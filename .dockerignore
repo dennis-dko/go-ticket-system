@@ -37,3 +37,10 @@ test/browser/*.png
 **/AUDIT_REPORT.md
 
 **/.gotmp
+
+**/.gradle
+**/.kotlin
+**/local.properties
+
+**/*.jks
+**/*.keystore

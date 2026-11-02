@@ -29,6 +29,11 @@ Dockerfile* text eol=lf
 
 # Go tooling writes and expects LF everywhere.
 *.go        text eol=lf
+
+# The Android app's Kotlin, for the reason Go's is: a raw string written over a
+# line break keeps the carriage return, and the app would carry it.
+*.kt        text eol=lf
+*.kts       text eol=lf
 go.mod      text eol=lf
 go.sum      text eol=lf
 

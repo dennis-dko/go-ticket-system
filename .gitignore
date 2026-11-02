@@ -60,3 +60,16 @@ AUDIT_REPORT.md
 # makes it where it is used - a task in .vscode/tasks.json - rather than the
 # repository carrying it as an empty .gitkeep.
 .gotmp/
+
+# What Gradle and the Kotlin compiler keep beside the Android app between
+# builds, and Android Studio's note of where its SDK is - machine state, not the
+# project. The app's own build writes into bin/.
+.gradle/
+.kotlin/
+local.properties
+
+# The key the Android app is signed with. It belongs in the release workflow's
+# secrets and in its owner's safe, and a copy dropped in the work tree is one
+# `git add` away from being published with the source.
+*.jks
+*.keystore

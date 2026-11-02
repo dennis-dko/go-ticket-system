@@ -12,6 +12,7 @@ import (
 var endsInSOnPurpose = map[string]string{
 	"configs":   "GoFr reads ./configs from the working directory, and every installation keeps its configuration there",
 	"workflows": "GitHub looks for workflows in .github/workflows and nowhere else",
+	"res":       "the Android build reads an app's resources from src/main/res, where every Android project keeps them",
 	"kerberos":  "a name, not a plural",
 }
 
