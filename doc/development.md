@@ -181,7 +181,7 @@ its own. Nothing of Android is needed on the machine: Gradle, a JDK and the SDK
 are in the image that directory's `Dockerfile` describes, pinned by version and
 checksum, and `task build:mobile` builds it and the app in it - the unit tests,
 Android lint, and a release build shrunk by R8 into
-`bin/mobile/outputs/apk/release`.
+`bin/mobile/outputs/apk/release`. CI's Android job runs the same.
 
 What can drift from the rest of the application unnoticed is checked from Go, in
 the same directory, by `task test`: every key the app looks up is in every

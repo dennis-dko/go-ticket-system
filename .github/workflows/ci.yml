@@ -620,6 +620,27 @@ jobs:
             CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go vet ./...
           done
 
+  # The Android app in internal/interface/mobile: its unit tests, Android lint
+  # and a release build shrunk by R8, in the image the Dockerfile there
+  # describes - the one `task build:mobile` builds it in, so this job and a
+  # laptop use the same JDK, Gradle and SDK. Unsigned: the release key is in the
+  # release environment, which no pull request can read. The Go tests that hold
+  # the app to the dictionaries and the API run in the Test job with the rest.
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the toolchain image
+        run: docker build -t gtr-android - < internal/interface/mobile/Dockerfile
+
+      - name: Test, lint and build the app
+        run: >-
+          docker run --rm -v "$PWD:/src" -w /src/internal/interface/mobile gtr-android
+          gradle --no-daemon --console=plain testDebugUnitTest assembleRelease lintRelease
+
   # Builds the Docker image on every PR as a smoke test. On pushes to main
   # it additionally publishes a rolling ":edge" image to GHCR, so main
   # always has a deployable artifact without waiting for a version tag.
