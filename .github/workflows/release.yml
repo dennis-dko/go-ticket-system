@@ -165,6 +165,9 @@ jobs:
     # before this, in that job, and on both paths - it does not get here
     # otherwise.
     if: needs.version.outputs.release == 'true'
+    # Where the Android app's signing key is kept: an environment's secrets are
+    # read only by the jobs that declare it, and this is the one.
+    environment: release
     permissions:
       contents: write
       packages: write
@@ -300,6 +303,55 @@ jobs:
           sh build/windows-resource.sh --clean
 
           build darwin  arm64
+
+      # The Android app, from the same commit with the same version, which is the
+      # version it compares with the installation it is connected to.
+      #
+      # Signed with the one key every release of it is signed with, because
+      # Android installs an update only over an app signed with the same key: a
+      # release signed with another would be one nobody who has the app can
+      # install. So the certificate is pinned here, and a key in the secrets that
+      # is not that one stops the release instead of publishing such an app. The
+      # key is a secret of the release environment, which only this job declares,
+      # and no release goes out without it - an app missing from one release is
+      # missed by nobody until somebody needs it.
+      - name: Build the Android app
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          GTR_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GTR_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GTR_ANDROID_KEY_ALIAS: go-time-recording
+          GTR_ANDROID_KEYSTORE: /key/release.jks
+          SIGNER_SHA256: b38ca23d7cc1ea62dcab31096dea87c5c6e98c8c197d8af084309adafb770050
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ANDROID_KEYSTORE}" ] || [ -z "${GTR_ANDROID_KEYSTORE_PASSWORD}" ]; then
+            echo "::error::the release environment has no ANDROID_KEYSTORE and ANDROID_KEYSTORE_PASSWORD, which the Android app is signed with"
+            exit 1
+          fi
+
+          key="${RUNNER_TEMP}/key"
+          mkdir -p "${key}"
+          printf '%s' "${ANDROID_KEYSTORE}" | base64 -d > "${key}/release.jks"
+
+          docker build -t gtr-android - < internal/interface/mobile/Dockerfile
+          docker run --rm -v "$PWD:/src" -v "${key}:/key:ro" -w /src/internal/interface/mobile \
+            -e VERSION -e GTR_ANDROID_KEYSTORE -e GTR_ANDROID_KEYSTORE_PASSWORD -e GTR_ANDROID_KEY_ALIAS -e GTR_ANDROID_KEY_PASSWORD \
+            gtr-android gradle --no-daemon --console=plain assembleRelease
+          rm -rf "${key}"
+
+          apk=bin/mobile/outputs/apk/release/go-time-recording-mobile-release.apk
+          signers=$(docker run --rm -v "$PWD:/src" gtr-android /opt/android-sdk/build-tools/36.0.0/apksigner verify --print-certs "/src/${apk}")
+          echo "${signers}"
+
+          if ! grep -q "certificate SHA-256 digest: ${SIGNER_SHA256}$" <<< "${signers}"; then
+            echo "::error::${apk} is not signed with the key every release of the app is signed with"
+            exit 1
+          fi
+
+          cp "${apk}" "dist/go-time-recording-mobile_${VERSION}.apk"
 
       # An asset larger than the versions already installed will download is one
       # none of them can take: the update card offers it, every install is turned
@@ -479,6 +531,7 @@ jobs:
           files: |
             dist/go-time-recording-web_*
             dist/go-time-recording-client_*
+            dist/go-time-recording-mobile_*
             dist/SHA256SUMS
           # append_body puts this below the generated notes, which is where it
           # belongs: the changelog is what a returning reader came for, and this
@@ -501,7 +554,9 @@ jobs:
             interface. `go-time-recording-client_*` is the terminal client, which books
             against an installation from the shell and serves nothing itself. It
             belongs to this release: use it with an installation that runs this
-            version.
+            version. `go-time-recording-mobile_*.apk` is the Android app, which does
+            what the terminal client does and belongs to this release the same way;
+            it is connected by scanning the code a new personal token is shown with.
 
             An installation running a version from before the binary was called
             `go-time-recording-web` cannot update itself to this one from the

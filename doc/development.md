@@ -191,6 +191,16 @@ written as the page's `REFUSAL_VALUES` says, the app answers to the address a
 token's code holds, and the dictionaries are copied from where everything else
 reads them.
 
+The release build is unsigned here. A release is signed with the one key every
+release of the app is signed with, because Android installs an update only over
+an app signed with the same key: it lives in the `release` environment's
+secrets - `ANDROID_KEYSTORE`, the keystore in base64, and
+`ANDROID_KEYSTORE_PASSWORD` - and with its owner, and
+[`release.yml`](../.github/workflows/release.yml) pins its certificate, so a
+release signed with any other key stops before anything is published. A lost key
+cannot be replaced: a new one makes an app that every phone with the old one has
+to uninstall first.
+
 To try a change on a phone, `gradle assembleDebug` in the same image builds an
 APK signed with a debug key instead. Android installs it over no released app
 and no released app over it, so one is uninstalled before the other goes on.
