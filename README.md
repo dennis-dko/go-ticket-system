@@ -247,12 +247,12 @@ and says what it did — for a script, an alias or a screen reader.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="doc/image/terminal.png" alt="The client's screen in a terminal: the stopwatch running for an hour and twenty minutes on the website relaunch, and today's three entries under it">
-      <p><b>The day at a glance.</b> The stopwatch counts the seconds, and the screen reads the day again every half minute, so a stopwatch stopped in the browser stops here too.</p>
+      <img src="doc/image/terminal.png" alt="The client's screen in a terminal, framed under the installation's name: the stopwatch running for an hour and twenty minutes on the website relaunch, today's three entries under it, and the menu of what it can do next">
+      <p><b>The day at a glance.</b> Under the installation's own name, who is signed in and which build of the client this is. The stopwatch counts the seconds, and the screen reads the day again every half minute, so a stopwatch stopped in the browser stops here too.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="doc/image/terminal-switch.png" alt="The form that switches the stopwatch to another project, with the active projects to choose from">
-      <p><b>A form for each change.</b> <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand; <code>esc</code> puts a form away and <code>q</code> closes the screen.</p>
+      <img src="doc/image/terminal-switch.png" alt="The form that switches the stopwatch to another project, one question at a time, with the active projects to choose from">
+      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away and <code>q</code> closes the screen.</p>
     </td>
   </tr>
 </table>

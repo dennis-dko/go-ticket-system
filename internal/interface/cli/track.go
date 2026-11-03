@@ -62,7 +62,7 @@ the installation shows at the foot of its page.
 // process listing on the machine. The language may come from either, because it
 // is nobody's secret - and where neither names one, it is the one the account
 // chose in the browser, so the terminal speaks what the screen does.
-func Run(ctx context.Context, args []string, env func(string) string, out, errOut io.Writer) int {
+func Run(ctx context.Context, build Build, args []string, env func(string) string, out, errOut io.Writer) int {
 	flag, args, named := languageFlag(args)
 	lang, explicit, err := chooseLanguage(flag, env, systemLanguage)
 
@@ -94,7 +94,7 @@ func Run(ctx context.Context, args []string, env func(string) string, out, errOu
 		return 2
 	}
 
-	s := &session{api: newClient(base, token, lang), out: out, lang: lang}
+	s := &session{api: newClient(base, token, lang), out: out, lang: lang, build: build}
 
 	// Asked before anything else, so a failure is said once: the request that
 	// would have been next goes to the same installation and would fail the same
@@ -234,9 +234,19 @@ func (l language) parse(args []string) (commandLine, error) {
 // session is one run of the client against one installation, and the language
 // it speaks.
 type session struct {
-	api  *client
-	out  io.Writer
-	lang language
+	api   *client
+	out   io.Writer
+	lang  language
+	build Build
+}
+
+// Build is the release this client was built from, as cmd/client has it stamped
+// in with -ldflags: the version it answers --version with, and the commit and
+// the day of that commit, which the screen shows under its title so that a
+// picture of a problem says which build it came from. A build nobody stamped is
+// "dev", with neither.
+type Build struct {
+	Version, Commit, Day string
 }
 
 // say writes a line of the answer. What a terminal does with it is the

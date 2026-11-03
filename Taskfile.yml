@@ -36,6 +36,13 @@ vars:
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev"
 
+  # The commit and its day, which the terminal client shows under its title
+  # beside the version.
+  COMMIT:
+    sh: git rev-parse --short=8 HEAD 2>/dev/null || true
+  DAY:
+    sh: git show -s --format=%cs HEAD 2>/dev/null || true
+
 tasks:
   default:
     desc: Show what is available.
@@ -550,7 +557,7 @@ tasks:
     internal: true
     cmds:
       - mkdir -p {{.BIN_DIR}}
-      - go build -ldflags "-X main.version={{.VERSION}}" -o ./{{.BIN_DIR}}/{{.CLIENT_NAME}}{{exeExt}} ./cmd/client
+      - go build -ldflags "-X main.version={{.VERSION}} -X main.commit={{.COMMIT}} -X main.day={{.DAY}}" -o ./{{.BIN_DIR}}/{{.CLIENT_NAME}}{{exeExt}} ./cmd/client
 
   build:mobile:
     desc: 'Ship: build the Android app - its unit tests, lint and an unsigned APK - in its toolchain image.'

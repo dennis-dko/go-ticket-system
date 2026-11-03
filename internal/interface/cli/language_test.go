@@ -262,8 +262,9 @@ func TestHoursFiguresAndDaysAreWrittenTheWayThePageWritesThem(t *testing.T) {
 	}
 }
 
-// The screen speaks German too: the stopwatch's card, today's list, the legend,
-// the forms and the keys huh names under them.
+// The screen speaks German too: the installation's name in German where it has
+// one, the stopwatch, today's list, the menu and the keys named under it, the
+// forms and the keys huh names under them.
 func TestTheScreenSpeaksGerman(t *testing.T) {
 	f, server := newFakeInstallation(t)
 
@@ -279,18 +280,25 @@ func TestTheScreenSpeaksGerman(t *testing.T) {
 	m.width = 100
 
 	shows := ansi.Strip(m.View().Content)
-	for _, said := range []string{"seit 09:12", "Heute", "3,00 Std.", "2,50 Std.  Consulting", "kein Projekt",
-		"w wechseln", "x stoppen", "b buchen", "r neu lesen", "q beenden"} {
+	for _, said := range []string{"Zeiterfassung", "seit 09:12", "Heute", "3,00 Std.", "2,50 Std.  Consulting", "kein Projekt",
+		"Wähle, was als Nächstes passieren soll.", "↑ hoch", "↓ runter", "enter bestätigen"} {
 		if !strings.Contains(shows, said) {
 			t.Errorf("the screen shows\n%s\nwithout %q", shows, said)
+		}
+	}
+
+	for _, change := range [][2]string{{"Auf ein anderes Projekt wechseln", "w"}, {"Stoppuhr anhalten", "x"},
+		{"Zeit von Hand buchen", "b"}, {"Den Tag neu lesen", "r"}, {"Den Bildschirm schließen", "q"}} {
+		if !offered(shows, change[0], change[1]) {
+			t.Errorf("the screen shows\n%s\nwithout %q on %s", shows, change[0], change[1])
 		}
 	}
 
 	opened, _ := m.open("switch")
 	shows = ansi.Strip(opened.(screen).View().Content)
 
-	for _, said := range []string{"Auf ein anderes Projekt wechseln", "wird auf Consulting gebucht", "Kein Projekt",
-		"Beschreibung", "esc abbrechen", "auswählen"} {
+	for _, said := range []string{"Heute › Auf ein anderes Projekt wechseln › Projekt", "Auf welches Projekt geht die Zeit?",
+		"wird auf Consulting gebucht", "Kein Projekt", "esc abbrechen", "enter bestätigen"} {
 		if !strings.Contains(shows, said) {
 			t.Errorf("the form shows\n%s\nwithout %q", shows, said)
 		}

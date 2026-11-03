@@ -29,9 +29,10 @@ import (
 // terminalColumns and terminalRows are the size of the terminal the README's
 // pictures of the client are taken in: narrow enough that the letters can still
 // be read where the README shows two pictures side by side, wide enough that
-// the stopwatch's line is not cut short, and tall enough for the longest form.
-// Rows left empty below are not photographed.
-const terminalColumns, terminalRows = 76, 34
+// the stopwatch's line is not cut short, and tall enough for the day with its
+// menu and a line of news under it, which is the tallest the screen gets. Rows
+// left empty below are not photographed.
+const terminalColumns, terminalRows = 76, 40
 
 // terminalAddress is the installation as the pictures name it. The screen's
 // header shows the address the client was given, and the port this instance
