@@ -10,6 +10,7 @@ merged.
 | `task test` | Unit and integration tests |
 | `task stage` | **Verify.** The shipped container image against real services, on :8080 |
 | `task image` | **Ship.** Build the deployment image |
+| `task build:mobile` | **Ship.** Build the Android app - its unit tests, lint and an unsigned APK - in its toolchain image |
 | `task release VERSION=v1.2.0` | **Ship.** Tag a minor or major version by hand; a patch needs no command at all |
 
 `task` on its own lists everything, and `task --summary <name>` explains one.
@@ -145,9 +146,10 @@ that make the synchronisation's edge cases reproducible.
 ## Adding a language
 
 Every language but English is one file - German is
-[`internal/support/i18n/locales/de.json`](../internal/support/i18n/locales/de.json) -
+[`internal/support/i18n/locale/de.json`](../internal/support/i18n/locale/de.json) -
 and everything that says something reads it: the page, the installer, the
-terminal client, the workbooks, the calendar feed and the foot of a PDF. English
+terminal client, the Android app, the workbooks, the calendar feed and the foot
+of a PDF. English
 has no file. It is written where it is said, in the markup and beside every
 lookup, so a sentence a dictionary lacks is said in English rather than not at
 all.
@@ -159,14 +161,49 @@ A new language is two changes:
    itself, `number.point` and `number.group` how it writes a figure, and
    `layout.day` and `layout.time` how it writes a day and a time, as Go layouts
    written with the reference day: `02.01.2006` writes 27.08.2026, and `15:04`
-   writes 23:40. A sentence takes its values where it says `{0}`, `{1}`.
+   writes 23:40 - from the parts `2006`, `01`, `02`, `15`, `04` and `05`, which
+   are the ones the Android app reads as well. A sentence takes its values where
+   it says `{0}`, `{1}`.
 2. The code in `SupportedLanguages`, in
    [`internal/domain/model/user_model.go`](../internal/domain/model/user_model.go).
 
-Nothing else names a language: the choosers, the manifest, the installer and the
-terminal client take the list from the files. `task test` says what is missing -
+Nothing else names a language: the choosers, the manifest, the installer, the
+terminal client and the Android app take the list from the files - the app
+carries the files themselves, copied in when it is built. `task test` says what is missing -
 a key the new file lacks, or has and German does not, a file not written the one
 way, a figure or a day it cannot write, or a language offered with no file.
+
+## The Android app
+
+The app is Kotlin with Jetpack Compose, in
+[`internal/interface/mobile`](../internal/interface/mobile), a Gradle build of
+its own. Nothing of Android is needed on the machine: Gradle, a JDK and the SDK
+are in the image that directory's `Dockerfile` describes, pinned by version and
+checksum, and `task build:mobile` builds it and the app in it - the unit tests,
+Android lint, and a release build shrunk by R8 into
+`bin/mobile/outputs/apk/release`. CI's Android job runs the same.
+
+What can drift from the rest of the application unnoticed is checked from Go, in
+the same directory, by `task test`: every key the app looks up is in every
+dictionary, what it borrows it says in the English of the terminal client or the
+page, no sentence is written around the dictionaries, a refusal's values are
+written as the page's `REFUSAL_VALUES` says, the app answers to the address a
+token's code holds, and the dictionaries are copied from where everything else
+reads them.
+
+The release build is unsigned here. A release is signed with the one key every
+release of the app is signed with, because Android installs an update only over
+an app signed with the same key: it lives in the `release` environment's
+secrets - `ANDROID_KEYSTORE`, the keystore in base64, and
+`ANDROID_KEYSTORE_PASSWORD` - and with its owner, and
+[`release.yml`](../.github/workflows/release.yml) pins its certificate, so a
+release signed with any other key stops before anything is published. A lost key
+cannot be replaced: a new one makes an app that every phone with the old one has
+to uninstall first.
+
+To try a change on a phone, `gradle assembleDebug` in the same image builds an
+APK signed with a debug key instead. Android installs it over no released app
+and no released app over it, so one is uninstalled before the other goes on.
 
 ## Verify
 

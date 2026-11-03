@@ -29,6 +29,11 @@ Dockerfile* text eol=lf
 
 # Go tooling writes and expects LF everywhere.
 *.go        text eol=lf
+
+# The Android app's Kotlin, for the reason Go's is: a raw string written over a
+# line break keeps the carriage return, and the app would carry it.
+*.kt        text eol=lf
+*.kts       text eol=lf
 go.mod      text eol=lf
 go.sum      text eol=lf
 
@@ -94,3 +99,12 @@ go.sum      text eol=lf
 # The live reload's configuration, pinned for the same check and no other
 # reason: TOML allows a carriage return before every line break.
 *.toml         text eol=lf
+
+# The Android app's resources and Gradle settings, and the licence - read by
+# tools that do not mind a carriage return, and pinned for the check as well.
+# A file left to text=auto is written with core.eol, which a clone leaves unset
+# and so native: CRLF on Windows, whatever core.autocrlf says - measured, not
+# assumed. test/lineending_test.go asks git which files that is.
+*.xml          text eol=lf
+*.properties   text eol=lf
+LICENSE        text eol=lf

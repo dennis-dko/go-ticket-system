@@ -23,7 +23,7 @@ func TestTheYearIsDrawnATileADay(t *testing.T) {
 
 	p.awaitJSON(`(async () => {
 		const year = Number(todayISO().slice(0, 4));
-		await api('/me/holidays', { method: 'PUT', body: JSON.stringify({ region: 'BY' }) });
+		await api('/me/holidays', { method: 'PUT', body: JSON.stringify({ place: 'DE-BY' }) });
 		await api('/timesheets', { method: 'POST', body: JSON.stringify({ date: todayISO(), durationHours: 6 }) });
 		const monday = new Date(Date.UTC(year, 2, 1));
 		while (monday.getUTCDay() !== 1) monday.setUTCDate(monday.getUTCDate() + 1);

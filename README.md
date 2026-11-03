@@ -1,4 +1,4 @@
-<h1 align="center"><img src="internal/interface/web/assets/favicon.svg" alt="" width="96"><br>Go-Time-Recording</h1>
+<h1 align="center"><img src="internal/interface/web/asset/favicon.svg" alt="" width="96"><br>Go-Time-Recording</h1>
 
 <p align="center">
   <b>Project time tracking in a single self-contained binary.</b><br>
@@ -23,8 +23,8 @@
 </p>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="doc/images/calendar-dark.png">
-  <img src="doc/images/calendar.png" alt="The calendar: a month of booked hours, with two days of leave, a day off sick and a public holiday marked">
+  <source media="(prefers-color-scheme: dark)" srcset="doc/image/calendar-dark.png">
+  <img src="doc/image/calendar.png" alt="The calendar: a month of booked hours, with two days of leave, a day off sick and a public holiday marked">
 </picture>
 
 ## Why Go-Time-Recording
@@ -54,83 +54,83 @@
 ## A tour
 
 Every picture below is taken from the running application by
-[a test](test/browser/readmepictures_test.go) that books a year of somebody's
+[a test](test/browser/readmepicture_test.go) that books a year of somebody's
 working time first — `task readme:pictures` takes them again.
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="doc/images/week.png" alt="The week grid: projects as rows and days as columns, with the hours booked, what each day asked and the balance underneath">
+      <img src="doc/image/week.png" alt="The week grid: projects as rows and days as columns, with the hours booked, what each day asked and the balance underneath">
       <p><b>The week as a grid.</b> Type hours straight into the cells; what each day asked and the balance sit underneath, and <i>Copy last week</i> fills the days that are still empty.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="doc/images/stopwatch.png" alt="The stopwatch, running for an hour and twenty minutes on the website relaunch">
+      <img src="doc/image/stopwatch.png" alt="The stopwatch, running for an hour and twenty minutes on the website relaunch">
       <p><b>A stopwatch that counts seconds.</b> Switch to the next project without losing one; a start pressed late can be corrected, and a clock left running is booked up to when the work ended.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/images/activities.png" alt="Charts of the month's hours per project and per activity">
+      <img src="doc/image/activity.png" alt="Charts of the month's hours per project and per activity">
       <p><b>Your own figures, as charts.</b> Hours per project, and per activity: write <code>#meeting</code> or <code>#review</code> into a description and it is counted — nothing to set up first.</p>
     </td>
     <td valign="top">
-      <img src="doc/images/report.png" alt="A report of the month as a pie chart, one slice per project">
+      <img src="doc/image/report.png" alt="A report of the month as a pie chart, one slice per project">
       <p><b>Reports in the shape the question needs.</b> Bars, columns or a pie, each project keeping its colour in all three, and a PDF of the same.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/images/year.png" alt="The year as tiles, one per day, darker for more hours, with public holidays and days away outlined">
+      <img src="doc/image/year.png" alt="The year as tiles, one per day, darker for more hours, with public holidays and days away outlined">
       <p><b>The year at a glance.</b> A tile a day, as dark as the hours on it; public holidays and days away outlined rather than told by colour alone, beside the year before.</p>
     </td>
     <td valign="top">
-      <img src="doc/images/projects.png" alt="The project list: one project in the last fifth of its hour budget, one past it, and the hourly rate of those that are charged for">
+      <img src="doc/image/project.png" alt="The project list: one project in the last fifth of its hour budget, one past it, and the hourly rate of those that are charged for">
       <p><b>Projects with budgets and rates.</b> The list says how much of a budget is booked, marked from four fifths and in red once it is past, and what a project is charged an hour.</p>
     </td>
   </tr>
   <tr>
     <td colspan="2" valign="top">
-      <img src="doc/images/statement.png" alt="A statement of work for the month: the hours of three billable projects, their hourly rates and what they come to, totalled in euros">
+      <img src="doc/image/statement.png" alt="A statement of work for the month: the hours of three billable projects, their hourly rates and what they come to, totalled in euros">
       <p><b>A statement of work at the end of the month.</b> The hours of the projects you charge for, at their rate, totalled per currency, as a PDF or a workbook. Not an invoice: the number, the tax and the customer stay yours to write.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/images/overtime.png" alt="The overtime balance of the month, day by day">
+      <img src="doc/image/overtime.png" alt="The overtime balance of the month, day by day">
       <p><b>An overtime balance against your own target.</b> Choose a day, and from then on every working day counts — less what a public holiday or a day away takes off it.</p>
     </td>
     <td valign="top">
-      <img src="doc/images/workday.png" alt="The working time of the month: when each day began and ended, its breaks, and the hours booked beside them">
+      <img src="doc/image/workday.png" alt="The working time of the month: when each day began and ended, its breaks, and the hours booked beside them">
       <p><b>Your working time, on record.</b> When each day began and ended and how long the breaks were, beside the hours booked; a gap shows as one, and the month leaves as a PDF.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/images/entries.png" alt="The entry list narrowed to the month's meetings">
+      <img src="doc/image/entry.png" alt="The entry list narrowed to the month's meetings">
       <p><b>Every entry, findable.</b> Narrow the list by project, period or words in the description — the export follows the same filter — and every correction keeps the version it replaced.</p>
     </td>
     <td valign="top">
-      <img src="doc/images/signin.png" alt="The sign-in form, offering a password, a passkey and the organisation's provider">
+      <img src="doc/image/signin.png" alt="The sign-in form, offering a password, a passkey and the organisation's provider">
       <p><b>Sign in your way.</b> A password and an authenticator app, a passkey, your organisation's provider — or, inside a domain, the Kerberos ticket the browser already holds.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/images/log.png" alt="The live log under Settings, filtered by level">
+      <img src="doc/image/log.png" alt="The live log under Settings, filtered by level">
       <p><b>Operated from the browser.</b> The process log, live; the database, the directory, telemetry, maintenance, updates and a restart, all under <i>Settings</i>.</p>
     </td>
     <td valign="top">
-      <img src="doc/images/installer.png" alt="The installer asking for the setup token and a database">
+      <img src="doc/image/installer.png" alt="The installer asking for the setup token and a database">
       <p><b>Set up in the browser.</b> Without a database the binary serves this screen, guarded by a token from its log, and then takes its port over in the same process.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/images/calendar-de.png" alt="The calendar in German">
+      <img src="doc/image/calendar-de.png" alt="The calendar in German">
       <p><b>English and German</b>, every screen and every refusal — dates and figures written the way the reader's language writes them.</p>
     </td>
     <td valign="top" align="center">
-      <img src="doc/images/phone.png" alt="The stopwatch on a telephone" width="240">
+      <img src="doc/image/phone.png" alt="The stopwatch on a telephone" width="240">
       <p><b>From a telephone to a wide screen</b>, and installable as an app with the installation's own name and logo - which opens without a network, and keeps what is booked meanwhile until it is back.</p>
     </td>
   </tr>
@@ -235,7 +235,7 @@ task dev DB=sqlite      # or: go run ./cmd
 ```
 
 Running it for real — behind a proxy, with HTTPS, as a service — is
-[`deploy/OPERATIONS.md`](deploy/OPERATIONS.md).
+[`deploy/OPERATION.md`](deploy/OPERATION.md).
 
 ## From a terminal
 
@@ -247,12 +247,12 @@ and says what it did — for a script, an alias or a screen reader.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="doc/images/terminal.png" alt="The client's screen in a terminal: the stopwatch running for an hour and twenty minutes on the website relaunch, and today's three entries under it">
-      <p><b>The day at a glance.</b> The stopwatch counts the seconds, and the screen reads the day again every half minute, so a stopwatch stopped in the browser stops here too.</p>
+      <img src="doc/image/terminal.png" alt="The client's screen in a terminal, framed under the installation's name: the stopwatch running for an hour and twenty minutes on the website relaunch, today's three entries under it, and the menu of what it can do next">
+      <p><b>The day at a glance.</b> Under the installation's own name, who is signed in and which build of the client this is. The stopwatch counts the seconds, and the screen reads the day again every half minute, so a stopwatch stopped in the browser stops here too.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="doc/images/terminal-switch.png" alt="The form that switches the stopwatch to another project, with the active projects to choose from">
-      <p><b>A form for each change.</b> <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand; <code>esc</code> puts a form away and <code>q</code> closes the screen.</p>
+      <img src="doc/image/terminal-switch.png" alt="The form that switches the stopwatch to another project, one question at a time, with the active projects to choose from">
+      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away and <code>q</code> closes the screen.</p>
     </td>
   </tr>
 </table>
@@ -278,7 +278,10 @@ is updated, take the client of the new release as well.
    Windows.
 2. In the browser, under **My account → API tokens**, create a token and copy it:
    it is shown once. It carries exactly the rights of your role, can be given a
-   number of days to last, and is revoked in the same list.
+   number of days to last, and is revoked in the same list. Beside it, also once,
+   are the installation's address - what `GTR_URL` below is set to - and a QR
+   code holding the two together, for an app to scan instead of being typed
+   both - [the API page](doc/api.md#connecting-an-app) says what it holds.
 3. Tell the client where the installation is and who you are — in the
    environment rather than as an argument, where a token would land in the
    shell's history:
@@ -323,20 +326,43 @@ the browser - or, where it chose none, the language the system is set to. In
 German it says what the installation refuses in the words the web interface has
 for it.
 
+## On a phone
+
+The Android app does what the terminal client does - the stopwatch, today's
+entries and booking by hand - through the same API, as the owner of a personal
+token. It is connected by the code a new token is shown with under
+**My account → API tokens**: scanned with the phone's camera, the code opens the
+app, which shows the installation it is asked to connect to and waits for a tap,
+because a code is a link any page could open. The address and the token can be
+typed in instead.
+
+**It belongs to the release it was built with**, as the terminal client does,
+and says so for as long as the installation runs another one. Download
+`go-time-recording-mobile_<version>.apk` from the
+[release](https://github.com/dennis-dko/go-time-recording/releases) the
+installation runs and open it on the phone; Android asks once whether the
+browser or file manager it was opened from may install apps. Every release is
+signed with the same key, so the next one installs over it.
+
+It speaks the language the account chose in the browser, otherwise the phone's,
+in the words the web interface and the terminal client use. An installation
+whose certificate comes from an authority of its own needs that authority
+installed on the phone, as the phone's browser does.
+
 ## What it does
 
 | Area | What you get | Read more |
 | --- | --- | --- |
-| **Recording** | Stopwatch, entry form and week grid; templates for what is booked often; changes to many entries at once; spreadsheet import and export | [Features](doc/features.md) |
-| **History** | Every correction keeps the version it replaced, for the entry's owner | [Features](doc/features.md#business-rules) |
-| **Evaluating** | Charts per day, project and activity, reports as bars, columns or a pie, the year as tiles, statements of work, PDF exports | [Features](doc/features.md) |
-| **Projects** | Private to their owner, with a period, a status, an hour budget and an hourly rate | [Projects](doc/features.md#projects) |
-| **Targets and time off** | A planned week, the public holidays of every German state, leave with its entitlement and carry-over, sick days and days taken against overtime | [Overtime](doc/features.md#overtime) |
-| **Working time** | When each day began and ended and its breaks, for each person's own record | [Working time](doc/features.md#your-own-record-of-your-working-time) |
-| **Calendar subscription** | Booked days and days away in Outlook, Google or a telephone's calendar | [Calendar](doc/features.md#your-days-in-your-own-calendar) |
+| **Recording** | Stopwatch, entry form and week grid; templates for what is booked often; changes to many entries at once; spreadsheet import and export | [Features](doc/feature.md) |
+| **History** | Every correction keeps the version it replaced, for the entry's owner | [Features](doc/feature.md#business-rules) |
+| **Evaluating** | Charts per day, project and activity, reports as bars, columns or a pie, the year as tiles, statements of work, PDF exports | [Features](doc/feature.md) |
+| **Projects** | Private to their owner, with a period, a status, an hour budget and an hourly rate | [Projects](doc/feature.md#projects) |
+| **Targets and time off** | A planned week, the public holidays of seventeen countries and their states or regions, leave with its entitlement and carry-over, sick days and days taken against overtime | [Overtime](doc/feature.md#overtime) |
+| **Working time** | When each day began and ended and its breaks, for each person's own record | [Working time](doc/feature.md#your-own-record-of-your-working-time) |
+| **Calendar subscription** | Booked days and days away in Outlook, Google or a telephone's calendar | [Calendar](doc/feature.md#your-days-in-your-own-calendar) |
 | **Accounts and roles** | Roles and their rights administered at run time; an administrator who runs the installation without keeping hours in it; managers for the accounts assigned to them, where an installation switches them on | [Access](doc/access.md) |
 | **Sign-in** | Passwords with TOTP, passkeys, LDAP and Active Directory with synchronisation, Kerberos, OpenID Connect | [Sign-in](doc/access.md#ldap) |
-| **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - and `go-time-recording-client` books through it from a terminal, on a screen of its own or a command at a time | [API](doc/api.md) |
+| **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - and `go-time-recording-client` books through it from a terminal, on a screen of its own or a command at a time, as the Android app does from a phone | [API](doc/api.md) |
 | **Operations** | Health, metrics, traces, live log, maintenance mode, updates, restart, HTTPS with Let's Encrypt, the installation's own name and logo | [Configuration](doc/configuration.md) |
 
 ## Documentation
@@ -344,7 +370,7 @@ for it.
 | Page | What it covers |
 | --- | --- |
 | [Getting started](doc/getting-started.md) | The installer, the first sign-in, the setup wizard and the tour |
-| [Features](doc/features.md) | Everything the application does, and the rules it keeps while doing it |
+| [Features](doc/feature.md) | Everything the application does, and the rules it keeps while doing it |
 | [Accounts, roles and sign-in](doc/access.md) | Rights, the administrator, API tokens, LDAP, Kerberos and OpenID Connect |
 | [Security](doc/security.md) | Sessions, CSRF, passkeys, two factors, HTTPS, and what a copy of the database gives away |
 | [Configuration](doc/configuration.md) | Where each setting comes from, and what the interface can change |
@@ -352,7 +378,7 @@ for it.
 | [Architecture](doc/architecture.md) | The four layers, and the decisions that would otherwise surprise |
 | [Development](doc/development.md) | The environments, and the checks a change has to pass |
 | [Releases and deployment](doc/deployment.md) | How a release is made and what it carries |
-| [Operations manual](deploy/OPERATIONS.md) | For whoever runs it: the four ways to deploy, backups, restarts, health |
+| [Operations manual](deploy/OPERATION.md) | For whoever runs it: the four ways to deploy, backups, restarts, health |
 
 Built on [GoFr](https://gofr.dev), structured after [gogs](https://github.com/gogs/gogs).
 

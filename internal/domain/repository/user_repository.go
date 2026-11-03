@@ -85,9 +85,9 @@ const (
 	// PreferenceTheme is light or dark, empty meaning the time of day decides.
 	PreferenceTheme
 
-	// PreferenceHolidayRegion is the state whose public holidays this person
-	// keeps, empty meaning they follow the installation.
-	PreferenceHolidayRegion
+	// PreferenceHolidayPlace is where this person keeps public holidays, empty
+	// meaning they follow the installation.
+	PreferenceHolidayPlace
 )
 
 // ExportedPart is one part of an account's export: what it is called and its rows,

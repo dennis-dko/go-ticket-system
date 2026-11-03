@@ -1,0 +1,205 @@
+package test
+
+import (
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+// CLAUDE.md points at exact lines, and nothing kept them pointing there.
+//
+// Nine places in that file name a `file.go:N` and say what is at it - the one
+// permitted panic and the two Must... calls that are panics under another name,
+// the one SQL statement built with Sprintf, the one time.Sleep, and the three
+// deliberate calls to VisibleTo instead of RequireVisible. They are the
+// difference between "audit this rule and read the exception" and "audit this
+// rule and rediscover the exception", which is most of what makes an audit of
+// this repository cheap rather than expensive.
+//
+// Two of the original seven had drifted by the time anybody looked: the Sprintf exception
+// had moved 1308 -> 1337 as the migration chain grew, and the VisibleTo call
+// 259 -> 272. Neither is wrong in a way anything would report. An auditor
+// following either reference reads an unremarkable line, concludes the exception
+// is gone, and either files the real one as a violation or, worse, trusts the
+// document over the tree.
+//
+// CLAUDE.md's own rule is that a directive which has stopped being true is worse
+// than no directive. This is the mechanism that rule was missing.
+//
+// The expected substring is written here rather than parsed out of the prose
+// around the reference. That is the duplication, and it is the point: this test
+// is what compares the two, and it cannot do that by reading only one of them.
+func TestCLAUDEmdStillPointsAtWhatItSaysItDoes(t *testing.T) {
+	references := []struct {
+		// path as CLAUDE.md writes it, which is sometimes only the base name.
+		reference string
+		// resolved is the path from the repository root.
+		resolved string
+		line     int
+		contains string
+	}{
+		{
+			reference: "internal/interface/web/web.go:89",
+			resolved:  "internal/interface/web/web.go",
+			line:      89,
+			contains:  "panic(",
+		},
+		// The two Must... sites beside it. They are panics the word `panic(`
+		// does not find, which is why the document names them and why they are
+		// watched here: the rule about them is a rule about where they sit, so a
+		// reference that has drifted off the declaration says nothing at all.
+		{
+			reference: "internal/application/v1/service/service.go:19",
+			resolved:  "internal/application/v1/service/service.go",
+			line:      19,
+			contains:  "regexp.MustCompile(",
+		},
+		{
+			reference: "internal/interface/api/v1/rest/security.go:150",
+			resolved:  "internal/interface/api/v1/rest/security.go",
+			line:      150,
+			contains:  "netip.MustParsePrefix(",
+		},
+		// The statement's own words rather than "fmt.Sprintf(", which some thirty
+		// lines of that file satisfy - so the reference slid from the statement
+		// formatting model.RoleUser onto one formatting a column type, and stayed
+		// green the whole way.
+		{
+			reference: "internal/infrastructure/persistence/migration/migration.go:1438",
+			resolved:  "internal/infrastructure/persistence/migration/migration.go",
+			line:      1438,
+			contains:  "WHERE name = '%s') WHERE role_id IS NULL",
+		},
+		{
+			reference: "internal/infrastructure/config/datasource.go:122",
+			resolved:  "internal/infrastructure/config/datasource.go",
+			line:      122,
+			contains:  "const configLocation",
+		},
+		{
+			reference: "restart_handler.go:488",
+			resolved:  "internal/interface/api/v1/rest/restart_handler.go",
+			line:      488,
+			contains:  "time.Sleep(",
+		},
+		{
+			reference: "project_application_service.go:170",
+			resolved:  "internal/application/v1/service/project_application_service.go",
+			line:      170,
+			contains:  "VisibleTo(",
+		},
+		{
+			reference: "workbook_application_service.go:306",
+			resolved:  "internal/application/v1/service/workbook_application_service.go",
+			line:      306,
+			contains:  "VisibleTo(",
+		},
+		{
+			reference: "timesheet_application_service.go:322",
+			resolved:  "internal/application/v1/service/timesheet_application_service.go",
+			line:      322,
+			contains:  "VisibleTo(",
+		},
+	}
+
+	root := ".."
+	directives := rules(t, root)
+
+	// Every reference in the table is one CLAUDE.md actually makes. Without this
+	// the table could quietly outlive the sentence that needed it, and go on
+	// passing about a reference nobody reads any more.
+	for _, want := range references {
+		if !strings.Contains(directives, "`"+want.reference+"`") {
+			t.Errorf("this test expects CLAUDE.md or doc/audit-method.md to cite %s and it no longer does; "+
+				"drop the row if the directive went, or fix the row if it moved",
+				want.reference)
+		}
+	}
+
+	// And every reference CLAUDE.md makes is one this table checks, or a new
+	// directive would be added with nothing watching it.
+	cited := regexp.MustCompile("`([a-zA-Z0-9_/.-]+\\.go):([0-9]+)`")
+
+	for _, m := range cited.FindAllStringSubmatch(directives, -1) {
+		found := false
+
+		for _, want := range references {
+			if want.reference == m[1]+":"+m[2] {
+				found = true
+
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("CLAUDE.md or doc/audit-method.md cites %s:%s and this test does not check it, "+
+				"so nothing would notice when it drifts", m[1], m[2])
+		}
+	}
+
+	for _, want := range references {
+		lines := strings.Split(read(t, filepath.Join(root, want.resolved)), "\n")
+
+		if want.line > len(lines) {
+			t.Errorf("CLAUDE.md or doc/audit-method.md cites %s but the file has only %d lines",
+				want.reference, len(lines))
+
+			continue
+		}
+
+		if strings.Contains(lines[want.line-1], want.contains) {
+			continue
+		}
+
+		// Say where it went. An auditor reading this failure wants the new line
+		// number, not the news that the old one is wrong - and finding it by hand
+		// in a 1,554-line migration chain is the tedious half of the job.
+		t.Errorf("CLAUDE.md or doc/audit-method.md cites %s for %q and line %d reads %q%s",
+			want.reference, want.contains, want.line,
+			strings.TrimSpace(lines[want.line-1]), whereItWent(lines, want.contains))
+	}
+}
+
+// whereItWent names the lines that do carry the token, so the fix is a number
+// somebody copies rather than a search somebody repeats.
+func whereItWent(lines []string, token string) string {
+	var found []string
+
+	for i, line := range lines {
+		if strings.Contains(line, token) {
+			found = append(found, strconv.Itoa(i+1))
+		}
+	}
+
+	if len(found) == 0 {
+		return "; it appears nowhere in the file, so the directive itself may be out of date"
+	}
+
+	return "; " + token + " is now at line " + strings.Join(found, ", ")
+}
+
+func read(t *testing.T, path string) string {
+	t.Helper()
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+
+	return strings.ReplaceAll(string(content), "\r\n", "\n")
+}
+
+// rules is CLAUDE.md and the audit method it points at, read as one document.
+//
+// The method left CLAUDE.md to keep it out of every session, and took paths,
+// citations and task names with it; a check that read CLAUDE.md alone would
+// have stopped watching those the day they moved.
+func rules(t *testing.T, root string) string {
+	t.Helper()
+
+	return read(t, filepath.Join(root, "CLAUDE.md")) + "\n" +
+		read(t, filepath.Join(root, "doc", "audit-method.md"))
+}

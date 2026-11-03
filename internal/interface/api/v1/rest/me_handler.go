@@ -212,6 +212,8 @@ func newOvertimeResponse(b *service.OvertimeBalance) OvertimeResponse {
 			Balance: day.Balance,
 			Absence: day.Absence,
 			Holiday: day.Holiday,
+
+			HolidaySubstitute: day.HolidaySubstitute,
 		})
 	}
 

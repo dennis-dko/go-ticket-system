@@ -33,7 +33,7 @@ func TestFromTheChosenDayEveryWorkingDayCounts(t *testing.T) {
 
 	_, admin, worker := startWithWorker(t)
 
-	admin.must(admin.api(http.MethodPut, "/settings/holidays", map[string]any{"region": "BY"}), http.StatusOK)
+	admin.must(admin.api(http.MethodPut, "/settings/holidays", map[string]any{"place": "DE-BY"}), http.StatusOK)
 
 	if saved := workingTimes(t, worker, map[string]any{"everyDayCountsFrom": "2026-05-25"}); saved.EveryDayCountsFrom == nil ||
 		*saved.EveryDayCountsFrom != "2026-05-25" {

@@ -29,7 +29,7 @@ import (
 // last: settleAfterRestart reloads the tab when the build changed. It lasts when
 // the new build arrives without this tab being told - a compose pull, a container
 // rollout, an update applied from somebody else's browser - and those are
-// deployment shapes deploy/OPERATIONS.md documents.
+// deployment shapes deploy/OPERATION.md documents.
 func TestAnUnknownSetupStepDoesNotEmptyTheScreen(t *testing.T) {
 	t.Parallel()
 

@@ -96,7 +96,7 @@ func TestLeaveOnADayNotWorkedIsNotCounted(t *testing.T) {
 		t.Fatalf("two days of leave read %.1f taken", account.Taken)
 	}
 
-	f.region = "BY"
+	f.place = "DE-BY"
 
 	if account := f.leaveIn(t, 2026); account.Taken != 1 {
 		t.Errorf("with Whit Monday a holiday, %.1f days are taken, want the Tuesday alone", account.Taken)

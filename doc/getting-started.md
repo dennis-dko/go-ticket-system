@@ -2,7 +2,7 @@
 
 Installing Go-Time-Recording, what its first start looks like, and what the
 first sign-in asks for. Running it on a server is the subject of
-[`deploy/OPERATIONS.md`](../deploy/OPERATIONS.md).
+[`deploy/OPERATION.md`](../deploy/OPERATION.md).
 
 ## Quick start
 

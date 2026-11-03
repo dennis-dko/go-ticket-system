@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The hourglass of favicon.svg, its two halves meeting in the middle and the
+     sand already fallen dimmer. That tile is 26 units across and an adaptive
+     icon shows the middle 72 of these 108, so every point is the SVG's, less
+     the tile's corner at 3, times 72/26, plus the 18 around what is shown. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36.28,33.51h35.44L54,54Z" />
+    <path
+        android:fillAlpha="0.55"
+        android:fillColor="#FFFFFF"
+        android:pathData="M36.28,74.49h35.44L54,54Z" />
+</vector>

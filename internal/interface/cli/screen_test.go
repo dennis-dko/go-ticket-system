@@ -43,7 +43,7 @@ func watch(t *testing.T, base, token string) *watched {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	w := &watched{t: t, out: &bytes.Buffer{}, ended: make(chan struct{})}
-	s := &session{api: newClient(base, token, language{}), out: w.out}
+	s := &session{api: newClient(base, token, language{}), out: w.out, build: testBuild}
 
 	w.p = s.program(ctx, tea.WithInput(nil), tea.WithOutput(io.Discard), tea.WithWindowSize(100, 40),
 		tea.WithoutSignals(), tea.WithFilter(func(m tea.Model, msg tea.Msg) tea.Msg {
@@ -139,6 +139,21 @@ func (w *watched) close() {
 	}
 }
 
+// testBuild is the build the screen's tests run as.
+var testBuild = Build{Version: "v9.9.9", Commit: "abcdef12", Day: "2026-11-03"}
+
+// offered reports whether the menu offers a change by what it is called, with its
+// key at the end of the same line.
+func offered(shows, called, key string) bool {
+	for _, line := range strings.Split(shows, "\n") {
+		if strings.Contains(line, called) && strings.HasSuffix(strings.TrimRight(strings.TrimRight(line, " "), "│ "), " "+key) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // asking is a condition on the field the open form is asking about.
 func asking(field string) func(screen) bool {
 	return func(m screen) bool { return m.form != nil && m.form.GetFocusedField().GetKey() == field }
@@ -153,7 +168,7 @@ func settled(m screen) bool { return m.loaded && m.form == nil && !m.busy && !m.
 func TestTheScreenShowsTheStopwatchRunningAndTodaysEntries(t *testing.T) {
 	f, server := newFakeInstallation(t)
 
-	m := newScreen(context.Background(), &session{api: newClient(server.URL, f.token, language{}), out: io.Discard})
+	m := newScreen(context.Background(), &session{api: newClient(server.URL, f.token, language{}), out: io.Discard, build: testBuild})
 
 	read, _ := m.load()().(loaded)
 	if read.err != nil {
@@ -164,15 +179,31 @@ func TestTheScreenShowsTheStopwatchRunningAndTodaysEntries(t *testing.T) {
 	m = next.(screen)
 	shows := ansi.Strip(m.View().Content)
 
-	for _, want := range []string{"Dana Example", "1:30:00", "Consulting · review", "since 09:12",
-		"Today", "3.00 h", "2.50 h", "review", "no project", "w switch", "x stop", "b book"} {
+	// In a frame, under the installation's own name, who is where and which
+	// build of the client this is.
+	for _, want := range []string{"╭", "╰", "Time Recording", "@ Dana Example · " + m.host,
+		"Version v9.9.9 (abcdef12 / 2026-11-03)", "1:30:00", "Consulting · review", "since 09:12",
+		"Today", "3.00 h", "2.50 h", "review", "no project", "Choose what to do next."} {
 		if !strings.Contains(shows, want) {
 			t.Errorf("the screen does not show %q:\n%s", want, shows)
 		}
 	}
 
-	if strings.Contains(shows, "s start") {
+	// And only the changes the stopwatch can take as it stands, each with its key.
+	for _, change := range [][2]string{{"Switch to another project", "w"}, {"Stop the stopwatch", "x"},
+		{"Book time by hand", "b"}, {"Read the day again", "r"}, {"Close the screen", "q"}} {
+		if !offered(shows, change[0], change[1]) {
+			t.Errorf("the screen does not offer %q on %s:\n%s", change[0], change[1], shows)
+		}
+	}
+
+	if strings.Contains(shows, "Start the stopwatch") {
 		t.Errorf("a running stopwatch is offered a start:\n%s", shows)
+	}
+
+	// The first change is the one the cursor is on.
+	if !strings.Contains(shows, "> Switch to another project") {
+		t.Errorf("the cursor is not on the first change:\n%s", shows)
 	}
 
 	next, _ = m.Update(tick(read.at.Add(75 * time.Second)))
@@ -193,14 +224,22 @@ func TestStartingFromTheScreenStartsTheStopwatchOnTheProjectPicked(t *testing.T)
 	w.until("the day is read", func(m screen) bool { return m.loaded && !m.shown.clock.Running })
 
 	w.press("s")
-	w.until("the project is asked", asking("project"))
+	shows := w.until("the project is asked", asking("project"))
+
+	if !strings.Contains(shows, "Today › Start the stopwatch › Project") {
+		t.Errorf("the screen does not say where in the start it is:\n%s", shows)
+	}
 
 	// No project, Website, Webshop, Consulting: the archived one is not offered.
 	w.press("down", "down", "down", "enter")
-	w.until("the description is asked", asking("description"))
+	shows = w.until("the description is asked", asking("description"))
+
+	if !strings.Contains(shows, "Today › Start the stopwatch › Description") {
+		t.Errorf("the screen does not follow the start to its next step:\n%s", shows)
+	}
 
 	w.press("review", "enter")
-	shows := w.until("the start is read back", func(m screen) bool { return settled(m) && m.shown.clock.Running })
+	shows = w.until("the start is read back", func(m screen) bool { return settled(m) && m.shown.clock.Running })
 
 	sent := f.sentTo("POST /me/timer")
 	if len(sent) != 1 || sent[0]["projectId"] != float64(4) || sent[0]["description"] != "review" {
@@ -244,8 +283,35 @@ func TestStoppingFromTheScreenAsksFirst(t *testing.T) {
 		t.Errorf("stopping sent %d stop(s), want one", len(sent))
 	}
 
-	if !strings.Contains(shows, "Booked 1.50 h on Consulting.") || !strings.Contains(shows, "s start") {
+	if !strings.Contains(shows, "Booked 1.50 h on Consulting.") || !offered(shows, "Start the stopwatch", "s") {
 		t.Errorf("after the stop the screen shows:\n%s", shows)
+	}
+
+	w.close()
+}
+
+// A change is chosen from the menu with the arrow keys and enter, as well as by
+// its key: down from the switch is the stop, and enter on it asks about the stop.
+func TestAChangeIsChosenFromTheMenu(t *testing.T) {
+	f, server := newFakeInstallation(t)
+
+	w := watch(t, server.URL, f.token)
+	w.until("the day is read", settled)
+
+	w.press("down")
+	shows := w.until("the cursor is on the stop", func(m screen) bool { return settled(m) && m.cursor == 1 })
+
+	if !strings.Contains(shows, "> Stop the stopwatch") {
+		t.Errorf("down from the first change does not put the cursor on the stop:\n%s", shows)
+	}
+
+	w.press("enter")
+	w.until("the stop is asked about", asking("stop"))
+	w.press("n")
+	w.until("the question is put away", settled)
+
+	if sent := f.sentTo("POST /me/timer/stop"); len(sent) != 0 {
+		t.Fatalf("keeping the stopwatch running sent %d stop(s)", len(sent))
 	}
 
 	w.close()

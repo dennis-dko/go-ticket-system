@@ -65,7 +65,7 @@ func (s *StorageZoneService) Verify(ctx context.Context) error {
 
 	return fmt.Errorf("this MySQL database's times were written in %s (%s) and this process runs in %s (%s); "+
 		"MySQL keeps a time without its zone, so every entry would be read as another day - "+
-		"start the application in %s, and see deploy/OPERATIONS.md if the database has to move",
+		"start the application in %s, and see deploy/OPERATION.md if the database has to move",
 		name, written, s.name, here, name)
 }
 

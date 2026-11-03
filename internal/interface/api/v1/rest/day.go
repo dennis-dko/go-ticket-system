@@ -1,0 +1,127 @@
+package rest
+
+import (
+	"time"
+
+	"gofr.dev/pkg/gofr"
+
+	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
+	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+)
+
+// DayResponse is one day: what was booked on it and what it asked, and why it
+// may ask less - somebody away, or a public holiday.
+type DayResponse struct {
+	Date    Date    `json:"date"`
+	Booked  float64 `json:"booked"`
+	Target  float64 `json:"target"`
+	Absence string  `json:"absence,omitempty"`
+	Holiday string  `json:"holiday,omitempty"`
+
+	// HolidaySubstitute says the holiday fell on a weekend and is kept on this
+	// day instead, under its own name.
+	HolidaySubstitute bool `json:"holidaySubstitute,omitempty"`
+
+	// Counts says whether the day counts towards the overtime balance, by the rule
+	// the balance keeps - so that a week drawn from these comes to its figure.
+	Counts bool `json:"counts"`
+}
+
+// DaysResponse is every day of a range, and what they add up to.
+type DaysResponse struct {
+	From        Date          `json:"from"`
+	To          Date          `json:"to"`
+	Days        []DayResponse `json:"days"`
+	TotalBooked float64       `json:"totalBooked"`
+	TotalTarget float64       `json:"totalTarget"`
+}
+
+// Days handles GET /api/v1/me/days: every day of a range, the empty ones
+// included, with what was booked on it and what it asked.
+//
+// The caller's own, and needing nothing beyond reading their own entries - the
+// same as the statistics, which this is the per-day half of. userId names an
+// account the caller looks after as a manager, whose days are then told without
+// the reasons they were away.
+func (h *MeHandler) Days(c *gofr.Context) (any, error) {
+	principal, err := h.authz.Require(c, model.PermTimesheetReadOwn)
+	if err != nil {
+		return nil, err
+	}
+
+	requested, err := queryUint(c, "userId")
+	if err != nil {
+		return nil, toHTTPError(err)
+	}
+
+	account, err := h.authz.accountFor(c, principal, requested, somebodyElsesEntries(),
+		model.PermTimesheetReadTeam)
+	if err != nil {
+		return nil, err
+	}
+
+	from, to, err := weekRange(c, h.locationFor(c, account))
+	if err != nil {
+		return nil, toHTTPError(err)
+	}
+
+	days, err := h.overtime.Days(c, account.ID, from, to)
+	if err != nil {
+		return nil, toHTTPError(err)
+	}
+
+	days = service.DaysSeenBy(days, account, principal)
+
+	answer := DaysResponse{
+		From: Date{Time: model.CalendarDay(from)},
+		To:   Date{Time: model.CalendarDay(to)},
+		Days: make([]DayResponse, 0, len(days)),
+	}
+
+	for _, day := range days {
+		answer.Days = append(answer.Days, DayResponse{
+			Date: Date{Time: day.Date}, Booked: day.Booked, Target: day.Target,
+			Absence: day.Absence, Holiday: day.Holiday, Counts: day.Counts,
+			HolidaySubstitute: day.HolidaySubstitute,
+		})
+
+		answer.TotalBooked += day.Booked
+		answer.TotalTarget += day.Target
+	}
+
+	return answer, nil
+}
+
+// weekRange reads the from/to parameters, defaulting to the week - Monday to
+// Sunday - that today falls in.
+//
+// Today in the caller's own zone, for the reason the overtime's month is: for
+// somebody in Auckland on a Monday morning the server's own clock is still in
+// last week.
+func weekRange(c *gofr.Context, location *time.Location) (from, to time.Time, err error) {
+	fromParam, err := queryDate(c, "from")
+	if err != nil {
+		return from, to, err
+	}
+
+	toParam, err := queryDate(c, "to")
+	if err != nil {
+		return from, to, err
+	}
+
+	today := time.Now().In(location)
+	sinceMonday := (int(today.Weekday()) + 6) % 7
+
+	from = time.Date(today.Year(), today.Month(), today.Day()-sinceMonday, 0, 0, 0, 0, location)
+	to = from.AddDate(0, 0, 6)
+
+	if fromParam != nil {
+		from = *fromParam
+	}
+
+	if toParam != nil {
+		to = *toParam
+	}
+
+	return from, to, nil
+}

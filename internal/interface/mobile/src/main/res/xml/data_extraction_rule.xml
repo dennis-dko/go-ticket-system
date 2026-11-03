@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nothing of the app's leaves the phone: not to a cloud backup and not to a
+     new phone it is transferred to. allowBackup="false" says the same for
+     Android 11 and earlier; from 12 on it no longer covers a transfer from
+     phone to phone, which these rules do. The token is sealed with a key that
+     never leaves the keystore, so a copy would be useless anyway - this keeps
+     the copy from being made. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+    </device-transfer>
+</data-extraction-rules>

@@ -78,7 +78,8 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]string{
-		"GET /me": `{"user":{"name":"Dana Example","effectiveTimezone":"Europe/Berlin","language":"` + language + `"}}`,
+		"GET /me":       `{"user":{"name":"Dana Example","effectiveTimezone":"Europe/Berlin","language":"` + language + `"}}`,
+		"GET /branding": `{"title":"Time Recording","translations":{"de":{"title":"Zeiterfassung"}},"version":"v9.9.9"}`,
 		"GET /projects": `{"items":[{"id":1,"name":"Website","status":"active"},` +
 			`{"id":2,"name":"Webshop","status":"active"},{"id":3,"name":"Archive","status":"archived"},` +
 			`{"id":4,"name":"Consulting","status":"active"}]}`,
@@ -127,7 +128,7 @@ func trackWith(t *testing.T, env map[string]string, args ...string) (int, string
 
 	var out, errOut bytes.Buffer
 
-	status := Run(context.Background(), args, func(key string) string { return env[key] }, &out, &errOut)
+	status := Run(context.Background(), Build{Version: "dev"}, args, func(key string) string { return env[key] }, &out, &errOut)
 
 	return status, out.String(), errOut.String()
 }

@@ -46,7 +46,7 @@ type Project struct {
 	// zero and sees everything. It stops being consistent the moment somebody
 	// turns authentication on - those rows are then invisible to every account,
 	// including the one that made them, and there is no screen that can reach them
-	// to fix it. deploy/OPERATIONS.md says so under "Things that will surprise
+	// to fix it. deploy/OPERATION.md says so under "Things that will surprise
 	// you"; it is the reason that mode is documented as a throwaway trial.
 	OwnerID *uint
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The application's mark, favicon.svg in the web interface's assets: its tile
+     is the background, which the launcher cuts to its own shape, and its
+     hourglass the foreground - and the monochrome layer a themed icon is drawn
+     from. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

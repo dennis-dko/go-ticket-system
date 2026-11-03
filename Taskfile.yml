@@ -36,6 +36,13 @@ vars:
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev"
 
+  # The commit and its day, which the terminal client shows under its title
+  # beside the version.
+  COMMIT:
+    sh: git rev-parse --short=8 HEAD 2>/dev/null || true
+  DAY:
+    sh: git show -s --format=%cs HEAD 2>/dev/null || true
+
 tasks:
   default:
     desc: Show what is available.
@@ -550,7 +557,27 @@ tasks:
     internal: true
     cmds:
       - mkdir -p {{.BIN_DIR}}
-      - go build -ldflags "-X main.version={{.VERSION}}" -o ./{{.BIN_DIR}}/{{.CLIENT_NAME}}{{exeExt}} ./cmd/client
+      - go build -ldflags "-X main.version={{.VERSION}} -X main.commit={{.COMMIT}} -X main.day={{.DAY}}" -o ./{{.BIN_DIR}}/{{.CLIENT_NAME}}{{exeExt}} ./cmd/client
+
+  build:mobile:
+    desc: 'Ship: build the Android app - its unit tests, lint and an unsigned APK - in its toolchain image.'
+    summary: |
+      The app in internal/interface/mobile is Kotlin, which the Go toolchain does
+      not build: Gradle does, in the image internal/interface/mobile/Dockerfile
+      describes. So a machine needs Docker and nothing of Android's, and a build
+      here uses the JDK, the Gradle and the SDK CI uses. The image is rebuilt
+      from its Dockerfile every time, which costs a second while nothing in it
+      has changed; Gradle's downloads are kept in the gtr-gradle volume.
+
+      What it runs is what CI's Android job runs: the unit tests, Android lint,
+      and a release build shrunk by R8 - unsigned, because the key a release is
+      signed with lives in the release workflow's secrets and nowhere else. The
+      APK lands in bin/mobile/outputs/apk/release. It calls itself "dev" rather
+      than this checkout's version, so it does not tell whoever runs it that
+      their installation is another release.
+    cmds:
+      - docker build -q -t gtr-android:latest - < internal/interface/mobile/Dockerfile
+      - docker run --rm -v "{{.ROOT_DIR}}:/src" -w /src/internal/interface/mobile -v gtr-gradle:/root/.gradle gtr-android:latest gradle --no-daemon --console=plain testDebugUnitTest assembleRelease lintRelease
 
   image:
     desc: 'Ship: build the deployment image, tagged with the version and "latest".'
@@ -635,7 +662,7 @@ tasks:
     desc: 'Upkeep: take the README''s pictures again, from the running application.'
     summary: |
       Books a year of somebody's working time into a fresh instance and
-      photographs the screens that show it, into doc/images - the pictures the
+      photographs the screens that show it, into doc/image - the pictures the
       README shows. Run it after changing a screen one of them shows, and look
       at what it took before committing it: nothing checks how a picture looks,
       only that the README shows what the camera takes.
@@ -655,7 +682,7 @@ tasks:
       so the README does not mix them.
     env:
       GOTMPDIR: '{{.ROOT_DIR}}/{{.TMP_DIR}}'
-      GTR_README_PICTURES: '{{.ROOT_DIR}}/doc/images'
+      GTR_README_PICTURES: '{{.ROOT_DIR}}/doc/image'
     cmds:
       - mkdir -p {{.TMP_DIR}}
       - defer: rm -rf {{.TMP_DIR}}
@@ -723,7 +750,7 @@ tasks:
     cmds:
       - cmd: docker rmi {{.APP_NAME}}:{{.VERSION}} {{.APP_NAME}}:latest
         ignore_error: true
-      - cmd: docker rmi gtr-test-app:latest gtr-test-probe:latest gtr-test-openldap:latest
+      - cmd: docker rmi gtr-test-app:latest gtr-test-probe:latest gtr-test-openldap:latest gtr-android:latest
         ignore_error: true
       - docker image prune -f
       - echo "Locally built images removed."

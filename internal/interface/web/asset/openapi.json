@@ -1,0 +1,3408 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "go-time-recording API",
+    "version": "1.0.0",
+    "description": "Project time tracking.\n\nAuthenticate either with the session cookie obtained from `POST /auth/login`, or with a personal API token sent as `Authorization: Bearer <token>` or `X-API-Token: <token>`.\n\nA token carries no rights of its own: every request is evaluated against the owner's **current** role, so changing or revoking a role takes effect on the very next call.\n\nAll responses are wrapped by the framework as `{\"data\": ...}` on success and `{\"error\": {\"message\": ...}}` on failure."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    },
+    {
+      "apiToken": []
+    },
+    {
+      "sessionCookie": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "auth",
+      "description": "Sign-in, sign-out and your own account"
+    },
+    {
+      "name": "timesheets",
+      "description": "Time entries"
+    },
+    {
+      "name": "projects",
+      "description": "Your own projects"
+    },
+    {
+      "name": "users",
+      "description": "User administration"
+    },
+    {
+      "name": "roles",
+      "description": "Roles and permissions"
+    },
+    {
+      "name": "reports",
+      "description": "Reports and overtime"
+    },
+    {
+      "name": "settings",
+      "description": "Instance administration, built-in administrator only"
+    },
+    {
+      "name": "setup",
+      "description": "First-run wizard"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign in",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "totp": {
+                    "type": "string",
+                    "description": "Required when the account has two-factor authentication enabled."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Signed in; a session cookie is set. When the response says `totpRequired`, no cookie is set and the code must be supplied."
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "429": {
+            "description": "Too many attempts"
+          }
+        }
+      }
+    },
+    "/auth/passkey": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Whether passkeys can be used on this connection",
+        "security": [],
+        "description": "Browsers expose WebAuthn only on a secure context - HTTPS, or localhost - and reject an IP address as a relying party identifier. The interface asks before offering a button that could only fail with \"SecurityError: This is an invalid domain\".",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/auth/passkey/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start a passwordless sign-in",
+        "security": [],
+        "description": "Returns a challenge. No username is asked for: the browser offers whichever credentials it holds for this site, and the one that signs names its own owner.",
+        "responses": {
+          "200": {
+            "description": "Challenge"
+          },
+          "429": {
+            "description": "Too many attempts"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finish a passwordless sign-in",
+        "security": [],
+        "description": "Verifies the signature and opens a session, exactly as a password sign-in does - same cookie, same lifetime, same CSRF rotation. Every failure answers alike.",
+        "responses": {
+          "201": {
+            "description": "Signed in"
+          }
+        }
+      }
+    },
+    "/auth/kerberos": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Whether a Kerberos sign-in is on offer",
+        "description": "True where a keytab was read at start and a directory is configured to look a ticket's owner up in. The interface asks before trying one, so a browser on an installation without either is never sent the Negotiate challenge.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign in with a Kerberos ticket",
+        "description": "The ticket travels as `Authorization: Negotiate …`, which a browser sends by itself once it trusts this address; a request without one is answered 401 with `WWW-Authenticate: Negotiate`, the challenge that asks for it. Only a ticket of the keytab's realm is accepted. Its owner is looked up in the directory - as named, then as name@REALM - and signed in to the account a directory password sign-in reaches, with the same session, cookie and CSRF rotation. A second factor the account holds is asked for with `totpRequired`, and the code is sent back as `totp` with the ticket.",
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "totp": {
+                    "type": "string",
+                    "description": "Required when the account has two-factor authentication enabled."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Signed in; a session cookie is set. When the response says `totpRequired`, no cookie is set and the code must be supplied."
+          },
+          "401": {
+            "description": "No ticket, a ticket that does not verify, or an owner the directory does not hold. Without a ticket the answer carries `WWW-Authenticate: Negotiate`."
+          },
+          "409": {
+            "description": "No keytab was read at start (`kerberosOff`), or no directory is configured to look a ticket's owner up in (`kerberosNeedsDirectory`)."
+          },
+          "429": {
+            "description": "Too many attempts"
+          }
+        }
+      }
+    },
+    "/auth/openid": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Whether signing in through a provider is offered",
+        "description": "Answers {\"offered\": true, \"label\": \"Keycloak\"} when a provider is configured and switched on under Settings, {\"offered\": false} otherwise. Reachable without a session: the sign-in form asks it before there is anybody to ask for.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start signing in through the provider",
+        "description": "No body. Answers {\"address\": \"https://...\"}, the provider's own sign-in to send the browser to, and sets a cookie holding the round's state, so that only this browser can finish it. The provider sends the browser back to /sign-in/openid, which is a page of the interface rather than a route of this API: the page hands the code and the state it came back with to POST /auth/openid/finish. openidOff when no provider is configured, openidUnreachable when its discovery document cannot be read.",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Where to send the browser"
+          }
+        }
+      }
+    },
+    "/auth/openid/finish": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finish a round through the provider",
+        "description": "Body: {\"state\": \"...\", \"code\": \"...\"}, as the browser came back with them. Only the browser holding the round's cookie can finish it, once, within ten minutes, and with the provider that was configured when it began (attemptExpired otherwise). The code is traded with the PKCE verifier the round was begun with, and the identity token is believed only when it is signed with the provider's published key, for this installation's client, not expired and carrying the round's nonce (openidRefused otherwise). A round begun by POST /me/openid links the account whose session began it and answers in the shape GET /me/openid does; any other signs in the account the identity is linked to and answers as POST /auth/login does, setting the session cookie. An identity nobody linked opens nothing (openidNotLinked): no account is ever matched on an address or made for an identity. The built-in administrator and an account the directory holds are never signed in this way (adminHasNoOpenID, directoryAccountHasNoOpenID).",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Signed in, or the account linked"
+          },
+          "400": {
+            "description": "attemptExpired"
+          },
+          "409": {
+            "description": "The provider refused, or the identity opens no account here"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign out and end the session",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Signed out"
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The signed-in user and their permissions",
+        "description": "Answers {\"user\", \"permissions\", \"authEnabled\", \"permissionsRevision\", \"reminders\": {\"unbookedDay\": true, \"timerAlertHours\": 10}, \"managersEnabled\": false}. reminders are your own reminder choices, set with PUT /me/reminders: whether the last working day is mentioned when nothing is booked on it, and after how many hours a running stopwatch is, with the default of ten worked out and zero for never. managersEnabled says whether the installation has managers switched on (see /settings/managers).",
+        "responses": {
+          "200": {
+            "description": "Identity and permissions"
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        }
+      }
+    },
+    "/me/password": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change your own password; ends every session you have",
+        "responses": {
+          "200": {
+            "description": "Changed"
+          },
+          "400": {
+            "description": "Wrong current password, or the new one is too short"
+          }
+        }
+      }
+    },
+    "/me/language": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Set your interface language",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          },
+          "400": {
+            "description": "Unsupported language"
+          }
+        }
+      }
+    },
+    "/me/theme": {
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Set the appearance you read in, or clear it to follow the time of day",
+        "description": "\"light\", \"dark\", or an empty value. Empty is meaningful rather than an omission: it is how somebody goes back to the screen following the time of day. The appearance is stored on the account rather than in the browser, so a shared machine does not hand the next person the last one's.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          },
+          "400": {
+            "description": "Unknown appearance"
+          }
+        }
+      }
+    },
+    "/me/holidays": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Whose public holidays you keep",
+        "description": "Answers {\"place\": \"\", \"instancePlace\": \"DE-BY\", \"effectivePlace\": \"DE-BY\", \"countries\": [{\"code\": \"DE\", \"regions\": [\"BW\", ...], \"regionRequired\": true}, ...]}. place is your own choice: empty follows the installation, \"none\" keeps no holidays at all, and a place keeps its holidays - a country by its ISO 3166-1 code, with the rest of its region's ISO 3166-2 code after a dash where it has one: AT, DE-HH, GB-SCT. countries are the ones whose holidays can be kept - AT, BE, CZ, DE, DK, FI, FR, GB, IE, IT, LU, NL, NO, PL, PT, SE and US - each with the regions that keep holidays of their own and whether one has to be named: a German state (BW, BY, BE, BB, HB, HH, HE, MV, NI, NW, RP, SL, SN, ST, SH, TH) and a British nation (ENG, WLS, SCT, NIR) always, because they divide their country, while Alsace and Moselle (FR-6AE, FR-57), South Tyrol (IT-BZ), the Azores and Madeira (PT-20, PT-30) keep a day or two more than the rest of their country, which is the country named alone. effectivePlace is what applies, empty for none. A place's holidays are those that hold in the whole of it; one that holds only where you work is recorded as an absence of the kind localHoliday. region, instanceRegion, effectiveRegion and regions say the same as they were written before there were countries, for a client written then: a German state by its code alone (BY), any other place as above, and regions the sixteen states.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Choose whose public holidays you keep",
+        "description": "Body: {\"place\": \"DE-HH\"} - a place (see GET), \"none\", or empty to follow the installation again. A place the rules do not know is refused naming country where they know no such country, and region where the country has no such region or cannot be kept without one, as Germany and the United Kingdom cannot. Where place is absent, region is read as it was written before there were countries: {\"region\": \"HH\"} is Hamburg, and BE Berlin rather than Belgium.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/me/timezone": {
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Set your own timezone, or clear it to follow the instance",
+        "description": "An IANA name such as \"Europe/Berlin\". An empty value is meaningful: it clears the personal setting so the account follows the instance-wide zone again. An unknown name is rejected rather than stored, because it would otherwise fall back to UTC at every use and move bookings between days.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/me/tour": {
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Record whether you have been shown the guided tour",
+        "description": "Stored on the user rather than in the browser, so someone who has been introduced to the application is not introduced again on their next device. Settable both ways: sending false offers the tour again, which is how the \"Show the tour\" button works.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/me/reminders": {
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Choose what you are reminded of",
+        "description": "Takes {\"unbookedDay\": true, \"timerAlertHours\": 10}, both at once. unbookedDay keeps the banner about the last working day with nothing booked on it; timerAlertHours is how long a running stopwatch may go before a banner says so, and a notification where the browser allows one: zero for never, at most 24 (invalidFields timerAlertHours), because past a day the stopwatch already says it holds more than one entry can. Answers what it kept.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/me/passkeys": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "List your registered passkeys",
+        "description": "Carries no key material. The public half could be sent harmlessly - it verifies signatures and cannot produce them - but sending it invites building something on a value that is meaningless outside a ceremony. `createdAt` and `lastUsedAt` are RFC 3339 moments rather than dates, for the reason the token listing gives.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/me/passkeys/register": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Start registering a passkey",
+        "description": "Refused for the built-in administrator: it is the guaranteed way back into an installation, and a guarantee that depends on a particular device still existing is not one.",
+        "responses": {
+          "200": {
+            "description": "Challenge"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Finish registering a passkey",
+        "description": "Verifies what the authenticator created and stores the public half.",
+        "responses": {
+          "200": {
+            "description": "Registered"
+          }
+        }
+      }
+    },
+    "/me/passkeys/{id}": {
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Revoke a passkey",
+        "description": "Scoped to the owner, so an id from somewhere else deletes nothing. Allowed even for the last one: a passkey is an addition to the password, never a replacement, so removing it cannot lock anyone out.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/me/totp": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Begin two-factor enrolment; the secret is returned once",
+        "responses": {
+          "201": {
+            "description": "Secret and otpauth URI"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Confirm two-factor with a current code",
+        "responses": {
+          "200": {
+            "description": "Enabled"
+          },
+          "400": {
+            "description": "Invalid code"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Disable two-factor",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disabled"
+          },
+          "400": {
+            "description": "Invalid code"
+          }
+        }
+      }
+    },
+    "/me/tokens": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "List your API tokens; secrets are never returned",
+        "responses": {
+          "200": {
+            "description": "Tokens"
+          }
+        },
+        "description": "`createdAt`, `expiresAt` and `lastUsedAt` are RFC 3339 moments, not dates. They used to be days, which is the wrong answer for the field somebody reads when they think a token has been taken: a token used at three in the morning read exactly like one used at three in the afternoon, and one used twice today read as used once. A use is written down at most once a minute, so `lastUsedAt` can be up to a minute behind the latest one."
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Issue an API token; the secret is shown once and cannot be recovered",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "expiresInDays": {
+                    "type": "integer",
+                    "description": "0 means the token does not expire on its own."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The token, including its `secret`, and what an app connects with: `connectUri`, which is `go-time-recording://connect?token=<the secret>&url=<this installation>` - the two values the terminal client reads as `GTR_TOKEN` and `GTR_URL`, the address being the one the request reached the installation at - and `qr`, that address as a QR code in an SVG data URI. All three exist only in this response."
+          },
+          "409": {
+            "description": "Token limit reached"
+          }
+        }
+      }
+    },
+    "/me/tokens/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke one of your own tokens",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revoked"
+          },
+          "404": {
+            "description": "Not one of your tokens"
+          }
+        }
+      }
+    },
+    "/timesheets": {
+      "get": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "List time entries",
+        "description": "Your own entries, one page at a time. `userId` may name you, which is a reasonable thing for a client to send; naming anybody else is refused rather than quietly answered with your own rows, because a list that does not match what was asked for is worse than a plain no - unless it names an account you look after as a manager: one an administrator assigned to you, while the installation has managers switched on (see /settings/managers), with `timesheets:read:team` in your role beside `timesheets:read:own`. The listing is then that account's. An entry booked or last changed by somebody other than its owner names them, as recordedBy and updatedBy {\"id\", \"name\"}; both are left out where the owner did it. A request naming no `limit` gets the default page rather than every entry you have ever booked, and `totalCount` is how many match altogether - so a page shorter than `totalCount` means there is another one. For the same reason a `limit` above the maximum is refused rather than reduced.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "You, or an account you look after with timesheets:read:team."
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Only the entries whose description contains this text, whatever its case. Matched as written: a percent sign or an underscore is a character, not a wildcard. On SQLite only ASCII letters are folded, so there `Ä` does not find `ä`. Longer than a description can be (2000 characters) is refused.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Entries per page. Default 100, maximum 500; above that the request is refused.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "How many matching entries to skip. Only meaningful with a stable order, which this listing has: newest day first, ties broken by id.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entries"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "Book time",
+        "description": "`projectId` is optional; omitting it records uncategorised hours. Omitting `userId` books for the caller. A manager may name an account they look after with `timesheets:write:team`, while the installation has managers switched on (see /settings/managers), and book it on one of that account's own projects; the entry then names them as recordedBy, which its owner sees beside it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimesheetInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "409": {
+            "description": "Daily limit exceeded, or the project no longer accepts entries"
+          }
+        }
+      }
+    },
+    "/timesheets/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "Read one entry",
+        "responses": {
+          "200": {
+            "description": "Entry"
+          }
+        },
+        "description": "Your own entry, or with `timesheets:read:team` one of an account you look after as a manager; any other answers 404, as an id nobody holds does."
+      },
+      "put": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "Update an entry",
+        "description": "Changes an entry of your own, or with `timesheets:write:team` one of an account you look after as a manager, which then names you as updatedBy. Anybody else’s answers 404, exactly as an id nobody holds does, so the answer does not say which ids are real - on every method, not only here. Naming in `userId` an account you may not book for, which would hand the entry over, is refused. A project given here goes through the same checks as booking onto it: it must exist, be one you may see, and still accept hours. Every field is optional: one left out or sent as null stays as it is - null does not remove anything here. A `projectId` of 0 takes the entry off its project, and an empty `description` empties it.",
+        "responses": {
+          "200": {
+            "description": "Updated"
+          },
+          "409": {
+            "description": "The day would go over its ceiling, or the project no longer accepts hours"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "Delete an entry",
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        },
+        "description": "Your own entry, or with `timesheets:write:team` one of an account you look after as a manager; any other answers 404."
+      }
+    },
+    "/timesheets/{id}/transfer": {
+      "post": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "Move an entry to another project",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Moved"
+          },
+          "409": {
+            "description": "The entry is already on that project, or the project is closed for booking"
+          }
+        },
+        "description": "Moves an entry of your own - or with `timesheets:write:team` one of an account you look after as a manager, which then names you as updatedBy - onto another project of its owner's. Any other entry, and a project that is not its owner's, answers 404. Needs `timesheets:transfer`."
+      }
+    },
+    "/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List projects",
+        "description": "Your own projects, which is all there are. There were two kinds - a shared project everybody could see and a private category - and a `private=true` parameter to narrow to the latter; every project belongs to one person now, so there is nothing to narrow. Each carries budgetHours - how many hours you mean to spend on it, null for none - and bookedHours, how many of your own are booked on it. Needs `projects:read`. `ownerId` names an account you look after as a manager, with any of the team rights, while the installation has managers switched on (see /settings/managers): the list is then that account's projects, which is where booking for it, reading its time and keeping its projects all start. Any other account is refused (onlyOwnProjects). Each also carries billable, hourlyRate - in whole units of currency, null for none - and currency, which are what its hours are charged at in GET /reports/statement.",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ownerId",
+            "in": "query",
+            "description": "An account you look after as a manager.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create a project",
+        "description": "The project belongs to whoever created it, always. There was a `private: true` to ask for that, and `projects:write:own` beside `projects:write` to decide which kind you were allowed to make; there is one kind, so neither is left. `startDate` is optional - a project is one person’s way of organising their own hours, not a plan. `budgetHours` is optional too: how many hours you mean to spend on it, between 0 and 100000, which nobody but you sees or signs off. Needs `projects:write`. `ownerId` names an account you look after with `projects:write:team`, while the installation has managers switched on (see /settings/managers): the project is then that account's. Any other account is refused (onlyOwnProjects). `billable`, `hourlyRate` and `currency` say what its hours are charged at, for GET /reports/statement: a rate in whole units of the currency, kept to the hundredth and between 0 and 100000, and a currency of three letters, EUR where left out.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      }
+    },
+    "/projects/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Read one project",
+        "responses": {
+          "200": {
+            "description": "Project"
+          },
+          "404": {
+            "description": "Unknown, or not yours - which answers the same way, so asking cannot tell you what colleagues have"
+          }
+        },
+        "description": "Your own project, or one of an account you look after as a manager; any other answers 404, as an id nobody holds does."
+      },
+      "put": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update a project",
+        "description": "Changes a project of your own, or with `projects:write:team` one of an account you look after as a manager; any other answers 404. Every field is optional: one left out or sent as null stays as it is - null does not remove anything here. An empty `endDate` takes the end date off, an empty `description` empties it, a `budgetHours` of 0 takes the budget off, an `hourlyRate` of 0 takes the rate off, and an empty `currency` is EUR again. A rate below 0 or above 100000 is refused (invalidFields hourlyRate), and a currency that is not three letters (invalidFields currency).",
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete a project",
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          },
+          "409": {
+            "description": "The project still has time entries"
+          }
+        },
+        "description": "Deletes a project of your own, or with `projects:write:team` one of an account you look after as a manager; any other answers 404. Needs `projects:delete`."
+      }
+    },
+    "/projects/{id}/archive": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Archive a completed project",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Archived"
+          },
+          "409": {
+            "description": "Not completed, or open entries remain"
+          }
+        },
+        "description": "Archives a completed project of your own, or with `projects:write:team` one of an account you look after as a manager; any other answers 404. Needs `projects:archive`."
+      }
+    },
+    "/projects/{id}/report": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Hours booked on a project",
+        "description": "Your own hours on the project, and nobody else’s. It used to be a breakdown per colleague, gated on a separate `reports:read` that no role held, so the screen was unreachable and would have shown what each colleague had booked. Needs `reports:read:own`. With `userId` a manager reads the report of an account they look after with `timesheets:read:team`, while the installation has managers switched on (see /settings/managers) - through that account's eyes: the project has to be the account's, and the hours are its own. Any other account is refused (onlyOwnEntriesRead).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "An account you look after with timesheets:read:team.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      }
+    },
+    "/reports": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Hours you booked, with or without a project",
+        "description": "Your own hours over a period. `projectId` chooses what it covers: leave it out for every project, send `none` for the hours that were never given one, or send an id for that project. The project-scoped report at `/projects/{id}/report` cannot express either of the first two, because an id has no spare value for \"all\" and \"none\" at once. Needs `reports:read:own`. `userId` names an account you look after as a manager with `timesheets:read:team`, while the installation has managers switched on (see /settings/managers): the total is then that account's, over its own projects. Any other account is refused (onlyOwnEntriesRead).",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "description": "A project id, `none` for the entries without a project, or omitted for all.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "An account you look after with timesheets:read:team.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report"
+          },
+          "400": {
+            "description": "Unreadable project selection, or a range that ends before it starts"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      }
+    },
+    "/users/{id}/overtime": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Overtime balance for one user",
+        "description": "Your own balance, which needs `reports:read:own`. Anyone else’s is refused (onlyOwnOvertime): a balance is their recorded time, totalled, and nobody reads that - except a manager holding `timesheets:read:team`, for an account an administrator assigned to them, while the installation has managers switched on (see /settings/managers). A manager is told that a day was away and never why: absence then reads \"away\", whatever was recorded. Which days count depends on everyDayCountsFrom (see /users/{id}/working-times). Without it, and before it, only days with bookings count, each measured against the week in force on it (see /me/schedules) - without a plan, the daily target from Monday to Friday and nothing at the weekend. From it on, every working day up to today counts, booked or not, and asks what its week plans less what a public holiday (see /me/holidays) or an absence (see /me/absences) takes off it: nothing on a holiday, a day of leave, a sick day or a local holiday, half on half a day of leave, the whole day on a day off against overtime. A day after today counts once something is booked on it. Each day says why it asks less where something does, as absence or holiday - with holidaySubstitute where it is a holiday kept on a weekday because it fell on a weekend - and the answer carries everyDayCountsFrom, null while only booked days count.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Balance"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List users",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create a user",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "409": {
+            "description": "Email already in use"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Read a user; your own account needs no permission",
+        "responses": {
+          "200": {
+            "description": "User"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update a user",
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete a user",
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          },
+          "409": {
+            "description": "The built-in administrator cannot be deleted"
+          }
+        }
+      }
+    },
+    "/users/{id}/role": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Assign a role",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assigned"
+          },
+          "409": {
+            "description": "The built-in administrator must keep a role that can administer"
+          }
+        }
+      }
+    },
+    "/users/{id}/password": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Reset an account password",
+        "description": "Gives an account a password chosen by whoever holds users:write, for letting somebody back in who has forgotten theirs. The account is flagged to replace it before it can use anything, and every session it has open ends. Refused for the caller’s own account, which is changed through /me/password with the current password, and for a directory account, whose password lives in the directory.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password"
+                ],
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset"
+          },
+          "400": {
+            "description": "The password is too short"
+          },
+          "409": {
+            "description": "Your own account, or one kept in the directory"
+          }
+        }
+      }
+    },
+    "/users/{id}/working-times": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Set your own daily target and daily maximum",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved"
+          },
+          "400": {
+            "description": "The target cannot exceed the maximum"
+          },
+          "403": {
+            "description": "Somebody else's account, or the right is not held"
+          }
+        },
+        "description": "Yours alone. Needs `settings:write:own`, and the id has to be your own: there is no wider permission that reaches somebody else’s, because a daily target is a time figure and everything to do with time belongs to the person it is about. An empty value, sent as 0, means \"follow the instance default\" under Settings. everyDayCountsFrom (YYYY-MM-DD) is the day from which every working day counts towards your balance, booked or not; absent leaves it alone, and an empty string takes it off again, so only booked days count, as they did before you chose one. The account that administers this installation cannot set these for anybody, which is deliberate - it cannot read the entries, the balance or the figures the numbers produce."
+      }
+    },
+    "/roles": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "List roles",
+        "responses": {
+          "200": {
+            "description": "Roles"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Create a role",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Unknown permission"
+          }
+        },
+        "description": "A role has to grant at least one permission: one that grants nothing can be assigned, and whoever holds it signs in to an interface with nothing on it."
+      }
+    },
+    "/roles/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Read a role",
+        "responses": {
+          "200": {
+            "description": "Role"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Update a role",
+        "responses": {
+          "200": {
+            "description": "Updated"
+          },
+          "409": {
+            "description": "System roles cannot be renamed or weakened"
+          }
+        },
+        "description": "A system role may be described differently and nothing else: not renamed, and its permissions not changed in either direction. That role belongs to the built-in administrator, which configures the installation and records no time — a right added here would hand it a working day from the screen that administers roles. Somebody who should both work here and administer is given the user-admin role instead."
+      },
+      "delete": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Delete a role",
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          },
+          "409": {
+            "description": "System role, or the role is still assigned"
+          }
+        }
+      }
+    },
+    "/permissions": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Every permission the application enforces",
+        "responses": {
+          "200": {
+            "description": "Permissions"
+          }
+        }
+      }
+    },
+    "/languages": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Supported interface languages",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Languages"
+          }
+        }
+      }
+    },
+    "/branding": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Instance title, logo and footer",
+        "security": [],
+        "description": "Public on purpose: the sign-in screen needs it before anyone is authenticated.",
+        "responses": {
+          "200": {
+            "description": "Branding"
+          }
+        }
+      }
+    },
+    "/settings/branding": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Save branding",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          },
+          "403": {
+            "description": "Built-in administrator only"
+          }
+        }
+      }
+    },
+    "/setup": {
+      "get": {
+        "tags": [
+          "setup"
+        ],
+        "summary": "What a fresh installation still has to settle",
+        "description": "Each step reports whether it is done, worked out from what is actually configured rather than from a record of the wizard having been shown - so a setting that is undone makes its step outstanding again. Two steps are required (the administrator password and the timezone); the rest are optional. Built-in administrator only, because a list of what is not yet configured is a useful thing for an attacker to read. Deliberately reachable while the initial password blocks the rest of the API.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/setup/complete": {
+      "post": {
+        "tags": [
+          "setup"
+        ],
+        "summary": "Dismiss the wizard",
+        "description": "Records that the wizard was dismissed, which settles the optional steps only. It reappears by itself while any required step is outstanding, so this cannot be used to run an installation without a timezone.",
+        "responses": {
+          "201": {
+            "description": "Dismissed"
+          }
+        }
+      }
+    },
+    "/setup/claim": {
+      "post": {
+        "tags": [
+          "setup"
+        ],
+        "summary": "Claim the session the installer earned",
+        "security": [],
+        "description": "Answered before anybody is signed in, and only on a process that actually served an installer. The browser holding that installer’s setup token is given a session for the built-in administrator, so the first screen after the installation is the one asking for a password rather than one asking for the documented initial password. Refused once a password has been chosen, and refused entirely on an installation configured without the installer.",
+        "parameters": [
+          {
+            "name": "X-Setup-Token",
+            "in": "header",
+            "required": true,
+            "description": "The token the installer printed to this process’s log.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A session cookie is set"
+          },
+          "401": {
+            "description": "The token does not match"
+          },
+          "409": {
+            "description": "No installer ran, or the installation has already been taken into use"
+          }
+        }
+      }
+    },
+    "/settings/operational": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read the operational limits",
+        "description": "Returns three things: the values an administrator has overridden, the values currently in force, and the values the configuration file supplies. An absent field under \"configured\" means that limit still follows the file.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Set the operational limits",
+        "description": "Send only the fields to override; omitting one makes it follow the configuration file again, and an empty object resets everything. Values are bounded on save, because this screen can otherwise lock out its own administrator. Takes effect within seconds, without a restart. Administrator only.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/settings/holidays": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "The installation's public holidays",
+        "description": "Answers {\"place\": \"DE-BY\", \"countries\": [...], \"region\": \"BY\", \"regions\": [\"BW\", ...]}: the place whose public holidays everybody keeps who has not chosen their own (see /me/holidays for places and countries), \"none\" where the installation chose to keep none, or empty while nobody has chosen - and both of those keep none. region and regions say the same as they were written before there were countries, when the installation said none by being empty. For whoever administers the installation.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Choose the installation's public holidays",
+        "description": "Body: {\"place\": \"DE-BY\"} - a place (see /me/holidays), \"none\", or empty. Refused as PUT /me/holidays refuses, and region read where place is absent as it is there.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/settings/timezone": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read the instance-wide timezone",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Set the instance-wide timezone",
+        "description": "Decides which calendar day a booking falls on for every user who has not set their own. Administrator only.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/settings/datasource": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read the stored database connection; the password is never returned",
+        "responses": {
+          "200": {
+            "description": "Connection"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Save the database connection; applied on the next restart",
+        "description": "An empty password keeps the one in force, and only for the same type, host, port and user: a connection naming another server or user is sent no password it was not given.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/settings/telemetry": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read the logging, metrics and tracing settings",
+        "description": "Returns what has been administered under \"configured\" and what this process is actually writing, serving and exporting under \"active\". The two disagree until the next restart. An absent field under \"configured\" follows the configuration file; \"traceExporter\": \"\" is an administered off, which is a different thing. Administrator only.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Set the logging, metrics and tracing settings; applied on the next restart",
+        "description": "Send only the fields to administer; an empty object makes everything follow the configuration file again. \"logLevel\" is DEBUG, INFO, NOTICE, WARN, ERROR or FATAL. \"traceExporter\" is \"otlp\", \"jaeger\" or \"\" for off, and needs \"tracerUrl\" as host:port when it names an exporter, with https:// in front to encrypt the export or http:// or nothing for plaintext - another scheme or a path is refused, because the exporter speaks OTLP over gRPC. \"metricsOff\": true stops the metrics endpoint being served; the port itself stays in the configuration file, because GoFr refuses to start when something already holds it. The log level takes effect on the next line written; the rest is applied when the application is restarted, because GoFr binds the port and builds the exporter while starting up. Administrator only.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/settings/datasource/test": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Probe a database connection without saving or switching to it",
+        "description": "An empty password keeps the one in force, and only for the same type, host, port and user: a connection naming another server or user is sent no password it was not given.",
+        "responses": {
+          "201": {
+            "description": "Result; the `ok` field tells success from failure"
+          }
+        }
+      }
+    },
+    "/settings/ldap": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read the LDAP configuration; the bind password is never returned",
+        "responses": {
+          "200": {
+            "description": "Configuration"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Save the LDAP configuration; takes effect immediately",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/settings/openid": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "The provider people sign in through",
+        "description": "Answers {\"enabled\", \"issuer\", \"clientId\", \"label\", \"hasSecret\", \"redirectUri\"}. The client secret is never sent back; hasSecret says whether one is stored. redirectUri is the address to register at the provider: this installation as the browser asking reached it, followed by /sign-in/openid.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Configure the provider people sign in through",
+        "description": "Body: {\"enabled\", \"issuer\", \"clientId\", \"clientSecret\", \"label\"}. An empty clientSecret keeps the stored one. The issuer is the provider's address exactly as its tokens name it - Keycloak's realm address, an Entra ID tenant's v2.0 address, https://accounts.google.com - and has to be reached over HTTPS unless it is on this machine (openidNeedsHttps). The secret is sealed with SECRET_KEY where it is stored. Applies from the next sign-in.",
+        "responses": {
+          "200": {
+            "description": "The stored provider, as GET answers"
+          }
+        }
+      }
+    },
+    "/settings/openid/test": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read a provider's discovery document without saving anything",
+        "description": "Body: {\"issuer\": \"...\"}. Answers {\"ok\": true}, or {\"ok\": false, \"error\": {\"code\", \"message\", \"detail\"}} with what the provider said in detail.",
+        "responses": {
+          "201": {
+            "description": "Result; the `ok` field tells success from failure"
+          }
+        }
+      }
+    },
+    "/settings/ldap/test": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Probe an LDAP connection without saving it",
+        "responses": {
+          "201": {
+            "description": "Result; the `ok` field tells success from failure"
+          }
+        }
+      }
+    },
+    "/me/timer": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Is a clock running, and since when",
+        "description": "Answers {\"running\": false} when nothing is going. While one runs it carries startedAt, so a client can count up on its own rather than polling, and elapsedHours, which is what the entry would record - a browser with a wrong clock then shows a slightly wrong number and still books the right one.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Start the clock",
+        "description": "Body is optional: {\"projectId\": 3, \"description\": \"...\"}, both of which may be left out and settled later. Starting again replaces a clock already running - somebody who does that has changed their mind about what they are doing, and refusing would leave them to stop a clock measuring the wrong thing. To book the running clock first and carry on with something else, use /me/timer/switch. Always the caller's own clock; there is no route for anybody else's.",
+        "responses": {
+          "200": {
+            "description": "Running"
+          },
+          "201": {
+            "description": "Running"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Correct when the running clock started",
+        "description": "Body: {\"startedAt\": \"2026-10-19T08:52:00Z\"} for a moment with its offset, or {\"startedAt\": \"2026-10-19T08:52\"} for a time on the wall clock, which is read in the caller's own timezone. For somebody who started work before pressing the button. Earlier or later, but never after now (timerStartInFuture). A start more than a day back makes a clock that can only be stopped with an end time, like any forgotten one; moving it across midnight moves the day the entry will land on. Refused with noTimerRunning when nothing runs.",
+        "responses": {
+          "200": {
+            "description": "The clock with its corrected start"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Discard the clock, recording nothing",
+        "description": "The way out of a clock nobody meant to start.",
+        "responses": {
+          "204": {
+            "description": "Discarded"
+          }
+        }
+      }
+    },
+    "/me/timer/stop": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Stop the clock and book what it measured",
+        "description": "Creates an ordinary time entry through the same service a typed booking goes through, so it meets the same rules: the daily cap, the project having to exist, be active and be visible, the description length. The duration is the measured one, to the second and rounded to nothing. The entry lands on the day the clock was *started*, in the caller's own timezone - somebody who starts at half past eleven at night and stops after midnight worked that evening.\n\nBody is optional. Without one the clock is stopped now. {\"endedAt\": \"2026-10-19T17:30\"} books it up to the time the work ended instead - for the clock somebody forgot - read like startedAt on PUT /me/timer: with its offset as given, without one in the caller's timezone. The end may not lie in the future (timerEndInFuture) or before the start (timerEndBeforeStart).\n\nRefused when what was measured is less than the smallest bookable duration (discard it instead) or more than one entry can hold (timerTooLong, with the hours measured); a forgotten clock is booked by saying when the work ended. A refusal leaves the clock running, so the time is not lost to it.",
+        "responses": {
+          "200": {
+            "description": "The entry that was created"
+          },
+          "201": {
+            "description": "The entry that was created"
+          }
+        }
+      }
+    },
+    "/me/timer/switch": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Book the running clock and carry on with something else",
+        "description": "Body as when starting: {\"projectId\": 4, \"description\": \"...\"}, both optional. Books what the running clock measured up to now, exactly as a stop would, and starts the next clock at that same second, so the two entries meet without a gap. Checked before anything is written: the next project is held to the rules a start is, and a booking that would be refused leaves the running clock as it was and starts nothing. Answers {\"booked\": <the entry>, \"timer\": <the clock now running>}. Refused with noTimerRunning when nothing runs.",
+        "responses": {
+          "200": {
+            "description": "The entry booked and the clock now running"
+          },
+          "201": {
+            "description": "The entry booked and the clock now running"
+          }
+        }
+      }
+    },
+    "/me/schedules": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Your planned weeks",
+        "description": "Answers {\"items\": [{\"validFrom\": \"2026-10-19\", \"hours\": [8, 8, 8, 8, 6, 0, 0]}], \"before\": [8, 8, 8, 8, 8, 0, 0]}. Each item is a week, Monday first, in force from its day until the next item's; items are earliest first. `before` is the week for the days before the first plan, and for everybody who has none: the daily target from Monday to Friday and nothing at the weekend. The overtime balance measures each booked day against the week in force on it, so a day the week leaves free counts every hour booked on it as overtime.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Plan a week from a day on",
+        "description": "Body: {\"validFrom\": \"2026-10-19\", \"hours\": [8, 8, 8, 8, 6, 0, 0]} - exactly seven figures, Monday first. Replaces a plan starting on the same day; the days before keep the plan that was in force then, so going part time does not rewrite last month. Each figure is between 0 and 24, and none may exceed your own daily maximum (targetOverMaximum).",
+        "responses": {
+          "200": {
+            "description": "The planned week"
+          },
+          "201": {
+            "description": "The planned week"
+          }
+        }
+      }
+    },
+    "/me/schedules/{validFrom}": {
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Take back the plan that starts on a day",
+        "description": "Its days go back to the plan before it, or to the daily target where there is none. A day no plan starts on answers 404.",
+        "parameters": [
+          {
+            "name": "validFrom",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removed"
+          }
+        }
+      }
+    },
+    "/me/templates": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Your templates",
+        "description": "Answers {\"items\": [{\"id\": 3, \"projectId\": 7, \"durationHours\": 0.25, \"description\": \"Daily\"}], \"totalCount\": 1}, in the order they were saved. Each part is null where the template fills nothing in. A template only fills the booking form - nothing is ever booked from one on its own - so it needs the right to book your own time, and its project is asked about again when the booking is made: one that has closed since is refused there, as any booking on it is.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Keep a booking you make often as a template",
+        "description": "Body: {\"projectId\": 7, \"durationHours\": 0.25, \"description\": \"Daily\"} - any of the three, at least one (templateEmpty). Held to what a booking is held to: hours between 0.01 and 24, a description no longer than one, and a project you can book on (projectClosedForBooking; one you cannot see answers 404). Saving one that fills the form exactly like a template you already have answers with that one rather than keeping a second. At most 50 per person (tooManyTemplates).",
+        "responses": {
+          "200": {
+            "description": "The template"
+          },
+          "201": {
+            "description": "The template"
+          }
+        }
+      }
+    },
+    "/me/templates/{id}": {
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Delete one of your templates",
+        "description": "Somebody else's template answers 404, the same as one that does not exist.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/me/absences": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "The days you are away",
+        "description": "Answers {\"items\": [{\"day\": \"2026-10-14\", \"kind\": \"halfVacation\"}], \"totalCount\": 1}, earliest first. Range as ?from=YYYY-MM-DD&to=YYYY-MM-DD; the default is the calendar year today falls in, in your own timezone. At most 371 days (rangeTooLong). A kind is one of vacation, halfVacation, sick, flexDay (a day off taken from the overtime balance, which keeps what the day asks) and localHoliday (a holiday where you work that your state or country does not keep as a whole).",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Record the working days of a range as away",
+        "description": "Body: {\"from\": \"2026-10-12\", \"to\": \"2026-10-23\", \"kind\": \"vacation\"}. Only the days your planned week asks something of are recorded - a fortnight of leave is its ten working days - and a day already recorded takes the new kind. A range with no working day in it is refused (noWorkingDays). Answers with the days recorded, in the shape GET answers.",
+        "responses": {
+          "200": {
+            "description": "The days recorded"
+          },
+          "201": {
+            "description": "The days recorded"
+          }
+        }
+      }
+    },
+    "/me/absences/{day}": {
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Take back the absence on a day",
+        "description": "A day with no absence recorded answers 404.",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/me/vacation": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "A year of your leave",
+        "description": "Answers {\"year\": 2026, \"entitlement\": 30, \"carriedOver\": 2, \"taken\": 18.5, \"planned\": 4, \"remaining\": 9.5, \"entitlements\": [{\"fromYear\": 2025, \"days\": 30}]}. ?year=YYYY, by default the year today falls in, in your own timezone. entitlement is what the year gives: the latest entitlement from that year or before. carriedOver is what the year before left - more than it gave where leave was not taken, less than nothing where it was overdrawn - back to the first year an entitlement was recorded for, before which there is no account. A day of leave (see /me/absences) uses a day and half a day of it a half, counted only on a day that is worked: one the week planned for it asks something of, and no public holiday. taken is leave up to today, planned is leave after it, and remaining is what is left once everything planned is taken.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Give yourself days of leave a year from a year on",
+        "description": "Body: {\"fromYear\": 2026, \"days\": 30} - between 0 and 366 days, in force from that year until the next entitlement's. Replaces an entitlement from the same year; the years before keep what they gave, so what they carried stays what it was. Answers with the account of fromYear, in the shape GET answers.",
+        "responses": {
+          "200": {
+            "description": "The year's account"
+          }
+        }
+      }
+    },
+    "/me/vacation/{fromYear}": {
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Take back an entitlement",
+        "description": "Its years go back to the entitlement before it, or to none. A year no entitlement starts in answers 404.",
+        "parameters": [
+          {
+            "name": "fromYear",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/me/openid": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Your link to an identity at the provider",
+        "description": "Answers {\"linked\": true, \"issuer\": \"https://id.example.com\", \"linkedAt\": \"2026-10-20T09:30:00Z\"}, or {\"linked\": false}.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Start linking your account to your identity at the provider",
+        "description": "No body. Answers as POST /auth/openid does; the round, finished by the same browser in the same session, links this account to whoever signs in at the provider. From then on that identity signs this account in without its password and without its second factor - the provider asks its own. Refused for the built-in administrator and for an account the directory holds, and for an identity already linked to another account (openidLinkedElsewhere).",
+        "responses": {
+          "201": {
+            "description": "Where to send the browser"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Unlink your account from the provider",
+        "description": "The provider signs this account in no more. 404 when it is linked to nothing.",
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/timesheets/{id}/revisions": {
+      "get": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "What an entry said before each correction",
+        "description": "Answers {\"items\": [{\"date\", \"durationHours\", \"projectId\", \"description\", \"replacedAt\", \"replacedBy\"}], \"totalCount\"}, the most recently replaced version first. Every correction that changes the day, the hours, the project or the description keeps the version it replaced - through the form, a transfer to another project, the week grid or a whole selection at once; a save that changes none of them keeps nothing. The entry's owner's, and a manager's with `timesheets:read:team` for an account they look after: anybody else is answered 404, as about the entry itself. replacedBy {\"id\", \"name\"} names whoever made the correction that replaced a version, where that was not the owner, and is left out where it was. Deleting the entry deletes its history with it. projectId names the project as it was, which may since have been deleted.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "No such entry of yours"
+          }
+        }
+      }
+    },
+    "/me/export": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Everything held about your own account, as a ZIP",
+        "description": "Answers application/zip: a JSON file per part - account, stopwatch, entry-history, time-entries, projects, api-tokens, passkeys, sessions, planned-weeks, entry-templates, absences, leave-entitlements, calendar-subscription, openid-links, working-times - each an array of rows with the columns as they are stored, and about.json saying what the archive is and what it leaves out. It holds exactly what erasing the account would delete. Left out are the password's hash, the second factor's seed, the hashes of personal tokens, sessions and the calendar address, and a passkey's key material: what is handed over about those is that they exist, when they were made and when they were last used. Open to anybody signed in, the built-in administrator included, and only ever about their own account (GDPR articles 15 and 20). Without authentication there is no account to export (noAuthNoAccount).",
+        "responses": {
+          "200": {
+            "description": "The archive"
+          }
+        }
+      }
+    },
+    "/me/notices": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "What about your own time deserves a banner",
+        "description": "Answers {\"balance\": {\"hours\": 43.5, \"since\": \"2026-01-05\", \"upperBound\": 40, \"lowerBound\": null, \"outside\": \"above\"}, \"unbookedDay\": \"2026-10-20\"}. unbookedDay is the last day before today you were expected to work - your week plans hours for it, it is no public holiday where you work, and you were not away, half a day of leave apart - when nothing is booked on it; it is left out when that day was booked, when it lies before your balance begins, and when you switched the reminder off with PUT /me/reminders. Only that one day, looked for up to two weeks back: an earlier gap is the business of the day it was. It needs timesheets:read:own. balance is your running balance - from the first day that counts, which is the first day you booked on or the day every working day counts from where that is earlier, up to today in your own timezone - beside the bounds you set, and outside is \"above\" or \"below\" while it lies past one of them and empty otherwise; standing exactly on a bound is inside it. since is null while nothing counts yet. The part is left out for an account without reports:read:own, which is answered with an empty object rather than refused: the interface asks on every load.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/me/balance-limits": {
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Set the bounds you keep your running balance within",
+        "description": "Takes {\"upperBound\": 40, \"lowerBound\": -20} in hours, both at once: null, or a bound left out, is none. An upper bound lies at zero or above and a lower one at zero or below, neither further out than 10000 hours (invalidFields upperBound or lowerBound), because a bound on the wrong side of zero would put every balance outside it from the first day. Answers what GET /me/notices answers. Needs settings:write:own, like the rest of your own figures.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          }
+        }
+      }
+    },
+    "/me/workdays": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "When you worked, a day at a time",
+        "description": "Answers {\"from\", \"to\", \"days\": [{\"date\": \"2026-10-19\", \"recorded\": true, \"start\": \"08:00\", \"end\": \"16:30\", \"breakMinutes\": 30, \"workedHours\": 8, \"bookedHours\": 7.5, \"notices\": []}], \"totalWorked\", \"totalBooked\"}. Every day of the range you recorded or booked on, earliest first: a day only booked on comes with recorded false and no times, so a record with a day missing shows which. workedHours is the time between start and end less the breaks; bookedHours what you booked on projects that day, which says what the time went on where this says when it was spent. notices is what the Working Hours Act (Arbeitszeitgesetz) says about the shift that began that day, an empty list when it says nothing: {\"rule\": \"longDay\", \"minutes\"} for more than ten hours worked (section 3, minutes worked), \"shortBreak\" for breaks shorter than the hours call for (section 4, minutes the break should have been: 30 past six hours, 45 past nine) and \"shortRest\" for fewer than eleven hours since the shift before (section 5, minutes of rest). A night recorded as the two days it falls on counts as one shift. They are notices and never refusals: the act has exceptions this application cannot know about. Range as ?from=YYYY-MM-DD&to=YYYY-MM-DD, by default the month today falls in, in your own timezone; at most 371 days (rangeTooLong). Your own and nobody else's: there is no view of anybody's working time but their own.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/me/workdays/{date}": {
+      "put": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Record when you worked on a day",
+        "description": "Body: {\"start\": \"08:00\", \"end\": \"16:30\", \"breakMinutes\": 30} - times as the clock showed them, \"24:00\" for a day that ends at midnight. The start comes before the end within the day (a night past midnight is the two days it falls on), and the breaks are shorter than the time between. Replaces what the day had.",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recorded"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Take back what you recorded for a day",
+        "description": "404 when nothing was recorded for it. The hours booked on it stay as they are.",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/me/address": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "This installation's address, and the same as a QR code",
+        "description": "Answers {\"address\": \"https://time.example.com\", \"qr\": \"data:image/svg+xml;base64,...\"}. `?origin=` names the address the asking page is at, its location.origin, and is taken where it names the host the request reached, with http or https; otherwise the address is this installation as the request reached it. The code is what the card offering to install the page shows, for opening the installation on a phone without typing its address. Needs nothing beyond being signed in.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
+    "/me/calendar-feed": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Your calendar feed, without its key",
+        "description": "Answers {\"active\": true, \"prefix\": \"gtrcal_AbC123\", \"createdAt\": \"2026-10-20T09:30:00Z\", \"lastReadAt\": \"2026-10-20T10:00:00Z\"}, or {\"active\": false} without one. prefix is the start of the key, to recognise which address your calendar was given; lastReadAt says whether anything is reading it. Needs the right to read your own entries, which is what the feed hands out.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Make a calendar feed, in place of the one you had",
+        "description": "No body. Answers as GET does, with path added: the address the feed is read at, key included, relative to this installation - the only time the key is ever shown, because only a hash of it is kept. The address you had before reads nothing from this moment on, which is how a key somebody has seen is taken back.",
+        "responses": {
+          "201": {
+            "description": "The new feed, with its address: `path`, relative to this installation, and `qr`, the whole address - the page's own origin and the path - as a QR code in an SVG data URI, for a phone to scan. Both carry the feed's key and exist only in this response."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Take your calendar feed back",
+        "description": "Its address reads nothing from then on. Asks for nothing beyond being signed in. Answers 404 when there is no feed.",
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/calendar-feed/{key}": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Read a calendar feed",
+        "description": "What a calendar program subscribes to - Outlook, Google, a telephone - with nothing but this address: no session and no token, the key in the path, with or without .ics after it. An iCalendar (RFC 5545) of whole days in the year either side of today, in the owner's language: every day they booked on, saying how many hours, with each entry written under it - its hours, its project unless it is one the owner cannot see, and its description - and every day they recorded themselves away, saying why. Every event is transparent, so booked hours never make anybody look busy. The key opens no more than its owner could read on their own screen: not when their role stops letting them read their own entries, nor while their password waits to be chosen. A key that opens nothing answers 404, whatever the reason. The key is hidden in the process log, under which the reading is still written.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The calendar",
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A key that opens nothing"
+          }
+        }
+      }
+    },
+    "/me/days": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Every day of a range: what was booked and what it asked",
+        "description": "Answers {\"from\", \"to\", \"days\": [{\"date\": \"2026-10-19\", \"booked\": 6.5, \"target\": 8, \"absence\": \"sick\", \"holiday\": \"whitMonday\"}], \"totalBooked\", \"totalTarget\"} - absence only on a day one is recorded (see /me/absences), holiday only on a public holiday of the place you keep (see /me/holidays), with holidaySubstitute true on a weekday a country keeps one on because it fell on a weekend - Christmas 2027 in Britain, on the 27th. counts says whether the day counts towards the overtime balance, by the rule the balance keeps, so a week drawn from these comes to its figure. Every day of the range is there, the ones with nothing booked included - unlike the overtime balance, which counts only the days somebody worked. What a day asks is the week in force on it (see /me/schedules). Range as ?from=YYYY-MM-DD&to=YYYY-MM-DD; the default is the week, Monday to Sunday, that today falls in, in your own timezone. At most 371 days (rangeTooLong), which is a year drawn as whole weeks. With ?userId= a manager reads the days of an account they look after with `timesheets:read:team`, while the installation has managers switched on (see /settings/managers), in that account's timezone - and absence then reads \"away\", whatever was recorded: why somebody was away, a day off sick above all, is theirs to tell. Any other account is refused (onlyOwnEntriesRead).",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "An account you look after with timesheets:read:team.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/me/weeks/copy": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Book one of your weeks like another",
+        "description": "Body: {\"from\": \"2026-10-12\", \"to\": \"2026-10-19\"} - two Mondays, the week to copy and the week to copy it into. Each entry of the first is booked on the same weekday of the second, with its project, hours and description, but only on days of the second week that have nothing booked yet: a day you have booked is left as it is. An entry whose project no longer takes bookings is left out. Everything else is held to the rules a booking is - the floor, the description, the daily maximum counting what the copy itself puts on a day - and written all at once or not at all. Answers {\"copied\": 9, \"hours\": 38.5, \"kept\": 1, \"closed\": 2}: the entries written and their hours, the days left as they were, and the entries left out. A first week with nothing in it is refused (nothingToCopy).",
+        "responses": {
+          "200": {
+            "description": "What the copy did"
+          },
+          "201": {
+            "description": "What the copy did"
+          }
+        }
+      }
+    },
+    "/me/statistics": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "What your own recorded time adds up to",
+        "description": "Totals the caller's own entries: per day, per project and per activity, with the overall total. Range as ?from=YYYY-MM-DD&to=YYYY-MM-DD, inclusive at both ends; the default is the first of the current month to today, worked out in the caller's own timezone.\n\nDeliberately not the project report. That one is keyed on a project id, so it cannot express \"every project\" or \"no project\"; this one is keyed on the caller and needs only timesheets:read:own. Neither answers with anybody's hours but the caller's.\n\nTwo details a chart depends on. Every day in the range is present, including the ones with nothing on them: a chart drawn only from the days that have entries shows a full week where there were two working days. And the entries with no project are their own row with projectId null, because \"not categorised\" is an answer worth seeing the size of rather than a gap. The activities the descriptions name with a # - #meeting, #review - are totalled as tags, [{\"tag\": \"meeting\", \"hours\": 3.5}], most hours first, beside untaggedHours for what names none. An entry naming two counts towards both, so the tags can add up to more than the total. A tag starts where a word does and runs over letters, digits, - and _; one of digits alone, #123, is a ticket number and not an activity. \n\nWith ?userId= a manager reads the same for an account they look after with `timesheets:read:team`, while the installation has managers switched on (see /settings/managers): over that account's projects and in its timezone. Any other account is refused (onlyOwnEntriesRead).",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "An account you look after with timesheets:read:team.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/exports/document": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Export an evaluation as PDF",
+        "description": "Lays out what an evaluation screen is showing and hands it back as a PDF: the report, the statistics, or an overtime calculation. Everything in the document arrives in the request, including the chart, which is drawn in the browser and sent as a PNG data URI - the chart in the file is the chart that was on the screen, in whichever of bars, columns or pie was chosen. Nothing is looked up, so this needs a session and no permission beyond it: there is no data here to be allowed or refused.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A PDF document",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The document is missing a title, or is larger than one document may be"
+          },
+          "401": {
+            "description": "No session"
+          }
+        }
+      }
+    },
+    "/timesheets/export": {
+      "get": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "Export time entries as .xlsx",
+        "description": "Takes the same filters as the list - projectId, from, to and q - with the same scoping: whoever may read only their own entries exports their own, whatever they ask for. A manager may name an account they look after in userId, and exports what the list would show them.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An .xlsx workbook",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/timesheets/import": {
+      "post": {
+        "tags": [
+          "timesheets"
+        ],
+        "summary": "Import time entries from .xlsx",
+        "description": "Creates entries; it never changes or replaces existing ones. Every row goes through the same validation, daily ceiling and project visibility as a single booking. Every row is reported either way: the ones that would be written and the ones that cannot, with the reason. Nothing is written while any row is refused - a file half imported leaves somebody looking for which half.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The .xlsx workbook to read."
+                  },
+                  "dryRun": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ],
+                    "description": "`true` previews without writing anything. Send the file twice - once to look, once to write - rather than relying on a plan held between requests."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the file would do, or what it did"
+          },
+          "201": {
+            "description": "What the file would do, or what it did"
+          },
+          "400": {
+            "description": "Not a readable workbook of this kind"
+          },
+          "409": {
+            "description": "Some rows cannot be written, so nothing was"
+          }
+        }
+      }
+    },
+    "/projects/export": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Export projects as .xlsx",
+        "description": "Your own projects, the same scoping as the list, so an export can never show more than the screen.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An .xlsx workbook",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/import": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Import projects from .xlsx",
+        "description": "Rows are matched by name: a name that exists is updated, a new one is created, so importing the same file twice changes nothing the second time. Every row becomes a project of the importer’s own, which no colleague can see - there was a Category column and a shared kind, and neither remains. An empty cell leaves that value as it is. The status is only written where it differs, so re-importing an export holding an archived project does not walk into the rule that archiving is only allowed from `completed`; asking for a status change the rule forbids is refused in the preview. Every row is reported either way: the ones that would be written and the ones that cannot, with the reason. Nothing is written while any row is refused - a file half imported leaves somebody looking for which half.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The .xlsx workbook to read."
+                  },
+                  "dryRun": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ],
+                    "description": "`true` previews without writing anything. Send the file twice - once to look, once to write - rather than relying on a plan held between requests."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the file would do, or what it did"
+          },
+          "201": {
+            "description": "What the file would do, or what it did"
+          },
+          "400": {
+            "description": "Not a readable workbook of this kind"
+          },
+          "409": {
+            "description": "Some rows cannot be written, so nothing was"
+          }
+        }
+      }
+    },
+    "/users/export": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Export accounts as .xlsx",
+        "description": "Needs `users:read`. No password is included, in either direction.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An .xlsx workbook",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/import": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Import account changes from .xlsx",
+        "description": "Changes existing accounts, matched on the email address, and does not create them: a new account needs a password, and a password in a spreadsheet is a password that gets mailed around. An empty cell leaves that setting as it is. Needs `users:write`. Every row is reported either way: the ones that would be written and the ones that cannot, with the reason. Nothing is written while any row is refused - a file half imported leaves somebody looking for which half.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The .xlsx workbook to read."
+                  },
+                  "dryRun": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ],
+                    "description": "`true` previews without writing anything. Send the file twice - once to look, once to write - rather than relying on a plan held between requests."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the file would do, or what it did"
+          },
+          "201": {
+            "description": "What the file would do, or what it did"
+          },
+          "400": {
+            "description": "Not a readable workbook of this kind"
+          },
+          "409": {
+            "description": "Some rows cannot be written, so nothing was"
+          }
+        }
+      }
+    },
+    "/roles/export": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Export roles as .xlsx, a column per permission",
+        "description": "Needs `roles:read`. Every permission the application enforces gets a column holding yes or no, rather than one cell listing them: a typo in a list is a right silently dropped, and nothing about it looks wrong until somebody cannot open a screen. The permission columns are not translated - a permission is an identifier, and the role editor shows it verbatim.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An .xlsx workbook",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/import": {
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "Import roles from .xlsx",
+        "description": "Creates and changes roles, matched on the name. Needs `roles:write`. A permission column is read by its heading rather than by position, so a file exported before a right existed still imports correctly; a heading naming a permission this application does not enforce is refused, because it means the file came from somewhere else. A system role may be described differently and nothing else - its permissions are what keeps the installation administrable. Every row is reported either way, and nothing is written while any row is refused.",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Language for the column headings and the values inside them, e.g. `de`. Unknown or absent means English. The importer reads a file in any of these languages whatever this was set to, because the heading row is skipped by position and translated values are recognised in every language."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The .xlsx workbook to read."
+                  },
+                  "dryRun": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ],
+                    "description": "`true` previews without writing anything. Send the file twice - once to look, once to write - rather than relying on a plan held between requests."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the file would do, or what it did"
+          },
+          "201": {
+            "description": "What the file would do, or what it did"
+          },
+          "400": {
+            "description": "Not a readable workbook of this kind, or a permission column naming a right this application does not enforce - that one answers `unknownPermissionColumn` with the offending heading, since the file itself reads perfectly well"
+          },
+          "409": {
+            "description": "Some rows cannot be written, so nothing was"
+          }
+        }
+      }
+    },
+    "/maintenance": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Whether the installation is in maintenance mode",
+        "security": [],
+        "description": "Public, like the branding and for the same reason: somebody opening the page during maintenance should read the notice on the sign-in screen rather than watch requests fail silently.",
+        "responses": {
+          "200": {
+            "description": "The maintenance state and its notice"
+          }
+        }
+      }
+    },
+    "/settings/maintenance": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Turn maintenance mode on or off",
+        "description": "While it is on, everything but signing in and the settings themselves is refused, so an administrator cannot lock themselves out of turning it off again.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Shown on the sign-in screen."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The state as it now stands"
+          }
+        }
+      }
+    },
+    "/settings/restart": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "What is waiting for a restart",
+        "description": "Lists the stored settings the running process does not match yet. `startedAt` changes when the process does, which is how a client can tell a restart it asked for actually happened.",
+        "responses": {
+          "200": {
+            "description": "Pending changes and the start time"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Restart the process",
+        "description": "Only where the platform can do it: the process replaces itself, which needs exec, so it is refused on Windows with a reason naming what to do instead. And only into a database that answers: the connection the next start opens - the stored one, or the environment's where none is stored - is probed first, the way the start probes it, because a start ends on one that does not answer and nothing would be left to put it right from. The refusal carries what the driver said as `detail`.",
+        "responses": {
+          "201": {
+            "description": "Restarting"
+          },
+          "400": {
+            "description": "The platform cannot restart in place (`restartUnsupported`)"
+          },
+          "409": {
+            "description": "The database the next start would open does not answer (`restartWouldNotStart`); nothing was restarted"
+          }
+        }
+      }
+    },
+    "/settings/ldap/sync/preview": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "What a directory synchronisation would do",
+        "description": "Changes nothing, so an administrator can see which accounts and how many recorded entries a run would remove before committing to it.",
+        "responses": {
+          "200": {
+            "description": "The report a run would produce"
+          }
+        }
+      }
+    },
+    "/settings/ldap/sync": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Synchronise accounts with the directory",
+        "description": "Matches on the directory-side identifier rather than the mail address, so a renamed mailbox is not read as a departure. `aborted` carries the reason a guard stopped the run, and `abortCode` with `abortValues` the same reason for a client to put in its reader's language, as with any refusal.",
+        "parameters": [
+          {
+            "name": "confirmed",
+            "in": "query",
+            "description": "The account ids a preview proposed and somebody confirmed, comma-separated; empty for a preview that proposed nobody. Given, the run deletes exactly these or changes nothing (`syncDiffersFromPreview`), because it asks the directory again and the answer may have moved. Absent, the run is unbound and held by the deletion limit alone, as a scheduled run is.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the run did"
+          }
+        }
+      }
+    },
+    "/settings/ldap/sync/runs": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "List what recent directory runs changed",
+        "description": "The latest runs that removed or added an account, newest first, at most twenty: when each ran, whether somebody confirmed it against a preview (the schedule and a script that sent no list did not), how many accounts it removed, how many time entries went with them, and how many accounts it added. Nothing about whom: the people a run removed are the people the purge erases, and the log names them for as long as it lasts. The built-in administrator's, as running one is.",
+        "responses": {
+          "200": {
+            "description": "The runs, in `items`"
+          }
+        }
+      }
+    },
+    "/admin/changes": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Who changed how the installation is run",
+        "description": "Answers {\"entries\": [{\"id\", \"at\", \"actor\": {\"id\", \"name\"}, \"action\": \"user.role\", \"target\": {\"id\", \"name\"}, \"detail\": \"user-admin\"}], \"more\"}, newest first, fifty at a time; ?before= the id of the oldest entry already shown reads the page before it. Every change that went through to an account (user.created, user.updated, user.deleted, user.role, user.password, users.imported), a role (role.created, role.updated, role.deleted, roles.imported), a setting (settings.maintenance with detail true or false, settings.branding, settings.ldap, settings.openid, settings.operational, settings.timezone, settings.holidays, settings.datasource, settings.telemetry) or the installation (directory.synchronised, installation.restart, installation.update, installation.setup) is recorded with the account that made it. Ids are kept and names read now: an account erased since has an empty name, and target is left out for a change to the installation as a whole. Needs settings:manage.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/admin/logs": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read the process log",
+        "description": "Behind the built-in administrator: the log carries email addresses, request paths and whatever a failing driver decided to print.",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Only lines newer than this sequence number."
+          },
+          {
+            "name": "levels",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated, e.g. `WARN,ERROR`. Absent means every level."
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case-insensitive substring of the message. A whole trace - the `traceId` of a record, which is also the `X-Correlation-ID` of the response to that request - finds the lines that request wrote."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "default": 300
+            },
+            "description": "How many lines at most; the newest are kept."
+          },
+          {
+            "name": "epoch",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "The `epoch` of the answer `since` was taken from. Sequence numbers start again with the process, so a position counted by a process that has since been replaced is answered from the beginning of the running one, with `restarted` set."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Log lines, the levels that exist, how many were dropped or passed over, and the `epoch` to send back with `since`"
+          }
+        }
+      }
+    },
+    "/settings/update": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "What version is running, and whether a newer one exists",
+        "description": "Answers on every deployment, and says which kind it is. `available` is the only field a button should key on: it means a newer version exists, it published a binary for this platform, this deployment is one where installing lasts, and it has not already been downloaded. `installable` is false in a container - a binary swapped inside one is undone by the next recreate, so the image is what gets updated there. `pending` names a version already on disk and waiting for a restart. A lookup that failed comes back as `problem` with a 200 rather than as an error: the release feed being unreachable is not this application being broken. Needs the rights the built-in administrator has, not merely settings:manage.",
+        "responses": {
+          "200": {
+            "description": "The running version and what is available"
+          },
+          "403": {
+            "description": "Not an administrator of this installation"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Download and install the newest release",
+        "description": "Downloads the release's binary for this platform, checks it against the SHA256SUMS published beside it, and puts it where this process's own file is. Nothing is written into place until the hash matches - this is code that will be executed as the application on the next start. It does not restart: replacing the file and replacing the process are separate acts, and Windows cannot do the second at all, so the answer says which case this is. Refused in a container and when the check is switched off.",
+        "responses": {
+          "200": {
+            "description": "In place; the answer says whether a restart is needed or possible"
+          },
+          "400": {
+            "description": "Already current, switched off, or running in a container"
+          },
+          "403": {
+            "description": "Not an administrator of this installation"
+          },
+          "500": {
+            "description": "The download or the checksum failed"
+          }
+        }
+      }
+    },
+    "/settings/update/check": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Ask the release feed now, rather than waiting out the cached answer",
+        "description": "The version card is built from an answer the application keeps for six hours, because the release feed allows an unauthenticated caller sixty requests an hour per address and every open card would otherwise spend them. That is right for a screen refreshing itself and wrong for the minute after somebody publishes a release, when the card states a version that was newest this morning. This asks the feed at once and answers with the same body as `GET /settings/update`, so the card can be drawn again from what comes back. It has a limit of its own - once every five minutes for the whole installation - and refuses with `updateCheckedRecently` and the seconds remaining, so the button cannot hand back the problem the cache prevents. A feed that will not answer is reported as `problem` with a 200, exactly as the GET does. Needs the rights the built-in administrator has, not merely settings:manage.",
+        "responses": {
+          "201": {
+            "description": "The running version and what is available, freshly asked"
+          },
+          "403": {
+            "description": "Not an administrator of this installation"
+          },
+          "409": {
+            "description": "Asked too recently, or the update check is switched off"
+          }
+        }
+      }
+    },
+    "/settings/managers": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Whether the installation has managers",
+        "description": "Answers {\"enabled\": false}. Shipped off. Needs `settings:manage`.",
+        "responses": {
+          "200": {
+            "description": "The switch"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Switch managers on or off",
+        "description": "Takes {\"enabled\": true}. While it is off, a team right reaches nobody and every assignment waits, kept: switching it on again restores what an administrator had set up rather than starting over. Only then does anybody see a colleague's time at all - and only an account an administrator assigned to them, whose owner is told so under GET /me/managers. Needs `settings:manage`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The switch as it now stands"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      }
+    },
+    "/users/{id}/managers": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Who looks after an account",
+        "description": "Answers {\"managerIds\": [4, 9]}: the accounts an administrator assigned to look after this one, as stored - whether or not managers are switched on, because it is what switching them on would reach. Needs `users:read`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The assignment"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Assign the managers who look after an account",
+        "description": "Takes {\"managerIds\": [4, 9]} and replaces whoever looked after the account; an empty list takes them all away. Each has to hold a role with a team right (notAManager), and nobody looks after their own account (selfManaged). Only an administrator assigns: a manager choosing whose time they see would be deciding what they are allowed to know. Needs `users:write`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "managerIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The assignment as it now stands"
+          },
+          "400": {
+            "description": "Somebody who cannot look after anybody, or the account itself"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "No such account"
+          }
+        }
+      }
+    },
+    "/me/team": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "The accounts you look after",
+        "description": "Answers {\"items\": [{\"id\": 7, \"name\": \"Ben\", \"rights\": [\"timesheets:read:team\", \"timesheets:write:team\", \"projects:write:team\"]}]}, ordered by name: the accounts an administrator assigned to you, with the team rights your role gives you over them. An empty list while the installation has no managers, or while your role holds no team right.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/me/managers": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Who may see your time",
+        "description": "Answers {\"items\": [{\"id\": 4, \"name\": \"Anna\", \"rights\": [\"timesheets:read:team\"]}]}, ordered by name: who an administrator assigned to look after you, and what each of them may do with your time by the team rights their role holds. An empty list while the installation has no managers, because nobody then can. Every account may ask, and the answer is never withheld.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/reports/statement": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "What your billable hours come to over a period",
+        "description": "A statement of work rather than an invoice: no number, no tax and no customer, which are rules about your books this application cannot know. Answers {\"from\", \"to\", \"lines\": [{\"projectId\", \"name\", \"hours\", \"currency\", \"hourlyRate\", \"amount\"}], \"totals\": [{\"currency\", \"hours\", \"amount\"}]} - a line for each of your billable projects with hours in the period, ordered by name, its rate and amount in whole units of its currency and null where it has no rate yet; and a total for each currency over the lines that have one, never one total across two currencies. An amount is the rate times the line's hours, rounded once to the hundredth. Hours on a project that is not billable, and hours on no project, are not in it. The period is the month so far in your own timezone unless from and to say otherwise (rangeInverted where to is before from). Needs `reports:read:own`; with `userId` a manager reads that of an account they look after with `timesheets:read:team`, and any other account is refused (onlyOwnEntriesRead).",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "First day of the period; the first of the month so far where left out.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Last day of the period; today where left out.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "An account you look after with timesheets:read:team.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The statement"
+          },
+          "400": {
+            "description": "A range that ends before it starts"
+          },
+          "403": {
+            "description": "Missing permission, or somebody else's"
+          }
+        }
+      }
+    },
+    "/reports/statement/export": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "The statement of work as a workbook",
+        "description": "The same statement as GET /reports/statement, as an .xlsx of one sheet: a row per line with the project, its hours, rate, currency and amount, and a total row for each currency under them. Rate and amount are numbers, and empty where there is no rate. The words - the sheet, the headings and the total rows - are in the language `lang` names, and in English where it names none.",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "First day of the period; the first of the month so far where left out.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Last day of the period; today where left out.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "An account you look after with timesheets:read:team.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language the sheet is written in.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workbook"
+          },
+          "403": {
+            "description": "Missing permission, or somebody else's"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A personal API token. Not subject to the CSRF check, since a browser never sends this header on its own."
+      },
+      "apiToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Token"
+      },
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "gtr_session",
+        "description": "A browser session. State-changing calls made with this must also echo the gtr_csrf cookie in the X-CSRF-Token header and come from this origin; calls authenticated by a personal API token are exempt. A call carrying `X-Background-Request: 1` is held to the session's lifetime and idle timeout like any other but is not counted as the session being used - the interface sends it on the checks it makes by itself, so that a screen left open is signed out by the idle timeout. Opening the event stream counts the same way."
+      },
+      "csrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "The value of the gtr_csrf cookie, echoed back. Required alongside sessionCookie on POST, PUT, PATCH and DELETE."
+      }
+    },
+    "schemas": {
+      "TimesheetInput": {
+        "type": "object",
+        "required": [
+          "date",
+          "durationHours"
+        ],
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "Defaults to the caller."
+          },
+          "projectId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional; omit for uncategorised hours."
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "durationHours": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 24
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ProjectInput": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ]
+          },
+          "budgetHours": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "How many hours you mean to spend on it; none where left out."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether its hours are charged to somebody: what GET /reports/statement lists."
+          },
+          "hourlyRate": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "What an hour is charged at, in whole units of the currency, kept to the hundredth."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "The ISO 4217 code the rate is in, three letters; EUR where left out or empty."
+          },
+          "ownerId": {
+            "type": "integer",
+            "description": "Whose project it becomes: you, or an account you look after with projects:write:team."
+          }
+        }
+      },
+      "DocumentTable": {
+        "type": "object",
+        "description": "A set of figures as the screen showed them.",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "numeric": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            },
+            "description": "Which columns are set flush right. The interface knows, because its own headings carry a class saying so."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "DocumentSection": {
+        "type": "object",
+        "description": "One heading, with a chart and a table under it. Both are optional: the statistics screen is two charts and no table, and overtime is neither.",
+        "properties": {
+          "heading": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "chart": {
+            "type": "string",
+            "description": "A PNG as a data URI, beginning `data:image/png;base64,`. Anything else is refused - a URL would be this server fetching whatever address a request named."
+          },
+          "table": {
+            "$ref": "#/components/schemas/DocumentTable"
+          }
+        }
+      },
+      "DocumentRequest": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string",
+            "description": "The period the evaluation covers, as the screen words it."
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentSection"
+            }
+          },
+          "summary": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The figures that stand on their own: a total, or the three numbers an overtime calculation comes to."
+          }
+        }
+      }
+    }
+  }
+}

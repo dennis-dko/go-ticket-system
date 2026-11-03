@@ -81,7 +81,7 @@ a figure or set a daily target, its own included.
 
 Backups used to be in that list and are not a thing this application does: there is
 no permission for them, no endpoint and no screen. They are external, and
-[`deploy/OPERATIONS.md`](../deploy/OPERATIONS.md) says what to copy for each dialect.
+[`deploy/OPERATION.md`](../deploy/OPERATION.md) says what to copy for each dialect.
 
 That is deliberate, and the reason is the account itself. Every installation has the
 built-in administrator before anybody has chosen anything: it is how you get in, not
@@ -335,7 +335,7 @@ names it in `KERBEROS_KEYTAB`; the ticket's owner is then looked up in the
 directory configured here, and signed in to the same account the directory's
 password reaches — second factor included. The sign-in screen tries a ticket by
 itself and falls back to the form without one.
-[`deploy/OPERATIONS.md`](../deploy/OPERATIONS.md) says how to make the keytab and
+[`deploy/OPERATION.md`](../deploy/OPERATION.md) says how to make the keytab and
 what the browsers need.
 
 ### Synchronisation
