@@ -6,6 +6,11 @@ import (
 	"os"
 	"os/signal"
 
+	// The time zone database, compiled in as the web binary's is. Windows has
+	// none for Go to find, so without it every zone but UTC is unknown there, and
+	// the stopwatch and the day were told in UTC instead of in the owner's zone.
+	_ "time/tzdata"
+
 	"github.com/dennis-dko/go-time-recording/internal/interface/cli"
 )
 

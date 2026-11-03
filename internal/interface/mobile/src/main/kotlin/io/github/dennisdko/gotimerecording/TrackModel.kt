@@ -122,6 +122,19 @@ class TrackModel(application: Application) : AndroidViewModel(application) {
 
     fun switchTo(project: Project?, description: String) = change { day, snapshot -> day.switchTo(project, description, snapshot.projects) }
 
+    /** languages are the languages the app speaks, English first, each by its own name. */
+    val languages: List<Pair<String, String>>
+        get() = (listOf("en") + dictionaries.spoken.sorted()).map { it to (dictionaries.words(it).lookup("language.name") ?: "English") }
+
+    /**
+     * save saves one of the account's settings to the route the browser saves it
+     * to, and reads the day again, which brings the setting back as the account
+     * now has it - a language from the moment it is chosen. [language] is the one
+     * just chosen, where it is one, so the line saying so is in it.
+     */
+    fun save(route: String, body: JSONObject, language: String? = null) =
+        change { day, _ -> day.save(route, body, language?.let { wordsFor(it) } ?: state.words) }
+
     fun book(hours: String, project: Project?, description: String, on: LocalDate) {
         val worked = try {
             state.words.parseHours(hours)

@@ -22,6 +22,15 @@ type answers struct {
 	hours       string
 	day         string
 	stop        bool
+
+	// setting is which of the account's settings the settings form changes, and
+	// the rest what it is changed to; see setting.go.
+	setting                           string
+	language, theme, zone             string
+	country, region                   string
+	unbookedDay                       bool
+	alertHours, upper, lower          string
+	targetHours, maxHours, countsFrom string
 }
 
 // formFor is the form for a change, writing into the screen's answers.
@@ -42,6 +51,8 @@ func (m screen) formFor(doing string) *huh.Form {
 		project := m.projectField(&a.project).
 			Description(l.text("track.form.switchNote", "What has run so far is booked on {0}.", running))
 		steps = []*huh.Group{huh.NewGroup(project), huh.NewGroup(m.describe(&a.description))}
+	case "settings":
+		steps = m.settingSteps(a)
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -65,7 +76,7 @@ func (m screen) formFor(doing string) *huh.Form {
 	// The screen's answer to whether the terminal is dark rather than the form's
 	// own: the terminal says so once, before any form is open, and is not asked
 	// again.
-	dark := m.dark
+	dark := m.darkness()
 
 	return huh.NewForm(steps...).
 		WithTheme(huh.ThemeFunc(func(bool) *huh.Styles { return formTheme(dark) })).
@@ -150,6 +161,10 @@ func (l language) keyHelp(keys *huh.KeyMap) {
 // request is the change an answered form asks for, as it will be sent; nil
 // where the answer was to change nothing.
 func (m screen) request() tea.Cmd {
+	if m.doing == "settings" {
+		return m.saveSetting()
+	}
+
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown
 
 	var picked *uint

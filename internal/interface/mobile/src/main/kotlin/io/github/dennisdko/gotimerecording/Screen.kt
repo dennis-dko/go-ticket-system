@@ -43,21 +43,31 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 
-/** App is the whole of what the app shows: the connect form until it is connected, and the day after. */
+/** App is the whole of what the app shows: the connect form until it is connected, the day after, and the settings when they are asked for. */
 @Composable
 fun App(model: TrackModel) {
+    // The appearance the account chose, and the phone's where it chose none -
+    // which is what the browser's automatic is on a phone.
+    val dark = when (model.state.snapshot?.account?.theme) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemInDarkTheme()
+    }
+
     // The mark's blue, and a lighter one where the background is dark, as the
     // web interface's accent does.
-    val colors = if (isSystemInDarkTheme()) darkColorScheme(primary = Color(0xFF8AB4FF)) else lightColorScheme(primary = Color(0xFF2F6FEB))
+    val colors = if (dark) darkColorScheme(primary = Color(0xFF8AB4FF)) else lightColorScheme(primary = Color(0xFF2F6FEB))
+    var settings by rememberSaveable { mutableStateOf(false) }
 
     MaterialTheme(colorScheme = colors) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             val state = model.state
 
-            if (state.connection == null || state.offered != null) {
-                ConnectScreen(state, model::connect, if (state.connection != null) model::decline else null)
-            } else {
-                DayScreen(state, model)
+            when {
+                state.connection == null || state.offered != null ->
+                    ConnectScreen(state, model::connect, if (state.connection != null) model::decline else null)
+                settings && state.snapshot != null -> SettingsScreen(state, model) { settings = false }
+                else -> DayScreen(state, model) { settings = true }
             }
         }
     }
@@ -123,18 +133,26 @@ private fun ConnectScreen(state: State, onConnect: (String, String) -> Unit, onC
 }
 
 @Composable
-private fun DayScreen(state: State, model: TrackModel) {
+private fun DayScreen(state: State, model: TrackModel, onSettings: () -> Unit) {
     val words = state.words
     val connection = state.connection ?: return
     val snapshot = state.snapshot
     var form by rememberSaveable { mutableStateOf("") }
 
     Page {
-        Text(snapshot?.name ?: connection.address, style = MaterialTheme.typography.titleLarge)
-        Text(connection.address, style = MaterialTheme.typography.bodySmall)
+        // Headed as the browser is, by what the installation calls itself, with
+        // who is signed in where under it.
+        val title = snapshot?.branding?.titleIn(words.code).orEmpty()
+        Text(title.ifEmpty { snapshot?.name ?: connection.address }, style = MaterialTheme.typography.titleLarge)
+        Text(listOfNotNull(snapshot?.name?.takeIf { title.isNotEmpty() }, connection.address).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+
+        snapshot?.branding?.bannerIn(words.code)?.takeIf { it.isNotEmpty() }?.let { banner ->
+            Card(Modifier.fillMaxWidth()) { Text(banner, modifier = Modifier.padding(16.dp)) }
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = model::refresh, enabled = state.busy == null) { Text(words.text("action.reload", "Reload")) }
+            OutlinedButton(onClick = onSettings, enabled = snapshot != null) { Text(words.text("track.menu.settings", "Settings")) }
             OutlinedButton(onClick = { form = "disconnect" }) { Text(words.text("mobile.disconnect", "Disconnect")) }
         }
 
@@ -158,6 +176,7 @@ private fun DayScreen(state: State, model: TrackModel) {
         Waiting(state)
 
         if (snapshot != null) {
+            Notices(state, snapshot)
             Clock(state, snapshot, onStart = { form = "start" }, onStop = { form = "stop" }, onSwitch = { form = "switch" })
             Today(words, snapshot, onBook = { form = "book" })
         }
@@ -210,7 +229,7 @@ private fun DayScreen(state: State, model: TrackModel) {
 
 /** Page is a screen's column: scrolled, and clear of the system's bars and the keyboard. */
 @Composable
-private fun Page(content: @Composable () -> Unit) {
+internal fun Page(content: @Composable () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -219,7 +238,7 @@ private fun Page(content: @Composable () -> Unit) {
 
 /** Waiting says what the app is waiting for, and what the last change did or why it was refused. */
 @Composable
-private fun Waiting(state: State) {
+internal fun Waiting(state: State) {
     state.busy?.let {
         LinearProgressIndicator(Modifier.fillMaxWidth())
         Text(it, style = MaterialTheme.typography.bodySmall)
@@ -232,6 +251,30 @@ private fun Waiting(state: State) {
 /** running is how long the stopwatch has run by now: what the installation said, and what has passed since it was asked. */
 private fun running(state: State, snapshot: Snapshot, now: Long = SystemClock.elapsedRealtime()): Double =
     snapshot.clock.elapsedHours + (now - state.readAt).coerceAtLeast(0) / 3_600_000.0
+
+/**
+ * Notices says what the browser's banners say about the owner's own time, each
+ * on a card of its own above the stopwatch, and goes on saying it for as long as
+ * it holds: a stopwatch that has run past the hours its owner chose comes to be
+ * said while it runs, so this ticks with it.
+ */
+@Composable
+private fun Notices(state: State, snapshot: Snapshot) {
+    var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+
+    LaunchedEffect(snapshot.clock.running, state.readAt) {
+        while (snapshot.clock.running) {
+            now = SystemClock.elapsedRealtime()
+            delay(60_000)
+        }
+    }
+
+    state.words.notices(snapshot, snapshot.notices, running(state, snapshot, now)).forEach { notice ->
+        Card(Modifier.fillMaxWidth()) {
+            Text(notice, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
 
 @Composable
 private fun Clock(state: State, snapshot: Snapshot, onStart: () -> Unit, onStop: () -> Unit, onSwitch: () -> Unit) {

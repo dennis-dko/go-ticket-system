@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -22,8 +23,14 @@ type fakeInstallation struct {
 	refuseAs string
 	stopped  bool
 
-	// language is the one the account chose in the browser; empty is none.
-	language string
+	// language and theme are the ones the account chose in the browser; empty is
+	// none. alertHours is after how many hours the stopwatch is mentioned, zero
+	// for never, which is what the routes answer unless a test says otherwise.
+	language, theme string
+	alertHours      int
+
+	// answers are what a test has a route answer, over what it answers by itself.
+	answers map[string]string
 }
 
 func newFakeInstallation(t *testing.T) (*fakeInstallation, *httptest.Server) {
@@ -62,10 +69,15 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 			f.stopped = false
 		case "POST /me/timer/stop":
 			f.stopped = true
+		case "PUT /me/language":
+			f.language, _ = body["language"].(string)
+		case "PUT /me/theme":
+			f.theme, _ = body["theme"].(string)
 		}
 	}
 
-	stopped, language := f.stopped, f.language
+	stopped, language, theme, alertHours := f.stopped, f.language, f.theme, f.alertHours
+	override, overridden := f.answers[route]
 	f.mu.Unlock()
 
 	if f.refuseAs != "" && r.Method != http.MethodGet {
@@ -78,8 +90,16 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]string{
-		"GET /me":       `{"user":{"name":"Dana Example","effectiveTimezone":"Europe/Berlin","language":"` + language + `"}}`,
+		"GET /me": `{"user":{"id":7,"name":"Dana Example","effectiveTimezone":"Europe/Berlin","timezone":"",` +
+			`"instanceTimezone":"Europe/Berlin","language":"` + language + `","theme":"` + theme + `",` +
+			`"dailyTargetHours":8,"maxDailyHours":0,"everyDayCountsFrom":null},` +
+			`"permissions":["settings:write:own","timesheets:read:own"],` +
+			`"reminders":{"unbookedDay":true,"timerAlertHours":` + strconv.Itoa(alertHours) + `}}`,
 		"GET /branding": `{"title":"Time Recording","translations":{"de":{"title":"Zeiterfassung"}},"version":"v9.9.9"}`,
+		"GET /me/holidays": `{"place":"","instancePlace":"DE-BY","countries":[` +
+			`{"code":"AT","regions":[],"regionRequired":false},` +
+			`{"code":"DE","regions":["BW","BY"],"regionRequired":true},` +
+			`{"code":"GB","regions":["ENG","SCT"],"regionRequired":true}]}`,
 		"GET /projects": `{"items":[{"id":1,"name":"Website","status":"active"},` +
 			`{"id":2,"name":"Webshop","status":"active"},{"id":3,"name":"Archive","status":"archived"},` +
 			`{"id":4,"name":"Consulting","status":"active"}]}`,
@@ -94,6 +114,14 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	if route == "GET /me/timer" && stopped {
 		data = `{"running":false,"elapsedHours":0}`
+	}
+
+	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" {
+		data = `{}`
+	}
+
+	if overridden {
+		data = override
 	}
 
 	if data == "" {

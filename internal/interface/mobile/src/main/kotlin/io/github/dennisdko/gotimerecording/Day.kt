@@ -22,7 +22,10 @@ data class Stopwatch(val running: Boolean, val projectId: Long?, val startedAt: 
 /**
  * Snapshot is the token owner's day as it stands: who they are, where their days
  * are kept, their projects, the stopwatch, what today has booked - and which
- * release the installation runs, which decides what this app can ask it.
+ * release the installation runs, which decides what this app can ask it. With it
+ * comes what the owner set for themselves, what the installation calls itself and
+ * says, the notices, and where public holidays are kept: read with the day, so
+ * that a choice made in the browser reaches the phone at its next read.
  */
 data class Snapshot(
     val name: String,
@@ -33,6 +36,11 @@ data class Snapshot(
     val today: LocalDate,
     val entries: List<Entry>,
     val version: String,
+    val account: Account = Account(),
+    val branding: Branding = Branding(),
+    val notices: Notices = Notices(),
+    /** places is null where the installation names no countries, which one from before there were countries does not. */
+    val places: HolidayPlaces? = null,
 )
 
 /**
@@ -45,9 +53,11 @@ class Day(private val api: Api, private val words: Language) {
 
     /** snapshot reads the token owner's day. */
     suspend fun snapshot(): Snapshot {
-        val me = (api.call("GET", "/me") as JSONObject).getJSONObject("user")
+        val answer = api.call("GET", "/me") as JSONObject
+        val me = answer.getJSONObject("user")
         val zone = runCatching { ZoneId.of(me.stringAt("effectiveTimezone")) }.getOrDefault(ZoneOffset.UTC)
         val today = LocalDate.now(zone)
+        val branding = api.call("GET", "/branding") as JSONObject
 
         return Snapshot(
             name = me.stringAt("name"),
@@ -57,8 +67,30 @@ class Day(private val api: Api, private val words: Language) {
             clock = stopwatchOf(api.call("GET", "/me/timer") as JSONObject),
             today = today,
             entries = entriesOn(today),
-            version = (api.call("GET", "/branding") as JSONObject).stringAt("version"),
+            version = branding.stringAt("version"),
+            account = Account.of(answer),
+            branding = Branding.of(branding),
+            notices = optional { Notices.of(api.call("GET", "/me/notices") as JSONObject) } ?: Notices(),
+            places = optional { HolidayPlaces.of(api.call("GET", "/me/holidays") as JSONObject) },
         )
+    }
+
+    /**
+     * save sends one of the account's settings to the route the browser sends it
+     * to - so the app can set nothing the browser cannot - and says where it went,
+     * in [said]: the language just chosen, where the app is about to speak it.
+     */
+    suspend fun save(route: String, body: JSONObject, said: Language): String {
+        api.call("PUT", route, body)
+
+        return said.text("track.settings.saved", "Saved for your account - the browser and the app follow it too.")
+    }
+
+    /** optional is what read answers, or null where the installation refuses it: one from before it was asked has no such route. */
+    private suspend fun <T> optional(read: suspend () -> T): T? = try {
+        read()
+    } catch (refused: Refused) {
+        null
     }
 
     /** start starts the stopwatch on project - none for null - and says when, in the owner's zone. */

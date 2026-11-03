@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"image/color"
-	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,6 +14,8 @@ import (
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
 )
 
 // refreshEvery is how often the screen reads the day again while it is open.
@@ -36,12 +37,20 @@ type screen struct {
 	host string
 
 	width int
-	dark  bool
 
-	// title is what the installation calls itself, read with the day: the name
-	// the page heads itself with, so the terminal and the browser are headed
-	// alike.
-	title string
+	// dark is what the terminal said its background is, and measured whether it
+	// said anything; see darkness.
+	dark, measured bool
+
+	// title and banner are what the installation calls itself and says to
+	// everybody, read with the day: what the page heads itself with, so the
+	// terminal and the browser are headed alike.
+	title, banner string
+
+	// told is what about the owner's own time deserves saying, as the browser's
+	// banners say it, and places where they keep public holidays.
+	told   notices
+	places holidayPlaces
 
 	shown  snapshot
 	readAt time.Time
@@ -79,13 +88,18 @@ type screen struct {
 	asked *answers
 }
 
-// loaded is the day as the installation answered, the installation's name, and
-// the moment it was read.
+// loaded is the day as the installation answered, what it calls itself and
+// says, the notices, and the moment it was read. branded and noticed say whether
+// those two could be read at all.
 type loaded struct {
-	shown snapshot
-	title string
-	at    time.Time
-	err   error
+	shown    snapshot
+	branding branding
+	told     notices
+	places   holidayPlaces
+	at       time.Time
+	err      error
+
+	branded, noticed, placed bool
 }
 
 // done is what became of a change, in the sentence its command would print.
@@ -140,27 +154,6 @@ func (s *session) leave(ctx context.Context, ended tea.Model, err error) error {
 	return nil
 }
 
-// title is what the installation calls itself in the client's language: the
-// title it has written for that language, or the one it has.
-func (s *session) title(ctx context.Context) (string, error) {
-	var branding struct {
-		Title        string `json:"title"`
-		Translations map[string]struct {
-			Title string `json:"title"`
-		} `json:"translations"`
-	}
-
-	if err := s.api.call(ctx, http.MethodGet, "/branding", nil, &branding); err != nil {
-		return "", err
-	}
-
-	if title := strings.TrimSpace(branding.Translations[s.lang.code()].Title); title != "" {
-		return title, nil
-	}
-
-	return strings.TrimSpace(branding.Title), nil
-}
-
 // Init reads the day, starts the second hand, and asks the terminal whether it
 // is dark, which decides the colours.
 func (m screen) Init() tea.Cmd {
@@ -174,9 +167,10 @@ func (m screen) ask(now time.Time) (screen, tea.Cmd) {
 	return m, m.load()
 }
 
-// load reads the day again, and what the installation calls itself. A name it
-// could not be asked for leaves the one shown: it heads the screen and nothing
-// else depends on it.
+// load reads the day again, what the installation calls itself and says, and
+// the notices. A name, a banner or notices that could not be asked for leave the
+// ones shown: nothing else depends on them, and an installation from before
+// they were answered says nothing about them.
 func (m screen) load() tea.Cmd {
 	ctx, s := m.ctx, m.s
 
@@ -186,9 +180,12 @@ func (m screen) load() tea.Cmd {
 			return loaded{at: time.Now(), err: err}
 		}
 
-		title, _ := s.title(ctx)
+		named, nameErr := s.branding(ctx)
+		told, toldErr := s.notices(ctx)
+		places, placesErr := s.holidayPlaces(ctx)
 
-		return loaded{shown: shown, title: title, at: time.Now()}
+		return loaded{shown: shown, branding: named, told: told, places: places, at: time.Now(),
+			branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
 	}
 }
 
@@ -213,7 +210,7 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 	case tea.BackgroundColorMsg:
-		m.dark = msg.IsDark()
+		m.dark, m.measured = msg.IsDark(), true
 	case tick:
 		m.now = time.Time(msg)
 
@@ -225,7 +222,7 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, second()
 	case loaded:
-		return m.read(msg), nil
+		return m.read(msg)
 	case done:
 		m.news, m.failure = msg.said, ""
 		if msg.err != nil {
@@ -249,23 +246,52 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // A stopwatch that has started or stopped offers other changes, so the cursor
 // goes back to the first of them rather than staying on whichever change now
 // stands where the one somebody moved to was.
-func (m screen) read(msg loaded) screen {
+//
+// A language the account chose since is spoken from here on, unless one was
+// named when the client was started - chosen in the browser or under Settings
+// here, it reaches an open screen as a stopwatch stopped there does. The day is
+// read again in it, since the installation's name and banner came in the old.
+func (m screen) read(msg loaded) (screen, tea.Cmd) {
 	m.reading, m.busy = false, false
 
 	if msg.err != nil {
 		m.stale = msg.err.Error()
 
-		return m
+		return m, nil
 	}
 
+	if chosen := msg.shown.language; !m.s.asked && chosen != m.s.lang.code() && slices.Contains(i18n.Languages(), chosen) {
+		m.s = m.s.inLanguage(speaking(chosen))
+		m = m.take(msg)
+
+		return m.ask(time.Now())
+	}
+
+	return m.take(msg), nil
+}
+
+// take keeps what a read brought.
+func (m screen) take(msg loaded) screen {
 	if msg.shown.clock.Running != m.shown.clock.Running {
 		m.cursor = 0
 	}
 
 	m.shown, m.readAt, m.loaded, m.stale = msg.shown, msg.at, true, ""
 
-	if msg.title != "" {
-		m.title = msg.title
+	if msg.branded {
+		m.banner = msg.branding.banner
+
+		if msg.branding.title != "" {
+			m.title = msg.branding.title
+		}
+	}
+
+	if msg.noticed {
+		m.told = msg.told
+	}
+
+	if msg.placed {
+		m.places = msg.places
 	}
 
 	if msg.at.After(m.now) {
@@ -303,6 +329,11 @@ func (m screen) choices() []choice {
 			{"s", "start", l.text("track.form.start", "Start the stopwatch")},
 			{"b", "book", l.text("track.form.book", "Book time by hand")},
 		}
+	}
+
+	// The account's own settings, once there is an account read to show them of.
+	if m.loaded && !m.busy {
+		changes = append(changes, choice{"p", "settings", l.text("track.menu.settings", "Settings")})
 	}
 
 	return append(changes,
@@ -358,6 +389,11 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 	m.doing, m.news, m.failure = doing, "", ""
 	m.asked = &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
+
+	if doing == "settings" {
+		m.asked = m.settingAnswers()
+	}
+
 	m.form = m.formFor(doing)
 
 	return m, m.form.Init()
@@ -406,54 +442,6 @@ func (m screen) farewell(now time.Time) string {
 	return m.shown.clockLine(m.s.lang, m.elapsed().Hours())
 }
 
-// tones are the web interface's colours, light or dark, so that the terminal
-// and the browser look like one application: app.css holds the same ones. ask
-// is its teal, the charts' second hue there, which says what the screen wants
-// to know.
-type tones struct {
-	accent, onAccent, muted, danger, green, line, ask color.Color
-}
-
-// tonesFor is the colours for a dark terminal or a light one.
-func tonesFor(dark bool) tones {
-	pick := lipgloss.LightDark(dark)
-
-	return tones{
-		accent:   pick(lipgloss.Color("#2f6feb"), lipgloss.Color("#5b8dfa")),
-		onAccent: pick(lipgloss.Color("#ffffff"), lipgloss.Color("#0d1117")),
-		muted:    pick(lipgloss.Color("#626d78"), lipgloss.Color("#98a2ad")),
-		danger:   pick(lipgloss.Color("#c0392b"), lipgloss.Color("#e06c5c")),
-		green:    lipgloss.Color("#2e9e5b"),
-		line:     pick(lipgloss.Color("#dfe3e8"), lipgloss.Color("#2c333b")),
-		ask:      pick(lipgloss.Color("#12a19a"), lipgloss.Color("#3fc9c0")),
-	}
-}
-
-// palette is the styles the screen draws with.
-type palette struct {
-	title, strong, muted, ok, failed, key, ask lipgloss.Style
-
-	frame, idle, running color.Color
-}
-
-// paletteFor is the palette for a dark terminal or a light one.
-func paletteFor(dark bool) palette {
-	c := tonesFor(dark)
-
-	return palette{
-		title:   lipgloss.NewStyle().Bold(true).Foreground(c.accent),
-		strong:  lipgloss.NewStyle().Bold(true),
-		muted:   lipgloss.NewStyle().Foreground(c.muted),
-		ok:      lipgloss.NewStyle().Foreground(c.green),
-		failed:  lipgloss.NewStyle().Foreground(c.danger),
-		key:     lipgloss.NewStyle().Bold(true).Foreground(c.accent),
-		ask:     lipgloss.NewStyle().Foreground(c.ask),
-		frame:   c.accent,
-		idle:    c.muted,
-		running: c.green,
-	}
-}
-
 // contentWidth is how wide the screen's frame is drawn: the window less its
 // margins, and no wider than a line can be read across.
 func (m screen) contentWidth() int {
@@ -472,21 +460,31 @@ func (m screen) inner() int { return m.contentWidth() - 6 }
 // build, where on the screen somebody is, and under it either the day and the
 // menu or the form that is open.
 func (m screen) View() tea.View {
-	look := paletteFor(m.dark)
+	look := paletteFor(m.darkness())
 	width := m.inner()
 	rule := look.muted.Render(strings.Repeat("─", width))
 
 	parts := []string{
 		lipgloss.PlaceHorizontal(width, lipgloss.Center, look.title.Render(m.heading())),
 		m.subtitle(look, width),
-		rule,
-		m.breadcrumb(look),
-		rule,
 	}
+
+	// Wrapped rather than cut short, as everything that says something is.
+	wrapped := lipgloss.NewStyle().Width(width)
+
+	if m.banner != "" {
+		parts = append(parts, wrapped.Render(look.ask.Render(m.banner)))
+	}
+
+	parts = append(parts, rule, m.breadcrumb(look), rule)
 
 	if m.form != nil {
 		parts = append(parts, m.form.View(), m.formHelp())
 	} else {
+		for _, line := range m.noticeLines() {
+			parts = append(parts, wrapped.Render(look.ask.Render("! "+line)))
+		}
+
 		parts = append(parts, m.stopwatch(look, width))
 
 		if m.loaded {
@@ -498,7 +496,7 @@ func (m screen) View() tea.View {
 
 	// Wrapped rather than cut short: a reason comes at the end of its sentence.
 	if line := m.statusLine(look); line != "" {
-		parts = append(parts, lipgloss.NewStyle().Width(width).Render(line))
+		parts = append(parts, wrapped.Render(line))
 	}
 
 	if m.form == nil {
@@ -627,7 +625,7 @@ func (m screen) stepName() string {
 		return l.text("field.day", "Day")
 	}
 
-	return ""
+	return m.settingStep(m.form.GetFocusedField().GetKey())
 }
 
 // stopwatch is what the stopwatch runs on, since when, and for how long.
