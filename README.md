@@ -357,7 +357,7 @@ installed on the phone, as the phone's browser does.
 | **History** | Every correction keeps the version it replaced, for the entry's owner | [Features](doc/feature.md#business-rules) |
 | **Evaluating** | Charts per day, project and activity, reports as bars, columns or a pie, the year as tiles, statements of work, PDF exports | [Features](doc/feature.md) |
 | **Projects** | Private to their owner, with a period, a status, an hour budget and an hourly rate | [Projects](doc/feature.md#projects) |
-| **Targets and time off** | A planned week, the public holidays of every German state, leave with its entitlement and carry-over, sick days and days taken against overtime | [Overtime](doc/feature.md#overtime) |
+| **Targets and time off** | A planned week, the public holidays of seventeen countries and their states or regions, leave with its entitlement and carry-over, sick days and days taken against overtime | [Overtime](doc/feature.md#overtime) |
 | **Working time** | When each day began and ended and its breaks, for each person's own record | [Working time](doc/feature.md#your-own-record-of-your-working-time) |
 | **Calendar subscription** | Booked days and days away in Outlook, Google or a telephone's calendar | [Calendar](doc/feature.md#your-days-in-your-own-calendar) |
 | **Accounts and roles** | Roles and their rights administered at run time; an administrator who runs the installation without keeping hours in it; managers for the accounts assigned to them, where an installation switches them on | [Access](doc/access.md) |

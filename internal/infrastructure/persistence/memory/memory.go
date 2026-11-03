@@ -244,8 +244,8 @@ func (r *UserRepository) SetPreference(
 		current.Language = value
 	case repository.PreferenceTimezone:
 		current.Timezone = value
-	case repository.PreferenceHolidayRegion:
-		current.HolidayRegion = value
+	case repository.PreferenceHolidayPlace:
+		current.HolidayPlace = value
 	default:
 		return fmt.Errorf("unknown user preference %d", field)
 	}

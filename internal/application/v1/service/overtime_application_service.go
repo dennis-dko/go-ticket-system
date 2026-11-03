@@ -139,7 +139,7 @@ type OvertimeService struct {
 	users      repository.UserRepository
 	schedules  repository.WorkScheduleRepository
 	absences   repository.AbsenceRepository
-	regions    RegionSource
+	places     PlaceSource
 	today      Today
 }
 
@@ -152,12 +152,12 @@ func NewOvertimeService(
 	users repository.UserRepository,
 	schedules repository.WorkScheduleRepository,
 	absences repository.AbsenceRepository,
-	regions RegionSource,
+	places PlaceSource,
 	today Today,
 ) *OvertimeService {
 	return &OvertimeService{
 		timesheets: timesheets, users: users, schedules: schedules, absences: absences,
-		regions: regions, today: today,
+		places: places, today: today,
 	}
 }
 
@@ -240,7 +240,7 @@ func (s *OvertimeService) rulesFor(ctx context.Context, user *model.User, first,
 		absent[absence.Day] = absence
 	}
 
-	holidays, err := holidaysOf(ctx, s.regions, user, first, last)
+	holidays, err := holidaysOf(ctx, s.places, user, first, last)
 	if err != nil {
 		return dayRules{}, err
 	}

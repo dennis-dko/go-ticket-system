@@ -57,9 +57,11 @@ const (
 	// a booking belongs to, for everyone who has not set their own.
 	SettingTimezone = "instance.timezone"
 
-	// SettingHolidayRegion is the state whose public holidays everybody keeps who
-	// has not chosen their own, or empty for none.
-	SettingHolidayRegion = "instance.holidayRegion"
+	// SettingHolidayPlace is the installation's choice of public holidays, which
+	// everybody keeps who has not made their own: a place, NoHolidays, or empty
+	// where nobody has chosen. The key is older than countries and keeps its name,
+	// because installations already store it under that one.
+	SettingHolidayPlace = "instance.holidayRegion"
 
 	// SettingOperational holds the limits an administrator may change from the
 	// Settings screen, layered over what the environment configured.

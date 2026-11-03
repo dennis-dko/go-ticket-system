@@ -17,7 +17,7 @@ type AbsenceService struct {
 	absences  repository.AbsenceRepository
 	users     repository.UserRepository
 	schedules repository.WorkScheduleRepository
-	regions   RegionSource
+	places    PlaceSource
 }
 
 // NewAbsenceService needs the accounts, their planned weeks and the
@@ -27,9 +27,9 @@ func NewAbsenceService(
 	absences repository.AbsenceRepository,
 	users repository.UserRepository,
 	schedules repository.WorkScheduleRepository,
-	regions RegionSource,
+	places PlaceSource,
 ) *AbsenceService {
-	return &AbsenceService{absences: absences, users: users, schedules: schedules, regions: regions}
+	return &AbsenceService{absences: absences, users: users, schedules: schedules, places: places}
 }
 
 // Absences returns somebody's absences from one day to another, earliest first.
@@ -89,7 +89,7 @@ func (s *AbsenceService) Record(
 		return nil, err
 	}
 
-	holidays, err := holidaysOf(ctx, s.regions, user, first, last)
+	holidays, err := holidaysOf(ctx, s.places, user, first, last)
 	if err != nil {
 		return nil, err
 	}

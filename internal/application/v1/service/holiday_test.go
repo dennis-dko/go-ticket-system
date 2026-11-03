@@ -2,11 +2,14 @@ package service_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
+	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
 	"github.com/dennis-dko/go-time-recording/internal/domain/model"
 	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
+	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
 )
 
 // on is a day of 2026 by month and day, for the holidays that are not in July.
@@ -14,22 +17,23 @@ func on(month time.Month, d int) time.Time {
 	return time.Date(2026, month, d, 0, 0, 0, 0, time.UTC)
 }
 
-// The week of Whit Monday is four days of leave in a state that keeps it, and
-// five where the installation keeps no holidays at all.
+// The week of Whit Monday is four days of leave in a place that keeps it, and
+// five where the installation keeps no holidays at all - because nobody chose
+// any, or because somebody chose none.
 func TestLeaveLeavesOutThePublicHolidays(t *testing.T) {
-	for region, want := range map[string]int{"BY": 4, "": 5} {
+	for place, want := range map[string]int{"DE-BY": 4, "AT": 4, "": 5, model.NoHolidays: 5} {
 		f := newPlannedFixture(t)
-		f.region = region
+		f.place = place
 
 		recorded, err := f.away.Record(context.Background(), f.userID,
 			on(time.May, 25), on(time.May, 29), model.AbsenceVacation)
 		if err != nil {
-			t.Fatalf("record with region %q: %v", region, err)
+			t.Fatalf("record with the installation in %q: %v", place, err)
 		}
 
 		if len(recorded) != want {
-			t.Errorf("Whit week with region %q was recorded as %v, want %d days",
-				region, daysOf(recorded), want)
+			t.Errorf("Whit week with the installation in %q was recorded as %v, want %d days",
+				place, daysOf(recorded), want)
 		}
 	}
 }
@@ -37,7 +41,7 @@ func TestLeaveLeavesOutThePublicHolidays(t *testing.T) {
 // The days of a week name the holidays among them.
 func TestTheDaysNameTheirHolidays(t *testing.T) {
 	f := newPlannedFixture(t)
-	f.region = "BY"
+	f.place = "DE-BY"
 
 	days, err := f.overtime.Days(context.Background(), f.userID, on(time.May, 25), on(time.May, 31))
 	if err != nil {
@@ -56,11 +60,11 @@ func TestTheDaysNameTheirHolidays(t *testing.T) {
 	}
 }
 
-// A person's own choice wins over the installation's: their own state's holidays,
-// or none at all.
-func TestAPersonsOwnRegionWinsOverTheInstallations(t *testing.T) {
+// A person's own choice wins over the installation's: their own place's
+// holidays, or none at all.
+func TestAPersonsOwnPlaceWinsOverTheInstallations(t *testing.T) {
 	f := newPlannedFixture(t)
-	f.region = "BY"
+	f.place = "DE-BY"
 	ctx := context.Background()
 
 	holidayOn := func(day time.Time) string {
@@ -79,7 +83,7 @@ func TestAPersonsOwnRegionWinsOverTheInstallations(t *testing.T) {
 		t.Errorf("following the installation, Corpus Christi reads %q", got)
 	}
 
-	if err := f.userRepo.SetPreference(ctx, f.userID, repository.PreferenceHolidayRegion, "BE"); err != nil {
+	if err := f.userRepo.SetPreference(ctx, f.userID, repository.PreferenceHolidayPlace, "DE-BE"); err != nil {
 		t.Fatalf("choose Berlin: %v", err)
 	}
 
@@ -87,11 +91,46 @@ func TestAPersonsOwnRegionWinsOverTheInstallations(t *testing.T) {
 		t.Errorf("somebody in Berlin has Corpus Christi as %q, want no holiday", got)
 	}
 
-	if err := f.userRepo.SetPreference(ctx, f.userID, repository.PreferenceHolidayRegion, model.NoHolidays); err != nil {
+	if err := f.userRepo.SetPreference(ctx, f.userID, repository.PreferenceHolidayPlace, model.NoHolidays); err != nil {
 		t.Fatalf("choose none: %v", err)
 	}
 
 	if got := holidayOn(on(time.May, 25)); got != "" {
 		t.Errorf("somebody keeping no holidays has Whit Monday as %q", got)
+	}
+}
+
+// A choice the rules do not know is refused, for a person and for the
+// installation alike, naming the half to change: the country where it is
+// unknown, the region where the country is known and has no such region or
+// cannot be kept without one.
+func TestAPlaceTheRulesDoNotKnowIsRefusedByTheHalfToChange(t *testing.T) {
+	f := newFixture(t)
+	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo, "Test")
+	ctx := context.Background()
+
+	for choice, field := range map[string]string{"XX": "country", "XX-BY": "country", "DE": "region", "DE-XX": "region", "GB": "region"} {
+		for who, err := range map[string]error{
+			"a person":         f.sessions.SetHolidayPlace(ctx, f.userID, choice),
+			"the installation": settings.SaveHolidayPlace(ctx, choice),
+		} {
+			if detail, ok := apperror.Detail(err); !ok || !slices.Equal(detail.Fields, []string{field}) {
+				t.Errorf("%s choosing %q answered %v, want %s refused", who, choice, err, field)
+			}
+		}
+	}
+
+	for _, choice := range []string{"", model.NoHolidays, "AT", "DE-BY", "FR-57"} {
+		if err := f.sessions.SetHolidayPlace(ctx, f.userID, choice); err != nil {
+			t.Errorf("a person choosing %q answered %v", choice, err)
+		}
+
+		if err := settings.SaveHolidayPlace(ctx, choice); err != nil {
+			t.Errorf("the installation choosing %q answered %v", choice, err)
+		}
+
+		if got, err := settings.HolidayPlace(ctx); err != nil || got != choice {
+			t.Errorf("the installation chose %q and keeps %q (%v)", choice, got, err)
+		}
 	}
 }

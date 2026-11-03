@@ -62,16 +62,16 @@ func (s *SessionService) SetTimezone(ctx context.Context, userID uint, timezone 
 	return err
 }
 
-// SetHolidayRegion stores the state whose public holidays this person keeps:
-// empty to follow the installation, model.NoHolidays for none.
-func (s *SessionService) SetHolidayRegion(ctx context.Context, userID uint, region string) error {
-	region = strings.TrimSpace(region)
+// SetHolidayPlace stores where this person keeps public holidays: a place,
+// empty to follow the installation, or model.NoHolidays for none.
+func (s *SessionService) SetHolidayPlace(ctx context.Context, userID uint, place string) error {
+	place = strings.TrimSpace(place)
 
-	if !model.ValidPersonalHolidayRegion(region) {
-		return apperror.InvalidFields("region")
+	if err := refuseHolidayChoice(place); err != nil {
+		return err
 	}
 
-	return s.users.SetPreference(ctx, userID, repository.PreferenceHolidayRegion, region)
+	return s.users.SetPreference(ctx, userID, repository.PreferenceHolidayPlace, place)
 }
 
 // SetReminders keeps both of somebody's reminder choices together: whether the

@@ -12,13 +12,13 @@ import (
 	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
 )
 
-// reminderFixture is the booking fixture with absences, the holidays of a state
+// reminderFixture is the booking fixture with absences, the holidays of a place
 // and a clock it can set.
 type reminderFixture struct {
 	*fixture
 
 	absences *memory.AbsenceRepository
-	region   string
+	place    string
 	today    time.Time
 }
 
@@ -32,7 +32,7 @@ func (f *reminderFixture) unbooked(t *testing.T) *time.Time {
 	t.Helper()
 
 	overtime := service.NewOvertimeService(f.timesheetRepo, f.userRepo, memory.NewWorkScheduleRepository(),
-		f.absences, func(context.Context) (string, error) { return f.region, nil },
+		f.absences, func(context.Context) (string, error) { return f.place, nil },
 		func(context.Context, *model.User) time.Time { return f.today })
 
 	notices, err := overtime.Notices(context.Background(), f.userID)
@@ -112,7 +112,7 @@ func TestTheLastWorkingDayWithNothingBookedIsMentioned(t *testing.T) {
 		}, nil},
 		{"a public holiday is passed over", func(t *testing.T, f *reminderFixture) {
 			// Christmas Day 2026 is a Friday; the 24th is a working day.
-			f.region = "BY"
+			f.place = "DE-BY"
 			f.today = time.Date(2026, 12, 28, 0, 0, 0, 0, time.UTC)
 			f.book(t, day(13), 8)
 		}, ptr(time.Date(2026, 12, 24, 0, 0, 0, 0, time.UTC))},

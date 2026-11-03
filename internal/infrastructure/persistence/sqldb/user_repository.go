@@ -247,7 +247,7 @@ func (r *UserRepository) scanUser(s scanner) (*model.User, error) {
 		&user.PasswordHash, &user.MustChangePassword, &user.IsSystem,
 		&user.DailyTargetHours, &user.MaxDailyHours,
 		&user.TOTPSecret, &user.TOTPEnabled, &user.Language, &user.IsExternal, &user.ExternalID,
-		&user.Timezone, &user.TourSeen, &user.Theme, &user.HolidayRegion, &countsFrom,
+		&user.Timezone, &user.TourSeen, &user.Theme, &user.HolidayPlace, &countsFrom,
 		&upper, &lower, &user.SkipUnbookedReminder, &alertHours)
 	if err != nil {
 		return nil, err
@@ -328,7 +328,7 @@ func (r *UserRepository) SetPreference(
 		query = "UPDATE users SET timezone = ? WHERE id = ?"
 	case repository.PreferenceTheme:
 		query = "UPDATE users SET theme = ? WHERE id = ?"
-	case repository.PreferenceHolidayRegion:
+	case repository.PreferenceHolidayPlace:
 		query = "UPDATE users SET holiday_region = ? WHERE id = ?"
 	default:
 		return fmt.Errorf("unknown user preference %d", field)

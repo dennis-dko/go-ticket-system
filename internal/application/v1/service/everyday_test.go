@@ -85,7 +85,7 @@ func TestBeforeTheChosenDayOnlyTheBookedDaysCount(t *testing.T) {
 
 	// Whit Monday, booked before the day: measured as it was, against the eight
 	// hours its week plans, rather than as a holiday that asks nothing.
-	f.region = "BY"
+	f.place = "DE-BY"
 	f.countFrom(t, on(time.May, 26))
 	f.book(t, on(time.May, 25), 2)
 
@@ -100,7 +100,7 @@ func TestBeforeTheChosenDayOnlyTheBookedDaysCount(t *testing.T) {
 // whole day - which is what takes it off the balance.
 func TestHolidaysAndAbsencesTakeOffWhatADayAsks(t *testing.T) {
 	f := newPlannedFixture(t)
-	f.region = "BY"
+	f.place = "DE-BY"
 	ctx := context.Background()
 
 	f.countFrom(t, on(time.May, 25))

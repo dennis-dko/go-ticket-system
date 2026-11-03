@@ -656,9 +656,9 @@ func main() {
 		timesheetRepo, userRepo, projectRepo, cfg.MaxDailyHours).
 		WithLimits(limits).
 		WithMetrics(app.Metrics())
-	// The installation's public holidays, read per call like its zone, so a state
+	// The installation's public holidays, read per call like its zone, so a place
 	// chosen on the Settings screen holds from the next answer on.
-	regions := appservice.RegionSource(settingsService.HolidayRegion)
+	holidayPlaces := appservice.PlaceSource(settingsService.HolidayPlace)
 
 	// Which day it is for somebody, in their own zone: a working day nobody booked
 	// counts once it has been, and for somebody in Auckland that is a day earlier
@@ -673,11 +673,11 @@ func main() {
 		return time.Now().In(user.TimezoneOf(zone))
 	})
 
-	overtime := appservice.NewOvertimeService(timesheetRepo, userRepo, scheduleRepo, absenceRepo, regions, today)
+	overtime := appservice.NewOvertimeService(timesheetRepo, userRepo, scheduleRepo, absenceRepo, holidayPlaces, today)
 	workWeeks := appservice.NewWorkScheduleService(scheduleRepo, userRepo)
 	templates := appservice.NewTemplateService(templateRepo, projectRepo)
-	absences := appservice.NewAbsenceService(absenceRepo, userRepo, scheduleRepo, regions)
-	leave := appservice.NewVacationService(vacationRepo, absenceRepo, userRepo, scheduleRepo, regions, today)
+	absences := appservice.NewAbsenceService(absenceRepo, userRepo, scheduleRepo, holidayPlaces)
+	leave := appservice.NewVacationService(vacationRepo, absenceRepo, userRepo, scheduleRepo, holidayPlaces, today)
 	workDays := appservice.NewWorkDayService(workDayRepo, timesheetRepo)
 
 	// What this installation is called in a language, wherever it has to name
