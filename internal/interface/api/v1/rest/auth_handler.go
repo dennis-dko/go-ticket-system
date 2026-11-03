@@ -26,6 +26,10 @@ type AuthHandler struct {
 	// installation that has no maintenance state to read, which is the same as
 	// not being out of service.
 	maintenance MaintenanceState
+
+	// tokens resolves a personal token for a sign-in with one; nil where none is
+	// allowed. See WithTokens.
+	tokens *service.APITokenService
 }
 
 // WithMaintenance lets sign-in know the installation is out of service.
