@@ -232,9 +232,15 @@ func setContent(page string) chromedp.Action {
 	return chromedp.Evaluate(`document.open(); document.write(`+string(literal)+`); document.close(); true`, nil)
 }
 
-// terminalPage is a screen as a page a browser can photograph: one span for each
-// run of cells that look alike, in the colours the program asked for, on the
-// terminal's own. The rows below the last one drawn on are left out but one.
+// terminalPage is a screen as a page a browser can photograph: every cell in a
+// box as wide as the cells it takes, in the colours the program asked for, on
+// the terminal's own. The rows below the last one drawn on are left out but one.
+//
+// A box for every cell, because the page is text and a terminal is a grid. Set
+// as runs of text, a glyph the font draws a hair wider or narrower than a cell
+// moved the rest of its row, and the frame's border came out a pixel off on the
+// line holding four of huh's bullets; boxes for some cells and runs for the
+// rest only moved the jog to the rows of rules, which add up differently.
 func terminalPage(screen uv.ScreenBuffer, title string, fg, bg color.Color) string {
 	last := 0
 
@@ -247,42 +253,24 @@ func terminalPage(screen uv.ScreenBuffer, title string, fg, bg color.Color) stri
 	var rows strings.Builder
 
 	for y := 0; y <= min(last+1, screen.Height()-1); y++ {
-		var run strings.Builder
-
-		style := ""
-
-		flush := func() {
-			if run.Len() > 0 {
-				fmt.Fprintf(&rows, `<span style="%s">%s</span>`, style, html.EscapeString(run.String()))
-				run.Reset()
-			}
-		}
-
 		for x := 0; x < screen.Width(); x++ {
 			cell := screen.CellAt(x, y)
 			if cell != nil && cell.IsZero() {
 				continue
 			}
 
-			content, look := " ", cellStyle(nil, fg, bg)
+			content, look, width := " ", cellStyle(nil, fg, bg), 1
 			if cell != nil {
 				if cell.Content != "" {
 					content = cell.Content
 				}
 
-				look = cellStyle(&cell.Style, fg, bg)
+				look, width = cellStyle(&cell.Style, fg, bg), max(cell.Width, 1)
 			}
 
-			if look != style {
-				flush()
-
-				style = look
-			}
-
-			run.WriteString(content)
+			fmt.Fprintf(&rows, `<span class="cell" style="%s;width:%dch">%s</span>`, look, width, html.EscapeString(content))
 		}
 
-		flush()
 		rows.WriteString("\n")
 	}
 
@@ -300,6 +288,7 @@ body { padding: 24px; }
 .bar { padding: 8px 16px; font: 13px/1.3 "Segoe UI", system-ui, sans-serif; text-align: center;
   opacity: 0.7; border-bottom: 1px solid rgba(128, 128, 128, 0.3); }
 pre { margin: 0; padding: 4px 8px 8px; font: 15px/1.2 Consolas, "Cascadia Mono", "DejaVu Sans Mono", monospace; }
+.cell { display: inline-block; text-align: center; }
 </style></head><body><div class="window">%[3]s<pre>%[4]s</pre></div></body></html>`,
 		hexColor(bg), hexColor(fg), bar, rows.String())
 }
