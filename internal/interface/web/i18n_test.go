@@ -34,9 +34,9 @@ func asset(t *testing.T, path string) string {
 
 // otherReaders are the parts of each dictionary the page does not read, each
 // held to its readers by tests of their own: the installer's, the terminal
-// client's, the workbooks', the calendar feed's, and the i18n package's own
-// figures and days.
-var otherReaders = []string{"installer.", "track.", "workbook.", "calendarFeed.", "number.", "layout."}
+// client's, the Android app's, the workbooks', the calendar feed's, and the
+// i18n package's own figures and days.
+var otherReaders = []string{"installer.", "track.", "mobile.", "workbook.", "calendarFeed.", "number.", "layout."}
 
 // dictionaries are what the page says in each language but English, by
 // language: the files the binary carries and hands the page, with the keys the

@@ -87,6 +87,13 @@ order of the two is not to be relied on. An app registers the scheme
 it, and from then on asks the API with `Authorization: Bearer <token>` as the
 client does.
 
+The Android app in this repository, released as
+`go-time-recording-mobile_<version>.apk`, is such an app. It fills its connect
+form from the code and connects only once whoever holds the phone has seen the
+address and agreed, because a code is a link any page could open - and an app
+that connected on its own would send what somebody books to wherever such a link
+pointed.
+
 The answer that creates a token carries the same thing for a program that makes
 one itself: `connectUri`, the address above, and `qr`, the code as an SVG data
 URI. Like the token's value, neither is ever shown again.

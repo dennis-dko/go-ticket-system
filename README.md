@@ -326,6 +326,29 @@ the browser - or, where it chose none, the language the system is set to. In
 German it says what the installation refuses in the words the web interface has
 for it.
 
+## On a phone
+
+The Android app does what the terminal client does - the stopwatch, today's
+entries and booking by hand - through the same API, as the owner of a personal
+token. It is connected by the code a new token is shown with under
+**My account → API tokens**: scanned with the phone's camera, the code opens the
+app, which shows the installation it is asked to connect to and waits for a tap,
+because a code is a link any page could open. The address and the token can be
+typed in instead.
+
+**It belongs to the release it was built with**, as the terminal client does,
+and says so for as long as the installation runs another one. Download
+`go-time-recording-mobile_<version>.apk` from the
+[release](https://github.com/dennis-dko/go-time-recording/releases) the
+installation runs and open it on the phone; Android asks once whether the
+browser or file manager it was opened from may install apps. Every release is
+signed with the same key, so the next one installs over it.
+
+It speaks the language the account chose in the browser, otherwise the phone's,
+in the words the web interface and the terminal client use. An installation
+whose certificate comes from an authority of its own needs that authority
+installed on the phone, as the phone's browser does.
+
 ## What it does
 
 | Area | What you get | Read more |
@@ -339,7 +362,7 @@ for it.
 | **Calendar subscription** | Booked days and days away in Outlook, Google or a telephone's calendar | [Calendar](doc/features.md#your-days-in-your-own-calendar) |
 | **Accounts and roles** | Roles and their rights administered at run time; an administrator who runs the installation without keeping hours in it; managers for the accounts assigned to them, where an installation switches them on | [Access](doc/access.md) |
 | **Sign-in** | Passwords with TOTP, passkeys, LDAP and Active Directory with synchronisation, Kerberos, OpenID Connect | [Sign-in](doc/access.md#ldap) |
-| **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - and `go-time-recording-client` books through it from a terminal, on a screen of its own or a command at a time | [API](doc/api.md) |
+| **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - and `go-time-recording-client` books through it from a terminal, on a screen of its own or a command at a time, as the Android app does from a phone | [API](doc/api.md) |
 | **Operations** | Health, metrics, traces, live log, maintenance mode, updates, restart, HTTPS with Let's Encrypt, the installation's own name and logo | [Configuration](doc/configuration.md) |
 
 ## Documentation
