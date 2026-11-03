@@ -276,7 +276,7 @@ func TestTheScreenSpeaksGerman(t *testing.T) {
 		t.Fatalf("reading the day: %v", read.err)
 	}
 
-	m = m.read(read)
+	m, _ = m.read(read)
 	m.width = 100
 
 	shows := ansi.Strip(m.View().Content)

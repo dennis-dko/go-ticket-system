@@ -65,7 +65,7 @@ func (m screen) formFor(doing string) *huh.Form {
 	// The screen's answer to whether the terminal is dark rather than the form's
 	// own: the terminal says so once, before any form is open, and is not asked
 	// again.
-	dark := m.dark
+	dark := m.darkness()
 
 	return huh.NewForm(steps...).
 		WithTheme(huh.ThemeFunc(func(bool) *huh.Styles { return formTheme(dark) })).

@@ -94,7 +94,7 @@ func Run(ctx context.Context, build Build, args []string, env func(string) strin
 		return 2
 	}
 
-	s := &session{api: newClient(base, token, lang), out: out, lang: lang, build: build}
+	s := &session{api: newClient(base, token, lang), out: out, lang: lang, build: build, asked: explicit}
 
 	// Asked before anything else, so a failure is said once: the request that
 	// would have been next goes to the same installation and would fail the same
@@ -238,6 +238,23 @@ type session struct {
 	out   io.Writer
 	lang  language
 	build Build
+
+	// asked says the language was named on the line or in GTR_LANG, which
+	// whatever the account chose does not overrule.
+	asked bool
+}
+
+// inLanguage is the session speaking another language: a copy, so that what is
+// already on its way goes on in the words it started in rather than reading a
+// language that changes under it.
+func (s *session) inLanguage(l language) *session {
+	api := *s.api
+	api.lang = l
+
+	spoken := *s
+	spoken.api, spoken.lang = &api, l
+
+	return &spoken
 }
 
 // Build is the release this client was built from, as cmd/client has it stamped
@@ -291,28 +308,12 @@ type stopwatch struct {
 	ElapsedHours float64    `json:"elapsedHours"`
 }
 
-// me is the token's owner as /me answers: what they are called, and where they
-// keep their days - their own zone, or the installation's where they chose
-// none, worked out by the installation so that a day here is the day the
-// browser would show them.
+// me is what the token's owner is called and where they keep their days; see
+// account.
 func (s *session) me(ctx context.Context) (string, *time.Location, error) {
-	var me struct {
-		User struct {
-			Name              string `json:"name"`
-			EffectiveTimezone string `json:"effectiveTimezone"`
-		} `json:"user"`
-	}
+	owner, err := s.account(ctx)
 
-	if err := s.api.call(ctx, http.MethodGet, "/me", nil, &me); err != nil {
-		return "", nil, err
-	}
-
-	zone, err := time.LoadLocation(me.User.EffectiveTimezone)
-	if err != nil || me.User.EffectiveTimezone == "" {
-		zone = time.UTC
-	}
-
-	return me.User.Name, zone, nil
+	return owner.name, owner.zone, err
 }
 
 // zone is where the token's owner keeps their days.
@@ -333,11 +334,11 @@ func (s *session) projects(ctx context.Context) ([]project, error) {
 	return listed.Items, err
 }
 
-// snapshot is the token owner's day as it stands: who they are, where their
-// days are kept, their projects, the stopwatch, and what today has booked.
+// snapshot is the token owner's day as it stands: who they are and what they
+// set for themselves, their projects, the stopwatch, and what today has booked.
 type snapshot struct {
-	name     string
-	zone     *time.Location
+	account
+
 	projects []project
 	clock    stopwatch
 	today    []entry
@@ -345,14 +346,14 @@ type snapshot struct {
 
 // snapshot reads the token owner's day.
 func (s *session) snapshot(ctx context.Context) (snapshot, error) {
-	var now snapshot
+	var (
+		now snapshot
+		err error
+	)
 
-	name, zone, err := s.me(ctx)
-	if err != nil {
+	if now.account, err = s.account(ctx); err != nil {
 		return now, err
 	}
-
-	now.name, now.zone = name, zone
 
 	if now.projects, err = s.projects(ctx); err != nil {
 		return now, err
@@ -362,7 +363,7 @@ func (s *session) snapshot(ctx context.Context) (snapshot, error) {
 		return now, err
 	}
 
-	now.today, err = s.entriesOn(ctx, time.Now().In(zone).Format(time.DateOnly))
+	now.today, err = s.entriesOn(ctx, time.Now().In(now.zone).Format(time.DateOnly))
 
 	return now, err
 }
