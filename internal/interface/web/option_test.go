@@ -179,6 +179,7 @@ func TestEveryPlaceAndEveryHolidayHasAName(t *testing.T) {
 	js := asset(t, "/app.js")
 
 	names := map[string]bool{}
+	substitutes := 0
 
 	for _, country := range model.HolidayCountries() {
 		if !strings.Contains(js, "t('country."+country.Code+"', ") {
@@ -203,6 +204,10 @@ func TestEveryPlaceAndEveryHolidayHasAName(t *testing.T) {
 			for year := 1950; year <= 2040; year++ {
 				for _, holiday := range model.HolidaysIn(place, year) {
 					names[holiday.Name] = true
+
+					if holiday.Substitute {
+						substitutes++
+					}
 				}
 			}
 		}
@@ -216,5 +221,13 @@ func TestEveryPlaceAndEveryHolidayHasAName(t *testing.T) {
 		if !strings.Contains(js, "t('holiday."+name+"', ") {
 			t.Errorf("app.js names no holiday %q, so the calendar shows its key", name)
 		}
+	}
+
+	if substitutes == 0 {
+		t.Fatal("no holiday was kept in place of one on a weekend; this case is not reading the countries that do")
+	}
+
+	if !strings.Contains(js, "t('holiday.substitute', ") {
+		t.Error("app.js has no words for a day kept in place of a holiday on a weekend, so it reads as the holiday itself")
 	}
 }

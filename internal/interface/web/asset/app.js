@@ -6151,7 +6151,7 @@ function drawWeekGrid() {
 
     // And what else the day is: a public holiday, an absence somebody recorded.
     const day = days.find((d) => d.date === dates[i]);
-    if (day?.holiday) head.append(el('span', { class: 'week-tag', text: holidayName(day.holiday) }));
+    if (day?.holiday) head.append(el('span', { class: 'week-tag', text: holidayOf(day) }));
     if (day?.absence) head.append(el('span', { class: 'week-tag', text: absenceName(day.absence) }));
   }
 
@@ -6703,7 +6703,7 @@ function renderCalendarGrid(first, last, byDay, marks) {
       ...(dayEntries.length ? { type: 'button' } : {}),
     }, el('span', { class: 'cal-daynum', text: String(d) }));
 
-    if (holiday) cell.append(el('span', { class: 'cal-away', text: holidayName(holiday) }));
+    if (holiday) cell.append(el('span', { class: 'cal-away', text: holidayOf(marks.get(iso)) }));
     if (away) cell.append(el('span', { class: 'cal-away', text: absenceName(away) }));
 
     if (hours > 0) {
@@ -6959,6 +6959,17 @@ function holidayName(name) {
   };
 
   return names[name]?.() ?? name;
+}
+
+/**
+ * The public holiday a day is, in words - said to be kept in place of one where
+ * it fell on a weekend and the country keeps it on this day instead, which would
+ * otherwise read as Christmas on the 27th.
+ */
+function holidayOf(day) {
+  const name = holidayName(day.holiday);
+
+  return day.holidaySubstitute ? fillIn(t('holiday.substitute', '{0} (substitute day)'), [name]) : name;
 }
 
 /** The countries public holidays can be kept in and their regions, as last loaded. */
@@ -7311,7 +7322,7 @@ function drawYearMap() {
 
     if (daily.date === today) classes.push('today');
 
-    const why = daily.holiday ? holidayName(daily.holiday) : (daily.absence ? absenceName(daily.absence) : '');
+    const why = daily.holiday ? holidayOf(daily) : (daily.absence ? absenceName(daily.absence) : '');
 
     tiles.push(el('span', {
       class: classes.join(' '),
@@ -17611,7 +17622,7 @@ function wireForms() {
     evaluatedPeriod.overtime = { from: balance.from, to: balance.to };
 
     const rows = (balance.days ?? []).map((d) => el('tr', {},
-      el('td', { text: [fmtDate(d.date), d.holiday ? holidayName(d.holiday) : null,
+      el('td', { text: [fmtDate(d.date), d.holiday ? holidayOf(d) : null,
         d.absence ? absenceName(d.absence) : null].filter(Boolean).join(' · ') }),
       el('td', { class: 'num', text: fmtHours(d.booked) }),
       el('td', { class: 'num', text: fmtHours(d.target) }),

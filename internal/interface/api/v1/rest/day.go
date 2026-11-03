@@ -18,6 +18,10 @@ type DayResponse struct {
 	Absence string  `json:"absence,omitempty"`
 	Holiday string  `json:"holiday,omitempty"`
 
+	// HolidaySubstitute says the holiday fell on a weekend and is kept on this
+	// day instead, under its own name.
+	HolidaySubstitute bool `json:"holidaySubstitute,omitempty"`
+
 	// Counts says whether the day counts towards the overtime balance, by the rule
 	// the balance keeps - so that a week drawn from these comes to its figure.
 	Counts bool `json:"counts"`
@@ -78,6 +82,7 @@ func (h *MeHandler) Days(c *gofr.Context) (any, error) {
 		answer.Days = append(answer.Days, DayResponse{
 			Date: Date{Time: day.Date}, Booked: day.Booked, Target: day.Target,
 			Absence: day.Absence, Holiday: day.Holiday, Counts: day.Counts,
+			HolidaySubstitute: day.HolidaySubstitute,
 		})
 
 		answer.TotalBooked += day.Booked

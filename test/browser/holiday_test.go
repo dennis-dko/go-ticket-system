@@ -137,3 +137,21 @@ func TestTheInstallationsHolidaysStartOnGermany(t *testing.T) {
 		return place == "AT"
 	})
 }
+
+// A holiday a country keeps on a weekday because it fell on a weekend says so in
+// the calendar: Christmas 2027 is a Saturday, and Scotland keeps it on the
+// Monday.
+func TestADayKeptInPlaceOfAHolidaySaysSoInTheCalendar(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyWorker()
+
+	p.awaitJSON(`api('/me/holidays', { method: 'PUT', body: JSON.stringify({ place: 'GB-SCT' }) })`, nil)
+
+	p.run("open December 2027", p.click(`.tab[data-view="calendar"]`),
+		chromedp.WaitVisible("#calendar-days", chromedp.ByID),
+		chromedp.Evaluate(`calendarMonth = monthOf('2027-12-01'); void loadCalendar()`, nil))
+
+	p.waitForText("#calendar-days", "Christmas Day (substitute day)")
+}

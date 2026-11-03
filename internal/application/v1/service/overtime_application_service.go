@@ -19,8 +19,11 @@ type OvertimeDay struct {
 
 	// Absence and Holiday say why the day asks less than its week plans, where
 	// something does: the kind of absence recorded on it, or the holiday it is.
-	Absence string
-	Holiday string
+	// HolidaySubstitute says the holiday fell on a weekend and is kept on this
+	// day instead.
+	Absence           string
+	Holiday           string
+	HolidaySubstitute bool
 }
 
 // OvertimeBalance summarises a user's overtime across a period.
@@ -51,8 +54,11 @@ type Day struct {
 	// Absence is the kind of absence recorded on the day, or empty.
 	Absence string
 
-	// Holiday is the public holiday the day is where this person works, or empty.
-	Holiday string
+	// Holiday is the public holiday the day is where this person works, or empty,
+	// and HolidaySubstitute says it fell on a weekend and is kept on this day
+	// instead.
+	Holiday           string
+	HolidaySubstitute bool
 
 	// Counts says whether the day counts towards the balance - see dayRules.
 	Counts bool
@@ -362,6 +368,8 @@ func (s *OvertimeService) Balance(
 			Balance: settled(booked - target),
 			Absence: rules.absent[day].Kind,
 			Holiday: rules.holidays[day].Name,
+
+			HolidaySubstitute: rules.holidays[day].Substitute,
 		})
 	}
 
@@ -455,6 +463,8 @@ func (s *OvertimeService) Days(ctx context.Context, userID uint, from, to time.T
 			Absence: rules.absent[d].Kind,
 			Holiday: rules.holidays[d].Name,
 			Counts:  counts,
+
+			HolidaySubstitute: rules.holidays[d].Substitute,
 		})
 	}
 

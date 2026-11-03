@@ -196,6 +196,43 @@ func TestAnInstallationInAnotherCountryKeepsThatCountrysHolidays(t *testing.T) {
 	}
 }
 
+// A holiday a country moves off a weekend is kept on the weekday it moves to,
+// said to stand in for it: Christmas 2027 is a Saturday, and Scotland keeps it on
+// the Monday and Boxing Day on the Tuesday.
+func TestADayKeptInPlaceOfAHolidayIsSaidToBe(t *testing.T) {
+	t.Parallel()
+
+	_, _, worker := startWithWorker(t)
+
+	worker.must(worker.api(http.MethodPut, "/me/holidays", map[string]any{"place": "GB-SCT"}), http.StatusOK)
+
+	var days struct {
+		Days []struct {
+			Date       string `json:"date"`
+			Holiday    string `json:"holiday"`
+			Substitute bool   `json:"holidaySubstitute"`
+		} `json:"days"`
+	}
+
+	worker.must(worker.api(http.MethodGet, "/me/days?from=2027-12-25&to=2027-12-28", nil),
+		http.StatusOK).Data(t, &days)
+
+	var read []string
+
+	for _, d := range days.Days {
+		mark := d.Holiday
+		if d.Substitute {
+			mark += "*"
+		}
+
+		read = append(read, mark)
+	}
+
+	if want := []string{"christmasDay", "stStephensDay", "christmasDay*", "stStephensDay*"}; !slices.Equal(read, want) {
+		t.Errorf("Christmas 2027 in Scotland reads %v, want %v", read, want)
+	}
+}
+
 // The installation can say it keeps none as a choice of its own, told apart from
 // nobody having chosen: both keep none, and a client from before countries reads
 // both as the empty choice it knew.

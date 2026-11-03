@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -97,6 +98,36 @@ func TestAPersonsOwnPlaceWinsOverTheInstallations(t *testing.T) {
 
 	if got := holidayOn(on(time.May, 25)); got != "" {
 		t.Errorf("somebody keeping no holidays has Whit Monday as %q", got)
+	}
+}
+
+// A holiday a country moves off a weekend is kept on the weekday it moves to,
+// under its own name and said to stand in for it: Christmas 2027 is a Saturday,
+// and England keeps it on the Monday and Boxing Day on the Tuesday.
+func TestADayKeptInPlaceOfAHolidaySaysSo(t *testing.T) {
+	f := newPlannedFixture(t)
+	f.place = "GB-ENG"
+
+	christmas := time.Date(2027, time.December, 24, 0, 0, 0, 0, time.UTC)
+
+	days, err := f.overtime.Days(context.Background(), f.userID, christmas, christmas.AddDate(0, 0, 4))
+	if err != nil {
+		t.Fatalf("days: %v", err)
+	}
+
+	var read []string
+
+	for _, d := range days {
+		mark := d.Holiday
+		if d.HolidaySubstitute {
+			mark += "*"
+		}
+
+		read = append(read, d.Date.Format("02")+" "+mark)
+	}
+
+	if got, want := strings.Join(read, ", "), "24 , 25 christmasDay, 26 stStephensDay, 27 christmasDay*, 28 stStephensDay*"; got != want {
+		t.Errorf("Christmas 2027 in England reads %q, want %q", got, want)
 	}
 }
 
