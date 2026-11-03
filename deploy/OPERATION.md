@@ -1446,8 +1446,8 @@ could be walked around by typing five numbers into the field between them.
 
 An installation whose administration has been handed to a `user-admin` account
 therefore keeps one thing out of that account's reach. That is deliberate: the
-irreversible operation stays with an account whose only job is the installation
-- the built-in one, which exists before anybody has chosen anything, or one that
+irreversible operation stays with an account whose only job is the installation -
+the built-in one, which exists before anybody has chosen anything, or one that
 was given the `admin` role on purpose.
 
 A run reads the directory and never writes to it. It creates accounts the
@@ -1485,7 +1485,7 @@ API call that names no accounts (`POST /api/v1/settings/ldap/sync` without
 recorded for good.** Each account is one line at WARN, whoever started the run
 and whichever way it ended:
 
-```
+```text
 directory sync removed "dave@example.com" with 12 time entries
 ```
 
