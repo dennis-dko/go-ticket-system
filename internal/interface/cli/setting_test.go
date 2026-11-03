@@ -124,10 +124,18 @@ func TestThePublicHolidaysAreChosenByCountryAndState(t *testing.T) {
 	w.until("the country is asked", asking("country"))
 
 	// Following the installation, none, then Austria, Germany, the United Kingdom.
+	//
+	// Waited for until the states are there: huh reads a select's options from
+	// its function in a command of its own, so for a moment after the field takes
+	// the focus it holds none, and a key pressed then acts on nothing. Under the
+	// race detector that moment was long enough for this case's enter to land in
+	// it.
 	w.press("down", "down", "down", "enter")
-	shows := prose(w.until("the state is asked", asking("region")))
+	shows := prose(w.until("the states are offered", func(m screen) bool {
+		return asking("region")(m) && strings.Contains(prose(m.View().Content), "Bavaria")
+	}))
 
-	if !strings.Contains(shows, "Settings › State") || !strings.Contains(shows, "Bavaria") {
+	if !strings.Contains(shows, "Settings › State") {
 		t.Errorf("Germany's parts are not asked for as states:\n%s", shows)
 	}
 
