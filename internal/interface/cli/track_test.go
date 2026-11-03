@@ -96,6 +96,10 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 			`"permissions":["settings:write:own","timesheets:read:own"],` +
 			`"reminders":{"unbookedDay":true,"timerAlertHours":` + strconv.Itoa(alertHours) + `}}`,
 		"GET /branding": `{"title":"Time Recording","translations":{"de":{"title":"Zeiterfassung"}},"version":"v9.9.9"}`,
+		"GET /me/holidays": `{"place":"","instancePlace":"DE-BY","countries":[` +
+			`{"code":"AT","regions":[],"regionRequired":false},` +
+			`{"code":"DE","regions":["BW","BY"],"regionRequired":true},` +
+			`{"code":"GB","regions":["ENG","SCT"],"regionRequired":true}]}`,
 		"GET /projects": `{"items":[{"id":1,"name":"Website","status":"active"},` +
 			`{"id":2,"name":"Webshop","status":"active"},{"id":3,"name":"Archive","status":"archived"},` +
 			`{"id":4,"name":"Consulting","status":"active"}]}`,

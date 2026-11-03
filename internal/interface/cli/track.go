@@ -24,7 +24,8 @@ import (
 const usage = `go-time-recording-client - book time from a terminal
 
 On a terminal and without a command, it opens a screen: the stopwatch running,
-today's entries, and a form for each of these commands.
+today's entries, a form for each of these commands, and the account's own
+settings, which it saves to the account as the browser does.
 
   status                             the stopwatch, and what today adds up to
   start [project] [-m text]          start the stopwatch, on a project or on none

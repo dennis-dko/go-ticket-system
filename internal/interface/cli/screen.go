@@ -48,8 +48,9 @@ type screen struct {
 	title, banner string
 
 	// told is what about the owner's own time deserves saying, as the browser's
-	// banners say it.
-	told notices
+	// banners say it, and places where they keep public holidays.
+	told   notices
+	places holidayPlaces
 
 	shown  snapshot
 	readAt time.Time
@@ -94,10 +95,11 @@ type loaded struct {
 	shown    snapshot
 	branding branding
 	told     notices
+	places   holidayPlaces
 	at       time.Time
 	err      error
 
-	branded, noticed bool
+	branded, noticed, placed bool
 }
 
 // done is what became of a change, in the sentence its command would print.
@@ -180,9 +182,10 @@ func (m screen) load() tea.Cmd {
 
 		named, nameErr := s.branding(ctx)
 		told, toldErr := s.notices(ctx)
+		places, placesErr := s.holidayPlaces(ctx)
 
-		return loaded{shown: shown, branding: named, told: told, at: time.Now(),
-			branded: nameErr == nil, noticed: toldErr == nil}
+		return loaded{shown: shown, branding: named, told: told, places: places, at: time.Now(),
+			branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
 	}
 }
 
@@ -287,6 +290,10 @@ func (m screen) take(msg loaded) screen {
 		m.told = msg.told
 	}
 
+	if msg.placed {
+		m.places = msg.places
+	}
+
 	if msg.at.After(m.now) {
 		m.now = msg.at
 	}
@@ -322,6 +329,11 @@ func (m screen) choices() []choice {
 			{"s", "start", l.text("track.form.start", "Start the stopwatch")},
 			{"b", "book", l.text("track.form.book", "Book time by hand")},
 		}
+	}
+
+	// The account's own settings, once there is an account read to show them of.
+	if m.loaded && !m.busy {
+		changes = append(changes, choice{"p", "settings", l.text("track.menu.settings", "Settings")})
 	}
 
 	return append(changes,
@@ -377,6 +389,11 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 	m.doing, m.news, m.failure = doing, "", ""
 	m.asked = &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
+
+	if doing == "settings" {
+		m.asked = m.settingAnswers()
+	}
+
 	m.form = m.formFor(doing)
 
 	return m, m.form.Init()
@@ -608,7 +625,7 @@ func (m screen) stepName() string {
 		return l.text("field.day", "Day")
 	}
 
-	return ""
+	return m.settingStep(m.form.GetFocusedField().GetKey())
 }
 
 // stopwatch is what the stopwatch runs on, since when, and for how long.
