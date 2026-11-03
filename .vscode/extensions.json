@@ -55,7 +55,7 @@
     // without a second tool.
     "qwtel.sqlite-viewer",
 
-    // CLAUDE.md, README.md and deploy/OPERATIONS.md are where the reasoning
+    // CLAUDE.md, README.md and deploy/OPERATION.md are where the reasoning
     // for this repository lives, and .markdownlint.yaml is what keeps their
     // one switched-off rule in one place. Without the extension that file only
     // helps whoever happens to have it already; with it, the config is what the

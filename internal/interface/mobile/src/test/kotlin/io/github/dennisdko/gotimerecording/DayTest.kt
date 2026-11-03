@@ -6,7 +6,7 @@ import org.junit.Test
 
 class DayTest {
 
-    private val english = Words("en", emptyMap())
+    private val english = Language("en", emptyMap())
 
     @Test
     fun hoursAreReadTheWaysPeopleWriteThem() {

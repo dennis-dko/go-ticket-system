@@ -4,11 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
 
-class WordsTest {
+class LanguageTest {
 
-    private val english = Words("en", emptyMap())
+    private val english = Language("en", emptyMap())
 
-    private val german = Words(
+    private val german = Language(
         "de",
         mapOf(
             "number.point" to ",",
@@ -51,19 +51,19 @@ class WordsTest {
 
     @Test
     fun valuesGoWhereTheSentenceSaysAndNowhereElse() {
-        assertEquals("Booked 1 on A.", Words.fill("Booked {0} on {1}.", "1", "A"))
-        assertEquals("b a", Words.fill("{1} {0}", "a", "b"))
-        assertEquals("{x} and {", Words.fill("{x} and {", "v"))
-        assertEquals("{2} stays", Words.fill("{2} stays", "x"))
-        assertEquals("b", Words.fill("{+1}", "a", "b"))
-        assertEquals("nothing to fill {0}", Words.fill("nothing to fill {0}"))
+        assertEquals("Booked 1 on A.", Language.fill("Booked {0} on {1}.", "1", "A"))
+        assertEquals("b a", Language.fill("{1} {0}", "a", "b"))
+        assertEquals("{x} and {", Language.fill("{x} and {", "v"))
+        assertEquals("{2} stays", Language.fill("{2} stays", "x"))
+        assertEquals("b", Language.fill("{+1}", "a", "b"))
+        assertEquals("nothing to fill {0}", Language.fill("nothing to fill {0}"))
     }
 
     @Test
     fun aDayIsWrittenInTheLayoutTheDictionaryNames() {
-        assertEquals("dd'.'MM'.'yyyy", Words.pattern("02.01.2006"))
-        assertEquals("yyyy'-'MM'-'dd", Words.pattern("2006-01-02"))
-        assertEquals("HH':'mm", Words.pattern("15:04"))
+        assertEquals("dd'.'MM'.'yyyy", Language.pattern("02.01.2006"))
+        assertEquals("yyyy'-'MM'-'dd", Language.pattern("2006-01-02"))
+        assertEquals("HH':'mm", Language.pattern("15:04"))
 
         val day = LocalDate.of(2026, 10, 29)
 

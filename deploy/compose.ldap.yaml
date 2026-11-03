@@ -110,7 +110,7 @@
 # synchronisation is separate and is the built-in administrator's alone - not
 # because of the connection, but because a run deletes every account the
 # directory no longer holds, together with everything those people recorded.
-# Always read the preview first. See deploy/OPERATIONS.md.
+# Always read the preview first. See deploy/OPERATION.md.
 #
 # ---------------------------------------------------------------------------
 # What this file needs that the others do not

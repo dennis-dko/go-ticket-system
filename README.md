@@ -54,7 +54,7 @@
 ## A tour
 
 Every picture below is taken from the running application by
-[a test](test/browser/readmepictures_test.go) that books a year of somebody's
+[a test](test/browser/readmepicture_test.go) that books a year of somebody's
 working time first — `task readme:pictures` takes them again.
 
 <table>
@@ -70,7 +70,7 @@ working time first — `task readme:pictures` takes them again.
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/image/activities.png" alt="Charts of the month's hours per project and per activity">
+      <img src="doc/image/activity.png" alt="Charts of the month's hours per project and per activity">
       <p><b>Your own figures, as charts.</b> Hours per project, and per activity: write <code>#meeting</code> or <code>#review</code> into a description and it is counted — nothing to set up first.</p>
     </td>
     <td valign="top">
@@ -84,7 +84,7 @@ working time first — `task readme:pictures` takes them again.
       <p><b>The year at a glance.</b> A tile a day, as dark as the hours on it; public holidays and days away outlined rather than told by colour alone, beside the year before.</p>
     </td>
     <td valign="top">
-      <img src="doc/image/projects.png" alt="The project list: one project in the last fifth of its hour budget, one past it, and the hourly rate of those that are charged for">
+      <img src="doc/image/project.png" alt="The project list: one project in the last fifth of its hour budget, one past it, and the hourly rate of those that are charged for">
       <p><b>Projects with budgets and rates.</b> The list says how much of a budget is booked, marked from four fifths and in red once it is past, and what a project is charged an hour.</p>
     </td>
   </tr>
@@ -106,7 +106,7 @@ working time first — `task readme:pictures` takes them again.
   </tr>
   <tr>
     <td valign="top">
-      <img src="doc/image/entries.png" alt="The entry list narrowed to the month's meetings">
+      <img src="doc/image/entry.png" alt="The entry list narrowed to the month's meetings">
       <p><b>Every entry, findable.</b> Narrow the list by project, period or words in the description — the export follows the same filter — and every correction keeps the version it replaced.</p>
     </td>
     <td valign="top">
@@ -235,7 +235,7 @@ task dev DB=sqlite      # or: go run ./cmd
 ```
 
 Running it for real — behind a proxy, with HTTPS, as a service — is
-[`deploy/OPERATIONS.md`](deploy/OPERATIONS.md).
+[`deploy/OPERATION.md`](deploy/OPERATION.md).
 
 ## From a terminal
 
@@ -353,13 +353,13 @@ installed on the phone, as the phone's browser does.
 
 | Area | What you get | Read more |
 | --- | --- | --- |
-| **Recording** | Stopwatch, entry form and week grid; templates for what is booked often; changes to many entries at once; spreadsheet import and export | [Features](doc/features.md) |
-| **History** | Every correction keeps the version it replaced, for the entry's owner | [Features](doc/features.md#business-rules) |
-| **Evaluating** | Charts per day, project and activity, reports as bars, columns or a pie, the year as tiles, statements of work, PDF exports | [Features](doc/features.md) |
-| **Projects** | Private to their owner, with a period, a status, an hour budget and an hourly rate | [Projects](doc/features.md#projects) |
-| **Targets and time off** | A planned week, the public holidays of every German state, leave with its entitlement and carry-over, sick days and days taken against overtime | [Overtime](doc/features.md#overtime) |
-| **Working time** | When each day began and ended and its breaks, for each person's own record | [Working time](doc/features.md#your-own-record-of-your-working-time) |
-| **Calendar subscription** | Booked days and days away in Outlook, Google or a telephone's calendar | [Calendar](doc/features.md#your-days-in-your-own-calendar) |
+| **Recording** | Stopwatch, entry form and week grid; templates for what is booked often; changes to many entries at once; spreadsheet import and export | [Features](doc/feature.md) |
+| **History** | Every correction keeps the version it replaced, for the entry's owner | [Features](doc/feature.md#business-rules) |
+| **Evaluating** | Charts per day, project and activity, reports as bars, columns or a pie, the year as tiles, statements of work, PDF exports | [Features](doc/feature.md) |
+| **Projects** | Private to their owner, with a period, a status, an hour budget and an hourly rate | [Projects](doc/feature.md#projects) |
+| **Targets and time off** | A planned week, the public holidays of every German state, leave with its entitlement and carry-over, sick days and days taken against overtime | [Overtime](doc/feature.md#overtime) |
+| **Working time** | When each day began and ended and its breaks, for each person's own record | [Working time](doc/feature.md#your-own-record-of-your-working-time) |
+| **Calendar subscription** | Booked days and days away in Outlook, Google or a telephone's calendar | [Calendar](doc/feature.md#your-days-in-your-own-calendar) |
 | **Accounts and roles** | Roles and their rights administered at run time; an administrator who runs the installation without keeping hours in it; managers for the accounts assigned to them, where an installation switches them on | [Access](doc/access.md) |
 | **Sign-in** | Passwords with TOTP, passkeys, LDAP and Active Directory with synchronisation, Kerberos, OpenID Connect | [Sign-in](doc/access.md#ldap) |
 | **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - and `go-time-recording-client` books through it from a terminal, on a screen of its own or a command at a time, as the Android app does from a phone | [API](doc/api.md) |
@@ -370,7 +370,7 @@ installed on the phone, as the phone's browser does.
 | Page | What it covers |
 | --- | --- |
 | [Getting started](doc/getting-started.md) | The installer, the first sign-in, the setup wizard and the tour |
-| [Features](doc/features.md) | Everything the application does, and the rules it keeps while doing it |
+| [Features](doc/feature.md) | Everything the application does, and the rules it keeps while doing it |
 | [Accounts, roles and sign-in](doc/access.md) | Rights, the administrator, API tokens, LDAP, Kerberos and OpenID Connect |
 | [Security](doc/security.md) | Sessions, CSRF, passkeys, two factors, HTTPS, and what a copy of the database gives away |
 | [Configuration](doc/configuration.md) | Where each setting comes from, and what the interface can change |
@@ -378,7 +378,7 @@ installed on the phone, as the phone's browser does.
 | [Architecture](doc/architecture.md) | The four layers, and the decisions that would otherwise surprise |
 | [Development](doc/development.md) | The environments, and the checks a change has to pass |
 | [Releases and deployment](doc/deployment.md) | How a release is made and what it carries |
-| [Operations manual](deploy/OPERATIONS.md) | For whoever runs it: the four ways to deploy, backups, restarts, health |
+| [Operations manual](deploy/OPERATION.md) | For whoever runs it: the four ways to deploy, backups, restarts, health |
 
 Built on [GoFr](https://gofr.dev), structured after [gogs](https://github.com/gogs/gogs).
 

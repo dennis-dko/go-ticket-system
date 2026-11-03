@@ -137,7 +137,7 @@ paraphrase of a message that has since been reworded.
 Two kinds of `code`. Specific ones are declared where the rule is enforced
 (`projectHasEntries`, `timesheetLocked`). The generic ones — the refusals that
 belong to no single rule — are declared once in
-[`apperror/codes.go`](../internal/support/apperror/codes.go): `internal`, `probeFailed`,
+[`apperror/code.go`](../internal/support/apperror/code.go): `internal`, `probeFailed`,
 `unauthenticated`, `notFound`, `invalidFields`, `rateLimited`, `csrfRejected`,
 `maintenance`.
 

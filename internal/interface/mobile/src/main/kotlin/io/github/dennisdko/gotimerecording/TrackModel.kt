@@ -26,12 +26,12 @@ class Dictionaries(private val assets: AssetManager) {
         .toSet()
 
     /** words is a language's words, or English for one there are none for. */
-    fun words(language: String): Words {
-        if (language !in spoken) return Words("en", emptyMap())
+    fun words(language: String): Language {
+        if (language !in spoken) return Language("en", emptyMap())
 
         val read = JSONObject(assets.open("$language.json").bufferedReader(Charsets.UTF_8).use { it.readText() })
 
-        return Words(language, read.keys().asSequence().associateWith { read.getString(it) })
+        return Language(language, read.keys().asSequence().associateWith { read.getString(it) })
     }
 }
 
@@ -45,7 +45,7 @@ fun languageFor(account: String, phone: String, spoken: Set<String>): String =
 
 /** State is everything the screen shows. */
 data class State(
-    val words: Words,
+    val words: Language,
     val connection: Connection?,
     /** offered is a connection a scanned code asks for, waiting for whoever holds the phone to accept it. */
     val offered: Connection? = null,
@@ -186,5 +186,5 @@ class TrackModel(application: Application) : AndroidViewModel(application) {
     private fun notThisApplication(connection: Connection): String =
         state.words.text("track.notThisApplication", "{0} answered with something that is not this application's", connection.address)
 
-    private fun wordsFor(account: String): Words = dictionaries.words(languageFor(account, phone, dictionaries.spoken))
+    private fun wordsFor(account: String): Language = dictionaries.words(languageFor(account, phone, dictionaries.spoken))
 }

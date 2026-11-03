@@ -5,9 +5,9 @@ import org.junit.Test
 
 class RefusalTest {
 
-    private val english = Words("en", emptyMap())
+    private val english = Language("en", emptyMap())
 
-    private val german = Words(
+    private val german = Language(
         "de",
         mapOf(
             "number.point" to ",",

@@ -15,7 +15,7 @@ import (
 //
 // Before this rule the description lived wherever the package happened to begin:
 // in the file named after the package where there was one, and otherwise in the
-// file carrying its subject - errors.go for rest, ldap.go for directory,
+// file carrying its subject - error.go for rest, ldap.go for directory,
 // visibility.go for the domain rules. Finding it meant knowing which. A file that
 // was split or renamed took the description with it or left it in the wrong
 // half, and a description of the whole package sat above the first declarations

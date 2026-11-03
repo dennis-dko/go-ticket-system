@@ -264,7 +264,7 @@ private fun Clock(state: State, snapshot: Snapshot, onStart: () -> Unit, onStop:
 }
 
 @Composable
-private fun Today(words: Words, snapshot: Snapshot, onBook: () -> Unit) {
+private fun Today(words: Language, snapshot: Snapshot, onBook: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(words.text("cal.today", "Today") + " - " + words.weekday(snapshot.today), style = MaterialTheme.typography.titleMedium)
@@ -296,7 +296,7 @@ private fun Question(question: String, yes: String, no: String, onYes: () -> Uni
 
 @Composable
 private fun ProjectForm(
-    words: Words,
+    words: Language,
     projects: List<Project>,
     title: String,
     note: String?,
@@ -324,7 +324,7 @@ private fun ProjectForm(
 
 @Composable
 private fun BookForm(
-    words: Words,
+    words: Language,
     snapshot: Snapshot,
     onDismiss: () -> Unit,
     onConfirm: (String, Project?, String, LocalDate) -> Unit,
@@ -374,7 +374,7 @@ private fun BookForm(
 
 /** ProjectChooser offers the active projects, as the terminal client takes them, and no project at all. */
 @Composable
-private fun ProjectChooser(words: Words, projects: List<Project>, chosen: Long?, onChoose: (Long?) -> Unit) {
+private fun ProjectChooser(words: Language, projects: List<Project>, chosen: Long?, onChoose: (Long?) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val none = words.text("ts.noProject", "No project")
     val active = projects.filter { it.status == "active" }
@@ -393,7 +393,7 @@ private fun ProjectChooser(words: Words, projects: List<Project>, chosen: Long?,
 }
 
 @Composable
-private fun Described(words: Words, description: String, onChange: (String) -> Unit) {
+private fun Described(words: Language, description: String, onChange: (String) -> Unit) {
     OutlinedTextField(
         value = description,
         onValueChange = onChange,

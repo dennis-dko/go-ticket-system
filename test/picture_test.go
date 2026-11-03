@@ -73,7 +73,7 @@ func picturesTheCameraTakes(t *testing.T) map[string]bool {
 	t.Helper()
 
 	file, err := parser.ParseFile(token.NewFileSet(),
-		filepath.Join("..", "test", "browser", "readmepictures_test.go"), nil, 0)
+		filepath.Join("..", "test", "browser", "readmepicture_test.go"), nil, 0)
 	if err != nil {
 		t.Fatalf("parsing the camera: %v", err)
 	}

@@ -79,9 +79,9 @@ func TestEveryNewMigrationComesAfterEveryReleasedOne(t *testing.T) {
 func versionsInSource(t *testing.T) []int64 {
 	t.Helper()
 
-	file, err := parser.ParseFile(token.NewFileSet(), "migrations.go", nil, 0)
+	file, err := parser.ParseFile(token.NewFileSet(), "migration.go", nil, 0)
 	if err != nil {
-		t.Fatalf("parsing migrations.go: %v", err)
+		t.Fatalf("parsing migration.go: %v", err)
 	}
 
 	var versions []int64

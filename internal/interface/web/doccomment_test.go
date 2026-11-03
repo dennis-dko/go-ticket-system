@@ -12,7 +12,7 @@ import (
 // and the function it described. The function then stood further down with no
 // description at all, and an editor showed both comments over the newcomer.
 // Reading the file does not show it - each comment still reads correctly where
-// it is - and test/doccomments_test.go, which asks the same of the Go side,
+// it is - and test/doccomment_test.go, which asks the same of the Go side,
 // never looks at the scripts.
 //
 // So: a line opening a doc comment may not follow directly on a line that

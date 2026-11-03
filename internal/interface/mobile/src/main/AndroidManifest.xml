@@ -6,11 +6,11 @@
 
     <!-- Nothing of the app's is backed up or carried to another phone.
          allowBackup="false" is what says so up to Android 11, so the rules file
-         lint asks for there would only repeat it; data_extraction_rules says it
+         lint asks for there would only repeat it; data_extraction_rule says it
          for 12 and later, where allowBackup no longer covers a transfer. -->
     <application
         android:allowBackup="false"
-        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:dataExtractionRules="@xml/data_extraction_rule"
         android:icon="@mipmap/ic_launcher"
         android:label="Time Recording"
         android:networkSecurityConfig="@xml/network_security_config"

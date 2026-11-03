@@ -161,7 +161,7 @@ func (c chain) reach(name string) string {
 func readChain(t *testing.T) chain {
 	t.Helper()
 
-	const path = "migrations.go"
+	const path = "migration.go"
 
 	fset := token.NewFileSet()
 

@@ -7,7 +7,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * Words is what the app says things in: one of the application's dictionaries,
+ * Language is what the app says things in: one of the application's dictionaries,
  * the very files internal/support/i18n/locale holds, copied into the app when it
  * is built - so the app speaks every language the installation does, and a new
  * language is still only its file.
@@ -19,7 +19,7 @@ import java.time.format.DateTimeFormatter
  * English, and a sentence a dictionary lacks is said in the English written
  * where it is said.
  */
-class Words(val language: String, private val dictionary: Map<String, String>) {
+class Language(val code: String, private val dictionary: Map<String, String>) {
 
     /** text is what key says, or [english] where there are no words for it, with [values] put in where it says {0}, {1} ... */
     fun text(key: String, english: String, vararg values: String): String =

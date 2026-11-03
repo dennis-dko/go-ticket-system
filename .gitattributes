@@ -104,7 +104,7 @@ go.sum      text eol=lf
 # tools that do not mind a carriage return, and pinned for the check as well.
 # A file left to text=auto is written with core.eol, which a clone leaves unset
 # and so native: CRLF on Windows, whatever core.autocrlf says - measured, not
-# assumed. test/lineendings_test.go asks git which files that is.
+# assumed. test/lineending_test.go asks git which files that is.
 *.xml          text eol=lf
 *.properties   text eol=lf
 LICENSE        text eol=lf
