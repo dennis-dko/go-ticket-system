@@ -641,6 +641,8 @@
   "mobile.disconnect": "Trennen",
   "mobile.disconnectQuestion": "{0} und das Token auf diesem Handy vergessen?",
   "mobile.otherVersion": "Diese App gehört zu {0}, die Installation läuft mit {1}. Installiere die App aus dem Release der Installation, damit beide dieselbe API kennen.",
+  "mobile.settings.back": "Zurück",
+  "mobile.theme.auto": "Wie das Telefon",
   "mobile.tokenUnknown": "die Installation kennt dieses Token nicht – leg unter Mein Konto, API-Tokens ein neues an und scanne seinen Code",
   "msg.alreadySending": "Das wird bereits gesendet.",
   "msg.booked": "Zeit gebucht",
