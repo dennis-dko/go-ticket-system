@@ -254,8 +254,13 @@ jobs:
 
           # The same flags the image is built with, including the version: a
           # download that calls itself "dev" is worse than no version at all, and
-          # the footer reads exactly this variable.
-          flags="-s -w -X main.version=${VERSION}"
+          # the footer reads exactly this variable. And the commit and its day,
+          # which the terminal client shows under its title beside the version;
+          # the web binary declares neither, and the linker passes over a -X
+          # for a variable a program does not have.
+          commit=$(git rev-parse --short=8 HEAD)
+          day=$(git show -s --format=%cs HEAD)
+          flags="-s -w -X main.version=${VERSION} -X main.commit=${commit} -X main.day=${day}"
 
           # compile <file name stem> <package> <os> <arch> [extension]
           compile() {
