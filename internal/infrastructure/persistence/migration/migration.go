@@ -183,6 +183,9 @@ func All(dialect string) map[int64]migration.Migrate {
 		20261022090000: {UP: func(d migration.Datasource) error {
 			return giveAProjectACurrency(d)
 		}},
+		20261103010000: {UP: func(d migration.Datasource) error {
+			return placeEveryHolidayStateInGermany(d, dialect)
+		}},
 	}
 }
 
@@ -1982,4 +1985,33 @@ func giveAProjectAnHourlyRate(d migration.Datasource) error {
 // says otherwise - which is what this application's own users charge in.
 func giveAProjectACurrency(d migration.Datasource) error {
 	return execAll(d, "ALTER TABLE projects ADD COLUMN currency VARCHAR(3) NOT NULL DEFAULT 'EUR'")
+}
+
+// placeEveryHolidayStateInGermany writes every stored choice of public holidays
+// the way a place is written now that there are countries: a German state's code
+// alone, which was every place there was, becomes the state's ISO 3166-2 code with
+// its country - BY becomes DE-BY. Empty and none mean what they meant.
+//
+// Once, here, rather than read both ways from now on: BE is Berlin written the old
+// way and Belgium the new one, so a reader asked to accept both could not tell
+// which one somebody meant. The states are written out rather than asked of the
+// model, because what this converts is what was stored then.
+func placeEveryHolidayStateInGermany(d migration.Datasource, dialect string) error {
+	installation := sqldb.Rebind(dialect, "UPDATE settings SET value = ? WHERE key_name = ? AND value = ?")
+	people := sqldb.Rebind(dialect, "UPDATE users SET holiday_region = ? WHERE holiday_region = ?")
+
+	for _, state := range []string{
+		"BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV",
+		"NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH",
+	} {
+		if _, err := d.SQL.Exec(installation, "DE-"+state, "instance.holidayRegion", state); err != nil {
+			return fmt.Errorf("placing the installation's holidays in %s: %w", state, err)
+		}
+
+		if _, err := d.SQL.Exec(people, "DE-"+state, state); err != nil {
+			return fmt.Errorf("placing the holidays of the people in %s: %w", state, err)
+		}
+	}
+
+	return nil
 }

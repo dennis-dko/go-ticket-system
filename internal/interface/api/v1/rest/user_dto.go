@@ -302,9 +302,11 @@ type OvertimeDayResponse struct {
 	Balance float64 `json:"balance"`
 
 	// Absence and Holiday say why the day asks less than its week plans, where
-	// something does.
-	Absence string `json:"absence,omitempty"`
-	Holiday string `json:"holiday,omitempty"`
+	// something does, and HolidaySubstitute that the holiday fell on a weekend
+	// and is kept on this day instead.
+	Absence           string `json:"absence,omitempty"`
+	Holiday           string `json:"holiday,omitempty"`
+	HolidaySubstitute bool   `json:"holidaySubstitute,omitempty"`
 }
 
 // OvertimeResponse is a user's overtime balance over a period.

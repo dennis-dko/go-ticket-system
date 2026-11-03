@@ -458,6 +458,7 @@ const FIELD_NAMES = {
   companyName: 'Company',
   companyUrl: 'Company website',
   confirmed: 'Confirmed accounts',
+  country: 'Country',
   currency: 'Currency',
   dailyTargetHours: 'Target h/day',
   date: 'Date',
@@ -496,7 +497,7 @@ const FIELD_NAMES = {
   port: 'Port',
   projectId: 'Project',
   q: 'Search',
-  region: 'State',
+  region: 'State or region',
   rateLimit: 'Rate limit',
   rateLimitWindowSeconds: 'Rate limit window (seconds)',
   role: 'Role',
@@ -6150,7 +6151,7 @@ function drawWeekGrid() {
 
     // And what else the day is: a public holiday, an absence somebody recorded.
     const day = days.find((d) => d.date === dates[i]);
-    if (day?.holiday) head.append(el('span', { class: 'week-tag', text: holidayName(day.holiday) }));
+    if (day?.holiday) head.append(el('span', { class: 'week-tag', text: holidayOf(day) }));
     if (day?.absence) head.append(el('span', { class: 'week-tag', text: absenceName(day.absence) }));
   }
 
@@ -6702,7 +6703,7 @@ function renderCalendarGrid(first, last, byDay, marks) {
       ...(dayEntries.length ? { type: 'button' } : {}),
     }, el('span', { class: 'cal-daynum', text: String(d) }));
 
-    if (holiday) cell.append(el('span', { class: 'cal-away', text: holidayName(holiday) }));
+    if (holiday) cell.append(el('span', { class: 'cal-away', text: holidayOf(marks.get(iso)) }));
     if (away) cell.append(el('span', { class: 'cal-away', text: absenceName(away) }));
 
     if (hours > 0) {
@@ -6810,75 +6811,245 @@ function absenceName(kind) {
 }
 
 /**
- * What each German state is called, in words - written out for the reason
- * absenceName gives.
+ * What each country public holidays can be kept in is called, in words -
+ * written out for the reason absenceName gives.
  */
-function regionName(code) {
+function countryName(code) {
   const names = {
-    BW: () => t('region.BW', 'Baden-Wuerttemberg'),
-    BY: () => t('region.BY', 'Bavaria'),
-    BE: () => t('region.BE', 'Berlin'),
-    BB: () => t('region.BB', 'Brandenburg'),
-    HB: () => t('region.HB', 'Bremen'),
-    HH: () => t('region.HH', 'Hamburg'),
-    HE: () => t('region.HE', 'Hesse'),
-    MV: () => t('region.MV', 'Mecklenburg-Western Pomerania'),
-    NI: () => t('region.NI', 'Lower Saxony'),
-    NW: () => t('region.NW', 'North Rhine-Westphalia'),
-    RP: () => t('region.RP', 'Rhineland-Palatinate'),
-    SL: () => t('region.SL', 'Saarland'),
-    SN: () => t('region.SN', 'Saxony'),
-    ST: () => t('region.ST', 'Saxony-Anhalt'),
-    SH: () => t('region.SH', 'Schleswig-Holstein'),
-    TH: () => t('region.TH', 'Thuringia'),
+    AT: () => t('country.AT', 'Austria'),
+    BE: () => t('country.BE', 'Belgium'),
+    CZ: () => t('country.CZ', 'Czechia'),
+    DE: () => t('country.DE', 'Germany'),
+    DK: () => t('country.DK', 'Denmark'),
+    FI: () => t('country.FI', 'Finland'),
+    FR: () => t('country.FR', 'France'),
+    GB: () => t('country.GB', 'United Kingdom'),
+    IE: () => t('country.IE', 'Ireland'),
+    IT: () => t('country.IT', 'Italy'),
+    LU: () => t('country.LU', 'Luxembourg'),
+    NL: () => t('country.NL', 'Netherlands'),
+    NO: () => t('country.NO', 'Norway'),
+    PL: () => t('country.PL', 'Poland'),
+    PT: () => t('country.PT', 'Portugal'),
+    SE: () => t('country.SE', 'Sweden'),
+    US: () => t('country.US', 'United States'),
   };
 
   return names[code]?.() ?? code;
+}
+
+/**
+ * What each region that keeps holidays of its own is called, by its place -
+ * the country's code and its own, DE-BY - written out for the same reason.
+ */
+function regionName(place) {
+  const names = {
+    'DE-BW': () => t('region.DE-BW', 'Baden-Wuerttemberg'),
+    'DE-BY': () => t('region.DE-BY', 'Bavaria'),
+    'DE-BE': () => t('region.DE-BE', 'Berlin'),
+    'DE-BB': () => t('region.DE-BB', 'Brandenburg'),
+    'DE-HB': () => t('region.DE-HB', 'Bremen'),
+    'DE-HH': () => t('region.DE-HH', 'Hamburg'),
+    'DE-HE': () => t('region.DE-HE', 'Hesse'),
+    'DE-MV': () => t('region.DE-MV', 'Mecklenburg-Western Pomerania'),
+    'DE-NI': () => t('region.DE-NI', 'Lower Saxony'),
+    'DE-NW': () => t('region.DE-NW', 'North Rhine-Westphalia'),
+    'DE-RP': () => t('region.DE-RP', 'Rhineland-Palatinate'),
+    'DE-SL': () => t('region.DE-SL', 'Saarland'),
+    'DE-SN': () => t('region.DE-SN', 'Saxony'),
+    'DE-ST': () => t('region.DE-ST', 'Saxony-Anhalt'),
+    'DE-SH': () => t('region.DE-SH', 'Schleswig-Holstein'),
+    'DE-TH': () => t('region.DE-TH', 'Thuringia'),
+    'FR-6AE': () => t('region.FR-6AE', 'Alsace'),
+    'FR-57': () => t('region.FR-57', 'Moselle'),
+    'GB-ENG': () => t('region.GB-ENG', 'England'),
+    'GB-WLS': () => t('region.GB-WLS', 'Wales'),
+    'GB-SCT': () => t('region.GB-SCT', 'Scotland'),
+    'GB-NIR': () => t('region.GB-NIR', 'Northern Ireland'),
+    'IT-BZ': () => t('region.IT-BZ', 'South Tyrol'),
+    'PT-20': () => t('region.PT-20', 'Azores'),
+    'PT-30': () => t('region.PT-30', 'Madeira'),
+  };
+
+  return names[place]?.() ?? place;
+}
+
+/** A place in words: its country, and its region after it where it has one. */
+function placeName(place) {
+  const [country, region] = place.split('-');
+
+  return region ? `${countryName(country)}, ${regionName(place)}` : countryName(country);
 }
 
 /** What each public holiday is called, in words, written out for the same reason. */
 function holidayName(name) {
   const names = {
     newYear: () => t('holiday.newYear', 'New Year’s Day'),
+    secondJanuary: () => t('holiday.secondJanuary', '2 January'),
     epiphany: () => t('holiday.epiphany', 'Epiphany'),
+    martinLutherKingDay: () => t('holiday.martinLutherKingDay', 'Martin Luther King Jr. Day'),
+    stBrigidsDay: () => t('holiday.stBrigidsDay', 'St Brigid’s Day'),
+    washingtonsBirthday: () => t('holiday.washingtonsBirthday', 'Washington’s Birthday'),
     womensDay: () => t('holiday.womensDay', 'International Women’s Day'),
+    stPatricksDay: () => t('holiday.stPatricksDay', 'St Patrick’s Day'),
+    maundyThursday: () => t('holiday.maundyThursday', 'Maundy Thursday'),
     goodFriday: () => t('holiday.goodFriday', 'Good Friday'),
     easterSunday: () => t('holiday.easterSunday', 'Easter Sunday'),
     easterMonday: () => t('holiday.easterMonday', 'Easter Monday'),
+    freedomDay: () => t('holiday.freedomDay', 'Freedom Day'),
+    queensDay: () => t('holiday.queensDay', 'Queen’s Day'),
+    kingsDay: () => t('holiday.kingsDay', 'King’s Day'),
     labourDay: () => t('holiday.labourDay', 'Labour Day'),
+    mayBankHoliday: () => t('holiday.mayBankHoliday', 'May Bank Holiday'),
+    earlyMayBankHoliday: () => t('holiday.earlyMayBankHoliday', 'Early May Bank Holiday'),
+    constitutionDay: () => t('holiday.constitutionDay', 'Constitution Day'),
     liberationDay: () => t('holiday.liberationDay', 'Liberation Day'),
+    victoryInEurope: () => t('holiday.victoryInEurope', 'Victory in Europe Day'),
+    europeDay: () => t('holiday.europeDay', 'Europe Day'),
+    greatPrayerDay: () => t('holiday.greatPrayerDay', 'General Prayer Day'),
     ascension: () => t('holiday.ascension', 'Ascension Day'),
     whitSunday: () => t('holiday.whitSunday', 'Whit Sunday'),
     whitMonday: () => t('holiday.whitMonday', 'Whit Monday'),
+    azoresDay: () => t('holiday.azoresDay', 'Azores Day'),
+    memorialDay: () => t('holiday.memorialDay', 'Memorial Day'),
+    springBankHoliday: () => t('holiday.springBankHoliday', 'Spring Bank Holiday'),
     corpusChristi: () => t('holiday.corpusChristi', 'Corpus Christi'),
+    republicDay: () => t('holiday.republicDay', 'Republic Day'),
+    juneBankHoliday: () => t('holiday.juneBankHoliday', 'June Bank Holiday'),
+    nationalDay: () => t('holiday.nationalDay', 'National Day'),
+    uprisingDay: () => t('holiday.uprisingDay', 'Anniversary of the uprising of 17 June 1953'),
+    juneteenth: () => t('holiday.juneteenth', 'Juneteenth'),
+    midsummerEve: () => t('holiday.midsummerEve', 'Midsummer Eve'),
+    midsummerDay: () => t('holiday.midsummerDay', 'Midsummer Day'),
+    madeiraDay: () => t('holiday.madeiraDay', 'Madeira Day'),
+    independenceDay: () => t('holiday.independenceDay', 'Independence Day'),
+    cyrilAndMethodiusDay: () => t('holiday.cyrilAndMethodiusDay', 'Saints Cyril and Methodius Day'),
+    janHusDay: () => t('holiday.janHusDay', 'Jan Hus Day'),
+    battleOfTheBoyne: () => t('holiday.battleOfTheBoyne', 'Battle of the Boyne'),
+    augustBankHoliday: () => t('holiday.augustBankHoliday', 'August Bank Holiday'),
+    summerBankHoliday: () => t('holiday.summerBankHoliday', 'Summer Bank Holiday'),
     assumption: () => t('holiday.assumption', 'Assumption Day'),
     childrensDay: () => t('holiday.childrensDay', 'World Children’s Day'),
+    statehoodDay: () => t('holiday.statehoodDay', 'Czech Statehood Day'),
     germanUnity: () => t('holiday.germanUnity', 'German Unity Day'),
+    stFrancisDay: () => t('holiday.stFrancisDay', 'St Francis of Assisi’s Day'),
+    columbusDay: () => t('holiday.columbusDay', 'Columbus Day'),
+    octoberBankHoliday: () => t('holiday.octoberBankHoliday', 'October Bank Holiday'),
     reformationDay: () => t('holiday.reformationDay', 'Reformation Day'),
     allSaints: () => t('holiday.allSaints', 'All Saints’ Day'),
+    armisticeDay: () => t('holiday.armisticeDay', 'Armistice Day'),
+    veteransDay: () => t('holiday.veteransDay', 'Veterans Day'),
+    freedomAndDemocracyDay: () => t('holiday.freedomAndDemocracyDay', 'Struggle for Freedom and Democracy Day'),
     repentanceDay: () => t('holiday.repentanceDay', 'Day of Prayer and Repentance'),
+    thanksgiving: () => t('holiday.thanksgiving', 'Thanksgiving'),
+    stAndrewsDay: () => t('holiday.stAndrewsDay', 'St Andrew’s Day'),
+    restorationOfIndependence: () => t('holiday.restorationOfIndependence', 'Restoration of Independence'),
+    immaculateConception: () => t('holiday.immaculateConception', 'Immaculate Conception'),
+    christmasEve: () => t('holiday.christmasEve', 'Christmas Eve'),
     christmasDay: () => t('holiday.christmasDay', 'Christmas Day'),
     stStephensDay: () => t('holiday.stStephensDay', 'Boxing Day'),
+    newYearsEve: () => t('holiday.newYearsEve', 'New Year’s Eve'),
+    royalWedding: () => t('holiday.royalWedding', 'Royal wedding'),
+    diamondJubilee: () => t('holiday.diamondJubilee', 'The Queen’s Diamond Jubilee'),
+    platinumJubilee: () => t('holiday.platinumJubilee', 'The Queen’s Platinum Jubilee'),
+    stateFuneral: () => t('holiday.stateFuneral', 'State funeral of Queen Elizabeth II'),
+    coronation: () => t('holiday.coronation', 'Coronation of King Charles III'),
+    dayOfRemembrance: () => t('holiday.dayOfRemembrance', 'Day of Remembrance and Recognition'),
+    worldCup: () => t('holiday.worldCup', 'Bank holiday for the World Cup'),
   };
 
   return names[name]?.() ?? name;
 }
 
-/** Whose public holidays this account keeps, and the states it could choose, as last loaded. */
+/**
+ * The public holiday a day is, in words - said to be kept in place of one where
+ * it fell on a weekend and the country keeps it on this day instead, which would
+ * otherwise read as Christmas on the 27th.
+ */
+function holidayOf(day) {
+  const name = holidayName(day.holiday);
+
+  return day.holidaySubstitute ? fillIn(t('holiday.substitute', '{0} (substitute day)'), [name]) : name;
+}
+
+/** The countries public holidays can be kept in and their regions, as last loaded. */
+let holidayCountries = [];
+
+/** Whose public holidays this account keeps, as last loaded. */
 let myHolidays = null;
 
-/** Loads the state whose public holidays this account keeps into "My account". */
+/** Loads where this account keeps public holidays into "My account". */
 async function loadMyHolidays() {
   myHolidays = await api('/me/holidays');
+  holidayCountries = myHolidays?.countries ?? holidayCountries;
 
   redrawable('myHolidays', fillMyHolidays);
 }
 
-/** Fills a state picker: the choices before the states, then every state the server offers. */
-function fillRegionSelect(select, regions, chosen, ...before) {
-  select.replaceChildren(...before,
-    ...(regions ?? []).map((code) => el('option', { value: code, text: regionName(code) })));
-  select.value = chosen ?? '';
+/**
+ * Fills a holiday card's two pickers from a choice: the countries after
+ * whatever comes before them, and the regions of the one chosen.
+ *
+ * emptyCountry is what an empty choice shows: following the installation for a
+ * person, and Germany for the installation - where nobody has chosen yet, with no
+ * state, which keeps none until one is saved.
+ */
+function fillHolidayPickers(form, choice, emptyCountry, ...before) {
+  const locale = activeLocale();
+  const countries = holidayCountries.map((country) => country.code)
+    .sort((a, b) => countryName(a).localeCompare(countryName(b), locale));
+
+  form.elements.country.replaceChildren(...before,
+    ...countries.map((code) => el('option', { value: code, text: countryName(code) })));
+
+  const [country, region] = choice ? choice.split('-') : [emptyCountry];
+
+  form.elements.country.value = country;
+  fillRegions(form, region);
+}
+
+/**
+ * Fills the region picker for the country chosen, under the word that country
+ * uses for its parts, and puts it away for a country with none.
+ *
+ * Required where the regions divide the country - a German state, a British
+ * nation - and starting on nothing there, so the form cannot be saved without
+ * one. Where a few regions keep a day or two more than the rest, the rest of the
+ * country comes first.
+ */
+function fillRegions(form, chosen) {
+  const code = form.elements.country.value;
+  const country = holidayCountries.find((one) => one.code === code);
+  const regions = country?.regions ?? [];
+  const select = form.elements.region;
+  const field = select.closest('label');
+
+  // Not required while it is away: a hidden control that is still required
+  // cannot be submitted past, and the form silently does nothing.
+  field.hidden = !regions.length;
+  select.required = Boolean(regions.length && country.regionRequired);
+
+  if (code === 'DE') swapTheLabel(field, 'holiday.region', 'State');
+  else if (code === 'GB') swapTheLabel(field, 'holiday.nation', 'Nation');
+  else swapTheLabel(field, 'holiday.area', 'Region');
+
+  select.replaceChildren(
+    country?.regionRequired
+      ? el('option', { value: '', text: t('holiday.chooseRegion', 'Choose one') })
+      : el('option', { value: '', text: t('holiday.elsewhere', 'Everywhere else') }),
+    ...regions.map((region) => el('option', { value: region, text: regionName(`${code}-${region}`) })));
+
+  select.value = regions.includes(chosen) ? chosen : '';
+}
+
+/** The choice a holiday card's pickers make: a place, or what stands in for one. */
+function chosenPlace(form) {
+  const country = form.elements.country.value;
+  const region = form.elements.region.value;
+
+  if (!holidayCountries.some((one) => one.code === country)) return country;
+
+  return region ? `${country}-${region}` : country;
 }
 
 function fillMyHolidays() {
@@ -6887,24 +7058,23 @@ function fillMyHolidays() {
   // Not over a choice somebody has made and not yet saved.
   if (!form || !myHolidays || beingEdited(form)) return;
 
-  const instance = myHolidays.instanceRegion;
+  const instance = myHolidays.instancePlace;
+  const kept = instance && instance !== 'none' ? placeName(instance) : t('holiday.noneKept', 'none');
 
-  fillRegionSelect($('#my-holidays'), myHolidays.regions, myHolidays.region,
-    el('option', {
-      value: '',
-      text: fillIn(t('holiday.inherit', 'Follow the installation ({0})'),
-        [instance ? regionName(instance) : t('holiday.noneKept', 'none')]),
-    }),
+  fillHolidayPickers(form, myHolidays.place, '',
+    el('option', { value: '', text: fillIn(t('holiday.inherit', 'Follow the installation ({0})'), [kept]) }),
     el('option', { value: 'none', text: t('holiday.noRegion', 'No public holidays') }));
 }
 
 function wireHolidays() {
   for (const [form, endpoint] of [['#form-my-holidays', '/me/holidays'], ['#form-holidays', '/settings/holidays']]) {
+    $(form)?.elements.country.addEventListener('change', (event) => fillRegions(event.target.form, ''));
+
     $(form)?.addEventListener('submit', (event) => {
       event.preventDefault();
 
       saveForm(event.target,
-        () => api(endpoint, { method: 'PUT', body: JSON.stringify({ region: event.target.elements.region.value }) }),
+        () => api(endpoint, { method: 'PUT', body: JSON.stringify({ place: chosenPlace(event.target) }) }),
         t('holiday.saved', 'Public holidays saved'),
         refreshAll);
     });
@@ -7152,7 +7322,7 @@ function drawYearMap() {
 
     if (daily.date === today) classes.push('today');
 
-    const why = daily.holiday ? holidayName(daily.holiday) : (daily.absence ? absenceName(daily.absence) : '');
+    const why = daily.holiday ? holidayOf(daily) : (daily.absence ? absenceName(daily.absence) : '');
 
     tiles.push(el('span', {
       class: classes.join(' '),
@@ -8393,10 +8563,11 @@ async function loadAdmin() {
   showTimeIn(instanceSelect, $('#instance-timezone-now'), 'UTC');
 
   const holidays = await api('/settings/holidays');
+  holidayCountries = holidays?.countries ?? holidayCountries;
 
   if (!beingEdited($('#form-holidays'))) {
-    fillRegionSelect($('#instance-holidays'), holidays.regions, holidays.region,
-      el('option', { value: '', text: t('holiday.noRegion', 'No public holidays') }));
+    fillHolidayPickers($('#form-holidays'), holidays.place, 'DE',
+      el('option', { value: 'none', text: t('holiday.noRegion', 'No public holidays') }));
   }
 
   const ds = await api('/settings/datasource');
@@ -17451,7 +17622,7 @@ function wireForms() {
     evaluatedPeriod.overtime = { from: balance.from, to: balance.to };
 
     const rows = (balance.days ?? []).map((d) => el('tr', {},
-      el('td', { text: [fmtDate(d.date), d.holiday ? holidayName(d.holiday) : null,
+      el('td', { text: [fmtDate(d.date), d.holiday ? holidayOf(d) : null,
         d.absence ? absenceName(d.absence) : null].filter(Boolean).join(' · ') }),
       el('td', { class: 'num', text: fmtHours(d.booked) }),
       el('td', { class: 'num', text: fmtHours(d.target) }),

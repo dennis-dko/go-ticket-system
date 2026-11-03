@@ -19,7 +19,7 @@ type VacationService struct {
 	absences     repository.AbsenceRepository
 	users        repository.UserRepository
 	schedules    repository.WorkScheduleRepository
-	regions      RegionSource
+	places       PlaceSource
 	today        Today
 }
 
@@ -31,12 +31,12 @@ func NewVacationService(
 	absences repository.AbsenceRepository,
 	users repository.UserRepository,
 	schedules repository.WorkScheduleRepository,
-	regions RegionSource,
+	places PlaceSource,
 	today Today,
 ) *VacationService {
 	return &VacationService{
 		entitlements: entitlements, absences: absences, users: users, schedules: schedules,
-		regions: regions, today: today,
+		places: places, today: today,
 	}
 }
 
@@ -53,7 +53,7 @@ type VacationAccount struct {
 // entitlement was recorded for: leave not taken is not lost here, and leave
 // overdrawn is owed. Only leave on a day that is worked counts - a day the week
 // planned for it asks something of, and no public holiday - which recording leave
-// already keeps to, and which is asked again here because a plan or a state chosen
+// already keeps to, and which is asked again here because a plan or a place chosen
 // later can make a recorded day one that is not worked.
 func (s *VacationService) Year(ctx context.Context, userID uint, year int) (*VacationAccount, error) {
 	if year < 1900 || year > 9999 {
@@ -91,7 +91,7 @@ func (s *VacationService) Year(ctx context.Context, userID uint, year int) (*Vac
 		return nil, err
 	}
 
-	holidays, err := holidaysOf(ctx, s.regions, user, from, to)
+	holidays, err := holidaysOf(ctx, s.places, user, from, to)
 	if err != nil {
 		return nil, err
 	}

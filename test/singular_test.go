@@ -132,6 +132,13 @@ func TestEveryFileIsNamedInTheSingular(t *testing.T) {
 			continue
 		}
 
+		// A last part of two letters is a code rather than a word - holiday_us.go
+		// holds the public holidays of the United States - and no plural is two
+		// letters long.
+		if parts := strings.Split(name, "_"); len(parts) > 1 && len(parts[len(parts)-1]) == 2 {
+			continue
+		}
+
 		t.Errorf("%s is named in the plural; this tree names its files in the singular", path)
 	}
 }

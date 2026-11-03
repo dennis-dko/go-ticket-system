@@ -322,7 +322,7 @@ func keep(t *testing.T, into, name string, picture []byte) {
 const theInstallation = `(async () => {
 	const put = (path, body) => api(path, {method: 'PUT', body: JSON.stringify(body)});
 	await put('/settings/timezone', {timezone: %s});
-	await put('/settings/holidays', {region: 'BY'});
+	await put('/settings/holidays', {place: 'DE-BY'});
 	await put('/settings/openid', {enabled: true, issuer: %s, clientId: %s, clientSecret: %s, label: ''});
 	await api('/users', {method: 'POST', body: JSON.stringify({
 		name: 'Robin Keller', email: 'robin@example.com', role: 'user', password: 'robin-password-1'})});

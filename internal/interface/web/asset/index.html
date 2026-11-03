@@ -1590,12 +1590,17 @@
       </form>
 
       <!-- Whose public holidays this person keeps, beside the zone because it is
-           the same arrangement: the installation's, unless they choose their own. -->
+           the same arrangement: the installation's, unless they choose their own.
+           The second picker is for a country whose holidays differ by state,
+           nation or region, and is put away for any other. -->
       <form method="post" id="form-my-holidays" class="card form">
         <h2 data-i18n="holiday.myTitle">My public holidays</h2>
-        <p class="muted" data-i18n="holiday.myHint">The public holidays of the state you work in: marked in the calendar and on the week, left out of the leave you record, and asking nothing from the day every working day counts from. Leave it on following the installation unless you work in another state, or outside Germany.</p>
+        <p class="muted" data-i18n="holiday.myHint">The public holidays where you work: marked in the calendar and on the week, left out of the leave you record, and asking nothing from the day every working day counts from. Leave it on following the installation unless you work in another state or country.</p>
         <div class="grid">
-          <label class="wide" data-i18n="holiday.region">State
+          <label data-i18n="holiday.country">Country
+            <select name="country" id="my-holiday-country"></select>
+          </label>
+          <label data-i18n="holiday.region" hidden>State
             <select name="region" id="my-holidays"></select>
           </label>
         </div>
@@ -1925,9 +1930,12 @@
 
       <form method="post" id="form-holidays" class="card form">
         <h2 data-i18n="holiday.title">Public holidays</h2>
-        <p class="muted" data-i18n="holiday.hint">The state whose public holidays everybody keeps who has not chosen their own under "My account". Without one, nobody keeps any.</p>
+        <p class="muted" data-i18n="holiday.hint">The public holidays of everybody who has not chosen their own under "My account": a country and, where its holidays differ by state, nation or region, which one. Until a choice is saved, nobody keeps any.</p>
         <div class="grid">
-          <label class="wide" data-i18n="holiday.region">State
+          <label data-i18n="holiday.country">Country
+            <select name="country" id="instance-holiday-country"></select>
+          </label>
+          <label data-i18n="holiday.region" hidden>State
             <select name="region" id="instance-holidays"></select>
           </label>
         </div>

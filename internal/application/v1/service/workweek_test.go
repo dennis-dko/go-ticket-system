@@ -27,8 +27,8 @@ type plannedFixture struct {
 	// absenceRepo is what away records into, for a service the fixture does not wire.
 	absenceRepo *memory.AbsenceRepository
 
-	// region is the state the installation keeps the holidays of, empty for none.
-	region string
+	// place is the installation's choice of public holidays, empty for none.
+	place string
 
 	// today is the day the balance is worked out on.
 	today time.Time
@@ -42,14 +42,14 @@ func newPlannedFixture(t *testing.T) *plannedFixture {
 
 	// A Friday at the end of July, after every day the fixture books on.
 	f := &plannedFixture{fixture: newFixture(t), today: day(31), absenceRepo: absences}
-	regions := service.RegionSource(func(context.Context) (string, error) { return f.region, nil })
+	places := service.PlaceSource(func(context.Context) (string, error) { return f.place, nil })
 
 	f.weeks = service.NewWorkScheduleService(schedules, f.userRepo)
 	clock := service.Today(func(context.Context, *model.User) time.Time { return f.today })
 
-	f.overtime = service.NewOvertimeService(f.timesheetRepo, f.userRepo, schedules, absences, regions, clock)
-	f.away = service.NewAbsenceService(absences, f.userRepo, schedules, regions)
-	f.leave = service.NewVacationService(memory.NewVacationRepository(), absences, f.userRepo, schedules, regions, clock)
+	f.overtime = service.NewOvertimeService(f.timesheetRepo, f.userRepo, schedules, absences, places, clock)
+	f.away = service.NewAbsenceService(absences, f.userRepo, schedules, places)
+	f.leave = service.NewVacationService(memory.NewVacationRepository(), absences, f.userRepo, schedules, places, clock)
 
 	return f
 }

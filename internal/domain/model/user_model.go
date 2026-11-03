@@ -72,11 +72,10 @@ type User struct {
 	// moves hours between days rather than merely displaying them oddly.
 	Timezone string
 
-	// HolidayRegion is the state whose public holidays this person keeps: empty
-	// follows the installation, NoHolidays keeps none, and anything else is one
-	// of the HolidayRegions - for somebody who works in another state than the
-	// installation's, or outside Germany.
-	HolidayRegion string
+	// HolidayPlace is where this person keeps public holidays: empty follows the
+	// installation, NoHolidays keeps none, and anything else is a place - for
+	// somebody who works in another state or country than the installation's.
+	HolidayPlace string
 
 	// EveryDayCountsFrom is the day from which every working day counts towards
 	// this person's overtime balance, booked or not, with what a holiday or an

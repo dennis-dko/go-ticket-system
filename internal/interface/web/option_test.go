@@ -170,36 +170,64 @@ func TestTheAbsencesOfferedAreTheKindsTheServerRecords(t *testing.T) {
 	}
 }
 
-// Every state the server offers has a name on screen, and so does every public
-// holiday its rules can produce - a picker or a calendar would otherwise show a
-// code or a key. The holidays are collected from the rules themselves, across
-// the years their exceptions hold in, rather than from a second list.
-func TestEveryStateAndEveryHolidayHasAName(t *testing.T) {
+// Every country and region the server offers has a name on screen, and so does
+// every public holiday its rules can produce - a picker or a calendar would
+// otherwise show a code or a key. The holidays are collected from the rules
+// themselves, in every place and across the years their exceptions hold in,
+// rather than from a second list.
+func TestEveryPlaceAndEveryHolidayHasAName(t *testing.T) {
 	js := asset(t, "/app.js")
 
-	for _, region := range model.HolidayRegions() {
-		if !strings.Contains(js, "t('region."+region+"', ") {
-			t.Errorf("app.js names no state %q, so a picker offers its code", region)
-		}
-	}
-
 	names := map[string]bool{}
+	substitutes := 0
 
-	for _, region := range model.HolidayRegions() {
-		for _, year := range []int{1994, 2017, 2020, 2026} {
-			for _, holiday := range model.HolidaysIn(region, year) {
-				names[holiday.Name] = true
+	for _, country := range model.HolidayCountries() {
+		if !strings.Contains(js, "t('country."+country.Code+"', ") {
+			t.Errorf("app.js names no country %q, so a picker offers its code", country.Code)
+		}
+
+		var places []string
+		if !country.RegionRequired {
+			places = append(places, country.Code)
+		}
+
+		for _, region := range country.Regions {
+			place := model.HolidayPlace(country.Code, region)
+			places = append(places, place)
+
+			if !strings.Contains(js, "t('region."+place+"', ") {
+				t.Errorf("app.js names no region %q, so a picker offers its code", place)
+			}
+		}
+
+		for _, place := range places {
+			for year := 1950; year <= 2040; year++ {
+				for _, holiday := range model.HolidaysIn(place, year) {
+					names[holiday.Name] = true
+
+					if holiday.Substitute {
+						substitutes++
+					}
+				}
 			}
 		}
 	}
 
-	if len(names) < 20 {
-		t.Fatalf("the rules produced %d holidays, fewer than the twenty they know; this case is not reading them all", len(names))
+	if len(names) < 70 {
+		t.Fatalf("the rules produced %d holidays, fewer than the seventy they know; this case is not reading them all", len(names))
 	}
 
 	for name := range names {
 		if !strings.Contains(js, "t('holiday."+name+"', ") {
 			t.Errorf("app.js names no holiday %q, so the calendar shows its key", name)
 		}
+	}
+
+	if substitutes == 0 {
+		t.Fatal("no holiday was kept in place of one on a weekend; this case is not reading the countries that do")
+	}
+
+	if !strings.Contains(js, "t('holiday.substitute', ") {
+		t.Error("app.js has no words for a day kept in place of a holiday on a weekend, so it reads as the holiday itself")
 	}
 }
