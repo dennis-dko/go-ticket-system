@@ -170,7 +170,7 @@ func notFoundEntities(t *testing.T) []string {
 
 	root := filepath.Join("..", "..", "..", "internal")
 
-	errorsGo, err := os.ReadFile(filepath.Join(root, "interface", "api", "v1", "rest", "errors.go"))
+	errorsGo, err := os.ReadFile(filepath.Join(root, "interface", "api", "v1", "rest", "error.go"))
 	if err != nil {
 		t.Fatalf("reading rest's errors: %v", err)
 	}

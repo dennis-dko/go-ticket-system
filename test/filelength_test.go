@@ -24,7 +24,7 @@ const lengthBudget = 800
 // says so rather than inventing a justification: a list that is wrong about why
 // a file is long is worse than the file, because it is read instead of the file.
 var overBudget = map[string]string{
-	"internal/infrastructure/persistence/migration/migrations.go": "an append-only chain whose order is " +
+	"internal/infrastructure/persistence/migration/migration.go": "an append-only chain whose order is " +
 		"its content; a second file would hold half of that order and neither half would show it",
 	"cmd/main.go": "start-up ordering is the subject and it reads top to bottom; splitting it is the one " +
 		"change that would hide the order, which is why the logic-read ledger reads it whole",

@@ -15,7 +15,7 @@
 #
 # Measured on this tree rather than assumed: it fires on 224 of CLAUDE.md's 286
 # lines, and 647 times across the repository's markdown - 287 of those in
-# README.md and 115 in deploy/OPERATIONS.md. The prose here is one paragraph per
+# README.md and 115 in deploy/OPERATION.md. The prose here is one paragraph per
 # bullet and is meant to be read wrapped rather than hard-wrapped, so those 224
 # are the document working as intended. CLAUDE.md is also the most-read file in
 # the repository, which makes 224 warnings on it the fastest way to teach

@@ -12,7 +12,7 @@
 #
 # A ticket's owner is looked up in the directory configured under Settings, so
 # without one the sign-in is not offered. "Signing in with Kerberos" in
-# OPERATIONS.md says how to make the service principal and the keytab, and what
+# OPERATION.md says how to make the service principal and the keytab, and what
 # the browsers need.
 
 services:

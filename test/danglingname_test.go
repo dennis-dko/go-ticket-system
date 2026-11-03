@@ -93,10 +93,10 @@ var namedOnPurpose = map[string]string{
 	"requireMayDelete":          "retired with the shared project",
 	"parseYesNo":                "retired with the Category column",
 	"signInAsAuditor":           "retired with timesheets:read:all",
-	"defaultAutoCloseAfterDays": "the constant orphans_test.go was written after",
+	"defaultAutoCloseAfterDays": "the constant orphan_test.go was written after",
 
 	// An example of the shape a check looks for.
-	"requireAdministrator": "what doccomments_test.go means by a compound identifier",
+	"requireAdministrator": "what doccomment_test.go means by a compound identifier",
 
 	// The history this check was written after, told above it.
 	"checkDailyLimit": "the name the daily cap's comment pointed at",

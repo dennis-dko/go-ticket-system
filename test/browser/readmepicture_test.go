@@ -98,10 +98,10 @@ func TestTheReadmePicturesAreTakenFromTheApplication(t *testing.T) {
 			setDateField(field, todayISO().slice(0, 8) + '01');
 			field.dispatchEvent(new Event('change', {bubbles: true}));
 		})()`, nil))
-	p.shootCard(into, "entries", "#view-timesheets .card:has(#table-timesheets)")
+	p.shootCard(into, "entry", "#view-timesheets .card:has(#table-timesheets)")
 
 	p.showView("overtime")
-	p.shootCard(into, "activities", "#statistics-card",
+	p.shootCard(into, "activity", "#statistics-card",
 		`#statistics-card h3[data-i18n="stats.perDay"]`, ".chart-wrap:has(#chart-days)")
 	p.shootCard(into, "year", "#year-card", "#year-card .table-wrap")
 	p.run("calculate the balance", p.click(`#form-overtime button[type="submit"]`))
@@ -118,7 +118,7 @@ func TestTheReadmePicturesAreTakenFromTheApplication(t *testing.T) {
 	p.shootCard(into, "statement", "#statement-result")
 
 	p.showView("projects")
-	p.shootCard(into, "projects", "#view-projects .card:has(#table-projects)")
+	p.shootCard(into, "project", "#view-projects .card:has(#table-projects)")
 
 	p.chooseTheme("dark")
 	p.showView("calendar")

@@ -10,7 +10,7 @@ import (
 
 // Nothing was comparing what the binary reads with what the operator is told.
 //
-// deploy/OPERATIONS.md is described in CLAUDE.md as the operational contract -
+// deploy/OPERATION.md is described in CLAUDE.md as the operational contract -
 // "a change to how the binary is configured, started or shut down belongs in it
 // in the same commit" - and that sentence was the whole of the mechanism. A key
 // added to the code and to nothing else is invisible: the application runs, the
@@ -44,7 +44,7 @@ var configDocs = []string{
 	"cmd/configs/.env",
 	"deploy/.env.example",
 	"deploy/.env.binary.example",
-	"deploy/OPERATIONS.md",
+	"deploy/OPERATION.md",
 }
 
 // notOurs lists the variables the example files set for somebody else to read,

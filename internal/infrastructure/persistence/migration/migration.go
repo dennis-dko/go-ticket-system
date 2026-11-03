@@ -1273,7 +1273,7 @@ func grantToAllRoles(d migration.Datasource, dialect, permission string) error {
 // SQLite does not enforce a column width and the servers do, so this was a change
 // that worked everywhere it was tried and failed only where it mattered -
 // "pq: value too long for type character varying(64)" on the first enrolment
-// after turning encryption on. It is the exact shape field_limits.go warns about,
+// after turning encryption on. It is the exact shape field_limit.go warns about,
 // and it was caught by the integration suite's PostgreSQL and MySQL legs.
 //
 // 255 rather than 87: it matches the other bounded columns here, and a limit

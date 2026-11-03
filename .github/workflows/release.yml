@@ -547,7 +547,7 @@ jobs:
             ## Running the binary
 
             The manual is
-            [`deploy/OPERATIONS.md`](https://github.com/${{ github.repository }}/blob/${{ needs.version.outputs.version }}/deploy/OPERATIONS.md) —
+            [`deploy/OPERATION.md`](https://github.com/${{ github.repository }}/blob/${{ needs.version.outputs.version }}/deploy/OPERATION.md) —
             the ways to run it, what to back up, what needs a restart, and what the
             health endpoints actually mean. The short version:
 

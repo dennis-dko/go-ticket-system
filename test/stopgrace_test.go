@@ -35,9 +35,9 @@ func TestEverythingThatStopsTheApplicationWaitsLongerThanItsGrace(t *testing.T) 
 	}{
 		{"the compose service's stop_grace_period", filepath.Join("..", "deploy", "compose.yaml"),
 			regexp.MustCompile(`(?m)^    stop_grace_period: (\S+)$`), ""},
-		{"the systemd unit's TimeoutStopSec", filepath.Join("..", "deploy", "OPERATIONS.md"),
+		{"the systemd unit's TimeoutStopSec", filepath.Join("..", "deploy", "OPERATION.md"),
 			regexp.MustCompile(`(?m)^TimeoutStopSec=(\S+)$`), ""},
-		{"the bare container's --stop-timeout", filepath.Join("..", "deploy", "OPERATIONS.md"),
+		{"the bare container's --stop-timeout", filepath.Join("..", "deploy", "OPERATION.md"),
 			regexp.MustCompile(`(?m)^docker run .*--stop-timeout (\d+)`), "s"},
 	} {
 		if got := durationIn(t, bound.file, bound.in, bound.unit); got <= grace {

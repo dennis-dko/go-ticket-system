@@ -1,7 +1,7 @@
 # Releases and deployment
 
 > Operating this rather than developing it?
-> [`deploy/OPERATIONS.md`](../deploy/OPERATIONS.md) is the manual: the four ways to
+> [`deploy/OPERATION.md`](../deploy/OPERATION.md) is the manual: the four ways to
 > run it, what to back up, what needs a restart, what the health endpoints
 > actually mean, and the handful of behaviours that surprise people. This page
 > is about how a release is produced, and how one reaches a server.
@@ -80,7 +80,7 @@ Nothing has to be built on the server.
 ## On the server
 
 Copy [`deploy/`](../deploy/) — three compose files, two environment templates and
-[the manual](../deploy/OPERATIONS.md) — and nothing else. The source tree is not
+[the manual](../deploy/OPERATION.md) — and nothing else. The source tree is not
 needed.
 
 ```bash
@@ -128,7 +128,7 @@ is done for you; the single binary is not.
 
 It also needs a hostname of its own rather than a path under one: the interface
 asks for `/app.js` and `/api/v1` absolutely, and nothing moves them.
-`deploy/OPERATIONS.md` has the whole Apache configuration and what each line is
+`deploy/OPERATION.md` has the whole Apache configuration and what each line is
 for.
 
 To terminate TLS in the application instead, add the overlay:
@@ -171,7 +171,7 @@ button.
 The trace browser is on `127.0.0.1:16686`, published to the loopback interface
 only — it asks nobody to sign in, and traces carry request paths and the
 identifiers in them. Reach it with `ssh -L 16686:127.0.0.1:16686 <server>`.
-[`deploy/OPERATIONS.md`](../deploy/OPERATIONS.md) has the rest, including why the
+[`deploy/OPERATION.md`](../deploy/OPERATION.md) has the rest, including why the
 traces are held in memory and what that costs.
 
 ## A directory, if you have none
@@ -253,5 +253,5 @@ It does not need a `configs/` directory; a missing one is tolerated and every
 value has a default. What the **working directory** decides is where
 `configs/datasource.json` is read and written, where a relative SQLite file
 lands, and where the default TLS cache `configs/certs` goes — so start it from
-the same place every time. [`deploy/OPERATIONS.md`](../deploy/OPERATIONS.md) has a
+the same place every time. [`deploy/OPERATION.md`](../deploy/OPERATION.md) has a
 systemd unit that gets that right.

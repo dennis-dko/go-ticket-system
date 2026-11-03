@@ -489,18 +489,18 @@ func TestTheAppAnswersToTheAddressATokensCodeHolds(t *testing.T) {
 }
 
 // Every dictionary writes a day and a time in parts of a Go layout the app knows
-// - the very parts Words.pattern reads, taken from it - because anything else is
+// - the very parts Language.pattern reads, taken from it - because anything else is
 // written out by the app as it stands, and 2.1.2006 would read as a date to
 // nobody.
 func TestEveryDictionaryWritesADayAndATimeInPartsTheAppReads(t *testing.T) {
 	var parts []string
 
-	for _, m := range regexp.MustCompile(`"(\d+)" to "[a-zA-Z]+"`).FindAllStringSubmatch(source(t, "Words.kt"), -1) {
+	for _, m := range regexp.MustCompile(`"(\d+)" to "[a-zA-Z]+"`).FindAllStringSubmatch(source(t, "Language.kt"), -1) {
 		parts = append(parts, m[1])
 	}
 
 	if len(parts) < 6 {
-		t.Fatalf("read %d parts of a layout from Words.pattern; the reading has stopped finding them", len(parts))
+		t.Fatalf("read %d parts of a layout from Language.pattern; the reading has stopped finding them", len(parts))
 	}
 
 	for _, language := range i18n.Languages()[1:] {

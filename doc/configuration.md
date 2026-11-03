@@ -178,7 +178,7 @@ form an empty password takes the database's name for itself, so the server opens
 the database named after the account: measured, the tables went into `postgres`
 while the log named `DB_NAME`. The installer and *Settings* refuse such a
 connection, and one the driver would mangle in other ways, which
-[the operations manual](../deploy/OPERATIONS.md) lists; an installation already
+[the operations manual](../deploy/OPERATION.md) lists; an installation already
 running on one keeps its data where it is and is told so at every start.
 
 On an installation configured through the environment — a compose deployment, or

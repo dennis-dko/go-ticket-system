@@ -50,7 +50,7 @@ func TestAnImageUpdateThatFoundNothingNewerTakesTheRestartBack(t *testing.T) {
 
 // A failed one is taken back as well, and the card is told what went wrong.
 //
-// deploy/OPERATIONS.md already promised the second half - "the card says what
+// deploy/OPERATION.md already promised the second half - "the card says what
 // went wrong" - while nothing read the updater's words at all.
 func TestAFailedImageUpdateIsTakenBackAndTheCardSaysWhy(t *testing.T) {
 	h, hub, dir := imageUpdateUnderTest(t)

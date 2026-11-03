@@ -41,7 +41,7 @@ data class Snapshot(
  * answers with what it did in the terminal client's sentence, so a stop booked
  * from the phone reads the same as one booked from the shell.
  */
-class Day(private val api: Api, private val words: Words) {
+class Day(private val api: Api, private val words: Language) {
 
     /** snapshot reads the token owner's day. */
     suspend fun snapshot(): Snapshot {
@@ -129,14 +129,14 @@ class Day(private val api: Api, private val words: Words) {
 }
 
 /** nameOf is what a project is called, by its id; null is no project. */
-fun Words.nameOf(projects: List<Project>, id: Long?): String {
+fun Language.nameOf(projects: List<Project>, id: Long?): String {
     if (id == null) return text("track.noProject", "no project")
 
     return projects.firstOrNull { it.id == id }?.name ?: text("track.projectNumber", "project {0}", id.toString())
 }
 
 /** clockLine says what the stopwatch is doing, given how long it has run. */
-fun Words.clockLine(snapshot: Snapshot, elapsedHours: Double): String {
+fun Language.clockLine(snapshot: Snapshot, elapsedHours: Double): String {
     val clock = snapshot.clock
     val started = clock.startedAt
     if (!clock.running || started == null) return text("track.notRunning", "The stopwatch is not running.")
@@ -148,7 +148,7 @@ fun Words.clockLine(snapshot: Snapshot, elapsedHours: Double): String {
 }
 
 /** parseHours reads hours the ways people write them: 1.5, 1,5 or 1:30. */
-fun Words.parseHours(raw: String): Double {
+fun Language.parseHours(raw: String): Double {
     val written = raw.trim()
     val refused = Refused(text("track.notHours", "\"{0}\" is not a number of hours: write 1.5, 1,5 or 1:30", written))
 

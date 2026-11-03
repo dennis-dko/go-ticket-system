@@ -27,7 +27,7 @@ val refusalValues: Map<String, Map<Int, String>> = mapOf(
  * the installation's are about a session; anything else in the web interface's
  * words for the code it sent, and otherwise in the installation's own.
  */
-fun Words.refused(status: Int, reason: String, body: String): String {
+fun Language.refused(status: Int, reason: String, body: String): String {
     if (status == 401) {
         return text(
             "mobile.tokenUnknown",
@@ -53,7 +53,7 @@ fun Words.refused(status: Int, reason: String, body: String): String {
  * English being the fallbacks in its own script. The fields named first,
  * because which ones is more use than any sentence.
  */
-private fun Words.inPageWords(error: JSONObject): String? {
+private fun Language.inPageWords(error: JSONObject): String? {
     val code = error.optString("code")
     if (code == "maintenance") return lookup("err.maintenance")
 
@@ -67,7 +67,7 @@ private fun Words.inPageWords(error: JSONObject): String? {
 
     val sentence = lookup("err.$code") ?: return null
 
-    return Words.fill(sentence, *valuesOf(code, error.optJSONArray("values")))
+    return Language.fill(sentence, *valuesOf(code, error.optJSONArray("values")))
 }
 
 /**
@@ -75,7 +75,7 @@ private fun Words.inPageWords(error: JSONObject): String? {
  * fillIn do: a status and a kind of record in its words, a day the way the
  * reader writes one, a whole number as it is and a fraction to two places.
  */
-private fun Words.valuesOf(code: String, values: JSONArray?): Array<String> {
+private fun Language.valuesOf(code: String, values: JSONArray?): Array<String> {
     if (values == null) return emptyArray()
 
     val named = refusalValues[code].orEmpty()
@@ -96,4 +96,4 @@ private fun Words.valuesOf(code: String, values: JSONArray?): Array<String> {
 }
 
 /** pageWord is one of the web interface's words, or the word itself where it has none. */
-private fun Words.pageWord(prefix: String, word: String): String = lookup(prefix + word) ?: word
+private fun Language.pageWord(prefix: String, word: String): String = lookup(prefix + word) ?: word

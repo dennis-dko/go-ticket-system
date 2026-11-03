@@ -16,7 +16,7 @@ import java.net.URL
  * else, as the terminal client does: the app can do exactly what the token's
  * owner may, and is held to every rule the API keeps.
  */
-class Api(address: String, private val token: String, private val words: Words) {
+class Api(address: String, private val token: String, private val words: Language) {
 
     private val base = address.trimEnd('/')
 

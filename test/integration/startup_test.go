@@ -49,7 +49,7 @@ func TestAnInstanceThatCannotStartIsSeenToExit(t *testing.T) {
 // The step that checks SECRET_KEY against what the installation's secrets were
 // written with runs inside GoFr's start hooks. A hook that failed used to make
 // GoFr's Run return rather than exit, so the process ended with 0: the systemd
-// unit OPERATIONS.md ships restarts on failure, and it read a refused start as a
+// unit OPERATION.md ships restarts on failure, and it read a refused start as a
 // clean stop - which, for a database that was only briefly away, is an outage
 // nothing brings back. Since v1.62.0 Run exits 1 itself, from inside, and main's
 // own sentence after Run - the one written past the log capture, which is sure to
