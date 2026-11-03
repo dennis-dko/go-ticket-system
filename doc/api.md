@@ -22,6 +22,25 @@ again, which the screen also does every half minute, so a stopwatch stopped in
 the browser stops here too; `esc` puts a form away and `q` closes the screen,
 which leaves a line saying how the stopwatch was left.
 
+`p` opens the account's own settings, and a change is sent to the route the
+browser sends it to:
+
+| Setting | Route |
+|---|---|
+| language | `PUT /me/language` |
+| appearance | `PUT /me/theme` |
+| timezone | `PUT /me/timezone` |
+| public holidays | `PUT /me/holidays` |
+| reminders | `PUT /me/reminders` |
+| bounds of the balance | `PUT /me/balance-limits` |
+| working hours | `PUT /users/{id}/working-times` |
+
+A token can therefore change exactly what its owner could change in the browser.
+What the screen shows besides the day it reads with the day: `/me` for the
+account's choices, `/branding` for the installation's name and banner, and
+`/me/notices` and `/me/holidays`. An installation that answers none of the last
+three leaves them out rather than failing the screen.
+
 <img src="image/terminal.png" alt="The client's screen in a terminal: the stopwatch running for an hour and twenty minutes on the website relaunch, and today's three entries under it" width="600">
 
 Each change is a command as well, for a script, an alias or a screen reader -

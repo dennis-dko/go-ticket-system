@@ -252,7 +252,7 @@ and says what it did — for a script, an alias or a screen reader.
     </td>
     <td width="50%" valign="top">
       <img src="doc/image/terminal-switch.png" alt="The form that switches the stopwatch to another project, one question at a time, with the active projects to choose from">
-      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away and <code>q</code> closes the screen.</p>
+      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand, <code>p</code> opens the account's settings. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away and <code>q</code> closes the screen.</p>
     </td>
   </tr>
 </table>
@@ -326,6 +326,26 @@ the browser - or, where it chose none, the language the system is set to. In
 German it says what the installation refuses in the words the web interface has
 for it.
 
+**It follows the account, and changes the account rather than itself.** The
+installation's name and banner head the screen, and above the stopwatch it says
+what the browser's banners say: a stopwatch running past the hours chosen under
+*Reminders*, the last working day with nothing booked, a balance past one of its
+bounds. **Settings** (`p`) changes what *My account* changes for oneself:
+
+- the language;
+- the appearance;
+- the timezone;
+- where public holidays are kept;
+- the reminders;
+- the bounds of the balance;
+- the working hours.
+
+Every change is saved to the account, so the browser and the phone follow it
+too, and a choice made in the browser reaches an open screen at its next read.
+The colours follow what the terminal says its background is. The appearance the
+account chose counts only where the terminal says nothing, because a terminal's
+background can be drawn on but not changed.
+
 ## On a phone
 
 The Android app does what the terminal client does - the stopwatch, today's
@@ -345,9 +365,17 @@ browser or file manager it was opened from may install apps. Every release is
 signed with the same key, so the next one installs over it.
 
 It speaks the language the account chose in the browser, otherwise the phone's,
-in the words the web interface and the terminal client use. An installation
-whose certificate comes from an authority of its own needs that authority
-installed on the phone, as the phone's browser does.
+in the words the web interface and the terminal client use. It follows the rest
+of the account the same way:
+
+- the appearance, or the phone's where the account leaves it open;
+- the installation's name and banner;
+- the notices the browser shows as banners.
+
+**Settings** changes the account's own settings as the terminal client does, and
+saves them to the account. An installation whose certificate comes from an
+authority of its own needs that authority installed on the phone, as the phone's
+browser does.
 
 ## What it does
 
