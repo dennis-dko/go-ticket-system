@@ -348,34 +348,33 @@ background can be drawn on but not changed.
 
 ## On a phone
 
-The Android app does what the terminal client does - the stopwatch, today's
-entries and booking by hand - through the same API, as the owner of a personal
-token. It is connected by the code a new token is shown with under
+The Android app is the installation's own web interface, in an app: every view,
+card and form the browser has, in the same design, saved through the same API
+into the same database - and anything the web interface learns in a release,
+the app has with it. It is connected by the code a new token is shown with under
 **My account → API tokens**: scanned with the phone's camera, the code opens the
 app, which shows the installation it is asked to connect to and waits for a tap,
 because a code is a link any page could open. The address and the token can be
 typed in instead.
 
-**It belongs to the release it was built with**, as the terminal client does,
-and says so for as long as the installation runs another one. Download
+The token signs the app in, so no password and no second factor are typed on
+the phone, and it keeps the web interface signed in for as long as the token is
+good. Signing out in it disconnects the app as well, so a phone handed on does
+not sign its next holder back in; and a phone that is lost is signed out by
+revoking its token under **My account → API tokens**, at once. A file the web interface saves - a report, an
+export - is saved where the phone's file picker says, and a file it asks for
+is chosen there too. Two things stay in a browser: the browser's notifications
+for a long-running stopwatch, where the banner on the page still says it, and
+passkeys and signing in through your organisation, which are set up there.
+
+**It belongs to the release it was built with.** Download
 `go-time-recording-mobile_<version>.apk` from the
 [release](https://github.com/dennis-dko/go-time-recording/releases) the
 installation runs and open it on the phone; Android asks once whether the
 browser or file manager it was opened from may install apps. Every release is
-signed with the same key, so the next one installs over it.
-
-It speaks the language the account chose in the browser, otherwise the phone's,
-in the words the web interface and the terminal client use. It follows the rest
-of the account the same way:
-
-- the appearance, or the phone's where the account leaves it open;
-- the installation's name and banner;
-- the notices the browser shows as banners.
-
-**Settings** changes the account's own settings as the terminal client does, and
-saves them to the account. An installation whose certificate comes from an
-authority of its own needs that authority installed on the phone, as the phone's
-browser does.
+signed with the same key, so the next one installs over it. An installation
+whose certificate comes from an authority of its own needs that authority
+installed on the phone, as the phone's browser does.
 
 ## What it does
 
