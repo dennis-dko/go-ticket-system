@@ -186,6 +186,9 @@ func All(dialect string) map[int64]migration.Migrate {
 		20261103010000: {UP: func(d migration.Datasource) error {
 			return placeEveryHolidayStateInGermany(d, dialect)
 		}},
+		20261103020000: {UP: func(d migration.Datasource) error {
+			return rememberWhichTokenOpenedASession(d, dialect)
+		}},
 	}
 }
 
@@ -2014,4 +2017,13 @@ func placeEveryHolidayStateInGermany(d migration.Datasource, dialect string) err
 	}
 
 	return nil
+}
+
+// rememberWhichTokenOpenedASession records the personal token a session was
+// exchanged for, so that taking the token back ends the session with it. Null for
+// every other sign-in and for every session there is. No foreign key: a session
+// goes with its token rather than holding it, and PurgeUser deletes an account's
+// tokens before its sessions.
+func rememberWhichTokenOpenedASession(d migration.Datasource, dialect string) error {
+	return execAll(d, fmt.Sprintf("ALTER TABLE sessions ADD COLUMN api_token_id %s", foreignKeyID(dialect)))
 }

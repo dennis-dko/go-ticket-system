@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 )
 
 // signedInAs is the account a sign-in's answer names.
@@ -40,6 +41,21 @@ func sessionCookieOf(answer response) string {
 	return ""
 }
 
+// sessionExpiryOf is when the session cookie an answer set runs out.
+func sessionExpiryOf(t *testing.T, answer response) time.Time {
+	t.Helper()
+
+	for _, cookie := range (&http.Response{Header: answer.Header}).Cookies() {
+		if cookie.Name == "gtr_session" && cookie.Value != "" {
+			return cookie.Expires
+		}
+	}
+
+	t.Fatalf("the answer set no session cookie: %v", answer.Header.Values("Set-Cookie"))
+
+	return time.Time{}
+}
+
 // madeToken is a personal token its owner made, with its id and secret.
 func madeToken(t *testing.T, owner *client, name string) (uint, string) {
 	t.Helper()
@@ -53,6 +69,27 @@ func madeToken(t *testing.T, owner *client, name string) (uint, string) {
 		http.StatusCreated, http.StatusOK).Data(t, &token)
 
 	return token.ID, token.Secret
+}
+
+// readingMe is how the installation answers a session cookie alone.
+func readingMe(t *testing.T, baseURL, session string) int {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, baseURL+"/api/v1/me", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.AddCookie(&http.Cookie{Name: "gtr_session", Value: session})
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_ = resp.Body.Close()
+
+	return resp.StatusCode
 }
 
 // A personal token is exchanged for a session of its owner, which is how the
@@ -74,22 +111,67 @@ func TestATokenSignsItsOwnerInToTheWebInterface(t *testing.T) {
 		t.Fatalf("the token's sign-in set no session cookie: %v", answer.Header.Values("Set-Cookie"))
 	}
 
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, a.BaseURL()+"/api/v1/me", nil)
-	if err != nil {
-		t.Fatal(err)
+	if status := readingMe(t, a.BaseURL(), session); status != http.StatusOK {
+		t.Errorf("the session the token opened was answered %d", status)
+	}
+}
+
+// Taking a token back ends the session it was exchanged for, so the phone it was
+// scanned into is cut off at once - as it was while the app sent the token with
+// every request - rather than for as long as the session would have lasted. Only
+// its owner can take it back, and nothing else of theirs ends with it.
+func TestTakingATokenBackEndsTheSessionItOpened(t *testing.T) {
+	t.Parallel()
+
+	a, admin, worker := startWithWorker(t)
+	id, secret := madeToken(t, worker, "phone")
+
+	phone := sessionCookieOf(asTheClients(t, a.BaseURL(), secret, http.MethodPost, "/auth/token", nil))
+	if phone == "" {
+		t.Fatal("the token opened no session to take back")
 	}
 
-	req.AddCookie(&http.Cookie{Name: "gtr_session", Value: session})
+	admin.must(admin.api(http.MethodDelete, fmt.Sprintf("/me/tokens/%d", id), nil), http.StatusNotFound)
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
+	if status := readingMe(t, a.BaseURL(), phone); status != http.StatusOK {
+		t.Fatalf("after somebody else tried to take the token back, its session was answered %d", status)
 	}
 
-	_ = resp.Body.Close()
+	worker.must(worker.api(http.MethodDelete, fmt.Sprintf("/me/tokens/%d", id), nil), http.StatusOK, http.StatusNoContent)
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("the session the token opened was answered %d", resp.StatusCode)
+	if status := readingMe(t, a.BaseURL(), phone); status != http.StatusUnauthorized {
+		t.Errorf("after the token was taken back, the session it opened was answered %d", status)
+	}
+
+	worker.must(worker.api(http.MethodGet, "/me", nil), http.StatusOK)
+}
+
+// A session a token opened lasts no longer than the token does, however long an
+// installation lets a sign-in last.
+func TestASessionATokenOpenedEndsNoLaterThanTheToken(t *testing.T) {
+	t.Parallel()
+
+	a, admin, worker := startWithWorker(t)
+	admin.must(admin.api(http.MethodPut, "/settings/operational", map[string]any{"sessionLifetimeHours": 72}),
+		http.StatusOK)
+
+	var token struct {
+		Secret    string     `json:"secret"`
+		ExpiresAt *time.Time `json:"expiresAt"`
+	}
+
+	worker.must(worker.api(http.MethodPost, "/me/tokens", map[string]any{"name": "phone", "expiresInDays": 1}),
+		http.StatusCreated, http.StatusOK).Data(t, &token)
+
+	if token.ExpiresAt == nil {
+		t.Fatal("a token made for a day carries no expiry")
+	}
+
+	// A minute's slack, for a database that keeps a moment to the second: what is
+	// being caught is a session outliving its token by two days.
+	expires := sessionExpiryOf(t, asTheClients(t, a.BaseURL(), token.Secret, http.MethodPost, "/auth/token", nil))
+	if expires.After(token.ExpiresAt.Add(time.Minute)) {
+		t.Errorf("the session runs until %s, the token only until %s", expires, token.ExpiresAt)
 	}
 }
 
@@ -172,7 +254,7 @@ func TestWhatIsNoUsableTokenOpensNoSession(t *testing.T) {
 		map[string]any{"password": "a-chosen-reset-password"}), http.StatusOK)
 
 	answer := asTheClients(t, a.BaseURL(), other, http.MethodPost, "/auth/token", nil)
-	if answer.Status == http.StatusOK || sessionCookieOf(answer) != "" {
+	if answer.Status == http.StatusCreated || sessionCookieOf(answer) != "" {
 		t.Errorf("a token whose owner was given a password to replace opened a session: %d %s", answer.Status, answer.Body)
 	}
 }
@@ -188,7 +270,7 @@ func TestATokensSignInKeepsToMaintenance(t *testing.T) {
 
 	setMaintenance(t, admin, true, "")
 
-	if answer := asTheClients(t, a.BaseURL(), workers, http.MethodPost, "/auth/token", nil); answer.Status == http.StatusOK ||
+	if answer := asTheClients(t, a.BaseURL(), workers, http.MethodPost, "/auth/token", nil); answer.Status == http.StatusCreated ||
 		sessionCookieOf(answer) != "" {
 		t.Errorf("during maintenance the worker's token opened a session: %d %s", answer.Status, answer.Body)
 	}

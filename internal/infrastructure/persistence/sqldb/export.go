@@ -41,7 +41,8 @@ var accountExport = []struct {
 		"FROM api_tokens WHERE user_id = ? ORDER BY id"},
 	{"passkeys", "SELECT id, name, attestation_type, transports, sign_count, backup_eligible, backed_up, " +
 		"created_at, last_used_at FROM passkeys WHERE user_id = ? ORDER BY id"},
-	{"sessions", "SELECT created_at, expires_at, last_seen_at FROM sessions WHERE user_id = ? ORDER BY created_at"},
+	{"sessions", "SELECT created_at, expires_at, last_seen_at, api_token_id " +
+		"FROM sessions WHERE user_id = ? ORDER BY created_at"},
 	{"planned-weeks", "SELECT valid_from, monday, tuesday, wednesday, thursday, friday, saturday, sunday " +
 		"FROM work_schedules WHERE user_id = ? ORDER BY valid_from"},
 	{"entry-templates", "SELECT id, project_id, duration_hours, description " +

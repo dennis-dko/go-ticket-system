@@ -24,10 +24,10 @@ var _ repository.SessionRepository = (*SessionRepository)(nil)
 
 func (r *SessionRepository) Save(ctx context.Context, session *model.Session) error {
 	_, err := r.exec(ctx,
-		"INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at) "+
-			"VALUES (?, ?, ?, ?, ?)",
+		"INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at, api_token_id) "+
+			"VALUES (?, ?, ?, ?, ?, ?)",
 		session.TokenHash, session.UserID, session.CreatedAt, session.ExpiresAt,
-		session.LastSeenAt)
+		session.LastSeenAt, nullableID(session.APITokenID))
 	if err != nil {
 		return apperror.Internal(err)
 	}
@@ -37,7 +37,7 @@ func (r *SessionRepository) Save(ctx context.Context, session *model.Session) er
 
 func (r *SessionRepository) Get(ctx context.Context, tokenHash string) (*model.Session, error) {
 	row := r.db.QueryRowContext(ctx, r.rebind(
-		"SELECT token_hash, user_id, created_at, expires_at, last_seen_at "+
+		"SELECT token_hash, user_id, created_at, expires_at, last_seen_at, api_token_id "+
 			"FROM sessions WHERE token_hash = ?"), tokenHash)
 
 	var (
@@ -45,9 +45,10 @@ func (r *SessionRepository) Get(ctx context.Context, tokenHash string) (*model.S
 		createdAt  dateTime
 		expiresAt  dateTime
 		lastSeenAt dateTime
+		apiToken   *uint
 	)
 
-	err := row.Scan(&session.TokenHash, &session.UserID, &createdAt, &expiresAt, &lastSeenAt)
+	err := row.Scan(&session.TokenHash, &session.UserID, &createdAt, &expiresAt, &lastSeenAt, &apiToken)
 	if problem := problemReading(err, "session", ""); problem != nil {
 		return nil, problem
 	}
@@ -55,6 +56,10 @@ func (r *SessionRepository) Get(ctx context.Context, tokenHash string) (*model.S
 	session.CreatedAt = createdAt.Time
 	session.ExpiresAt = expiresAt.Time
 	session.LastSeenAt = lastSeenAt.Time
+
+	if apiToken != nil {
+		session.APITokenID = *apiToken
+	}
 
 	// A row written before the column existed, or by a version that did not
 	// fill it. Its sign-in is the last thing known about it, which is the
@@ -91,6 +96,15 @@ func (r *SessionRepository) Delete(ctx context.Context, tokenHash string) error 
 
 func (r *SessionRepository) DeleteForUser(ctx context.Context, userID uint) error {
 	if _, err := r.exec(ctx, "DELETE FROM sessions WHERE user_id = ?", userID); err != nil {
+		return apperror.Internal(err)
+	}
+
+	return nil
+}
+
+func (r *SessionRepository) DeleteOpenedBy(ctx context.Context, tokenID, userID uint) error {
+	if _, err := r.exec(ctx,
+		"DELETE FROM sessions WHERE api_token_id = ? AND user_id = ?", tokenID, userID); err != nil {
 		return apperror.Internal(err)
 	}
 

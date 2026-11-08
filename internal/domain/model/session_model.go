@@ -16,6 +16,12 @@ type Session struct {
 	// timeout measures against. Set when the session is opened, so a session
 	// nobody ever uses is as idle as one abandoned after a day's work.
 	LastSeenAt time.Time
+
+	// APITokenID is the personal token this session was exchanged for, zero for
+	// every other sign-in. Taking the token back ends the session with it, so a
+	// phone the token was scanned into is cut off at once rather than whenever
+	// the session would have run out.
+	APITokenID uint
 }
 
 // Expired reports whether the session has run out of its own lifetime.

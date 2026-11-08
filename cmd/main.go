@@ -584,7 +584,7 @@ func main() {
 	adminLog := appservice.NewAdminLogService(sqldb.NewAdminEventRepository(db, cfg.Dialect), userRepo, roleRepo)
 
 	auth := appservice.NewAuthService(userRepo, roleRepo)
-	apiTokens := appservice.NewAPITokenService(tokenRepo, userRepo, auth)
+	apiTokens := appservice.NewAPITokenService(tokenRepo, sessionRepo, userRepo, auth)
 	passkeys := appservice.NewPasskeyService(passkeyRepo, userRepo)
 	settingsService := appservice.NewSettingsService(settingsRepo, roleRepo, userRepo, cfg.AppName).
 		WithSecrets(secrets)

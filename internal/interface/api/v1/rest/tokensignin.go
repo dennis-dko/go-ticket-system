@@ -23,9 +23,10 @@ func (h *AuthHandler) WithTokens(tokens *service.APITokenService) *AuthHandler {
 // It grants nothing the token does not. The token already carries the whole of
 // its owner's role through the API, past any second factor, because its owner
 // passed one to make it; a session is the same rights in the form the web
-// interface reads them in, with the same lifetime and the same refusal during
-// maintenance as every other session, since it is opened and completed as a
-// passkey's or a provider's is.
+// interface reads them in, refused during maintenance as every other session is,
+// since it is opened and completed as a passkey's or a provider's is. And it ends
+// with the token, as the token's own requests do: taking the token back ends it,
+// and it lasts no longer than the token.
 //
 // Only the token decides who. A session cookie on the same request is not asked,
 // so a stray cookie cannot turn somebody else's token into its own session. A
@@ -38,7 +39,7 @@ func (h *AuthHandler) TokenSignIn(c *gofr.Context) (any, error) {
 		return nil, unauthorizedError{}
 	}
 
-	principal, err := h.tokens.Resolve(c, secret)
+	token, principal, err := h.tokens.ResolveToken(c, secret)
 	if err != nil {
 		switch apperror.KindOf(err) {
 		case apperror.KindInternal, apperror.KindConflict:
@@ -48,7 +49,7 @@ func (h *AuthHandler) TokenSignIn(c *gofr.Context) (any, error) {
 		return nil, unauthorizedError{}
 	}
 
-	result, err := h.sessions.OpenSession(c, principal.User)
+	result, err := h.sessions.OpenSessionForToken(c, principal.User, token)
 	if err != nil {
 		return nil, toHTTPError(err)
 	}

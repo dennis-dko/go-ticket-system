@@ -306,6 +306,26 @@ func (s *SessionService) OpenFirstSession(ctx context.Context) (*LoginResult, er
 // It performs no authentication of its own, so every caller has to have done
 // that first.
 func (s *SessionService) OpenSession(ctx context.Context, user *model.User) (*LoginResult, error) {
+	return s.open(ctx, user, nil)
+}
+
+// OpenSessionForToken issues a session in exchange for one of the user's personal
+// tokens, which is how the Android app signs in. It is OpenSession's session in
+// every respect but two, and both make it end with the token: it is recorded as
+// the token's, so taking the token back ends it, and it lasts no longer than the
+// token does. Like OpenSession it authenticates nothing - the caller resolved the
+// token.
+func (s *SessionService) OpenSessionForToken(
+	ctx context.Context,
+	user *model.User,
+	apiToken *model.APIToken,
+) (*LoginResult, error) {
+	return s.open(ctx, user, apiToken)
+}
+
+// open builds every session there is, for the reason OpenSession gives; apiToken
+// is nil for every sign-in but a token's.
+func (s *SessionService) open(ctx context.Context, user *model.User, apiToken *model.APIToken) (*LoginResult, error) {
 	token, err := security.NewSessionToken()
 	if err != nil {
 		return nil, apperror.Internal(err)
@@ -321,6 +341,14 @@ func (s *SessionService) OpenSession(ctx context.Context, user *model.User) (*Lo
 		// A session nobody ever uses is as idle as one abandoned after a day's
 		// work, so the clock starts here rather than at the first request.
 		LastSeenAt: now,
+	}
+
+	if apiToken != nil {
+		session.APITokenID = apiToken.ID
+
+		if apiToken.ExpiresAt != nil && apiToken.ExpiresAt.Before(session.ExpiresAt) {
+			session.ExpiresAt = *apiToken.ExpiresAt
+		}
 	}
 
 	if err := s.sessions.Save(ctx, session); err != nil {

@@ -35,6 +35,10 @@ type SessionRepository interface {
 	// old password, so it is the one to keep.
 	DeleteForUserExcept(ctx context.Context, userID uint, keepTokenHash string) error
 
+	// DeleteOpenedBy ends the sessions a personal token was exchanged for, scoped
+	// to the token's owner as taking the token back is.
+	DeleteOpenedBy(ctx context.Context, tokenID, userID uint) error
+
 	// DeleteExpired prunes sessions that have timed out.
 	DeleteExpired(ctx context.Context) (int64, error)
 }
