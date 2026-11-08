@@ -192,7 +192,10 @@ func lookups(t *testing.T) map[string]looked {
 		}
 	}
 
-	if len(found) < 40 {
+	// A floor for a reading that has stopped finding anything, not a count: the
+	// app says little of its own since it shows the web interface, which says the
+	// rest - twenty-odd keys when that was decided, from over sixty before.
+	if len(found) < 20 {
 		t.Fatalf("found %d keys looked up; the reading has stopped finding them", len(found))
 	}
 
@@ -401,7 +404,8 @@ func TestNoSentenceIsSaidAroundTheDictionaries(t *testing.T) {
 		}
 	}
 
-	if said < 20 {
+	// A floor, for the reason lookups gives one.
+	if said < 8 {
 		t.Fatalf("found %d sentences handed to text; the reading has stopped finding them", said)
 	}
 }

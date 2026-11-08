@@ -17,8 +17,14 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         tools:ignore="DataExtractionRules">
 
+        <!-- configChanges keeps the activity, and with it the web interface and
+             whatever is half typed into it, through a turned screen: a WebView
+             created again would load the page anew. A change between light and
+             dark is left to make it anew, because the page's appearance follows
+             the theme its WebView is made with; see Web.kt. -->
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">

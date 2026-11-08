@@ -7,10 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 
-/** MainActivity is the app's one screen, and where the link a token's code holds arrives. */
+/** MainActivity is the app's one screen - the installation's web interface, once connected - and where the link a token's code holds arrives. */
 class MainActivity : ComponentActivity() {
 
-    private val model: TrackModel by viewModels()
+    private val model: AppModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,12 +28,12 @@ class MainActivity : ComponentActivity() {
         offer(intent)
     }
 
-    // The day is read whenever the app comes back: the stopwatch may have been
-    // stopped in the browser meanwhile, and stopping it anywhere stops it
-    // everywhere.
+    // Whenever the app comes back, the web interface's session is made sure of:
+    // it ends after its idle time, and the page would otherwise open on the
+    // sign-in form.
     override fun onResume() {
         super.onResume()
-        model.refresh()
+        model.resume()
     }
 
     private fun offer(intent: Intent?) {
