@@ -247,12 +247,12 @@ and says what it did — for a script, an alias or a screen reader.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="doc/image/terminal.png" alt="The client's screen in a terminal, framed under the installation's name: the stopwatch running for an hour and twenty minutes on the website relaunch, today's three entries under it, and the menu of what it can do next">
+      <img src="doc/image/terminal.png" alt="The client's screen in a terminal, framed under the installation's name and the web interface's tabs: the stopwatch running on the website relaunch, the entries under it as the page lists them, and the menu of what it can do next">
       <p><b>The day at a glance.</b> Under the installation's own name, who is signed in and which build of the client this is, and the web interface's tabs, the one on screen filled with the accent. The stopwatch counts the seconds, and the screen reads the day again every half minute, so a stopwatch stopped in the browser stops here too.</p>
     </td>
     <td width="50%" valign="top">
       <img src="doc/image/terminal-switch.png" alt="The form that switches the stopwatch to another project, one question at a time, with the active projects to choose from">
-      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand, and <code>e</code> opens the entries' own menu - filtered as the page filters them, a page at a time. <code>←</code> and <code>→</code> move between the tabs. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away and <code>q</code> closes the screen.</p>
+      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, and <code>b</code> books hours by hand. <code>e</code>, <code>u</code>, <code>t</code> and <code>v</code> open the menus of the page's cards - the entries, the stopwatch, the spreadsheet and the templates - where a change to an entry is chosen first and the entry picked in the list after it. <code>←</code> and <code>→</code> move between the tabs. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away or goes back, and <code>q</code> closes the screen.</p>
     </td>
   </tr>
 </table>

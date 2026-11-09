@@ -142,7 +142,7 @@ func TestTheReadmePicturesAreTakenFromTheApplication(t *testing.T) {
 	p.awaitJSON(`api('/me/tokens', {method: 'POST', body: JSON.stringify({name: 'Terminal', expiresInDays: 0})})`, &token)
 
 	term := openTerminal(t, p.app.BaseURL(), token.Secret)
-	term.await("Website relaunch", "Today")
+	term.await("Website relaunch", "Entries")
 	keep(t, into, "terminal", term.photograph())
 
 	term.press("w")
