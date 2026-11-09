@@ -38,6 +38,9 @@ type screen struct {
 
 	width int
 
+	// view is the tab moved to, by the name the page gives it; see currentTab.
+	view string
+
 	// dark is what the terminal said its background is, and measured whether it
 	// said anything; see darkness.
 	dark, measured bool
@@ -118,7 +121,7 @@ func newScreen(ctx context.Context, s *session) screen {
 		host = u.Host
 	}
 
-	return screen{ctx: ctx, s: s, host: host, reading: true, askedAt: time.Now()}
+	return screen{ctx: ctx, s: s, host: host, view: viewTimesheets, reading: true, askedAt: time.Now()}
 }
 
 // show runs the screen until it is closed.
@@ -306,34 +309,21 @@ func (m screen) take(msg loaded) screen {
 // so a hand that knows them does not have to learn them again.
 type choice struct{ key, doing, called string }
 
-// choices are the menu: the changes the stopwatch can take as it stands, and
-// reading the day again and closing the screen, which it can always take. A
-// change it cannot take - stopping one that is not running - is not offered,
-// and its key does nothing; none is offered before the day is read or while a
-// change is on its way.
+// choices are the menu: what the tab on screen offers, and reading the day again
+// and closing the screen, which every tab offers. A tab offers nothing before
+// the day is read or while a change is on its way.
 func (m screen) choices() []choice {
 	l := m.s.lang
 
 	var changes []choice
 
-	switch {
-	case !m.loaded || m.busy:
-	case m.shown.clock.Running:
-		changes = []choice{
-			{"w", "switch", l.text("track.form.switch", "Switch to another project")},
-			{"x", "stop", l.text("track.form.stop", "Stop the stopwatch")},
-			{"b", "book", l.text("track.form.book", "Book time by hand")},
-		}
-	default:
-		changes = []choice{
-			{"s", "start", l.text("track.form.start", "Start the stopwatch")},
-			{"b", "book", l.text("track.form.book", "Book time by hand")},
-		}
-	}
-
-	// The account's own settings, once there is an account read to show them of.
 	if m.loaded && !m.busy {
-		changes = append(changes, choice{"p", "settings", l.text("track.menu.settings", "Settings")})
+		switch m.currentTab().view {
+		case viewAccount:
+			changes = m.settingChoices()
+		default:
+			changes = m.timesheetChoices()
+		}
 	}
 
 	return append(changes,
@@ -341,13 +331,17 @@ func (m screen) choices() []choice {
 		choice{"q", "quit", l.text("track.menu.quit", "Close the screen")})
 }
 
-// press answers a key while no form is open: a move through the menu, enter on
-// the line moved to, or the key of a change.
+// press answers a key while no form is open: a move to another tab, a move
+// through the menu, enter on the line moved to, or the key of a change.
 func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	choices := m.choices()
 	at := min(m.cursor, len(choices)-1)
 
 	switch k.String() {
+	case "left", "shift+tab":
+		return m.moveTab(-1), nil
+	case "right", "tab":
+		return m.moveTab(1), nil
 	case "up", "k":
 		m.cursor = max(at-1, 0)
 
@@ -382,6 +376,10 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 		return m.ask(time.Now())
 	}
 
+	if setting, ok := strings.CutPrefix(doing, "setting:"); ok {
+		return m.openSetting(setting)
+	}
+
 	return m.open(doing)
 }
 
@@ -389,11 +387,6 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 	m.doing, m.news, m.failure = doing, "", ""
 	m.asked = &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
-
-	if doing == "settings" {
-		m.asked = m.settingAnswers()
-	}
-
 	m.form = m.formFor(doing)
 
 	return m, m.form.Init()
@@ -457,8 +450,8 @@ func (m screen) contentWidth() int {
 func (m screen) inner() int { return m.contentWidth() - 6 }
 
 // View draws the screen in a frame: the installation's name, who and which
-// build, where on the screen somebody is, and under it either the day and the
-// menu or the form that is open.
+// build, the page's tabs, where on the screen somebody is, and under it either
+// what the tab shows and its menu, or the form that is open.
 func (m screen) View() tea.View {
 	look := paletteFor(m.darkness())
 	width := m.inner()
@@ -476,6 +469,10 @@ func (m screen) View() tea.View {
 		parts = append(parts, wrapped.Render(look.ask.Render(m.banner)))
 	}
 
+	if m.loaded {
+		parts = append(parts, m.tabBar(look, width))
+	}
+
 	parts = append(parts, rule, m.breadcrumb(look), rule)
 
 	if m.form != nil {
@@ -485,13 +482,8 @@ func (m screen) View() tea.View {
 			parts = append(parts, wrapped.Render(look.ask.Render("! "+line)))
 		}
 
-		parts = append(parts, m.stopwatch(look, width))
-
-		if m.loaded {
-			parts = append(parts, m.todayList(look, width))
-		}
-
-		parts = append(parts, rule, look.ask.Render(m.s.lang.text("track.menu.prompt", "Choose what to do next.")), m.menu(look, width))
+		parts = append(parts, m.tabBody(look, width)...)
+		parts = append(parts, rule, look.ask.Render(m.menuPrompt()), m.menu(look, width))
 	}
 
 	// Wrapped rather than cut short: a reason comes at the end of its sentence.
@@ -564,17 +556,17 @@ func nonEmpty(words ...string) []string {
 	return said
 }
 
-// breadcrumb says where on the screen somebody is: today, and while a form is
+// breadcrumb says where on the screen somebody is: the tab, and while a form is
 // open the change it asks about and the step it is at, the last of them in the
-// accent.
+// accent. A step called what its change is called is said once.
 func (m screen) breadcrumb(look palette) string {
-	l := m.s.lang
-	steps := []string{l.text("cal.today", "Today")}
+	steps := []string{m.tabName(m.currentTab())}
 
 	if m.form != nil {
-		steps = append(steps, m.changeName())
+		change := m.changeName()
+		steps = append(steps, change)
 
-		if step := m.stepName(); step != "" {
+		if step := m.stepName(); step != "" && step != change {
 			steps = append(steps, step)
 		}
 	}
@@ -588,8 +580,13 @@ func (m screen) breadcrumb(look palette) string {
 	return strings.Join(steps, look.muted.Render(" › "))
 }
 
-// changeName is what the menu calls the change the open form asks about.
+// changeName is what the menu calls the change the open form asks about, and
+// for a setting what the setting is called.
 func (m screen) changeName() string {
+	if m.doing == "settings" {
+		return m.settingName(m.asked.setting)
+	}
+
 	for _, c := range m.choicesFor(m.doing) {
 		if c.doing == m.doing {
 			return c.called
@@ -599,14 +596,13 @@ func (m screen) changeName() string {
 	return m.doing
 }
 
-// choicesFor is the menu as it stood when doing was chosen from it: a switch and
-// a stop were chosen from a running stopwatch's.
+// choicesFor is the stopwatch's menu as it stood when doing was chosen from it:
+// a switch and a stop were chosen from a running stopwatch's.
 func (m screen) choicesFor(doing string) []choice {
 	shown := m
-	shown.loaded, shown.busy = true, false
 	shown.shown.clock.Running = doing == "switch" || doing == "stop"
 
-	return shown.choices()
+	return shown.timesheetChoices()
 }
 
 // stepName is what the field the open form is asking about is called, or
@@ -626,73 +622,6 @@ func (m screen) stepName() string {
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())
-}
-
-// stopwatch is what the stopwatch runs on, since when, and for how long.
-func (m screen) stopwatch(look palette, width int) string {
-	l := m.s.lang
-
-	switch {
-	case !m.loaded && m.reading:
-		return look.muted.Render(l.text("track.reading", "Reading {0} …", m.host))
-	case !m.loaded:
-		return look.muted.Render(l.text("track.nothingRead", "Nothing read from {0} yet.", m.host))
-	}
-
-	clock := m.shown.clock
-	if !clock.Running || clock.StartedAt == nil {
-		return lipgloss.NewStyle().Foreground(look.idle).Render("○  ") + l.text("track.notRunning", "The stopwatch is not running.")
-	}
-
-	on := l.nameOf(m.shown.projects, clock.ProjectID)
-	if clock.Description != nil && *clock.Description != "" {
-		on += look.muted.Render(" · " + *clock.Description)
-	}
-
-	left := lipgloss.NewStyle().Foreground(look.running).Render("●  ") + look.strong.Render(clockFace(m.elapsed())) + "   " + on
-	right := look.muted.Render(l.text("track.since", "since {0}", clock.StartedAt.In(m.shown.zone).Format("15:04")))
-
-	return spread(width, left, right)
-}
-
-// todayList is what today has booked, entry by entry, under the day and its
-// total - the day by its date, since the breadcrumb above already says today.
-func (m screen) todayList(look palette, width int) string {
-	l := m.s.lang
-	entries := m.shown.today
-	day := l.weekday(m.readAt.In(m.shown.zone))
-
-	heading := spread(width, look.strong.Render(day), look.strong.Render(l.hours(total(entries))))
-
-	if len(entries) == 0 {
-		return heading + "\n" + look.muted.Render(l.text("track.nothingYet", "Nothing booked yet."))
-	}
-
-	names := make([]string, len(entries))
-	column := 0
-
-	for i, e := range entries {
-		names[i] = l.nameOf(m.shown.projects, e.ProjectID)
-		column = max(column, lipgloss.Width(names[i]))
-	}
-
-	column = min(column, width/2)
-	rows := []string{heading}
-	hoursWidth := hoursColumn(l.hoursOf(entries)...)
-
-	for i, e := range entries {
-		name := ansi.Truncate(names[i], column, "…")
-		row := fmt.Sprintf("   %*s  %s", hoursWidth, l.hours(e.DurationHours),
-			name+strings.Repeat(" ", column-lipgloss.Width(name)))
-
-		if e.Description != nil && *e.Description != "" {
-			row += "  " + look.muted.Render(*e.Description)
-		}
-
-		rows = append(rows, ansi.Truncate(row, width, "…"))
-	}
-
-	return strings.Join(rows, "\n")
 }
 
 // menu is the choices, the one the cursor is on in the accent behind a >, each
@@ -730,16 +659,22 @@ func (m screen) statusLine(look palette) string {
 	return ""
 }
 
-// help names the keys that move through the menu, the way huh names its own
-// under a form - so the menu and the forms say it alike. A change's own key
-// stands at the end of its line instead.
+// help names the keys that move between the tabs and through the menu, the way
+// huh names its own under a form - so the menu and the forms say it alike. A
+// change's own key stands at the end of its line instead.
 func (m screen) help(look palette) string {
 	l := m.s.lang
-	keys := [][2]string{
-		{"↑", l.text("track.huh.up", "up")},
-		{"↓", l.text("track.huh.down", "down")},
-		{"enter", l.text("track.huh.confirm", "confirm")},
+
+	var keys [][2]string
+
+	if len(m.openTabs()) > 1 {
+		keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
 	}
+
+	keys = append(keys,
+		[2]string{"↑", l.text("track.huh.up", "up")},
+		[2]string{"↓", l.text("track.huh.down", "down")},
+		[2]string{"enter", l.text("track.huh.confirm", "confirm")})
 
 	named := make([]string, len(keys))
 	for i, k := range keys {

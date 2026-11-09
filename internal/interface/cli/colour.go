@@ -31,9 +31,11 @@ func tonesFor(dark bool) tones {
 	}
 }
 
-// palette is the styles the screen draws with.
+// palette is the styles the screen draws with. tab and tabOn are the page's
+// tabs, the one on screen filled with the accent as app.css fills it.
 type palette struct {
 	title, strong, muted, ok, failed, key, ask lipgloss.Style
+	tab, tabOn                                 lipgloss.Style
 
 	frame, idle, running color.Color
 }
@@ -50,6 +52,8 @@ func paletteFor(dark bool) palette {
 		failed:  lipgloss.NewStyle().Foreground(c.danger),
 		key:     lipgloss.NewStyle().Bold(true).Foreground(c.accent),
 		ask:     lipgloss.NewStyle().Foreground(c.ask),
+		tab:     lipgloss.NewStyle().Foreground(c.muted),
+		tabOn:   lipgloss.NewStyle().Foreground(c.onAccent).Background(c.accent),
 		frame:   c.accent,
 		idle:    c.muted,
 		running: c.green,

@@ -107,7 +107,10 @@ func (w *watched) until(what string, ok func(screen) bool) string {
 
 // press sends keys as a keyboard does: each a character, or a named key.
 func (w *watched) press(keys ...string) {
-	named := map[string]rune{"enter": tea.KeyEnter, "down": tea.KeyDown, "backspace": tea.KeyBackspace, "esc": tea.KeyEscape}
+	named := map[string]rune{
+		"enter": tea.KeyEnter, "down": tea.KeyDown, "up": tea.KeyUp, "left": tea.KeyLeft, "right": tea.KeyRight,
+		"backspace": tea.KeyBackspace, "esc": tea.KeyEscape, "tab": tea.KeyTab,
+	}
 
 	for _, k := range keys {
 		if code, ok := named[k]; ok {
@@ -183,7 +186,7 @@ func TestTheScreenShowsTheStopwatchRunningAndTodaysEntries(t *testing.T) {
 	// build of the client this is.
 	for _, want := range []string{"╭", "╰", "Time Recording", "@ Dana Example · " + m.host,
 		"Version v9.9.9 (abcdef12 / 2026-11-03)", "1:30:00", "Consulting · review", "since 09:12",
-		"Today", "3.00 h", "2.50 h", "review", "no project", "Choose what to do next."} {
+		"Time entries", "3.00 h", "2.50 h", "review", "no project", "Choose what to do next."} {
 		if !strings.Contains(shows, want) {
 			t.Errorf("the screen does not show %q:\n%s", want, shows)
 		}
@@ -226,7 +229,7 @@ func TestStartingFromTheScreenStartsTheStopwatchOnTheProjectPicked(t *testing.T)
 	w.press("s")
 	shows := w.until("the project is asked", asking("project"))
 
-	if !strings.Contains(shows, "Today › Start the stopwatch › Project") {
+	if !strings.Contains(shows, "Time entries › Start the stopwatch › Project") {
 		t.Errorf("the screen does not say where in the start it is:\n%s", shows)
 	}
 
@@ -234,7 +237,7 @@ func TestStartingFromTheScreenStartsTheStopwatchOnTheProjectPicked(t *testing.T)
 	w.press("down", "down", "down", "enter")
 	shows = w.until("the description is asked", asking("description"))
 
-	if !strings.Contains(shows, "Today › Start the stopwatch › Description") {
+	if !strings.Contains(shows, "Time entries › Start the stopwatch › Description") {
 		t.Errorf("the screen does not follow the start to its next step:\n%s", shows)
 	}
 
@@ -372,7 +375,7 @@ func TestARefusedChangeIsSaidOnTheScreen(t *testing.T) {
 
 	shows := w.until("the refusal is said", func(m screen) bool { return settled(m) && m.failure != "" })
 
-	if !strings.Contains(shows, "✗ the project is closed for booking") || !strings.Contains(shows, "Today") {
+	if !strings.Contains(shows, "✗ the project is closed for booking") || !strings.Contains(shows, "Time entries") {
 		t.Errorf("after a refusal the screen shows:\n%s", shows)
 	}
 

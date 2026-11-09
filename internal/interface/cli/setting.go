@@ -70,15 +70,24 @@ func (m screen) settingAnswers() *answers {
 	return asked
 }
 
-// settingSteps is the settings form: which setting, and then that setting's own
-// questions, one at a time as every form here asks them. The others are hidden,
-// so the breadcrumb names only the step somebody is at.
+// openSetting puts up the form for the setting chosen from My account's menu,
+// with every setting's answer as it stands.
+func (m screen) openSetting(setting string) (tea.Model, tea.Cmd) {
+	m.doing, m.news, m.failure = "settings", "", ""
+	m.asked = m.settingAnswers()
+	m.asked.setting = setting
+	m.form = m.formFor("settings")
+
+	return m, m.form.Init()
+}
+
+// settingSteps is the form for the setting chosen from My account's menu: that
+// setting's own questions, one at a time as every form here asks them. The
+// other settings' are hidden, so the breadcrumb names only the step somebody is
+// at.
 func (m screen) settingSteps(a *answers) []*huh.Group {
 	l := m.s.lang
 	other := func(setting string) func() bool { return func() bool { return a.setting != setting } }
-
-	which := huh.NewSelect[string]().Key("setting").Title(l.text("track.settings.which", "What do you want to set?")).
-		Options(m.settingOptions()...).Value(&a.setting)
 
 	languages := make([]huh.Option[string], 0, len(i18n.Languages()))
 	for _, code := range i18n.Languages() {
@@ -86,7 +95,6 @@ func (m screen) settingSteps(a *answers) []*huh.Group {
 	}
 
 	return []*huh.Group{
-		huh.NewGroup(which),
 		huh.NewGroup(huh.NewSelect[string]().Key("language").Title(l.text("app.language", "Language")).
 			Options(languages...).Value(&a.language)).WithHideFunc(other(settingLanguage)),
 		huh.NewGroup(huh.NewSelect[string]().Key("theme").Title(l.text("app.theme", "Appearance")).
@@ -135,32 +143,33 @@ func (m screen) settingSteps(a *answers) []*huh.Group {
 	}
 }
 
-// settingOptions are the settings the screen offers, each with what it is set to
-// now. The bounds only where the installation answers the balance they bound,
-// the holidays only where it names the countries, and the working hours only
-// for an account that may set its own - which the browser asks too.
-func (m screen) settingOptions() []huh.Option[string] {
+// settingChoices are My account's menu: the settings the screen offers, each
+// with what it is set to now, chosen by its number - which is the same in every
+// language, as every key here is. The bounds only where the installation answers
+// the balance they bound, the holidays only where it names the countries, and
+// the working hours only for an account that may set its own - which the browser
+// asks too.
+func (m screen) settingChoices() []choice {
 	l, a := m.s.lang, m.shown.account
 
-	option := func(name, now, setting string) huh.Option[string] {
-		return huh.NewOption(name+": "+now, setting)
+	var choices []choice
+
+	offer := func(setting, now string) {
+		choices = append(choices, choice{strconv.Itoa(len(choices) + 1), "setting:" + setting, m.settingName(setting) + ": " + now})
 	}
 
-	options := []huh.Option[string]{
-		option(l.text("app.language", "Language"), m.languageNow(), settingLanguage),
-		option(l.text("app.theme", "Appearance"), l.themeName(a.theme), settingTheme),
-		option(l.text("tz.myTitle", "My timezone"), m.zoneNow(), settingZone),
-	}
+	offer(settingLanguage, m.languageNow())
+	offer(settingTheme, l.themeName(a.theme))
+	offer(settingZone, m.zoneNow())
 
 	if len(m.places.countries) > 0 {
-		options = append(options, option(l.text("holiday.myTitle", "My public holidays"), m.holidaysNow(), settingHolidays))
+		offer(settingHolidays, m.holidaysNow())
 	}
 
-	options = append(options, option(l.text("remind.title", "Reminders"), m.remindersNow(), settingReminders))
+	offer(settingReminders, m.remindersNow())
 
 	if b := m.told.balance; b != nil {
-		options = append(options, option(l.text("bounds.title", "Bounds of my balance"),
-			l.text("track.settings.boundsNow", "upper {0}, lower {1}", l.bound(b.upper), l.bound(b.lower)), settingBounds))
+		offer(settingBounds, l.text("track.settings.boundsNow", "upper {0}, lower {1}", l.bound(b.upper), l.bound(b.lower)))
 	}
 
 	if slices.Contains(a.permissions, model.PermSettingsWriteOwn) {
@@ -169,11 +178,35 @@ func (m screen) settingOptions() []huh.Option[string] {
 			target = model.DefaultDailyTargetHours
 		}
 
-		options = append(options, option(l.text("settings.workingTimes", "My working hours"),
-			l.text("track.settings.perDay", "{0} a day", l.hours(target)), settingHours))
+		offer(settingHours, l.text("track.settings.perDay", "{0} a day", l.hours(target)))
 	}
 
-	return options
+	return choices
+}
+
+// settingName is what a setting is called, as My account in the browser heads
+// it.
+func (m screen) settingName(setting string) string {
+	l := m.s.lang
+
+	switch setting {
+	case settingLanguage:
+		return l.text("app.language", "Language")
+	case settingTheme:
+		return l.text("app.theme", "Appearance")
+	case settingZone:
+		return l.text("tz.myTitle", "My timezone")
+	case settingHolidays:
+		return l.text("holiday.myTitle", "My public holidays")
+	case settingReminders:
+		return l.text("remind.title", "Reminders")
+	case settingBounds:
+		return l.text("bounds.title", "Bounds of my balance")
+	case settingHours:
+		return l.text("settings.workingTimes", "My working hours")
+	}
+
+	return setting
 }
 
 // languageNow is the account's language by its own name, or the one the client

@@ -14,16 +14,17 @@ of the version it was built from. `go-time-recording-client --version` says
 which that is, and it should be the version the installation shows at the foot
 of its pages.
 
-On its own, on a terminal, it opens a screen: the stopwatch ticking, today's
-entries under it, and a form for each change. `s` starts the stopwatch, `w`
-switches it to another project and books what has run, `x` stops it and books
-what it measured - after asking - and `b` books hours by hand. `r` reads the day
-again, which the screen also does every half minute, so a stopwatch stopped in
-the browser stops here too; `esc` puts a form away and `q` closes the screen,
-which leaves a line saying how the stopwatch was left.
+On its own, on a terminal, it opens a screen headed by the web interface's
+tabs, with `←` and `→` between them. Under *Time entries* are the stopwatch
+ticking, today's entries under it, and a form for each change. `s` starts the
+stopwatch, `w` switches it to another project and books what has run, `x` stops
+it and books what it measured - after asking - and `b` books hours by hand. `r`
+reads the day again, which the screen also does every half minute, so a
+stopwatch stopped in the browser stops here too; `esc` puts a form away and `q`
+closes the screen, which leaves a line saying how the stopwatch was left.
 
-`p` opens the account's own settings, and a change is sent to the route the
-browser sends it to:
+*My account*, the next tab along, holds the account's own settings, each chosen
+by its number, and a change is sent to the route the browser sends it to:
 
 | Setting | Route |
 |---|---|

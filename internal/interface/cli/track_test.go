@@ -29,6 +29,9 @@ type fakeInstallation struct {
 	language, theme string
 	alertHours      int
 
+	// permissions are the rights /me answers with, where a test names them.
+	permissions []string
+
 	// answers are what a test has a route answer, over what it answers by itself.
 	answers map[string]string
 }
@@ -78,7 +81,14 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	stopped, language, theme, alertHours := f.stopped, f.language, f.theme, f.alertHours
 	override, overridden := f.answers[route]
+
+	rights := []string{"settings:write:own", "timesheets:read:own"}
+	if f.permissions != nil {
+		rights = f.permissions
+	}
 	f.mu.Unlock()
+
+	permissions, _ := json.Marshal(rights)
 
 	if f.refuseAs != "" && r.Method != http.MethodGet {
 		refusal, _ := json.Marshal(map[string]any{"error": map[string]string{"code": "x", "message": f.refuseAs}})
@@ -93,7 +103,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		"GET /me": `{"user":{"id":7,"name":"Dana Example","effectiveTimezone":"Europe/Berlin","timezone":"",` +
 			`"instanceTimezone":"Europe/Berlin","language":"` + language + `","theme":"` + theme + `",` +
 			`"dailyTargetHours":8,"maxDailyHours":0,"everyDayCountsFrom":null},` +
-			`"permissions":["settings:write:own","timesheets:read:own"],` +
+			`"permissions":` + string(permissions) + `,` +
 			`"reminders":{"unbookedDay":true,"timerAlertHours":` + strconv.Itoa(alertHours) + `}}`,
 		"GET /branding": `{"title":"Time Recording","translations":{"de":{"title":"Zeiterfassung"}},"version":"v9.9.9"}`,
 		"GET /me/holidays": `{"place":"","instancePlace":"DE-BY","countries":[` +
