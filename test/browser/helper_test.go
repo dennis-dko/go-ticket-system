@@ -184,10 +184,11 @@ func (p *page) submitAndAwaitReload(t *testing.T, submit chromedp.Action) {
 	for {
 		var gone bool
 
-		p.run("wait for the reload", chromedp.Evaluate(
-			`window.__beforeReload === undefined`, &gone))
-
-		if gone {
+		// An evaluation that lands while the old document is being replaced fails
+		// with the very navigation it is waiting for, so a failure here means "not
+		// yet" - the deadline below still ends a reload that never comes.
+		err := chromedp.Run(p.ctx, chromedp.Evaluate(`window.__beforeReload === undefined`, &gone))
+		if err == nil && gone {
 			break
 		}
 
