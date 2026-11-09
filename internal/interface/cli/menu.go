@@ -40,8 +40,20 @@ func (m screen) choices() []choice {
 
 // press answers a key while no form is open: a move to another tab, a move
 // through the menu or through the entries, enter on the line moved to, escape
-// out of a card's menu, or the key of a change.
+// out of a card's menu, or the key of a change. While an entry is being picked
+// the keys pick it, and while a history is shown they only close it.
 func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case m.past != nil:
+		if k.String() == "esc" || k.String() == "enter" {
+			m.past = nil
+		}
+
+		return m, nil
+	case m.picking != "":
+		return m.pickKey(k)
+	}
+
 	choices := m.choices()
 	at := min(m.cursor, len(choices)-1)
 
@@ -116,8 +128,11 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 	m.doing, m.news, m.failure = doing, "", ""
 	m.asked = &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
 
-	if doing == "filter" {
+	switch doing {
+	case "filter":
 		m.asked = m.filterAnswers()
+	case "edit":
+		m.asked = m.correctionAnswers()
 	}
 
 	m.form = m.formFor(doing)
@@ -178,20 +193,32 @@ func (m screen) menu(look palette, width int) string {
 
 // help names the keys that move between the tabs and through the menu, the way
 // huh names its own under a form - so the menu and the forms say it alike. A
-// change's own key stands at the end of its line instead.
+// change's own key stands at the end of its line instead. While an entry is
+// being picked it names the keys that pick it, and under a history the one that
+// closes it.
 func (m screen) help(look palette) string {
 	l := m.s.lang
 
 	var keys [][2]string
 
-	if len(m.openTabs()) > 1 {
-		keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
-	}
+	switch {
+	case m.past != nil:
+		keys = [][2]string{{"esc", l.text("history.close", "Close")}}
+	case m.picking != "":
+		keys = [][2]string{
+			{"↑", l.text("track.huh.up", "up")}, {"↓", l.text("track.huh.down", "down")},
+			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")},
+		}
+	default:
+		if len(m.openTabs()) > 1 {
+			keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
+		}
 
-	keys = append(keys,
-		[2]string{"↑", l.text("track.huh.up", "up")},
-		[2]string{"↓", l.text("track.huh.down", "down")},
-		[2]string{"enter", l.text("track.huh.confirm", "confirm")})
+		keys = append(keys,
+			[2]string{"↑", l.text("track.huh.up", "up")},
+			[2]string{"↓", l.text("track.huh.down", "down")},
+			[2]string{"enter", l.text("track.huh.confirm", "confirm")})
+	}
 
 	named := make([]string, len(keys))
 	for i, k := range keys {

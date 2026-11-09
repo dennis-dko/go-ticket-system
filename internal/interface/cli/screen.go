@@ -51,6 +51,16 @@ type screen struct {
 	card entryCard
 	top  int
 
+	// picking is the change an entry is being picked for in the card, and row the
+	// entry the cursor is on, by its place among those read. editing is the entry
+	// picked, while its form is open and its change on its way.
+	picking string
+	row     int
+	editing entry
+
+	// past is an entry's history, shown until it is closed.
+	past *history
+
 	// dark is what the terminal said its background is, and measured whether it
 	// said anything; see darkness.
 	dark, measured bool
@@ -250,6 +260,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.read(msg)
 	case morePage:
 		return m.addPage(msg), nil
+	case history:
+		return m.showHistory(msg), nil
 	case done:
 		m.news, m.failure = msg.said, ""
 		if msg.err != nil {
@@ -414,15 +426,24 @@ func (m screen) frame(rows int) string {
 
 	parts = append(parts, rule, m.breadcrumb(look), rule)
 
-	if m.form != nil {
+	switch {
+	case m.form != nil:
 		parts = append(parts, m.form.View(), m.formHelp())
-	} else {
+	case m.past != nil:
+		parts = append(parts, m.historyView(look, width))
+	default:
 		for _, line := range m.noticeLines() {
 			parts = append(parts, wrapped.Render(look.ask.Render("! "+line)))
 		}
 
 		parts = append(parts, m.tabBody(look, width, rows)...)
-		parts = append(parts, rule, look.ask.Render(m.menuPrompt()), m.menu(look, width))
+
+		// While an entry is picked, the question is which, and the menu waits.
+		if m.picking != "" {
+			parts = append(parts, rule, look.ask.Render(m.pickPrompt()))
+		} else {
+			parts = append(parts, rule, look.ask.Render(m.menuPrompt()), m.menu(look, width))
+		}
 	}
 
 	// Wrapped rather than cut short: a reason comes at the end of its sentence.
@@ -492,9 +513,10 @@ func nonEmpty(words ...string) []string {
 }
 
 // breadcrumb says where on the screen somebody is: the tab, the card whose menu
-// is open, and while a form is open the change it asks about and the step it is
-// at, the last of them in the accent. A step called what its change is called is
-// said once.
+// is open, the change an entry is being picked for or whose answer is shown,
+// and while a form is open the change it asks about and the step it is at, the
+// last of them in the accent. A step called what its change is called is said
+// once.
 func (m screen) breadcrumb(look palette) string {
 	steps := []string{m.tabName(m.currentTab())}
 
@@ -502,7 +524,12 @@ func (m screen) breadcrumb(look palette) string {
 		steps = append(steps, m.subName())
 	}
 
-	if m.form != nil {
+	switch {
+	case m.picking != "":
+		steps = append(steps, m.calledFor(m.picking))
+	case m.past != nil:
+		steps = append(steps, m.calledFor("history"))
+	case m.form != nil:
 		change := m.changeName()
 		steps = append(steps, change)
 
@@ -527,13 +554,19 @@ func (m screen) changeName() string {
 		return m.settingName(m.asked.setting)
 	}
 
-	for _, c := range append(m.choicesFor(m.doing), m.entryChoices()...) {
-		if c.doing == m.doing {
+	return m.calledFor(m.doing)
+}
+
+// calledFor is what the menu calls a change, in whichever of its menus offers
+// it.
+func (m screen) calledFor(doing string) string {
+	for _, c := range append(m.choicesFor(doing), m.entryChoices()...) {
+		if c.doing == doing {
 			return c.called
 		}
 	}
 
-	return m.doing
+	return doing
 }
 
 // choicesFor is the stopwatch's menu as it stood when doing was chosen from it:

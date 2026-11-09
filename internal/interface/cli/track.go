@@ -294,14 +294,17 @@ type project struct {
 
 // entry is a time entry, as the API answers with one. RecordedBy and UpdatedBy
 // name a manager who booked or changed it in the owner's name, and are nil for
-// the owner's own.
+// the owner's own; CreatedAt and UpdatedAt differ once it was saved again.
 type entry struct {
-	ProjectID     *uint    `json:"projectId"`
-	Date          string   `json:"date"`
-	DurationHours float64  `json:"durationHours"`
-	Description   *string  `json:"description"`
-	RecordedBy    *actedBy `json:"recordedBy"`
-	UpdatedBy     *actedBy `json:"updatedBy"`
+	ID            uint       `json:"id"`
+	ProjectID     *uint      `json:"projectId"`
+	Date          string     `json:"date"`
+	DurationHours float64    `json:"durationHours"`
+	Description   *string    `json:"description"`
+	RecordedBy    *actedBy   `json:"recordedBy"`
+	UpdatedBy     *actedBy   `json:"updatedBy"`
+	CreatedAt     *time.Time `json:"createdAt"`
+	UpdatedAt     *time.Time `json:"updatedAt"`
 }
 
 // actedBy is who acted on somebody else's entry, as the API names them.

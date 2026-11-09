@@ -9,7 +9,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/dennis-dko/go-time-recording/internal/domain/model"
@@ -139,7 +138,7 @@ func (m screen) addPage(msg morePage) screen {
 func (m screen) entryChoices() []choice {
 	l, card := m.s.lang, m.card
 
-	choices := []choice{{"f", "filter", l.text("track.list.filter", "Filter the entries")}}
+	choices := append(m.rowChoices(), choice{"f", "filter", l.text("track.list.filter", "Filter the entries")})
 
 	if card.unassigned > 0 && card.filter.project != "none" {
 		choices = append(choices, choice{"o", "unassigned", l.text("ts.unassigned", "{0} without a project", strconv.Itoa(card.unassigned))})
@@ -177,6 +176,8 @@ func (m screen) chooseOnCard(doing string) (tea.Model, tea.Cmd, bool) {
 		m.busy = true
 
 		return m, m.more(), true
+	case "edit", "delete", "history":
+		return m.startPicking(doing), nil, true
 	}
 
 	return m, nil, false
@@ -268,7 +269,8 @@ func (a answers) filtered() entryFilter {
 // and what it is narrowed to, the entries under the page's columns, and how many
 // of how many it shows where there are more. Where the window holds fewer than
 // were read, rows of them are shown from the one at the top, and the card says
-// which.
+// which. While an entry is being picked, the cursor stands before it, and the
+// entries that cannot be picked are drawn quietly.
 func (m screen) entryCardView(look palette, width, rows int) string {
 	l, card := m.s.lang, m.card
 
@@ -278,15 +280,30 @@ func (m screen) entryCardView(look palette, width, rows int) string {
 		return strings.Join(append(lines, look.muted.Render(l.text("ts.empty", "No entries for this filter."))), "\n")
 	}
 
-	columns := m.entryColumns(width)
-	lines = append(lines, look.muted.Render(columns.row(l.text("field.date", "Date"), l.text("field.project", "Project"),
-		l.text("field.hours", "Hours"), l.text("field.description", "Description"))))
+	// Two columns are kept for the cursor, so the entries do not move when one
+	// is being picked.
+	inner := width - 2
+	table := m.entryGrid(look)
+	lines = append(lines, "  "+table.heading(look, inner))
 
-	rows = max(min(rows, len(card.items)), min(listFewest, len(card.items)))
-	top := min(m.top, len(card.items)-rows)
+	rows = min(rows, len(card.items))
+	top := max(min(m.top, len(card.items)-rows), 0)
 
-	for _, e := range card.items[top : top+rows] {
-		lines = append(lines, m.entryRow(look, columns, e))
+	for i, line := range table.lines(inner)[top : top+rows] {
+		at := top + i
+
+		switch {
+		case m.picking == "":
+			line = "  " + line
+		case at == m.row:
+			line = look.title.Render("> ") + line
+		case !m.pickable(card.items[at]):
+			line = "  " + look.muted.Render(ansi.Strip(line))
+		default:
+			line = "  " + line
+		}
+
+		lines = append(lines, line)
 	}
 
 	var tally, place string
@@ -342,56 +359,34 @@ func (m screen) filterSummary() string {
 	return strings.Join(said, " · ")
 }
 
-// entryColumns is how wide the card's columns are drawn: a date as the reader
-// writes one, the project up to a third of the line, the hours as wide as the
-// widest, and the description in the rest.
-type entryColumns struct {
-	day, project, hours int
-}
-
-// entryColumns measures the columns for the entries read.
-func (m screen) entryColumns(width int) entryColumns {
+// entryGrid is the entries read as the page's table draws them: the day, the
+// project up to a third of the line, the hours as a figure, and the description
+// in what is left.
+func (m screen) entryGrid(look palette) grid {
 	l := m.s.lang
-	c := entryColumns{
-		day:     lipgloss.Width(l.text("field.date", "Date")),
-		project: lipgloss.Width(l.text("field.project", "Project")),
-		hours:   lipgloss.Width(l.text("field.hours", "Hours")),
+	table := grid{
+		headings: []string{l.text("field.date", "Date"), l.text("field.project", "Project"),
+			l.text("field.hours", "Hours"), l.text("field.description", "Description")},
+		right: []bool{false, false, true},
+		most:  []int{0, 3},
 	}
 
 	for _, e := range m.card.items {
-		c.day = max(c.day, lipgloss.Width(l.date(e.Date)))
-		c.project = max(c.project, lipgloss.Width(m.projectOf(e)))
-		c.hours = max(c.hours, lipgloss.Width(l.number(e.DurationHours)))
+		table.rows = append(table.rows, m.entryCells(look, e))
 	}
 
-	c.project = min(c.project, width/3)
-
-	return c
+	return table
 }
 
-// row sets the four cells of a line in their columns, the hours to the right as
-// the page sets figures.
-func (c entryColumns) row(day, project, hours, description string) string {
-	pad := func(text string, width int) string {
-		text = ansi.Truncate(text, width, "…")
-
-		return text + strings.Repeat(" ", max(width-lipgloss.Width(text), 0))
-	}
-
-	return pad(day, c.day) + "  " + pad(project, c.project) + "  " +
-		strings.Repeat(" ", max(c.hours-lipgloss.Width(hours), 0)) + hours + "  " + description
-}
-
-// entryRow is one entry as a line of the card: no project and no description in
-// the quiet colour, as the page shows what is missing, and who booked or changed
-// it where that was somebody else.
-func (m screen) entryRow(look palette, c entryColumns, e entry) string {
+// entryCells are one entry's cells: no project and no description in the quiet
+// colour, as the page shows what is missing, and who booked or changed it where
+// that was somebody else.
+func (m screen) entryCells(look palette, e entry) []string {
 	l := m.s.lang
-	width := m.inner()
 
 	project := m.projectOf(e)
 	if e.ProjectID == nil {
-		project = look.muted.Render(ansi.Truncate(project, c.project, "…"))
+		project = look.muted.Render(project)
 	}
 
 	description := look.muted.Render("–")
@@ -407,7 +402,7 @@ func (m screen) entryRow(look palette, c entryColumns, e entry) string {
 		description += look.muted.Render(" · " + l.text("team.updatedBy", "changed by {0}", e.UpdatedBy.Name))
 	}
 
-	return ansi.Truncate(c.row(l.date(e.Date), project, l.number(e.DurationHours), description), width, "…")
+	return []string{l.date(e.Date), project, l.number(e.DurationHours), description}
 }
 
 // projectOf is the name of an entry's project, as the page's list names it.

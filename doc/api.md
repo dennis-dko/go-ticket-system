@@ -19,10 +19,15 @@ tabs, with `←` and `→` between them. Under *Time entries* are the stopwatch
 ticking, the entries as the page lists them, and a form for each change. `s`
 starts the stopwatch, `w` switches it to another project and books what has
 run, `x` stops it and books what it measured - after asking - and `b` books hours
-by hand. `e` opens the entries' own menu, which narrows them by days, words and
-project as the page's filters do (`GET /timesheets` with `from`, `to`, `q` and
-`projectId`), goes to the entries still waiting for a project, and reads the
-next 25; `PgUp` and `PgDn` page through what the window has no room for. `r`
+by hand. `e` opens the entries' own menu. It corrects an entry in the booking
+form filled with it (`PUT /timesheets/{id}`), deletes one after asking
+(`DELETE /timesheets/{id}`) and shows what one said before it was corrected
+(`GET /timesheets/{id}/revisions`) - the change first, then the entry, picked
+in the list with the arrows and `enter`. It also narrows the entries by days,
+words and project as the page's filters do (`GET /timesheets` with `from`,
+`to`, `q` and `projectId`), goes to the entries still waiting for a project, and
+reads the next 25; `PgUp` and `PgDn` page through what the window has no room
+for. `r`
 reads the day again, which the screen also does every half minute, so a
 stopwatch stopped in the browser stops here too; `esc` puts a form away or goes
 back from a card's menu, and `q` closes the screen, which leaves a line saying

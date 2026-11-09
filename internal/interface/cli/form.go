@@ -23,6 +23,10 @@ type answers struct {
 	day         string
 	stop        bool
 
+	// confirmed is the answer to whether an entry is deleted, no until it is
+	// given.
+	confirmed bool
+
 	// from, to, search and scope are what the entries are narrowed to; see
 	// entryFilter.
 	from, to, search, scope string
@@ -59,6 +63,8 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = m.settingSteps(a)
 	case "filter":
 		steps = m.filterSteps(a)
+	case "delete":
+		steps = []*huh.Group{m.deleteStep(a)}
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -91,13 +97,17 @@ func (m screen) formFor(doing string) *huh.Form {
 		WithWidth(m.inner())
 }
 
-// projectField picks one of the account's active projects, or none.
+// projectField picks one of the account's active projects, or none - and for an
+// entry being corrected the one it is on, whatever has become of that project
+// since, so that a correction keeps it unless it is changed.
 func (m screen) projectField(into *uint) *huh.Select[uint] {
 	l := m.s.lang
 	options := []huh.Option[uint]{huh.NewOption(l.text("ts.noProject", "No project"), uint(0))}
 
 	for _, p := range m.shown.projects {
-		if p.Status == "active" {
+		kept := m.doing == "edit" && m.editing.ProjectID != nil && *m.editing.ProjectID == p.ID
+
+		if p.Status == "active" || kept {
 			options = append(options, huh.NewOption(p.Name, p.ID))
 		}
 	}
@@ -167,8 +177,13 @@ func (l language) keyHelp(keys *huh.KeyMap) {
 // request is the change an answered form asks for, as it will be sent; nil
 // where the answer was to change nothing.
 func (m screen) request() tea.Cmd {
-	if m.doing == "settings" {
+	switch m.doing {
+	case "settings":
 		return m.saveSetting()
+	case "edit":
+		return m.saveCorrection()
+	case "delete":
+		return m.deleteEntry()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown
