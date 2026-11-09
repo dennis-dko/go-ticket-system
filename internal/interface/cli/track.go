@@ -25,8 +25,9 @@ const usage = `go-time-recording-client - book time from a terminal
 
 On a terminal and without a command, it opens a screen headed by the web
 interface's tabs: the time entries - the stopwatch, the entries, the spreadsheet
-and the templates - and the account's own settings, which it saves to the
-account as the browser does, with a menu and a form for each change.
+and the templates - the week as a grid of projects and days, and the account's
+own settings, which it saves to the account as the browser does, with a menu and
+a form for each change.
 
   status                             the stopwatch, and what today adds up to
   start [project] [-m text]          start the stopwatch, on a project or on none

@@ -10,12 +10,13 @@ import (
 // saved is a screen that has sent a change and read the day again since.
 func saved(m screen) bool { return settled(m) && m.news != "" }
 
-// settingsOpen moves to My account, whose menu is the settings.
+// settingsOpen moves to My account, whose menu is the settings: the last tab, so
+// the left arrow goes round to it from the first, whichever tabs stand between.
 func (w *watched) settingsOpen() {
 	w.t.Helper()
 
 	w.until("the day is read", settled)
-	w.press("right")
+	w.press("left")
 	w.until("the settings are offered", onTab(viewAccount))
 }
 

@@ -75,6 +75,27 @@ func TestTheDocumentNamesTheLanguagesItMaySpeak(t *testing.T) {
 	}
 }
 
+// The page's English is what its script hands t(): a word as it stands, a
+// sentence over several lines and several literals whole, with an escaped quote
+// as a quote. A key the script hands t() nothing under is not one it says.
+func TestThePagesEnglishIsWhatItsScriptHandsT(t *testing.T) {
+	for key, want := range map[string]string{
+		"holiday.newYear":     "New Year’s Day",
+		"week.title":          "Week {0} · {1} – {2}",
+		"msg.unreachable":     "The server could not be reached. Check the connection and try again.",
+		"announce.installing": "A new version ({0}) is being installed. You can carry on working; the application will restart shortly.",
+		"tel.tracingLoopback": "If that address does not answer, the shipped file publishes the trace browser on the server's loopback only - then the way in is {0}.",
+	} {
+		if said, ok := web.English(key); !ok || said != want {
+			t.Errorf("the page's English for %s reads %q (%v), want %q", key, said, ok, want)
+		}
+	}
+
+	if said, ok := web.English("week.noSuchKey"); ok {
+		t.Errorf("a key the page never hands t() reads %q", said)
+	}
+}
+
 // REFUSAL_VALUES is read whole: every code the page writes values of, and with
 // which of its functions.
 func TestTheValuesOfARefusalAreReadAsThePageWritesThem(t *testing.T) {
