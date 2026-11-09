@@ -37,6 +37,8 @@ func (m screen) choices() []choice {
 			changes = m.settingChoices()
 		case m.currentTab().view == viewWeek:
 			changes = m.weekChoices()
+		case m.currentTab().view == viewCalendar:
+			// The month is moved with < and >, which the keys under the menu name.
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -69,10 +71,8 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	choices := m.choices()
 	at := min(m.cursor, len(choices)-1)
 
-	if m.currentTab().view == viewWeek {
-		if next, cmd, ok := m.weekKey(k.String()); ok {
-			return next, cmd
-		}
+	if next, cmd, ok := m.moveKey(k.String()); ok {
+		return next, cmd
 	}
 
 	switch k.String() {
@@ -280,11 +280,18 @@ func (m screen) help(look palette) string {
 			keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
 		}
 
-		if m.currentTab().view == viewWeek {
+		switch m.currentTab().view {
+		case viewWeek:
 			keys = append(keys, [2]string{"</>", l.text("track.key.weeks", "weeks")})
 
 			if m.weekShown != "" {
 				keys = append(keys, [2]string{"t", l.text("week.thisWeek", "This week")})
+			}
+		case viewCalendar:
+			keys = append(keys, [2]string{"</>", l.text("track.key.months", "months")})
+
+			if m.cal.shown != "" {
+				keys = append(keys, [2]string{"t", l.text("cal.today", "Today")})
 			}
 		}
 
