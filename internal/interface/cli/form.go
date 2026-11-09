@@ -37,8 +37,10 @@ type answers struct {
 	// file is where an export goes, or the file an import reads.
 	file string
 
-	// cell is the week grid's cell the hours are entered into.
+	// cell is the week grid's cell the hours are entered into, and row the key of
+	// the row added to it.
 	cell cellPicked
+	row  string
 
 	// from, to, search and scope are what the entries are narrowed to; see
 	// entryFilter.
@@ -96,6 +98,10 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = []*huh.Group{m.fileStep(doing, a)}
 	case "cell":
 		steps = m.cellSteps(a)
+	case "addRow":
+		steps = []*huh.Group{m.addRowStep(a)}
+	case "copyWeek":
+		steps = []*huh.Group{m.copyStep(a)}
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -231,6 +237,8 @@ func (m screen) request() tea.Cmd {
 		return m.checkFile()
 	case "cell":
 		return m.saveCell()
+	case "copyWeek":
+		return m.copyWeek()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown

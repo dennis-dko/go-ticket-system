@@ -1341,6 +1341,7 @@
   "track.wb.path": "der Pfad zu einer .xlsx-Datei",
   "track.wb.text": "Exportiert die Einträge so, wie die Eintragskarte sie eingrenzt: {0}. Ein Import legt Einträge an; vorhandene werden nie geändert oder ersetzt.",
   "track.wb.tooLarge": "die Datei ist größer als die {0} MB, die die Installation annimmt",
+  "track.week.addRow": "Zeile hinzufügen",
   "track.week.cell": "Stunden eintragen",
   "track.week.emptyBack": "Geleert nimmt die Zelle ihren Eintrag zurück.",
   "track.week.reading": "Lese die Woche …",

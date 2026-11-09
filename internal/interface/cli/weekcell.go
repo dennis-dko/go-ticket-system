@@ -31,23 +31,41 @@ type cellPicked struct {
 	before  float64
 }
 
-// weekChoices are the week's menu: entering hours into a cell, for an account
-// that may book its own time - and for one that may not, the way to the entries
-// behind a cell of several, which the page links to for anybody who sees the
-// grid. Neither while the week moved to is still being read, nor in a grid with
-// no cell to pick.
+// weekChoices are the week's menu: entering hours into a cell, adding a row and
+// copying last week, for an account that may book its own time - and for one
+// that may not, the way to the entries behind a cell of several, which the page
+// links to for anybody who sees the grid. Nothing while the week moved to is
+// still being read, no cell in a grid with none to pick, and no row where every
+// row there could be is there.
 func (m screen) weekChoices() []choice {
 	l := m.s.lang
 
-	if m.week.monday != m.weekMonday() || !m.anyCell(m.weekRows()) {
+	if m.week.monday != m.weekMonday() {
 		return nil
 	}
 
-	if m.mayWrite() {
-		return []choice{{"e", "cell", l.text("track.week.cell", "Enter hours")}}
+	rows := m.weekRows()
+
+	var choices []choice
+
+	if m.anyCell(rows) {
+		called := l.text("track.week.show", "Show a cell's entries")
+		if m.mayWrite() {
+			called = l.text("track.week.cell", "Enter hours")
+		}
+
+		choices = append(choices, choice{"e", "cell", called})
 	}
 
-	return []choice{{"e", "cell", l.text("track.week.show", "Show a cell's entries")}}
+	if !m.mayWrite() {
+		return choices
+	}
+
+	if len(m.addable(rows)) > 0 {
+		choices = append(choices, choice{"a", "addRow", l.text("track.week.addRow", "Add a row")})
+	}
+
+	return append(choices, choice{"c", "copyWeek", l.text("week.copyLast", "Copy last week")})
 }
 
 // cellPickable reports whether a cell can be picked: one of several entries

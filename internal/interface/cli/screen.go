@@ -56,8 +56,10 @@ type screen struct {
 	week      weekCard
 	weekShown string
 
-	// cell is the cell of the week grid the cursor is on.
-	cell weekCell
+	// cell is the cell of the week grid the cursor is on, and added the rows added
+	// to a week's grid by hand.
+	cell  weekCell
+	added []addedRow
 
 	// picking is the change an entry is being picked for in the card, and row the
 	// entry the cursor is on, by its place among those read. editing is the entry
@@ -683,6 +685,8 @@ func (m screen) stepName() string {
 		return l.text("tpl.one", "Template")
 	case "file":
 		return l.text("track.wb.file", "File")
+	case "row":
+		return l.text("field.project", "Project")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

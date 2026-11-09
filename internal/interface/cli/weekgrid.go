@@ -46,7 +46,8 @@ func (r weekRow) on(date string) []entry {
 }
 
 // weekRows are the grid's rows in the page's order: every project something is
-// booked on in the week, by name, and the hours without a project last.
+// booked on in the week and every row added to it by hand, by name, and the
+// hours without a project last.
 func (m screen) weekRows() []weekRow {
 	byKey := map[string]*weekRow{}
 
@@ -60,6 +61,10 @@ func (m screen) weekRows() []weekRow {
 		}
 
 		byKey[key].entries = append(byKey[key].entries, e)
+	}
+
+	for _, r := range m.addedRows(byKey) {
+		byKey[r.key], keys = r, append(keys, r.key)
 	}
 
 	rows := make([]weekRow, 0, len(keys))

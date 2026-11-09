@@ -169,6 +169,10 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		if active := m.activeProjects(); len(active) > 0 {
 			asked.project = active[0].ID
 		}
+	case "addRow":
+		if addable := m.addable(m.weekRows()); len(addable) > 0 {
+			asked.row = addable[0].key
+		}
 	}
 
 	return m.openWith(doing, asked)
@@ -202,12 +206,14 @@ func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case huh.StateCompleted:
 		m.form = nil
 
-		// A filter changes what the screen shows, not the installation, and a
-		// template only fills the booking in: nothing is booked until its own
-		// form is answered.
+		// A filter changes what the screen shows, not the installation, and so
+		// does a row added to the week; a template only fills the booking in:
+		// nothing is booked until its own form is answered.
 		switch m.doing {
 		case "filter":
 			return m.narrow(m.asked.filtered())
+		case "addRow":
+			return m.addRow(m.asked.row)
 		case "bookTemplate":
 			return m.openWith("book", m.fromTemplate(m.asked.template, m.asked.day))
 		}
