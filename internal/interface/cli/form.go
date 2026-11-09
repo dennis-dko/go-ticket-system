@@ -34,6 +34,9 @@ type answers struct {
 	// template is the one chosen to fill a booking in, zero for none.
 	template uint
 
+	// file is where an export goes, or the file an import reads.
+	file string
+
 	// from, to, search and scope are what the entries are narrowed to; see
 	// entryFilter.
 	from, to, search, scope string
@@ -86,6 +89,8 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = m.newTemplateSteps(a)
 	case "tplDelete":
 		steps = []*huh.Group{m.templateDeleteStep(a)}
+	case "export", "import":
+		steps = []*huh.Group{m.fileStep(doing, a)}
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -215,6 +220,10 @@ func (m screen) request() tea.Cmd {
 		return m.saveTemplate()
 	case "tplDelete":
 		return m.deleteTemplate()
+	case "export":
+		return m.exportTo()
+	case "import":
+		return m.checkFile()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown

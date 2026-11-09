@@ -27,8 +27,12 @@ the work ended, as the page asks it. The stopwatch and the booking are offered
 only to an account that may write its own time. `v` opens the templates
 (`GET /me/templates`): it keeps a new one (`POST /me/templates`) and deletes one
 after asking; booking by hand starts with the templates that can fill it in, and
-nothing is booked until its form is answered. `e` opens the entries' own
-menu. It corrects an entry in the booking
+nothing is booked until its form is answered. `t` opens the spreadsheet: it
+saves the entries as the entries card narrows them to an `.xlsx` file
+(`GET /timesheets/export`, never over a file that is there already), and imports
+one as the page does - checked first (`POST /timesheets/import` with `dryRun`),
+each refused row with why, and written only once every row can be. `e` opens the
+entries' own menu. It corrects an entry in the booking
 form filled with it (`PUT /timesheets/{id}`), deletes one after asking
 (`DELETE /timesheets/{id}`) and shows what one said before it was corrected
 (`GET /timesheets/{id}/revisions`) - the change first, then the entry, picked

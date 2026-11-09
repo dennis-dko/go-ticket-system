@@ -31,6 +31,8 @@ func (m screen) choices() []choice {
 			changes = append(m.clockChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subTemplates:
 			changes = append(m.templateChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subWorkbook:
+			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
 		default:
@@ -146,6 +148,8 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		asked = m.correctionAnswers()
 	case "adjust", "end", "discard":
 		asked = m.clockAnswers(doing)
+	case "export":
+		asked.file = m.exportName()
 	case "assign":
 		// The first of the projects offered, rather than none, which is not one
 		// of them.

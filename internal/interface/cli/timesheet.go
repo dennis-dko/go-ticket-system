@@ -4,11 +4,12 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// subClock and subTemplates name the stopwatch's and the templates' card menus,
-// opened from the time entries' own.
+// subClock, subTemplates and subWorkbook name the stopwatch's, the templates'
+// and the spreadsheet's card menus, opened from the time entries' own.
 const (
 	subClock     = "clock"
 	subTemplates = "templates"
+	subWorkbook  = "workbook"
 )
 
 // timesheetChoices are the time entries' menu: the changes the stopwatch can
@@ -23,22 +24,23 @@ func (m screen) timesheetChoices() []choice {
 	book := choice{"b", "book", l.text("track.form.book", "Book time by hand")}
 	clock := choice{"u", "menu:" + subClock, l.text("timer.title", "Stopwatch") + " …"}
 	templates := choice{"v", "menu:" + subTemplates, l.text("tpl.title", "Templates") + " …"}
+	workbook := choice{"t", "menu:" + subWorkbook, l.text("wb.title", "Spreadsheet") + " …"}
 
 	switch {
 	case !m.mayWrite():
-		return []choice{entries}
+		return []choice{entries, workbook}
 	case m.forgotten():
 		// Stopping it means saying when the work ended; a switch is refused.
-		return []choice{{"x", "end", l.text("track.form.stop", "Stop the stopwatch")}, book, clock, entries, templates}
+		return []choice{{"x", "end", l.text("track.form.stop", "Stop the stopwatch")}, book, clock, entries, workbook, templates}
 	case m.shown.clock.Running:
 		return []choice{
 			{"w", "switch", l.text("track.form.switch", "Switch to another project")},
 			{"x", "stop", l.text("track.form.stop", "Stop the stopwatch")},
-			book, clock, entries, templates,
+			book, clock, entries, workbook, templates,
 		}
 	}
 
-	return []choice{{"s", "start", l.text("track.form.start", "Start the stopwatch")}, book, entries, templates}
+	return []choice{{"s", "start", l.text("track.form.start", "Start the stopwatch")}, book, entries, workbook, templates}
 }
 
 // timesheetBody is what the time entries show above their menu: the stopwatch
@@ -55,6 +57,8 @@ func (m screen) timesheetBody(look palette, width, rows int) []string {
 	case !m.loaded:
 	case m.sub == subTemplates:
 		shown = append(shown, m.templateCardView(look, width))
+	case m.sub == subWorkbook:
+		shown = append(shown, m.workbookCardView(look, width))
 	default:
 		shown = append(shown, m.entryCardView(look, width, rows))
 	}

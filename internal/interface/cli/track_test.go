@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -37,8 +39,9 @@ type fakeInstallation struct {
 	answers map[string]string
 
 	// list answers the entries' list for what its query asks, where a test gives
-	// it one.
-	list func(url.Values) string
+	// it one, and imports answers an import, checked or written.
+	list    func(url.Values) string
+	imports func(dryRun bool) string
 }
 
 func newFakeInstallation(t *testing.T) (*fakeInstallation, *httptest.Server) {
@@ -64,7 +67,23 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	var body map[string]any
 
-	if raw, _ := io.ReadAll(r.Body); len(raw) > 0 {
+	raw, _ := io.ReadAll(r.Body)
+
+	// An upload is kept as its fields, its file's name and what the file held.
+	if kind, params, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); kind == "multipart/form-data" {
+		body = map[string]any{}
+		parts := multipart.NewReader(bytes.NewReader(raw), params["boundary"])
+
+		for part, err := parts.NextPart(); err == nil; part, err = parts.NextPart() {
+			content, _ := io.ReadAll(part)
+
+			if part.FileName() != "" {
+				body["file"], body["content"] = part.FileName(), string(content)
+			} else {
+				body[part.FormName()] = string(content)
+			}
+		}
+	} else if len(raw) > 0 {
 		_ = json.Unmarshal(raw, &body)
 	}
 
@@ -79,7 +98,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	f.mu.Lock()
 	f.sent[route] = append(f.sent[route], body)
-	list := f.list
+	list, imports := f.list, f.imports
 
 	if f.refuseAs == "" {
 		switch route {
@@ -110,6 +129,13 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(http.StatusConflict)
 		_, _ = w.Write(refusal)
+
+		return
+	}
+
+	// A file is answered as itself, not in the envelope.
+	if route == "GET /timesheets/export" {
+		_, _ = io.WriteString(w, fakeWorkbook)
 
 		return
 	}
@@ -145,6 +171,10 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	if route == "GET /timesheets" && list != nil {
 		data = list(r.URL.Query())
+	}
+
+	if route == "POST /timesheets/import" && imports != nil {
+		data = imports(body["dryRun"] == "true")
 	}
 
 	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" ||

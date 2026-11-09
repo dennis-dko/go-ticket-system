@@ -66,6 +66,9 @@ type screen struct {
 	templates []template
 	chosen    template
 
+	// plan is a file checked for an import and not written yet.
+	plan *importPlan
+
 	// past is an entry's history, shown until it is closed.
 	past *history
 
@@ -286,6 +289,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.addPage(msg), nil
 	case history:
 		return m.showHistory(msg), nil
+	case checked:
+		return m.took(msg)
 	case done:
 		m.news, m.failure = msg.said, ""
 		if msg.err != nil {
@@ -594,7 +599,8 @@ func (m screen) calledFor(doing string) string {
 	running := m
 	running.shown.clock.Running = true
 
-	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices()} {
+	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
+		m.workbookChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -642,6 +648,8 @@ func (m screen) stepName() string {
 		return l.text("timer.time", "Time")
 	case "template":
 		return l.text("tpl.one", "Template")
+	case "file":
+		return l.text("track.wb.file", "File")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())
