@@ -98,6 +98,9 @@ func TestTheArrowsMoveFromTabToTab(t *testing.T) {
 	w.until("the time entries are on screen", onTab(viewTimesheets))
 
 	w.press("right")
+	w.until("the week is on screen", onTab(viewWeek))
+
+	w.press("right")
 	shows := w.until("My account is on screen", onTab(viewAccount))
 
 	if !offered(shows, "Language: English", "1") || !offered(shows, "Appearance: Automatic", "2") {

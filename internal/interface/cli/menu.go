@@ -35,6 +35,8 @@ func (m screen) choices() []choice {
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
+		case m.currentTab().view == viewWeek:
+			changes = m.weekChoices()
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -45,10 +47,11 @@ func (m screen) choices() []choice {
 		choice{"q", "quit", l.text("track.menu.quit", "Close the screen")})
 }
 
-// press answers a key while no form is open: a move to another tab, a move
-// through the menu or through the entries, enter on the line moved to, escape
-// out of a card's menu, or the key of a change. While an entry is being picked
-// the keys pick it, and while a history is shown they only close it.
+// press answers a key while no form is open: a move to another tab or another
+// week, a move through the menu or through the entries, enter on the line moved
+// to, escape out of a card's menu, or the key of a change. While an entry or a
+// cell is being picked the keys pick it, and while a history is shown they only
+// close it.
 func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case m.past != nil:
@@ -57,6 +60,8 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, nil
+	case m.picking == "cell":
+		return m.cellKey(k)
 	case m.picking != "":
 		return m.pickKey(k)
 	}
@@ -64,11 +69,17 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	choices := m.choices()
 	at := min(m.cursor, len(choices)-1)
 
+	if m.currentTab().view == viewWeek {
+		if next, cmd, ok := m.weekKey(k.String()); ok {
+			return next, cmd
+		}
+	}
+
 	switch k.String() {
 	case "left", "shift+tab":
-		return m.moveTab(-1), nil
+		return m.toTab(-1)
 	case "right", "tab":
-		return m.moveTab(1), nil
+		return m.toTab(1)
 	case "pgup", "pgdown":
 		return m.page(k.String() == "pgdown"), nil
 	case "esc":
@@ -111,6 +122,8 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 		m.sub, m.cursor = "", 0
 
 		return m, nil
+	case "cell":
+		return m.startCell()
 	}
 
 	if sub, ok := strings.CutPrefix(doing, "menu:"); ok {
@@ -156,6 +169,10 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		if active := m.activeProjects(); len(active) > 0 {
 			asked.project = active[0].ID
 		}
+	case "addRow":
+		if addable := m.addable(m.weekRows()); len(addable) > 0 {
+			asked.row = addable[0].key
+		}
 	}
 
 	return m.openWith(doing, asked)
@@ -170,10 +187,16 @@ func (m screen) openWith(doing string, asked *answers) (tea.Model, tea.Cmd) {
 }
 
 // fillIn hands a message to the open form, and sends the change once the form
-// is answered.
+// is answered. A cell's form goes back to the grid whatever its answer, with
+// the cursor where it was, as the page keeps the focus in the grid for the next
+// cell.
 func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
 	form, cmd := m.form.Update(msg)
 	m.form = form.(*huh.Form)
+
+	if m.form.State != huh.StateNormal && m.doing == "cell" {
+		m.picking = "cell"
+	}
 
 	switch m.form.State {
 	case huh.StateAborted:
@@ -183,12 +206,14 @@ func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case huh.StateCompleted:
 		m.form = nil
 
-		// A filter changes what the screen shows, not the installation, and a
-		// template only fills the booking in: nothing is booked until its own
-		// form is answered.
+		// A filter changes what the screen shows, not the installation, and so
+		// does a row added to the week; a template only fills the booking in:
+		// nothing is booked until its own form is answered.
 		switch m.doing {
 		case "filter":
 			return m.narrow(m.asked.filtered())
+		case "addRow":
+			return m.addRow(m.asked.row)
 		case "bookTemplate":
 			return m.openWith("book", m.fromTemplate(m.asked.template, m.asked.day))
 		}
@@ -238,6 +263,9 @@ func (m screen) help(look palette) string {
 	switch {
 	case m.past != nil:
 		keys = [][2]string{{"esc", l.text("history.close", "Close")}}
+	case m.picking == "cell":
+		keys = [][2]string{{"←/→", l.text("track.key.day", "day")}, {"↑/↓", l.text("track.key.row", "row")},
+			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")}}
 	case m.picking != "":
 		keys = [][2]string{{"↑", l.text("track.huh.up", "up")}, {"↓", l.text("track.huh.down", "down")}}
 
@@ -250,6 +278,14 @@ func (m screen) help(look palette) string {
 	default:
 		if len(m.openTabs()) > 1 {
 			keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
+		}
+
+		if m.currentTab().view == viewWeek {
+			keys = append(keys, [2]string{"</>", l.text("track.key.weeks", "weeks")})
+
+			if m.weekShown != "" {
+				keys = append(keys, [2]string{"t", l.text("week.thisWeek", "This week")})
+			}
 		}
 
 		keys = append(keys,

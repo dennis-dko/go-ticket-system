@@ -16,17 +16,19 @@
 //
 // On a terminal, the client with no command opens a screen drawn with Bubble
 // Tea and huh, headed by the web interface's tabs as far as it has been taught
-// them: the stopwatch running, today's entries, the account's settings, and a
-// form for each change. The commands stay, because a script reads lines and
-// a screen reader reads lines too, where a drawn screen serves neither; both
-// make their changes through the same functions and say what they did in the
-// same words.
+// them: the stopwatch running and the entries, the week as a grid of projects
+// and days, the account's settings, and a form for each change. The commands
+// stay, because a script reads lines and a screen reader reads lines too, where
+// a drawn screen serves neither; both make their changes through the same
+// functions and say what they did in the same words.
 //
 // Those words are English, or another language the binary carries a dictionary
 // for. Its own sentences are the dictionaries' track.* entries, named after the
 // command it was before it was a binary, and what the web interface says as
 // well - a refusal, a status, the unit of an hour - it says in the web
 // interface's entries, so the terminal and the browser never put one thing two
-// ways. The language is the one asked for with --lang or GTR_LANG, otherwise
-// the one the account chose in the browser, otherwise the system's.
+// ways. A name the page writes out itself, such as a public holiday's, is read
+// in English from the page rather than copied here. The language is the one
+// asked for with --lang or GTR_LANG, otherwise the one the account chose in the
+// browser, otherwise the system's.
 package cli

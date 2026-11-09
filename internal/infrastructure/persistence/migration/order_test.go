@@ -27,11 +27,11 @@ var released = []int64{
 // A migration added to the chain comes after every one before it.
 //
 // GoFr runs only the versions above the highest one an installation has already
-// applied - migration.go compares each against MAX(version) and logs
-// "skipping migration" for the rest, at INFO. So a migration added later with an
-// older version is run by every fresh installation and skipped, quietly, by
-// every one that already has the newer version: the two end with different
-// schemas, and nothing says so. CLAUDE.md says to add to the end, and until this
+// applied. It names the ones below it that never ran, at ERROR on every start,
+// and still does not run them. So a migration added later with an older version
+// is run by every fresh installation and skipped by every one that already has
+// the newer version: the two end with different schemas, and the line that says
+// so is read, if at all, once an update has already parted them. CLAUDE.md says to add to the end, and until this
 // test that was a sentence. It is the shape parallel branches produce - each
 // names its migration after the day it was started, and whichever merges second
 // is the older one.

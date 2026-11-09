@@ -39,9 +39,11 @@ type fakeInstallation struct {
 	answers map[string]string
 
 	// list answers the entries' list for what its query asks, where a test gives
-	// it one, and imports answers an import, checked or written.
+	// it one, and imports answers an import, checked or written. days answers the
+	// days of a range, which daysOf does where a test gives none.
 	list    func(url.Values) string
 	imports func(dryRun bool) string
+	days    func(url.Values) string
 }
 
 func newFakeInstallation(t *testing.T) (*fakeInstallation, *httptest.Server) {
@@ -98,7 +100,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	f.mu.Lock()
 	f.sent[route] = append(f.sent[route], body)
-	list, imports := f.list, f.imports
+	list, imports, days := f.list, f.imports, f.days
 
 	if f.refuseAs == "" {
 		switch route {
@@ -161,6 +163,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		"POST /timesheets":      `{"projectId":4,"date":"2026-10-21","durationHours":1.5}`,
 		"GET /me/templates":     `{"items":[],"totalCount":0}`,
 		"POST /me/templates":    `{"id":9}`,
+		"POST /me/weeks/copy":   `{"copied":3,"hours":7.5,"kept":1,"closed":1}`,
 		"GET /timesheets": `{"items":[{"projectId":4,"date":"2026-10-22","durationHours":2.5,"description":"review"},` +
 			`{"projectId":null,"date":"2026-10-22","durationHours":0.5}],"totalCount":2}`,
 	}[route]
@@ -175,6 +178,14 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	if route == "POST /timesheets/import" && imports != nil {
 		data = imports(body["dryRun"] == "true")
+	}
+
+	if route == "GET /me/days" {
+		if days == nil {
+			days = daysOf(nil)
+		}
+
+		data = days(r.URL.Query())
 	}
 
 	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" ||

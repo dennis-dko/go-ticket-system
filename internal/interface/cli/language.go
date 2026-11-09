@@ -182,6 +182,59 @@ func (l language) hours(h float64) string {
 // 1,234.50 in English and 1.234,50 in German.
 func (l language) number(v float64) string { return l.words.Number(v) }
 
+// share writes a figure with the places it has, as the page's fmtShare writes the
+// week's: 2.5, 8 and 0.125 in English, 2,5 in German. Fifteen significant digits
+// are kept, which is what a sum of hours survives as a double, so 0.1 and 0.2
+// come to 0.3 rather than to the binary fraction under it.
+func (l language) share(v float64) string {
+	rounded, err := strconv.ParseFloat(strconv.FormatFloat(v, 'g', 15, 64), 64)
+	if err != nil {
+		rounded = v
+	}
+
+	whole, fraction, _ := strings.Cut(strconv.FormatFloat(math.Abs(rounded), 'f', -1, 64), ".")
+	group := l.text("number.group", ",")
+
+	var b strings.Builder
+
+	if rounded < 0 {
+		b.WriteString("-")
+	}
+
+	for i, digit := range whole {
+		if i > 0 && (len(whole)-i)%3 == 0 {
+			b.WriteString(group)
+		}
+
+		b.WriteRune(digit)
+	}
+
+	if fraction != "" {
+		b.WriteString(l.text("number.point", ".") + fraction)
+	}
+
+	return b.String()
+}
+
+// weekdayNames are the calendar's names of the days, Monday first, as the page's
+// weekdayNames reads them.
+func (l language) weekdayNames() [7]string {
+	names := [7]string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}
+
+	if said := strings.Split(l.text("cal.weekdays", "Mon,Tue,Wed,Thu,Fri,Sat,Sun"), ","); len(said) == 7 {
+		copy(names[:], said)
+	}
+
+	return names
+}
+
+// dayAndMonth writes a day without its year, as the week's columns are headed:
+// the layout the reader writes a day in, less the year - 09.11. in German, and
+// 11-09 in English, which writes a day as it travels.
+func (l language) dayAndMonth(at time.Time) string {
+	return at.Format(strings.Trim(strings.Replace(l.text("layout.day", time.DateOnly), "2006", "", 1), "-/ "))
+}
+
 // date writes a day that travels as YYYY-MM-DD the way the reader writes one.
 // English keeps the form it travels in, which is how the client has always
 // written it; a dictionary names its own as a Go layout.
@@ -333,4 +386,22 @@ func (l language) pageWord(prefix, word string) string {
 	}
 
 	return word
+}
+
+// pageSays is what the page says under a key: this language's words for it, and
+// where the dictionary has none - English has no dictionary - the page's own
+// English, read from the page rather than copied here. fallback is for a key the
+// page says nothing under. Unlike pageWord, which hands back the word as it
+// travels, this is for names the page writes out itself, such as a public
+// holiday's: "New Year’s Day", where the installation sends newYear.
+func (l language) pageSays(key, fallback string) string {
+	if said, ok := l.words.Lookup(key); ok {
+		return said
+	}
+
+	if said, ok := web.English(key); ok {
+		return said
+	}
+
+	return fallback
 }

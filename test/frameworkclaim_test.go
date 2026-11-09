@@ -23,7 +23,7 @@ import (
 // read of GoFr's own diff between the two versions - and corrected what no
 // longer holds. The scan alone is not the sweep: at v1.62.0 the diff found all
 // five claims that had stopped being true, and the scan none of them.
-const frameworkClaimsReadAgainst = "v1.62.0"
+const frameworkClaimsReadAgainst = "v1.63.1"
 
 // TestTheFrameworkClaimsWereReadAgainstTheGoFrRequired fails once go.mod requires
 // another GoFr than the one the claims were last read against.
