@@ -441,9 +441,12 @@ func (m screen) frame(rows int) string {
 	width := m.inner()
 	rule := look.muted.Render(strings.Repeat("─", width))
 
+	// What belongs together is set without a line between: the name and who is
+	// signed in, the breadcrumb between its rules, and a question and the menu
+	// that answers it. A blank line between those cost five lines the entries
+	// need, once the screen carried the page's tabs and cards.
 	parts := []string{
-		lipgloss.PlaceHorizontal(width, lipgloss.Center, look.title.Render(m.heading())),
-		m.subtitle(look, width),
+		lipgloss.PlaceHorizontal(width, lipgloss.Center, look.title.Render(m.heading())) + "\n" + m.subtitle(look, width),
 	}
 
 	// Wrapped rather than cut short, as everything that says something is.
@@ -457,7 +460,7 @@ func (m screen) frame(rows int) string {
 		parts = append(parts, m.tabBar(look, width))
 	}
 
-	parts = append(parts, rule, m.breadcrumb(look), rule)
+	parts = append(parts, rule+"\n"+m.breadcrumb(look)+"\n"+rule)
 
 	switch {
 	case m.form != nil:
@@ -473,9 +476,9 @@ func (m screen) frame(rows int) string {
 
 		// While an entry is picked, the question is which, and the menu waits.
 		if m.picking != "" {
-			parts = append(parts, rule, look.ask.Render(m.pickPrompt()))
+			parts = append(parts, rule+"\n"+wrapped.Render(look.ask.Render(m.pickPrompt())))
 		} else {
-			parts = append(parts, rule, look.ask.Render(m.menuPrompt()), m.menu(look, width))
+			parts = append(parts, rule+"\n"+look.ask.Render(m.menuPrompt())+"\n"+m.menu(look, width))
 		}
 	}
 

@@ -221,6 +221,25 @@ func TestMoreEntriesAreReadAPageAtATime(t *testing.T) {
 	w.close()
 }
 
+// A screen with more entries than its window has room for is drawn no taller
+// than the window, the menu and the keys under it included: the entries give
+// way, and the rest of the screen leaves them room.
+func TestTheScreenIsNoTallerThanItsWindow(t *testing.T) {
+	f, server := newFakeInstallation(t)
+	f.list = numbered(25)
+
+	w := watch(t, server.URL, f.token)
+	shows := w.until("the entries are read", func(m screen) bool { return settled(m) && len(m.card.items) == 25 })
+
+	if lines := strings.Count(shows, "\n") + 1; lines > 40 {
+		t.Errorf("the screen is %d lines in a window of 40:\n%s", lines, shows)
+	}
+
+	if rows := strings.Count(shows, "entry "); rows < 5 {
+		t.Errorf("the screen leaves room for %d entries in a window of 40:\n%s", rows, shows)
+	}
+}
+
 // Entries the window has no room for are paged through, a window's worth at a
 // time, and the card says which of them it shows.
 func TestEntriesTheWindowHasNoRoomForArePagedThrough(t *testing.T) {
