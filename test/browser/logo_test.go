@@ -320,13 +320,13 @@ func TestClearingTheLogoChangesTheTabWithoutAReload(t *testing.T) {
 	p.run("open Settings again", p.click(`.tab[data-view="admin"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
-	p.run("take the logo off", p.click("#logo-clear"),
-		p.click(`#form-branding button[type="submit"]`))
+	// Saving a changed mark reloads the page, and the tab is asked about only once
+	// the new document is there: a fetch of the icon still under way when the old
+	// one went failed the case with the navigation, whenever the two met. Polled
+	// after that, because what this case is about is the tab.
+	p.submitAndAwaitReload(t, chromedp.Tasks{p.click("#logo-clear"),
+		p.click(`#form-branding button[type="submit"]`)})
 
-	// Not waited for by its notice: saving a changed mark reloads the page, and
-	// the notice goes with it. What this case is about is the tab, so that is what
-	// is waited for - polled, because the save, the branding behind it and the
-	// reload all have to finish first.
 	deadline := time.Now().Add(waitPatience)
 
 	for p.iconIsTheLogo(t) {
