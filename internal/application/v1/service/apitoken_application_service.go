@@ -20,19 +20,22 @@ const maxTokensPerUser = 20
 
 // APITokenService issues and resolves personal API tokens.
 type APITokenService struct {
-	tokens repository.APITokenRepository
-	users  repository.UserRepository
-	auth   *AuthService
+	tokens   repository.APITokenRepository
+	sessions repository.SessionRepository
+	users    repository.UserRepository
+	auth     *AuthService
 }
 
 // NewAPITokenService needs the auth service because a token resolves to its
-// account's principal through the same code a session's does.
+// account's principal through the same code a session's does, and the sessions
+// because taking a token back ends the ones it was exchanged for.
 func NewAPITokenService(
 	tokens repository.APITokenRepository,
+	sessions repository.SessionRepository,
 	users repository.UserRepository,
 	auth *AuthService,
 ) *APITokenService {
-	return &APITokenService{tokens: tokens, users: users, auth: auth}
+	return &APITokenService{tokens: tokens, sessions: sessions, users: users, auth: auth}
 }
 
 // IssuedToken is returned once, at creation. The secret is never retrievable
@@ -106,8 +109,18 @@ func (s *APITokenService) List(ctx context.Context, userID uint) ([]*model.APITo
 	return s.tokens.ListForUser(ctx, userID)
 }
 
-// Revoke deletes one of the user's own tokens.
+// Revoke deletes one of the user's own tokens, and ends the sessions it was
+// exchanged for.
+//
+// The sessions first: a failure between the two then leaves a token to take back
+// again, where the other order would leave a phone signed in by a token that is
+// gone. Both are scoped to the user, so nobody ends another person's sessions by
+// naming a token of theirs.
 func (s *APITokenService) Revoke(ctx context.Context, id, userID uint) error {
+	if err := s.sessions.DeleteOpenedBy(ctx, id, userID); err != nil {
+		return err
+	}
+
 	return s.tokens.Delete(ctx, id, userID)
 }
 
@@ -117,30 +130,38 @@ func (s *APITokenService) Revoke(ctx context.Context, id, userID uint) error {
 // change or a revoked permission takes effect on the very next request, and a
 // token can never outrank the person it belongs to.
 func (s *APITokenService) Resolve(ctx context.Context, secret string) (*Principal, error) {
+	_, principal, err := s.ResolveToken(ctx, secret)
+
+	return principal, err
+}
+
+// ResolveToken is Resolve for a caller that has to know which token it was:
+// exchanging one for a session, which ends with the token.
+func (s *APITokenService) ResolveToken(ctx context.Context, secret string) (*model.APIToken, *Principal, error) {
 	invalid := apperror.Invalidf("invalid token").WithCode("invalidToken")
 
 	if !strings.HasPrefix(secret, APITokenPrefix) {
-		return nil, invalid
+		return nil, nil, invalid
 	}
 
 	token, err := s.tokens.GetByHash(ctx, security.HashToken(secret))
 	if err != nil {
-		return nil, missingOr(err, invalid)
+		return nil, nil, missingOr(err, invalid)
 	}
 
 	if token.Expired(time.Now()) {
-		return nil, invalid
+		return nil, nil, invalid
 	}
 
 	user, err := s.users.GetByID(ctx, token.UserID)
 	if err != nil {
-		return nil, missingOr(err, invalid)
+		return nil, nil, missingOr(err, invalid)
 	}
 
 	// An account still on its initial password must not be usable through a
 	// token either, or the password rule could simply be bypassed.
 	if user.MustChangePassword {
-		return nil, apperror.Conflictf("the account must change its initial password first").
+		return nil, nil, apperror.Conflictf("the account must change its initial password first").
 			WithCode("mustChangePasswordFirst")
 	}
 
@@ -153,5 +174,10 @@ func (s *APITokenService) Resolve(ctx context.Context, secret string) (*Principa
 		_ = s.tokens.TouchLastUsed(ctx, token.ID)
 	}
 
-	return s.auth.principalFor(ctx, user)
+	principal, err := s.auth.principalFor(ctx, user)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return token, principal, nil
 }

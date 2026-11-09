@@ -603,6 +603,19 @@ func (r *SessionRepository) DeleteForUserExcept(
 	return nil
 }
 
+func (r *SessionRepository) DeleteOpenedBy(_ context.Context, tokenID, userID uint) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for hash, session := range r.sessions {
+		if session.APITokenID == tokenID && session.UserID == userID {
+			delete(r.sessions, hash)
+		}
+	}
+
+	return nil
+}
+
 func (r *SessionRepository) DeleteExpired(_ context.Context) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

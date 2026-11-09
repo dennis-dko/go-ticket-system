@@ -28,7 +28,7 @@ func TestATokenThatCannotBeLookedUpIsNotReportedAsInvalid(t *testing.T) {
 	f := newFixture(t)
 
 	unreadable := service.NewAPITokenService(unreadableTokens{&stubTokens{byID: map[uint]*model.APIToken{}}},
-		f.userRepo, f.auth)
+		newStubSessions(), f.userRepo, f.auth)
 
 	_, err := unreadable.Resolve(ctx, service.APITokenPrefix+"something")
 	if hasCode(err, "invalidToken") || apperror.KindOf(err) != apperror.KindInternal {
@@ -36,7 +36,7 @@ func TestATokenThatCannotBeLookedUpIsNotReportedAsInvalid(t *testing.T) {
 	}
 
 	// And one that does not exist is still invalid.
-	plain := service.NewAPITokenService(&stubTokens{byID: map[uint]*model.APIToken{}}, f.userRepo, f.auth)
+	plain := service.NewAPITokenService(&stubTokens{byID: map[uint]*model.APIToken{}}, newStubSessions(), f.userRepo, f.auth)
 
 	if _, err := plain.Resolve(ctx, service.APITokenPrefix+"something"); !hasCode(err, "invalidToken") {
 		t.Errorf("a token that does not exist was answered %v, want invalidToken", err)

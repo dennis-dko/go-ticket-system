@@ -65,6 +65,7 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.POST(base+"/auth/passkey/login", h.Passkeys.BeginLogin)
 	app.PUT(base+"/auth/passkey/login", h.Passkeys.FinishLogin)
 	app.POST(base+"/auth/logout", h.Auth.Logout)
+	app.POST(base+"/auth/token", h.Auth.TokenSignIn)
 
 	// Signing in through the provider the installation configured: whether it is
 	// offered, going there, and finishing with the code it sends the browser back

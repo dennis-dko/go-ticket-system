@@ -163,6 +163,8 @@ func maintenanceExempt(r *http.Request) bool {
 	switch path {
 	case base + "/auth/login", base + "/auth/logout", base + "/branding", base + "/languages":
 		return true
+	case base + "/auth/token":
+		return true
 	case base + "/auth/passkey", base + "/auth/passkey/login":
 		return true
 	case base + "/auth/openid", base + "/auth/openid/finish":

@@ -37,6 +37,8 @@ func (sessionStoreAnswering) DeleteForUser(context.Context, uint) error { return
 
 func (sessionStoreAnswering) DeleteForUserExcept(context.Context, uint, string) error { return nil }
 
+func (sessionStoreAnswering) DeleteOpenedBy(context.Context, uint, uint) error { return nil }
+
 func (sessionStoreAnswering) DeleteExpired(context.Context) (int64, error) { return 0, nil }
 
 // A session the database could not read keeps its cookie, and a handler that
@@ -140,7 +142,7 @@ func TestATokenThatCannotBeLookedUpIsNotCalledInvalid(t *testing.T) {
 
 			users := memory.NewUserRepository()
 			roles := memory.NewRoleRepository(users)
-			tokens := service.NewAPITokenService(tokenStoreAnswering{err: tc.lookup}, users,
+			tokens := service.NewAPITokenService(tokenStoreAnswering{err: tc.lookup}, sessionStoreAnswering{}, users,
 				service.NewAuthService(users, roles))
 
 			status := 0

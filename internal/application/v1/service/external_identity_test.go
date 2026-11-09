@@ -250,6 +250,19 @@ func (s *stubSessions) DeleteForUserExcept(
 	return nil
 }
 
+func (s *stubSessions) DeleteOpenedBy(_ context.Context, tokenID, userID uint) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for hash, session := range s.items {
+		if session.APITokenID == tokenID && session.UserID == userID {
+			delete(s.items, hash)
+		}
+	}
+
+	return nil
+}
+
 func (s *stubSessions) DeleteForUser(_ context.Context, userID uint) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

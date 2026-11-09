@@ -112,7 +112,7 @@ func TestATokenRecordsItsLastUseAtMostOnceAMinute(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(t)
 	tokens := &stubTokens{byID: map[uint]*model.APIToken{}}
-	svc := service.NewAPITokenService(tokens, f.userRepo, f.auth)
+	svc := service.NewAPITokenService(tokens, newStubSessions(), f.userRepo, f.auth)
 
 	// Past the initial password, which a token is refused on.
 	user, err := f.userRepo.GetByID(ctx, f.userID)

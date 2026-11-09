@@ -266,6 +266,27 @@
         }
       }
     },
+    "/auth/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign in to the web interface with a personal token",
+        "description": "The token travels as `Authorization: Bearer <token>` or `X-API-Token`, and the answer is a sign-in's: the session cookie, a new CSRF cookie and `{\"user\": {...}, \"permissions\": [...]}`. It is how the Android app signs in to the web interface it shows, connected by the code a new token is shown with. It grants nothing the token does not - the token already carries its owner's role through the API - and only the token decides who: a session cookie on the same request is not asked. The session ends with the token: revoking the token ends it, and it lasts no longer than the token does. A token that does not resolve is answered 401 as a wrong password is, one whose owner is still on the initial password 409 mustChangePasswordFirst, and during maintenance only an account that may end it gets a session.",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Signed in; a session cookie is set"
+          },
+          "401": {
+            "description": "The token is not one this installation knows"
+          },
+          "409": {
+            "description": "The token's owner has to change the initial password first"
+          }
+        }
+      }
+    },
     "/me": {
       "get": {
         "tags": [
@@ -561,6 +582,7 @@
           "auth"
         ],
         "summary": "Revoke one of your own tokens",
+        "description": "The sessions the token was exchanged for through `POST /auth/token` end with it.",
         "parameters": [
           {
             "name": "id",

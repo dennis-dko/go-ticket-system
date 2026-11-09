@@ -584,7 +584,7 @@ func main() {
 	adminLog := appservice.NewAdminLogService(sqldb.NewAdminEventRepository(db, cfg.Dialect), userRepo, roleRepo)
 
 	auth := appservice.NewAuthService(userRepo, roleRepo)
-	apiTokens := appservice.NewAPITokenService(tokenRepo, userRepo, auth)
+	apiTokens := appservice.NewAPITokenService(tokenRepo, sessionRepo, userRepo, auth)
 	passkeys := appservice.NewPasskeyService(passkeyRepo, userRepo)
 	settingsService := appservice.NewSettingsService(settingsRepo, roleRepo, userRepo, cfg.AppName).
 		WithSecrets(secrets)
@@ -1008,6 +1008,9 @@ func main() {
 	v1.RegisterRoutes(app, v1.Handlers{
 		Auth: rest.NewAuthHandler(sessions, authorizer, cfg.AppName, instanceTimezone).
 			WithMaintenance(maintenanceState).
+			// The Android app's sign-in: it shows the web interface, and is
+			// connected by a token's code rather than a password typed on a phone.
+			WithTokens(apiTokens).
 			// Only with a directory: a ticket names somebody, and the directory is
 			// where that name becomes an account.
 			WithKerberos(func() bool { return kerberosAcceptor != nil && ldapClient.Enabled() }),

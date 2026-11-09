@@ -57,9 +57,13 @@ var taskTarget = regexp.MustCompile(`(?m)^  ([a-z][a-zA-Z0-9:._-]*):[ \t]*$`)
 // not" means reading the prose around it. Every one of those absence claims is a
 // directory or a package. Reading file paths only makes that question disappear
 // rather than answering it badly.
+//
+// An ending missing here is a kind of file the document can name wrongly without
+// anything noticing, which is how the Android app's Kotlin went unread.
 var fileSuffix = []string{
 	".go", ".md", ".yml", ".yaml", ".json", ".js", ".css", ".html",
 	".env", ".example", ".sh", ".conf", ".template", ".ldif", ".in", ".txt",
+	".kt",
 }
 
 // ignoredPath lists the files the document names that are not in the tree, and
