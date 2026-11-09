@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"reflect"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -227,18 +226,12 @@ func tuneSQLite(app *gofr.App, db container.DB, dialect string) {
 	}
 }
 
-// unavailable reports whether the container has no usable SQL datasource.
-//
-// When GoFr cannot build one it stores a typed nil pointer in the interface,
-// so the interface itself is non-nil and a plain `db == nil` misses the case.
+// unavailable reports whether the container has no usable SQL datasource, which
+// GoFr leaves nil when it cannot build one. How it leaves it is GoFr's to choose -
+// up to v1.62 a typed nil pointer, which this comparison does not see - so
+// TestAStartWithoutADatabaseIsToldApartFromOneWithIt asks GoFr itself.
 func unavailable(db container.DB) bool {
-	if db == nil {
-		return true
-	}
-
-	v := reflect.ValueOf(db)
-
-	return v.Kind() == reflect.Pointer && v.IsNil()
+	return db == nil
 }
 
 func main() {
