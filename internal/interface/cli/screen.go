@@ -56,6 +56,9 @@ type screen struct {
 	week      weekCard
 	weekShown string
 
+	// cell is the cell of the week grid the cursor is on.
+	cell weekCell
+
 	// picking is the change an entry is being picked for in the card, and row the
 	// entry the cursor is on, by its place among those read. editing is the entry
 	// picked, while its form is open and its change on its way.
@@ -630,7 +633,7 @@ func (m screen) calledFor(doing string) string {
 	running.shown.clock.Running = true
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
-		m.workbookChoices()} {
+		m.workbookChoices(), m.weekChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called

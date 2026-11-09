@@ -91,6 +91,8 @@ func (m screen) pickPrompt() string {
 			"  " + m.tickedCount()
 	case "tplDelete":
 		return l.text("track.pick.template", "Choose the template to delete.")
+	case "cell":
+		return l.text("track.pick.cell", "Choose the cell with the arrows, then press enter.")
 	}
 
 	return l.text("track.pick.edit", "Choose the entry to correct.")

@@ -13,10 +13,13 @@ import (
 
 // weekRow is one row of the week grid: a project something is booked on in the
 // week, or the hours booked on none. key is the project's id as it travels, or
-// "none".
+// "none"; open says whether the row takes hours, which a closed project's does
+// not.
 type weekRow struct {
 	key     string
 	name    string
+	project *uint
+	open    bool
 	entries []entry
 }
 
@@ -81,13 +84,22 @@ func (m screen) weekRows() []weekRow {
 }
 
 // newRow is an empty row for a project, or for the hours without one, named as
-// the page names it.
+// the page names it and open where it takes hours: the hours without a project
+// always, and a project's while it is active.
 func (m screen) newRow(key string, project *uint) *weekRow {
 	if project == nil {
-		return &weekRow{key: key, name: m.s.lang.text("ts.noProject", "No project")}
+		return &weekRow{key: key, name: m.s.lang.text("ts.noProject", "No project"), open: true}
 	}
 
-	return &weekRow{key: key, name: m.s.lang.nameOf(m.shown.projects, project)}
+	row := &weekRow{key: key, name: m.s.lang.nameOf(m.shown.projects, project), project: project}
+
+	for _, p := range m.shown.projects {
+		if p.ID == *project {
+			row.open = p.Status == "active"
+		}
+	}
+
+	return row
 }
 
 // dayOn is what the week's days say about a day, empty for one they do not name.
@@ -166,13 +178,32 @@ func (m screen) weekCardView(look palette, width int) string {
 		look.muted.Render(columns.line("  ", l.text("field.project", "Project"), names[:], l.text("week.sum", "Total"))),
 		look.muted.Render(columns.line("  ", "", short[:], "")))
 
+	picking, cursor := m.picking == "cell", m.cellAt(rows)
+
 	for i, r := range rows {
 		name := r.name
 		if r.key == "none" {
 			name = look.muted.Render(name)
 		}
 
-		lines = append(lines, columns.line("  ", name, body[i][:7], body[i][7]))
+		// While a cell is picked, the cursor's row has a > before it and its cell
+		// is filled with the accent, and a cell that cannot be picked is quiet.
+		gutter, days := "  ", slices.Clone(body[i][:7])
+
+		for d := range days {
+			switch {
+			case picking && i == cursor && d == m.cell.day:
+				days[d] = look.tabOn.Render(fitRight(days[d], columns.day))
+			case picking && !m.cellPickable(r, d):
+				days[d] = look.muted.Render(days[d])
+			}
+		}
+
+		if picking && i == cursor {
+			gutter = look.title.Render(">") + " "
+		}
+
+		lines = append(lines, columns.line(gutter, name, days, body[i][7]))
 	}
 
 	if len(rows) == 0 {

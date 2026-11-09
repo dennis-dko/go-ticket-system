@@ -36,7 +36,7 @@ func (m screen) choices() []choice {
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
 		case m.currentTab().view == viewWeek:
-			// The week is moved with < and >, which the keys under the menu name.
+			changes = m.weekChoices()
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -47,10 +47,11 @@ func (m screen) choices() []choice {
 		choice{"q", "quit", l.text("track.menu.quit", "Close the screen")})
 }
 
-// press answers a key while no form is open: a move to another tab, a move
-// through the menu or through the entries, enter on the line moved to, escape
-// out of a card's menu, or the key of a change. While an entry is being picked
-// the keys pick it, and while a history is shown they only close it.
+// press answers a key while no form is open: a move to another tab or another
+// week, a move through the menu or through the entries, enter on the line moved
+// to, escape out of a card's menu, or the key of a change. While an entry or a
+// cell is being picked the keys pick it, and while a history is shown they only
+// close it.
 func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case m.past != nil:
@@ -59,6 +60,8 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, nil
+	case m.picking == "cell":
+		return m.cellKey(k)
 	case m.picking != "":
 		return m.pickKey(k)
 	}
@@ -119,6 +122,8 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 		m.sub, m.cursor = "", 0
 
 		return m, nil
+	case "cell":
+		return m.startCell()
 	}
 
 	if sub, ok := strings.CutPrefix(doing, "menu:"); ok {
@@ -178,10 +183,16 @@ func (m screen) openWith(doing string, asked *answers) (tea.Model, tea.Cmd) {
 }
 
 // fillIn hands a message to the open form, and sends the change once the form
-// is answered.
+// is answered. A cell's form goes back to the grid whatever its answer, with
+// the cursor where it was, as the page keeps the focus in the grid for the next
+// cell.
 func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
 	form, cmd := m.form.Update(msg)
 	m.form = form.(*huh.Form)
+
+	if m.form.State != huh.StateNormal && m.doing == "cell" {
+		m.picking = "cell"
+	}
 
 	switch m.form.State {
 	case huh.StateAborted:
@@ -246,6 +257,9 @@ func (m screen) help(look palette) string {
 	switch {
 	case m.past != nil:
 		keys = [][2]string{{"esc", l.text("history.close", "Close")}}
+	case m.picking == "cell":
+		keys = [][2]string{{"←/→", l.text("track.key.day", "day")}, {"↑/↓", l.text("track.key.row", "row")},
+			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")}}
 	case m.picking != "":
 		keys = [][2]string{{"↑", l.text("track.huh.up", "up")}, {"↓", l.text("track.huh.down", "down")}}
 
