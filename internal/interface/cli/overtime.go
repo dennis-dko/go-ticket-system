@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,11 +14,16 @@ import (
 
 // overtimeState is the overtime's tab: the hours of the period last read, the
 // period chosen - empty for the page's own - and the first of its days on screen
-// where the window holds fewer than the period has.
+// where the window holds fewer than the period has; and the year last read for
+// the tiles, the year chosen - zero for this one - and the first of its months
+// on screen.
 type overtimeState struct {
 	stats    statistics
 	from, to string
 	top      int
+
+	year               yearDays
+	yearShown, yearTop int
 }
 
 // statistics is a period's hours as /me/statistics answers them: every day of
@@ -110,13 +114,14 @@ func (m screen) tookStats(msg statsRead) screen {
 	return m
 }
 
-// overtimeChoices are the overtime's menu: choosing the period, and the hours as
-// a document.
+// overtimeChoices are the overtime's menu: choosing the period, the year's
+// tiles, and the hours as a document.
 func (m screen) overtimeChoices() []choice {
 	l := m.s.lang
 
 	return []choice{
 		{"z", "statsPeriod", l.text("track.stats.period", "Choose the period")},
+		{"y", "menu:" + subYear, l.text("field.year", "Year") + " …"},
 		{"p", "statsPDF", l.text("action.exportPdf", "Export as PDF")},
 	}
 }
@@ -146,8 +151,12 @@ func (m screen) choosePeriod(a answers) (tea.Model, tea.Cmd) {
 }
 
 // overtimeBody is what the overtime shows above its menu: the hours of the period,
-// once they have been read.
+// once they have been read, or the year's card while its menu is open.
 func (m screen) overtimeBody(look palette, width, rows int) []string {
+	if m.sub == subYear {
+		return m.yearBody(look, width, rows)
+	}
+
 	if from, to := m.statsPeriod(); m.ot.stats.From != from || m.ot.stats.To != to {
 		return []string{look.muted.Render(m.s.lang.text("track.stats.reading", "Reading the hours …"))}
 	}
@@ -182,8 +191,7 @@ func (m screen) statsCardView(look palette, width, rows int) string {
 	lines = append(lines, l.bars(look, width, labels[top:top+rows], values[top:top+rows], values)...)
 
 	if rows < len(labels) {
-		lines = append(lines, look.muted.Render(spread(width, "", l.text("track.list.rows", "{0}–{1} of {2} · pgup/pgdn",
-			strconv.Itoa(top+1), strconv.Itoa(top+rows), strconv.Itoa(len(labels))))))
+		lines = append(lines, look.muted.Render(spread(width, "", l.place(top, rows, len(labels)))))
 	}
 
 	labels, values = m.projectBars()
@@ -195,21 +203,6 @@ func (m screen) statsCardView(look palette, width, rows int) string {
 		wrapped.Render(look.muted.Render(l.text("stats.activityHint", "Write an activity into a description with a # - #meeting, #review - and its hours are added up here. An entry naming two counts towards both, so these can add up to more than the total."))))
 
 	return strings.Join(append(lines, l.bars(look, width, labels, values, values)...), "\n")
-}
-
-// pageDays moves the day chart a window's worth of days down or up, no further
-// than its ends, as PgUp and PgDn move the entries.
-func (m screen) pageDays(down bool) screen {
-	rows := m.listRoom()
-	last := max(len(m.ot.stats.Days)-rows, 0)
-
-	if down {
-		m.ot.top = min(m.ot.top+rows, last)
-	} else {
-		m.ot.top = max(min(m.ot.top, last)-rows, 0)
-	}
-
-	return m
 }
 
 // dayBars are the day chart's bars: each day of the period and its hours, the

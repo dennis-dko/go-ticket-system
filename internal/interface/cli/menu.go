@@ -40,6 +40,8 @@ func (m screen) choices() []choice {
 			changes = append(m.awayChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subWorkbook:
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subYear:
+			changes = []choice{{"esc", "back", l.text("track.menu.back", "Back")}}
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
 		case m.currentTab().view == viewWeek:
@@ -145,6 +147,12 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 
 	if sub, ok := strings.CutPrefix(doing, "menu:"); ok {
 		m.sub, m.cursor = sub, 0
+
+		// The year is read when its card opens, and with the day only while it is
+		// open: two years of days are the most any read on the screen asks for.
+		if sub == subYear {
+			return m, m.readYearNow()
+		}
 
 		return m, nil
 	}
@@ -333,6 +341,10 @@ func (m screen) help(look palette) string {
 
 			if m.cal.shown != "" {
 				keys = append(keys, [2]string{"t", l.text("cal.today", "Today")})
+			}
+		case viewOvertime:
+			if m.sub == subYear {
+				keys = append(keys, [2]string{"</>", l.text("track.key.years", "years")})
 			}
 		}
 

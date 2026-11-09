@@ -64,7 +64,7 @@ type screen struct {
 	// cal is the calendar's tab: the month and the cards beside it.
 	cal calendarState
 
-	// ot is the overtime's tab: the hours of a period.
+	// ot is the overtime's tab: the hours of a period, and the year's tiles.
 	ot overtimeState
 
 	// picking is the change an entry is being picked for in the card, and row the
@@ -325,6 +325,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.tookAway(msg), nil
 	case statsRead:
 		return m.tookStats(msg), nil
+	case yearRead:
+		return m.tookYear(msg), nil
 	case history:
 		return m.showHistory(msg), nil
 	case checked:
@@ -461,12 +463,13 @@ func (m screen) View() tea.View {
 	return v
 }
 
-// listRoom is how many of the entries the window has room for: its height less
-// everything else on the screen, and never fewer than a list needs to be read.
-// A window that has not said how high it is has room for all of them.
+// listRoom is how many rows of the list on screen the window has room for: its
+// height less everything else on the screen, and never fewer than a list needs
+// to be read. A window that has not said how high it is has room for all of
+// them - the entries, the days of a period or the year's months.
 func (m screen) listRoom() int {
 	if m.height == 0 {
-		return max(len(m.card.items), len(m.ot.stats.Days))
+		return max(len(m.card.items), len(m.ot.stats.Days), yearMonths)
 	}
 
 	return max(m.height-lipgloss.Height(m.frame(0)), listFewest)
