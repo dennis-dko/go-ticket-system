@@ -49,8 +49,21 @@ stopwatch stopped in the browser stops here too; `esc` puts a form away or goes
 back from a card's menu, and `q` closes the screen, which leaves a line saying
 how the stopwatch was left.
 
-*My account*, the next tab along, holds the account's own settings, each chosen
-by its number, and a change is sent to the route the browser sends it to:
+*Week*, the next tab, draws the week as the page's grid: the projects as rows
+and the days as columns, each day's sum and each row's total, and under them
+what the days came to, what they asked and what was left over (`GET /timesheets`
+from Monday to Sunday, every page of it, and `GET /me/days`). `<` and `>` move it
+a week back and on, and `t` brings it back to this week. `e` enters hours into a
+cell, picked with the arrows after it: a number in an empty cell books it
+(`POST /timesheets`), a changed number corrects the one entry behind it by its
+hours alone (`PUT /timesheets/{id}`), and an emptied cell takes that entry back
+after asking (`DELETE /timesheets/{id}`). A cell several entries make up leads
+to them instead, in the time entries narrowed to its day and project. `a` adds a
+row for a project the week has nothing on yet, and `c` copies last week into the
+days of this one that have nothing booked, after asking (`POST /me/weeks/copy`).
+
+*My account*, the last tab, holds the account's own settings, each chosen by its
+number, and a change is sent to the route the browser sends it to:
 
 | Setting | Route |
 |---|---|
