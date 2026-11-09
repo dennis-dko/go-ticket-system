@@ -10,13 +10,13 @@ import (
 // saved is a screen that has sent a change and read the day again since.
 func saved(m screen) bool { return settled(m) && m.news != "" }
 
-// settingsOpen opens the settings and waits for the question which one.
+// settingsOpen moves to My account, whose menu is the settings.
 func (w *watched) settingsOpen() {
 	w.t.Helper()
 
 	w.until("the day is read", settled)
-	w.press("p")
-	w.until("the settings are offered", asking("setting"))
+	w.press("right")
+	w.until("the settings are offered", onTab(viewAccount))
 }
 
 // sentOnce is what the installation was sent on a route, which it was sent
@@ -41,7 +41,7 @@ func TestTheSettingsSayWhatEachIsSetToNow(t *testing.T) {
 	w := watch(t, server.URL, f.token)
 	w.settingsOpen()
 
-	shows := prose(w.until("the settings are offered", asking("setting")))
+	shows := prose(w.until("the settings are offered", onTab(viewAccount)))
 
 	for _, want := range []string{
 		"Language: English", "Appearance: Automatic", "My timezone: follows the installation (Europe/Berlin)",
@@ -103,7 +103,7 @@ func TestALanguageChosenHereIsSpokenAtOnce(t *testing.T) {
 		t.Errorf("the language was sent as %v, want de", sent)
 	}
 
-	for _, want := range []string{"Wähle, was als Nächstes passieren soll.", "In deinem Konto gespeichert"} {
+	for _, want := range []string{"Was möchtest du einstellen?", "In deinem Konto gespeichert"} {
 		if !strings.Contains(shows, want) {
 			t.Errorf("the screen does not say %q:\n%s", want, shows)
 		}
@@ -135,7 +135,7 @@ func TestThePublicHolidaysAreChosenByCountryAndState(t *testing.T) {
 		return asking("region")(m) && strings.Contains(prose(m.View().Content), "Bavaria")
 	}))
 
-	if !strings.Contains(shows, "Settings › State") {
+	if !strings.Contains(shows, "My account › My public holidays › State") {
 		t.Errorf("Germany's parts are not asked for as states:\n%s", shows)
 	}
 

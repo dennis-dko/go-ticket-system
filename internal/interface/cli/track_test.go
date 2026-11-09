@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,8 +32,16 @@ type fakeInstallation struct {
 	language, theme string
 	alertHours      int
 
+	// permissions are the rights /me answers with, where a test names them.
+	permissions []string
+
 	// answers are what a test has a route answer, over what it answers by itself.
 	answers map[string]string
+
+	// list answers the entries' list for what its query asks, where a test gives
+	// it one, and imports answers an import, checked or written.
+	list    func(url.Values) string
+	imports func(dryRun bool) string
 }
 
 func newFakeInstallation(t *testing.T) (*fakeInstallation, *httptest.Server) {
@@ -56,18 +67,44 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	var body map[string]any
 
-	if raw, _ := io.ReadAll(r.Body); len(raw) > 0 {
+	raw, _ := io.ReadAll(r.Body)
+
+	// An upload is kept as its fields, its file's name and what the file held.
+	if kind, params, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); kind == "multipart/form-data" {
+		body = map[string]any{}
+		parts := multipart.NewReader(bytes.NewReader(raw), params["boundary"])
+
+		for part, err := parts.NextPart(); err == nil; part, err = parts.NextPart() {
+			content, _ := io.ReadAll(part)
+
+			if part.FileName() != "" {
+				body["file"], body["content"] = part.FileName(), string(content)
+			} else {
+				body[part.FormName()] = string(content)
+			}
+		}
+	} else if len(raw) > 0 {
 		_ = json.Unmarshal(raw, &body)
+	}
+
+	// What a request asked in its query is kept beside its body, under "?".
+	if r.URL.RawQuery != "" {
+		if body == nil {
+			body = map[string]any{}
+		}
+
+		body["?"] = r.URL.Query()
 	}
 
 	f.mu.Lock()
 	f.sent[route] = append(f.sent[route], body)
+	list, imports := f.list, f.imports
 
 	if f.refuseAs == "" {
 		switch route {
 		case "POST /me/timer":
 			f.stopped = false
-		case "POST /me/timer/stop":
+		case "POST /me/timer/stop", "DELETE /me/timer":
 			f.stopped = true
 		case "PUT /me/language":
 			f.language, _ = body["language"].(string)
@@ -78,7 +115,14 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	stopped, language, theme, alertHours := f.stopped, f.language, f.theme, f.alertHours
 	override, overridden := f.answers[route]
+
+	rights := []string{"settings:write:own", "timesheets:read:own", "timesheets:write:own"}
+	if f.permissions != nil {
+		rights = f.permissions
+	}
 	f.mu.Unlock()
+
+	permissions, _ := json.Marshal(rights)
 
 	if f.refuseAs != "" && r.Method != http.MethodGet {
 		refusal, _ := json.Marshal(map[string]any{"error": map[string]string{"code": "x", "message": f.refuseAs}})
@@ -89,11 +133,18 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A file is answered as itself, not in the envelope.
+	if route == "GET /timesheets/export" {
+		_, _ = io.WriteString(w, fakeWorkbook)
+
+		return
+	}
+
 	data := map[string]string{
 		"GET /me": `{"user":{"id":7,"name":"Dana Example","effectiveTimezone":"Europe/Berlin","timezone":"",` +
 			`"instanceTimezone":"Europe/Berlin","language":"` + language + `","theme":"` + theme + `",` +
 			`"dailyTargetHours":8,"maxDailyHours":0,"everyDayCountsFrom":null},` +
-			`"permissions":["settings:write:own","timesheets:read:own"],` +
+			`"permissions":` + string(permissions) + `,` +
 			`"reminders":{"unbookedDay":true,"timerAlertHours":` + strconv.Itoa(alertHours) + `}}`,
 		"GET /branding": `{"title":"Time Recording","translations":{"de":{"title":"Zeiterfassung"}},"version":"v9.9.9"}`,
 		"GET /me/holidays": `{"place":"","instancePlace":"DE-BY","countries":[` +
@@ -108,6 +159,8 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		"POST /me/timer/stop":   `{"projectId":4,"date":"2026-10-22","durationHours":1.5}`,
 		"POST /me/timer/switch": `{"booked":{"projectId":4,"date":"2026-10-22","durationHours":1.5}}`,
 		"POST /timesheets":      `{"projectId":4,"date":"2026-10-21","durationHours":1.5}`,
+		"GET /me/templates":     `{"items":[],"totalCount":0}`,
+		"POST /me/templates":    `{"id":9}`,
 		"GET /timesheets": `{"items":[{"projectId":4,"date":"2026-10-22","durationHours":2.5,"description":"review"},` +
 			`{"projectId":null,"date":"2026-10-22","durationHours":0.5}],"totalCount":2}`,
 	}[route]
@@ -116,7 +169,18 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		data = `{"running":false,"elapsedHours":0}`
 	}
 
-	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" {
+	if route == "GET /timesheets" && list != nil {
+		data = list(r.URL.Query())
+	}
+
+	if route == "POST /timesheets/import" && imports != nil {
+		data = imports(body["dryRun"] == "true")
+	}
+
+	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" ||
+		strings.HasPrefix(route, "PUT /timesheets/") || strings.HasPrefix(route, "DELETE /timesheets/") ||
+		route == "DELETE /me/timer" || strings.HasPrefix(route, "DELETE /me/templates/") ||
+		(strings.HasPrefix(route, "POST /timesheets/") && strings.HasSuffix(route, "/transfer")) {
 		data = `{}`
 	}
 

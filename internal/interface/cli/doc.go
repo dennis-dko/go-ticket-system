@@ -15,8 +15,9 @@
 // installation's own release.
 //
 // On a terminal, the client with no command opens a screen drawn with Bubble
-// Tea and huh: the stopwatch running, today's entries, and a form for each
-// change the commands make. The commands stay, because a script reads lines and
+// Tea and huh, headed by the web interface's tabs as far as it has been taught
+// them: the stopwatch running, today's entries, the account's settings, and a
+// form for each change. The commands stay, because a script reads lines and
 // a screen reader reads lines too, where a drawn screen serves neither; both
 // make their changes through the same functions and say what they did in the
 // same words.

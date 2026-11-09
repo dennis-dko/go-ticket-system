@@ -23,9 +23,10 @@ import (
 // usage is what the client says about itself.
 const usage = `go-time-recording-client - book time from a terminal
 
-On a terminal and without a command, it opens a screen: the stopwatch running,
-today's entries, a form for each of these commands, and the account's own
-settings, which it saves to the account as the browser does.
+On a terminal and without a command, it opens a screen headed by the web
+interface's tabs: the time entries - the stopwatch, the entries, the spreadsheet
+and the templates - and the account's own settings, which it saves to the
+account as the browser does, with a menu and a form for each change.
 
   status                             the stopwatch, and what today adds up to
   start [project] [-m text]          start the stopwatch, on a project or on none
@@ -292,12 +293,24 @@ type project struct {
 	Status string `json:"status"`
 }
 
-// entry is a time entry, as the API answers with one.
+// entry is a time entry, as the API answers with one. RecordedBy and UpdatedBy
+// name a manager who booked or changed it in the owner's name, and are nil for
+// the owner's own; CreatedAt and UpdatedAt differ once it was saved again.
 type entry struct {
-	ProjectID     *uint   `json:"projectId"`
-	Date          string  `json:"date"`
-	DurationHours float64 `json:"durationHours"`
-	Description   *string `json:"description"`
+	ID            uint       `json:"id"`
+	ProjectID     *uint      `json:"projectId"`
+	Date          string     `json:"date"`
+	DurationHours float64    `json:"durationHours"`
+	Description   *string    `json:"description"`
+	RecordedBy    *actedBy   `json:"recordedBy"`
+	UpdatedBy     *actedBy   `json:"updatedBy"`
+	CreatedAt     *time.Time `json:"createdAt"`
+	UpdatedAt     *time.Time `json:"updatedAt"`
+}
+
+// actedBy is who acted on somebody else's entry, as the API names them.
+type actedBy struct {
+	Name string `json:"name"`
 }
 
 // stopwatch is the running clock, as /me/timer answers.
@@ -345,8 +358,21 @@ type snapshot struct {
 	today    []entry
 }
 
-// snapshot reads the token owner's day.
+// snapshot reads the token owner's day, and what today has booked.
 func (s *session) snapshot(ctx context.Context) (snapshot, error) {
+	now, err := s.day(ctx)
+	if err != nil {
+		return now, err
+	}
+
+	now.today, err = s.entriesOn(ctx, time.Now().In(now.zone).Format(time.DateOnly))
+
+	return now, err
+}
+
+// day reads the token owner's day without what today has booked, which the
+// screen shows in its entries card instead.
+func (s *session) day(ctx context.Context) (snapshot, error) {
 	var (
 		now snapshot
 		err error
@@ -360,11 +386,7 @@ func (s *session) snapshot(ctx context.Context) (snapshot, error) {
 		return now, err
 	}
 
-	if err := s.api.call(ctx, http.MethodGet, "/me/timer", nil, &now.clock); err != nil {
-		return now, err
-	}
-
-	now.today, err = s.entriesOn(ctx, time.Now().In(now.zone).Format(time.DateOnly))
+	err = s.api.call(ctx, http.MethodGet, "/me/timer", nil, &now.clock)
 
 	return now, err
 }
@@ -476,10 +498,18 @@ func (s *session) startClock(ctx context.Context, body map[string]any, name stri
 	return s.lang.text("track.started", "Started at {0} on {1}.", started.In(zone).Format("15:04"), name), nil
 }
 
-// stopClock stops the stopwatch and books what it measured.
-func (s *session) stopClock(ctx context.Context, projects []project) (string, error) {
+// stopClock stops the stopwatch and books what it measured, up to endedAt where
+// the work ended earlier - a day and a time on the owner's wall clock - and up
+// to now where that is empty, which the installation reads from a stop with no
+// body at all.
+func (s *session) stopClock(ctx context.Context, projects []project, endedAt string) (string, error) {
+	var body any
+	if endedAt != "" {
+		body = map[string]string{"endedAt": endedAt}
+	}
+
 	var booked entry
-	if err := s.api.call(ctx, http.MethodPost, "/me/timer/stop", nil, &booked); err != nil {
+	if err := s.api.call(ctx, http.MethodPost, "/me/timer/stop", body, &booked); err != nil {
 		return "", err
 	}
 
@@ -553,7 +583,7 @@ func (s *session) stop(ctx context.Context, line commandLine) error {
 		return err
 	}
 
-	return s.report(s.stopClock(ctx, projects))
+	return s.report(s.stopClock(ctx, projects, ""))
 }
 
 func (s *session) switchTo(ctx context.Context, line commandLine) error {

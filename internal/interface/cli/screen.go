@@ -15,6 +15,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/dennis-dko/go-time-recording/internal/domain/model"
 	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
 )
 
@@ -24,8 +25,9 @@ import (
 // the installation nothing.
 const refreshEvery = 30 * time.Second
 
-// screen is the client on a terminal: the stopwatch running live, what today has
-// booked, a menu of the changes it can take, and a form for each of them.
+// screen is the client on a terminal: the web interface's tabs, under them the
+// stopwatch running live and the entries, a menu of the changes it can take,
+// and a form for each of them.
 //
 // It makes those changes through the same session as the commands, so it can
 // do nothing they cannot, and it says what it did in their words. It keeps the
@@ -36,7 +38,39 @@ type screen struct {
 	s    *session
 	host string
 
-	width int
+	// width and height are the window's: how wide the frame is drawn, and how
+	// many of the entries fit in it.
+	width, height int
+
+	// view is the tab moved to, by the name the page gives it; see currentTab.
+	// sub is the card whose menu is open under it, empty for the tab's own.
+	view, sub string
+
+	// card is the entries card, and top the first of its entries on screen where
+	// the window holds fewer than were read.
+	card entryCard
+	top  int
+
+	// picking is the change an entry is being picked for in the card, and row the
+	// entry the cursor is on, by its place among those read. editing is the entry
+	// picked, while its form is open and its change on its way.
+	picking string
+	row     int
+	editing entry
+
+	// ticked are the entries ticked for a change made to several, by id.
+	ticked []uint
+
+	// templates are the account's, read with the day, and chosen the one picked
+	// to be deleted.
+	templates []template
+	chosen    template
+
+	// plan is a file checked for an import and not written yet.
+	plan *importPlan
+
+	// past is an entry's history, shown until it is closed.
+	past *history
 
 	// dark is what the terminal said its background is, and measured whether it
 	// said anything; see darkness.
@@ -88,18 +122,22 @@ type screen struct {
 	asked *answers
 }
 
-// loaded is the day as the installation answered, what it calls itself and
-// says, the notices, and the moment it was read. branded and noticed say whether
-// those two could be read at all.
+// loaded is the day as the installation answered, the entries card, the
+// templates, what it calls itself and says, the notices, and the moment it was
+// read. carded says whether the account may read its entries, templated whether
+// its templates were read, and branded, noticed and placed whether the rest
+// could be read at all.
 type loaded struct {
-	shown    snapshot
-	branding branding
-	told     notices
-	places   holidayPlaces
-	at       time.Time
-	err      error
+	shown     snapshot
+	card      entryCard
+	templates []template
+	branding  branding
+	told      notices
+	places    holidayPlaces
+	at        time.Time
+	err       error
 
-	branded, noticed, placed bool
+	carded, templated, branded, noticed, placed bool
 }
 
 // done is what became of a change, in the sentence its command would print.
@@ -118,7 +156,7 @@ func newScreen(ctx context.Context, s *session) screen {
 		host = u.Host
 	}
 
-	return screen{ctx: ctx, s: s, host: host, reading: true, askedAt: time.Now()}
+	return screen{ctx: ctx, s: s, host: host, view: viewTimesheets, reading: true, askedAt: time.Now()}
 }
 
 // show runs the screen until it is closed.
@@ -167,25 +205,49 @@ func (m screen) ask(now time.Time) (screen, tea.Cmd) {
 	return m, m.load()
 }
 
-// load reads the day again, what the installation calls itself and says, and
-// the notices. A name, a banner or notices that could not be asked for leave the
-// ones shown: nothing else depends on them, and an installation from before
-// they were answered says nothing about them.
+// load reads the day again, the entries card as it is narrowed and as far as it
+// has been read, what the installation calls itself and says, and the notices.
+// A name, a banner or notices that could not be asked for leave the ones shown:
+// nothing else depends on them, and an installation from before they were
+// answered says nothing about them.
 func (m screen) load() tea.Cmd {
-	ctx, s := m.ctx, m.s
+	ctx, s, filter, shown := m.ctx, m.s, m.card.filter, len(m.card.items)
 
 	return func() tea.Msg {
-		shown, err := s.snapshot(ctx)
+		day, err := s.day(ctx)
 		if err != nil {
 			return loaded{at: time.Now(), err: err}
+		}
+
+		var card entryCard
+
+		carded := slices.Contains(day.permissions, model.PermTimesheetReadOwn)
+		if carded {
+			if card, err = s.readCard(ctx, filter, shown); err != nil {
+				return loaded{at: time.Now(), err: err}
+			}
+		}
+
+		// The templates of an account that may book, as the page reads them; ones
+		// that could not be read leave those shown, like the name and the notices.
+		var (
+			kept      []template
+			templated bool
+		)
+
+		if slices.Contains(day.permissions, model.PermTimesheetWriteOwn) {
+			var keptErr error
+
+			kept, keptErr = s.templates(ctx)
+			templated = keptErr == nil
 		}
 
 		named, nameErr := s.branding(ctx)
 		told, toldErr := s.notices(ctx)
 		places, placesErr := s.holidayPlaces(ctx)
 
-		return loaded{shown: shown, branding: named, told: told, places: places, at: time.Now(),
-			branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
+		return loaded{shown: day, card: card, templates: kept, branding: named, told: told, places: places, at: time.Now(),
+			carded: carded, templated: templated, branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
 	}
 }
 
@@ -208,7 +270,7 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.press(msg)
 		}
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
+		m.width, m.height = msg.Width, msg.Height
 	case tea.BackgroundColorMsg:
 		m.dark, m.measured = msg.IsDark(), true
 	case tick:
@@ -223,6 +285,12 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, second()
 	case loaded:
 		return m.read(msg)
+	case morePage:
+		return m.addPage(msg), nil
+	case history:
+		return m.showHistory(msg), nil
+	case checked:
+		return m.took(msg)
 	case done:
 		m.news, m.failure = msg.said, ""
 		if msg.err != nil {
@@ -278,6 +346,19 @@ func (m screen) take(msg loaded) screen {
 
 	m.shown, m.readAt, m.loaded, m.stale = msg.shown, msg.at, true, ""
 
+	// The card as it was asked for: one read under a filter changed since belongs
+	// to a list that is gone, and the read the change started is on its way.
+	switch {
+	case !msg.carded:
+		m.card = entryCard{filter: m.card.filter}
+	case msg.card.filter == m.card.filter:
+		m.card = msg.card
+	}
+
+	if msg.templated {
+		m.templates = msg.templates
+	}
+
 	if msg.branded {
 		m.banner = msg.branding.banner
 
@@ -299,131 +380,6 @@ func (m screen) take(msg loaded) screen {
 	}
 
 	return m
-}
-
-// choice is one line of the menu: what it does, what it is called, and the key
-// that does it without moving there. The keys stay the same in every language,
-// so a hand that knows them does not have to learn them again.
-type choice struct{ key, doing, called string }
-
-// choices are the menu: the changes the stopwatch can take as it stands, and
-// reading the day again and closing the screen, which it can always take. A
-// change it cannot take - stopping one that is not running - is not offered,
-// and its key does nothing; none is offered before the day is read or while a
-// change is on its way.
-func (m screen) choices() []choice {
-	l := m.s.lang
-
-	var changes []choice
-
-	switch {
-	case !m.loaded || m.busy:
-	case m.shown.clock.Running:
-		changes = []choice{
-			{"w", "switch", l.text("track.form.switch", "Switch to another project")},
-			{"x", "stop", l.text("track.form.stop", "Stop the stopwatch")},
-			{"b", "book", l.text("track.form.book", "Book time by hand")},
-		}
-	default:
-		changes = []choice{
-			{"s", "start", l.text("track.form.start", "Start the stopwatch")},
-			{"b", "book", l.text("track.form.book", "Book time by hand")},
-		}
-	}
-
-	// The account's own settings, once there is an account read to show them of.
-	if m.loaded && !m.busy {
-		changes = append(changes, choice{"p", "settings", l.text("track.menu.settings", "Settings")})
-	}
-
-	return append(changes,
-		choice{"r", "refresh", l.text("track.menu.refresh", "Read the day again")},
-		choice{"q", "quit", l.text("track.menu.quit", "Close the screen")})
-}
-
-// press answers a key while no form is open: a move through the menu, enter on
-// the line moved to, or the key of a change.
-func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	choices := m.choices()
-	at := min(m.cursor, len(choices)-1)
-
-	switch k.String() {
-	case "up", "k":
-		m.cursor = max(at-1, 0)
-
-		return m, nil
-	case "down", "j":
-		m.cursor = min(at+1, len(choices)-1)
-
-		return m, nil
-	case "enter":
-		return m.choose(choices[at].doing)
-	}
-
-	for _, c := range choices {
-		if c.key == k.String() {
-			return m.choose(c.doing)
-		}
-	}
-
-	return m, nil
-}
-
-// choose does what a line of the menu offers.
-func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
-	switch doing {
-	case "quit":
-		return m, tea.Quit
-	case "refresh":
-		if m.reading {
-			return m, nil
-		}
-
-		return m.ask(time.Now())
-	}
-
-	return m.open(doing)
-}
-
-// open puts up the form for a change, with what the last one said cleared away.
-func (m screen) open(doing string) (tea.Model, tea.Cmd) {
-	m.doing, m.news, m.failure = doing, "", ""
-	m.asked = &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
-
-	if doing == "settings" {
-		m.asked = m.settingAnswers()
-	}
-
-	m.form = m.formFor(doing)
-
-	return m, m.form.Init()
-}
-
-// fillIn hands a message to the open form, and sends the change once the form
-// is answered.
-func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
-	form, cmd := m.form.Update(msg)
-	m.form = form.(*huh.Form)
-
-	switch m.form.State {
-	case huh.StateAborted:
-		m.form = nil
-
-		return m, nil
-	case huh.StateCompleted:
-		m.form = nil
-
-		change := m.request()
-		if change == nil {
-			return m, nil
-		}
-
-		m.busy = true
-
-		return m, change
-	}
-
-	return m, cmd
 }
 
 // elapsed is how long the stopwatch has run: what the installation measured
@@ -456,17 +412,41 @@ func (m screen) contentWidth() int {
 // its padding.
 func (m screen) inner() int { return m.contentWidth() - 6 }
 
-// View draws the screen in a frame: the installation's name, who and which
-// build, where on the screen somebody is, and under it either the day and the
-// menu or the form that is open.
+// View draws the screen, with as many of the entries as the window has room for.
 func (m screen) View() tea.View {
+	v := tea.NewView(m.frame(m.listRoom()))
+	v.AltScreen = true
+	v.WindowTitle = m.windowTitle()
+
+	return v
+}
+
+// listRoom is how many of the entries the window has room for: its height less
+// everything else on the screen, and never fewer than a list needs to be read.
+// A window that has not said how high it is has room for all of them.
+func (m screen) listRoom() int {
+	if m.height == 0 {
+		return len(m.card.items)
+	}
+
+	return max(m.height-lipgloss.Height(m.frame(0)), listFewest)
+}
+
+// frame draws the screen in a frame, with rows of the entries: the
+// installation's name, who and which build, the page's tabs, where on the screen
+// somebody is, and under it either what the tab shows and its menu, or the form
+// that is open.
+func (m screen) frame(rows int) string {
 	look := paletteFor(m.darkness())
 	width := m.inner()
 	rule := look.muted.Render(strings.Repeat("─", width))
 
+	// What belongs together is set without a line between: the name and who is
+	// signed in, the breadcrumb between its rules, and a question and the menu
+	// that answers it. A blank line between those cost five lines the entries
+	// need, once the screen carried the page's tabs and cards.
 	parts := []string{
-		lipgloss.PlaceHorizontal(width, lipgloss.Center, look.title.Render(m.heading())),
-		m.subtitle(look, width),
+		lipgloss.PlaceHorizontal(width, lipgloss.Center, look.title.Render(m.heading())) + "\n" + m.subtitle(look, width),
 	}
 
 	// Wrapped rather than cut short, as everything that says something is.
@@ -476,22 +456,30 @@ func (m screen) View() tea.View {
 		parts = append(parts, wrapped.Render(look.ask.Render(m.banner)))
 	}
 
-	parts = append(parts, rule, m.breadcrumb(look), rule)
+	if m.loaded {
+		parts = append(parts, m.tabBar(look, width))
+	}
 
-	if m.form != nil {
+	parts = append(parts, rule+"\n"+m.breadcrumb(look)+"\n"+rule)
+
+	switch {
+	case m.form != nil:
 		parts = append(parts, m.form.View(), m.formHelp())
-	} else {
+	case m.past != nil:
+		parts = append(parts, m.historyView(look, width))
+	default:
 		for _, line := range m.noticeLines() {
 			parts = append(parts, wrapped.Render(look.ask.Render("! "+line)))
 		}
 
-		parts = append(parts, m.stopwatch(look, width))
+		parts = append(parts, m.tabBody(look, width, rows)...)
 
-		if m.loaded {
-			parts = append(parts, m.todayList(look, width))
+		// While an entry is picked, the question is which, and the menu waits.
+		if m.picking != "" {
+			parts = append(parts, rule+"\n"+wrapped.Render(look.ask.Render(m.pickPrompt())))
+		} else {
+			parts = append(parts, rule+"\n"+look.ask.Render(m.menuPrompt())+"\n"+m.menu(look, width))
 		}
-
-		parts = append(parts, rule, look.ask.Render(m.s.lang.text("track.menu.prompt", "Choose what to do next.")), m.menu(look, width))
 	}
 
 	// Wrapped rather than cut short: a reason comes at the end of its sentence.
@@ -506,11 +494,7 @@ func (m screen) View() tea.View {
 	frame := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(look.frame).
 		Padding(1, 2).Width(m.contentWidth())
 
-	v := tea.NewView(lipgloss.NewStyle().Margin(1, 2).Render(frame.Render(strings.Join(parts, "\n\n"))))
-	v.AltScreen = true
-	v.WindowTitle = m.windowTitle()
-
-	return v
+	return lipgloss.NewStyle().Margin(1, 2).Render(frame.Render(strings.Join(parts, "\n\n")))
 }
 
 // heading is the installation's name, once it has been read, and the client's
@@ -564,17 +548,28 @@ func nonEmpty(words ...string) []string {
 	return said
 }
 
-// breadcrumb says where on the screen somebody is: today, and while a form is
-// open the change it asks about and the step it is at, the last of them in the
-// accent.
+// breadcrumb says where on the screen somebody is: the tab, the card whose menu
+// is open, the change an entry is being picked for or whose answer is shown,
+// and while a form is open the change it asks about and the step it is at, the
+// last of them in the accent. A step called what its change is called is said
+// once.
 func (m screen) breadcrumb(look palette) string {
-	l := m.s.lang
-	steps := []string{l.text("cal.today", "Today")}
+	steps := []string{m.tabName(m.currentTab())}
 
-	if m.form != nil {
-		steps = append(steps, m.changeName())
+	if m.sub != "" {
+		steps = append(steps, m.subName())
+	}
 
-		if step := m.stepName(); step != "" {
+	switch {
+	case m.picking != "":
+		steps = append(steps, m.calledFor(m.picking))
+	case m.past != nil:
+		steps = append(steps, m.calledFor("history"))
+	case m.form != nil:
+		change := m.changeName()
+		steps = append(steps, change)
+
+		if step := m.stepName(); step != "" && step != change {
 			steps = append(steps, step)
 		}
 	}
@@ -588,25 +583,44 @@ func (m screen) breadcrumb(look palette) string {
 	return strings.Join(steps, look.muted.Render(" › "))
 }
 
-// changeName is what the menu calls the change the open form asks about.
+// changeName is what the menu calls the change the open form asks about, and
+// for a setting what the setting is called.
 func (m screen) changeName() string {
-	for _, c := range m.choicesFor(m.doing) {
-		if c.doing == m.doing {
-			return c.called
+	switch m.doing {
+	case "settings":
+		return m.settingName(m.asked.setting)
+	case "bookTemplate":
+		return m.calledFor("book")
+	}
+
+	return m.calledFor(m.doing)
+}
+
+// calledFor is what the menu calls a change, in whichever of its menus offers
+// it.
+func (m screen) calledFor(doing string) string {
+	running := m
+	running.shown.clock.Running = true
+
+	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
+		m.workbookChoices()} {
+		for _, c := range menu {
+			if c.doing == doing {
+				return c.called
+			}
 		}
 	}
 
-	return m.doing
+	return doing
 }
 
-// choicesFor is the menu as it stood when doing was chosen from it: a switch and
-// a stop were chosen from a running stopwatch's.
+// choicesFor is the stopwatch's menu as it stood when doing was chosen from it:
+// a switch and a stop were chosen from a running stopwatch's.
 func (m screen) choicesFor(doing string) []choice {
 	shown := m
-	shown.loaded, shown.busy = true, false
 	shown.shown.clock.Running = doing == "switch" || doing == "stop"
 
-	return shown.choices()
+	return shown.timesheetChoices()
 }
 
 // stepName is what the field the open form is asking about is called, or
@@ -623,95 +637,25 @@ func (m screen) stepName() string {
 		return l.text("field.hours", "Hours")
 	case "day":
 		return l.text("field.day", "Day")
+	case "from":
+		return l.text("field.from", "From")
+	case "to":
+		return l.text("field.to", "To")
+	case "search":
+		return l.text("filter.search", "Search in descriptions")
+	case "scope":
+		return l.text("field.project", "Project")
+	case "clockDay":
+		return l.text("field.date", "Date")
+	case "clockTime":
+		return l.text("timer.time", "Time")
+	case "template":
+		return l.text("tpl.one", "Template")
+	case "file":
+		return l.text("track.wb.file", "File")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())
-}
-
-// stopwatch is what the stopwatch runs on, since when, and for how long.
-func (m screen) stopwatch(look palette, width int) string {
-	l := m.s.lang
-
-	switch {
-	case !m.loaded && m.reading:
-		return look.muted.Render(l.text("track.reading", "Reading {0} …", m.host))
-	case !m.loaded:
-		return look.muted.Render(l.text("track.nothingRead", "Nothing read from {0} yet.", m.host))
-	}
-
-	clock := m.shown.clock
-	if !clock.Running || clock.StartedAt == nil {
-		return lipgloss.NewStyle().Foreground(look.idle).Render("○  ") + l.text("track.notRunning", "The stopwatch is not running.")
-	}
-
-	on := l.nameOf(m.shown.projects, clock.ProjectID)
-	if clock.Description != nil && *clock.Description != "" {
-		on += look.muted.Render(" · " + *clock.Description)
-	}
-
-	left := lipgloss.NewStyle().Foreground(look.running).Render("●  ") + look.strong.Render(clockFace(m.elapsed())) + "   " + on
-	right := look.muted.Render(l.text("track.since", "since {0}", clock.StartedAt.In(m.shown.zone).Format("15:04")))
-
-	return spread(width, left, right)
-}
-
-// todayList is what today has booked, entry by entry, under the day and its
-// total - the day by its date, since the breadcrumb above already says today.
-func (m screen) todayList(look palette, width int) string {
-	l := m.s.lang
-	entries := m.shown.today
-	day := l.weekday(m.readAt.In(m.shown.zone))
-
-	heading := spread(width, look.strong.Render(day), look.strong.Render(l.hours(total(entries))))
-
-	if len(entries) == 0 {
-		return heading + "\n" + look.muted.Render(l.text("track.nothingYet", "Nothing booked yet."))
-	}
-
-	names := make([]string, len(entries))
-	column := 0
-
-	for i, e := range entries {
-		names[i] = l.nameOf(m.shown.projects, e.ProjectID)
-		column = max(column, lipgloss.Width(names[i]))
-	}
-
-	column = min(column, width/2)
-	rows := []string{heading}
-	hoursWidth := hoursColumn(l.hoursOf(entries)...)
-
-	for i, e := range entries {
-		name := ansi.Truncate(names[i], column, "…")
-		row := fmt.Sprintf("   %*s  %s", hoursWidth, l.hours(e.DurationHours),
-			name+strings.Repeat(" ", column-lipgloss.Width(name)))
-
-		if e.Description != nil && *e.Description != "" {
-			row += "  " + look.muted.Render(*e.Description)
-		}
-
-		rows = append(rows, ansi.Truncate(row, width, "…"))
-	}
-
-	return strings.Join(rows, "\n")
-}
-
-// menu is the choices, the one the cursor is on in the accent behind a >, each
-// with its key at the end of its line.
-func (m screen) menu(look palette, width int) string {
-	choices := m.choices()
-	at := min(m.cursor, len(choices)-1)
-	rows := make([]string, len(choices))
-
-	for i, c := range choices {
-		line := "  " + c.called
-		if i == at {
-			line = look.title.Render("> " + c.called)
-		}
-
-		rows[i] = spread(width, line, look.key.Render(c.key))
-	}
-
-	return strings.Join(rows, "\n")
 }
 
 // statusLine says what the last change did, or why the day shown may be old.
@@ -728,25 +672,6 @@ func (m screen) statusLine(look palette) string {
 	}
 
 	return ""
-}
-
-// help names the keys that move through the menu, the way huh names its own
-// under a form - so the menu and the forms say it alike. A change's own key
-// stands at the end of its line instead.
-func (m screen) help(look palette) string {
-	l := m.s.lang
-	keys := [][2]string{
-		{"↑", l.text("track.huh.up", "up")},
-		{"↓", l.text("track.huh.down", "down")},
-		{"enter", l.text("track.huh.confirm", "confirm")},
-	}
-
-	named := make([]string, len(keys))
-	for i, k := range keys {
-		named[i] = look.muted.Render(k[0]+" ") + look.muted.Faint(true).Render(k[1])
-	}
-
-	return strings.Join(named, look.muted.Faint(true).Render(" • "))
 }
 
 // formHelp names the keys of the field the open form is asking about, as huh

@@ -107,7 +107,11 @@ func (w *watched) until(what string, ok func(screen) bool) string {
 
 // press sends keys as a keyboard does: each a character, or a named key.
 func (w *watched) press(keys ...string) {
-	named := map[string]rune{"enter": tea.KeyEnter, "down": tea.KeyDown, "backspace": tea.KeyBackspace, "esc": tea.KeyEscape}
+	named := map[string]rune{
+		"enter": tea.KeyEnter, "down": tea.KeyDown, "up": tea.KeyUp, "left": tea.KeyLeft, "right": tea.KeyRight,
+		"backspace": tea.KeyBackspace, "esc": tea.KeyEscape, "tab": tea.KeyTab,
+		"pgup": tea.KeyPgUp, "pgdown": tea.KeyPgDown, "space": tea.KeySpace,
+	}
 
 	for _, k := range keys {
 		if code, ok := named[k]; ok {
@@ -163,9 +167,9 @@ func asking(field string) func(screen) bool {
 func settled(m screen) bool { return m.loaded && m.form == nil && !m.busy && !m.reading }
 
 // The screen shows what the stopwatch runs on, since when and for how long,
-// ticking on by itself, with today's entries under it and only the keys that do
+// ticking on by itself, with the entries under it and only the keys that do
 // something now.
-func TestTheScreenShowsTheStopwatchRunningAndTodaysEntries(t *testing.T) {
+func TestTheScreenShowsTheStopwatchRunningAndTheEntries(t *testing.T) {
 	f, server := newFakeInstallation(t)
 
 	m := newScreen(context.Background(), &session{api: newClient(server.URL, f.token, language{}), out: io.Discard, build: testBuild})
@@ -183,7 +187,7 @@ func TestTheScreenShowsTheStopwatchRunningAndTodaysEntries(t *testing.T) {
 	// build of the client this is.
 	for _, want := range []string{"╭", "╰", "Time Recording", "@ Dana Example · " + m.host,
 		"Version v9.9.9 (abcdef12 / 2026-11-03)", "1:30:00", "Consulting · review", "since 09:12",
-		"Today", "3.00 h", "2.50 h", "review", "no project", "Choose what to do next."} {
+		"Time entries", "Entries", "2.50", "review", "No project", "Choose what to do next."} {
 		if !strings.Contains(shows, want) {
 			t.Errorf("the screen does not show %q:\n%s", want, shows)
 		}
@@ -191,7 +195,7 @@ func TestTheScreenShowsTheStopwatchRunningAndTodaysEntries(t *testing.T) {
 
 	// And only the changes the stopwatch can take as it stands, each with its key.
 	for _, change := range [][2]string{{"Switch to another project", "w"}, {"Stop the stopwatch", "x"},
-		{"Book time by hand", "b"}, {"Read the day again", "r"}, {"Close the screen", "q"}} {
+		{"Book time by hand", "b"}, {"Entries …", "e"}, {"Read the day again", "r"}, {"Close the screen", "q"}} {
 		if !offered(shows, change[0], change[1]) {
 			t.Errorf("the screen does not offer %q on %s:\n%s", change[0], change[1], shows)
 		}
@@ -226,7 +230,7 @@ func TestStartingFromTheScreenStartsTheStopwatchOnTheProjectPicked(t *testing.T)
 	w.press("s")
 	shows := w.until("the project is asked", asking("project"))
 
-	if !strings.Contains(shows, "Today › Start the stopwatch › Project") {
+	if !strings.Contains(shows, "Time entries › Start the stopwatch › Project") {
 		t.Errorf("the screen does not say where in the start it is:\n%s", shows)
 	}
 
@@ -234,7 +238,7 @@ func TestStartingFromTheScreenStartsTheStopwatchOnTheProjectPicked(t *testing.T)
 	w.press("down", "down", "down", "enter")
 	shows = w.until("the description is asked", asking("description"))
 
-	if !strings.Contains(shows, "Today › Start the stopwatch › Description") {
+	if !strings.Contains(shows, "Time entries › Start the stopwatch › Description") {
 		t.Errorf("the screen does not follow the start to its next step:\n%s", shows)
 	}
 
@@ -372,7 +376,7 @@ func TestARefusedChangeIsSaidOnTheScreen(t *testing.T) {
 
 	shows := w.until("the refusal is said", func(m screen) bool { return settled(m) && m.failure != "" })
 
-	if !strings.Contains(shows, "✗ the project is closed for booking") || !strings.Contains(shows, "Today") {
+	if !strings.Contains(shows, "✗ the project is closed for booking") || !strings.Contains(shows, "Time entries") {
 		t.Errorf("after a refusal the screen shows:\n%s", shows)
 	}
 

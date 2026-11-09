@@ -14,16 +14,43 @@ of the version it was built from. `go-time-recording-client --version` says
 which that is, and it should be the version the installation shows at the foot
 of its pages.
 
-On its own, on a terminal, it opens a screen: the stopwatch ticking, today's
-entries under it, and a form for each change. `s` starts the stopwatch, `w`
-switches it to another project and books what has run, `x` stops it and books
-what it measured - after asking - and `b` books hours by hand. `r` reads the day
-again, which the screen also does every half minute, so a stopwatch stopped in
-the browser stops here too; `esc` puts a form away and `q` closes the screen,
-which leaves a line saying how the stopwatch was left.
+On its own, on a terminal, it opens a screen headed by the web interface's
+tabs, with `←` and `→` between them. Under *Time entries* are the stopwatch
+ticking, the entries as the page lists them, and a form for each change. `s`
+starts the stopwatch, `w` switches it to another project and books what has
+run, `x` stops it and books what it measured - after asking - and `b` books hours
+by hand. `u` opens the stopwatch's own menu while it runs: it corrects the start
+(`PUT /me/timer`), books up to an earlier end (`POST /me/timer/stop` with
+`endedAt`), or discards the measured time after asking (`DELETE /me/timer`). A
+stopwatch running longer than one entry can hold is stopped only by saying when
+the work ended, as the page asks it. The stopwatch and the booking are offered
+only to an account that may write its own time. `v` opens the templates
+(`GET /me/templates`): it keeps a new one (`POST /me/templates`) and deletes one
+after asking; booking by hand starts with the templates that can fill it in, and
+nothing is booked until its form is answered. `t` opens the spreadsheet: it
+saves the entries as the entries card narrows them to an `.xlsx` file
+(`GET /timesheets/export`, never over a file that is there already), and imports
+one as the page does - checked first (`POST /timesheets/import` with `dryRun`),
+each refused row with why, and written only once every row can be. `e` opens the
+entries' own menu. It corrects an entry in the booking
+form filled with it (`PUT /timesheets/{id}`), deletes one after asking
+(`DELETE /timesheets/{id}`) and shows what one said before it was corrected
+(`GET /timesheets/{id}/revisions`) - the change first, then the entry, picked
+in the list with the arrows and `enter`. Several entries, ticked with the space
+bar, are given a project one after another (`POST /timesheets/{id}/transfer`,
+with the right to) or deleted after asking, as the page's bar does it. It also
+narrows the entries by days,
+words and project as the page's filters do (`GET /timesheets` with `from`,
+`to`, `q` and `projectId`), goes to the entries still waiting for a project, and
+reads the next 25; `PgUp` and `PgDn` page through what the window has no room
+for. `r`
+reads the day again, which the screen also does every half minute, so a
+stopwatch stopped in the browser stops here too; `esc` puts a form away or goes
+back from a card's menu, and `q` closes the screen, which leaves a line saying
+how the stopwatch was left.
 
-`p` opens the account's own settings, and a change is sent to the route the
-browser sends it to:
+*My account*, the next tab along, holds the account's own settings, each chosen
+by its number, and a change is sent to the route the browser sends it to:
 
 | Setting | Route |
 |---|---|

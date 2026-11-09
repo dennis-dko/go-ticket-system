@@ -23,6 +23,24 @@ type answers struct {
 	day         string
 	stop        bool
 
+	// confirmed is the answer to whether something is deleted or discarded, no
+	// until it is given.
+	confirmed bool
+
+	// clockDay and clockTime are a moment on the owner's wall clock, when the
+	// stopwatch's work started or ended.
+	clockDay, clockTime string
+
+	// template is the one chosen to fill a booking in, zero for none.
+	template uint
+
+	// file is where an export goes, or the file an import reads.
+	file string
+
+	// from, to, search and scope are what the entries are narrowed to; see
+	// entryFilter.
+	from, to, search, scope string
+
 	// setting is which of the account's settings the settings form changes, and
 	// the rest what it is changed to; see setting.go.
 	setting                           string
@@ -53,6 +71,26 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = []*huh.Group{huh.NewGroup(project), huh.NewGroup(m.describe(&a.description))}
 	case "settings":
 		steps = m.settingSteps(a)
+	case "filter":
+		steps = m.filterSteps(a)
+	case "delete":
+		steps = []*huh.Group{m.deleteStep(a)}
+	case "assign":
+		steps = []*huh.Group{m.assignStep(a)}
+	case "deleteSome":
+		steps = []*huh.Group{m.deleteSomeStep(a)}
+	case "adjust", "end":
+		steps = m.clockSteps(doing, a)
+	case "discard":
+		steps = []*huh.Group{m.discardStep(a)}
+	case "bookTemplate":
+		steps = []*huh.Group{m.templateStep(a)}
+	case "tplNew":
+		steps = m.newTemplateSteps(a)
+	case "tplDelete":
+		steps = []*huh.Group{m.templateDeleteStep(a)}
+	case "export", "import":
+		steps = []*huh.Group{m.fileStep(doing, a)}
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -85,13 +123,17 @@ func (m screen) formFor(doing string) *huh.Form {
 		WithWidth(m.inner())
 }
 
-// projectField picks one of the account's active projects, or none.
+// projectField picks one of the account's active projects, or none - and for an
+// entry being corrected the one it is on, whatever has become of that project
+// since, so that a correction keeps it unless it is changed.
 func (m screen) projectField(into *uint) *huh.Select[uint] {
 	l := m.s.lang
 	options := []huh.Option[uint]{huh.NewOption(l.text("ts.noProject", "No project"), uint(0))}
 
 	for _, p := range m.shown.projects {
-		if p.Status == "active" {
+		kept := m.doing == "edit" && m.editing.ProjectID != nil && *m.editing.ProjectID == p.ID
+
+		if p.Status == "active" || kept {
 			options = append(options, huh.NewOption(p.Name, p.ID))
 		}
 	}
@@ -161,8 +203,27 @@ func (l language) keyHelp(keys *huh.KeyMap) {
 // request is the change an answered form asks for, as it will be sent; nil
 // where the answer was to change nothing.
 func (m screen) request() tea.Cmd {
-	if m.doing == "settings" {
+	switch m.doing {
+	case "settings":
 		return m.saveSetting()
+	case "edit":
+		return m.saveCorrection()
+	case "delete":
+		return m.deleteEntry()
+	case "assign":
+		return m.transferSome()
+	case "deleteSome":
+		return m.deleteSome()
+	case "adjust", "end", "discard":
+		return m.clockChange()
+	case "tplNew":
+		return m.saveTemplate()
+	case "tplDelete":
+		return m.deleteTemplate()
+	case "export":
+		return m.exportTo()
+	case "import":
+		return m.checkFile()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown
@@ -195,7 +256,7 @@ func (m screen) request() tea.Cmd {
 			return nil
 		}
 
-		change = func() (string, error) { return s.stopClock(ctx, shown.projects) }
+		change = func() (string, error) { return s.stopClock(ctx, shown.projects, "") }
 	case "book":
 		worked, err := s.lang.parseHours(strings.TrimSpace(a.hours))
 		if err != nil {
