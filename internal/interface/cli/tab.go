@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"slices"
 	"strings"
 
@@ -21,6 +22,7 @@ type tab struct {
 const (
 	viewTimesheets = "timesheets"
 	viewWeek       = "week"
+	viewCalendar   = "calendar"
 	viewAccount    = "settings"
 )
 
@@ -32,6 +34,7 @@ const (
 var tabs = []tab{
 	{viewTimesheets, model.PermTimesheetReadOwn},
 	{viewWeek, model.PermTimesheetReadOwn},
+	{viewCalendar, model.PermTimesheetReadOwn},
 	{viewAccount, ""},
 }
 
@@ -89,14 +92,77 @@ func (m screen) moveTab(by int) screen {
 	return m
 }
 
+// tabRead is what a read of the day brings besides for the tab on screen: the
+// week's grid on the week's tab, and the month on the calendar's.
+type tabRead struct {
+	week            weekCard
+	month           calendarCard
+	leave           leaveYear
+	away            []absence
+	weeked, monthed bool
+}
+
+// readTab reads what the tab on screen shows besides the day: the week moved to,
+// or the month.
+func (s *session) readTab(ctx context.Context, view, monday, first string, year int) (tabRead, error) {
+	var (
+		read tabRead
+		err  error
+	)
+
+	switch view {
+	case viewWeek:
+		read.week, err = s.readWeek(ctx, monday)
+		read.weeked = err == nil
+	case viewCalendar:
+		if read.month, err = s.readMonth(ctx, first); err == nil {
+			read.leave, err = s.readLeave(ctx, year)
+		}
+
+		if err == nil {
+			read.away, err = s.readAway(ctx)
+		}
+
+		read.monthed = err == nil
+	}
+
+	return read, err
+}
+
+// tookTab keeps what a read brought for the tab, as it was asked for, as the
+// entries card is kept: one read for a week or a month the tab has moved on from
+// belongs to a tab that is gone.
+func (m screen) tookTab(read tabRead) screen {
+	if read.weeked && read.week.monday == m.weekMonday() {
+		m.week = read.week
+	}
+
+	if read.monthed && read.month.first == m.calendarMonth() {
+		m.cal.month = read.month
+	}
+
+	if read.monthed && read.leave.Year == m.leaveYearShown() {
+		m.cal.leave = read.leave
+	}
+
+	if read.monthed {
+		m.cal.away = read.away
+	}
+
+	return m
+}
+
 // toTab moves by steps through the tabs, and reads the week where it moves to
 // the week's: one read when the tab was last open may have been booked on since,
 // in the browser or under the time entries.
 func (m screen) toTab(by int) (tea.Model, tea.Cmd) {
 	m = m.moveTab(by)
 
-	if m.currentTab().view == viewWeek {
+	switch m.currentTab().view {
+	case viewWeek:
 		return m, m.readWeekNow()
+	case viewCalendar:
+		return m, tea.Batch(m.readMonthNow(), m.readLeaveNow(), m.readAwayNow())
 	}
 
 	return m, nil
@@ -111,6 +177,8 @@ func (m screen) tabBody(look palette, width, rows int) []string {
 		return m.timesheetBody(look, width, rows)
 	case viewWeek:
 		return m.weekBody(look, width)
+	case viewCalendar:
+		return m.calendarBody(look, width)
 	}
 
 	return nil
@@ -134,6 +202,8 @@ func (m screen) tabName(t tab) string {
 	switch t.view {
 	case viewWeek:
 		return l.text("nav.week", "Week")
+	case viewCalendar:
+		return l.text("nav.calendar", "Calendar")
 	case viewAccount:
 		return l.text("nav.settings", "My account")
 	}

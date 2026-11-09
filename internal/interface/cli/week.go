@@ -34,23 +34,33 @@ type weekRead struct {
 	err  error
 }
 
-// readWeek reads the week from a Monday on: every entry booked in it, however
-// many pages the list answers them in, and what each of its days asks. The page
-// reads the list to its end for the same reason - a week totalled from its first
-// page is a week short.
+// readWeek reads the week from a Monday on.
 func (s *session) readWeek(ctx context.Context, monday string) (weekCard, error) {
-	week := weekCard{monday: monday}
-	sunday := addDays(monday, 6)
+	entries, days, err := s.readDays(ctx, monday, addDays(monday, 6))
+	if err != nil {
+		return weekCard{}, err
+	}
+
+	return weekCard{monday: monday, entries: entries, days: days}, nil
+}
+
+// readDays reads the days from one day to another as the page's week and
+// calendar read them: every entry booked on them, however many pages the list
+// answers them in, and what each day asks. The page reads the list to its end
+// for the reason the calendar learnt it - a month of a hundred and one entries
+// totalled from its first page lost its first days.
+func (s *session) readDays(ctx context.Context, from, to string) ([]entry, []weekDay, error) {
+	var entries []entry
 
 	for {
-		page, err := s.entryList(ctx, entryFilter{from: monday, to: sunday}, len(week.entries), listMost)
+		page, err := s.entryList(ctx, entryFilter{from: from, to: to}, len(entries), listMost)
 		if err != nil {
-			return weekCard{}, err
+			return nil, nil, err
 		}
 
-		week.entries = append(week.entries, page.Items...)
+		entries = append(entries, page.Items...)
 
-		if len(page.Items) == 0 || len(week.entries) >= page.TotalCount {
+		if len(page.Items) == 0 || len(entries) >= page.TotalCount {
 			break
 		}
 	}
@@ -59,14 +69,12 @@ func (s *session) readWeek(ctx context.Context, monday string) (weekCard, error)
 		Days []weekDay `json:"days"`
 	}
 
-	q := url.Values{"from": {monday}, "to": {sunday}}
+	q := url.Values{"from": {from}, "to": {to}}
 	if err := s.api.call(ctx, http.MethodGet, "/me/days?"+q.Encode(), nil, &answer); err != nil {
-		return weekCard{}, err
+		return nil, nil, err
 	}
 
-	week.days = answer.Days
-
-	return week, nil
+	return entries, answer.Days, nil
 }
 
 // today is the owner's day by this machine's clock, in the zone they keep their
@@ -154,9 +162,25 @@ func (m screen) tookWeek(msg weekRead) screen {
 	return m
 }
 
-// weekKey answers the keys that move the grid: < a week back, > a week on, and t
-// to this week, once the grid is somewhere else. ok is false for any other key.
-func (m screen) weekKey(key string) (tea.Model, tea.Cmd, bool) {
+// moveKey answers the keys that move the week or the calendar on the tab on
+// screen: < back, > on, and t to the week or month today is in, once the tab
+// shows another. ok is false for any other key, and on any other tab.
+func (m screen) moveKey(key string) (tea.Model, tea.Cmd, bool) {
+	step, away := m.stepWeek, m.weekShown != ""
+
+	switch m.currentTab().view {
+	case viewWeek:
+	case viewCalendar:
+		step, away = m.stepMonth, m.cal.shown != ""
+
+		// The leave's card has arrows of its own, for its years.
+		if m.sub == subLeave {
+			step, away = m.stepYear, false
+		}
+	default:
+		return m, nil, false
+	}
+
 	var (
 		next tea.Model
 		cmd  tea.Cmd
@@ -164,11 +188,11 @@ func (m screen) weekKey(key string) (tea.Model, tea.Cmd, bool) {
 
 	switch {
 	case key == "<":
-		next, cmd = m.stepWeek(-1)
+		next, cmd = step(-1)
 	case key == ">":
-		next, cmd = m.stepWeek(1)
-	case key == "t" && m.weekShown != "":
-		next, cmd = m.stepWeek(0)
+		next, cmd = step(1)
+	case key == "t" && away:
+		next, cmd = step(0)
 	default:
 		return m, nil, false
 	}

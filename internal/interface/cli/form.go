@@ -37,6 +37,17 @@ type answers struct {
 	// file is where an export goes, or the file an import reads.
 	file string
 
+	// workDay is the day whose working time is recorded, and workStart, workEnd
+	// and workBreaks what it is recorded as.
+	workDay, workStart, workEnd, workBreaks string
+
+	// leaveDays and leaveYear are how many days of leave a year gives, and from
+	// which year on.
+	leaveDays, leaveYear string
+
+	// awayFrom, awayTo and awayKind are the first and the last day away, and why.
+	awayFrom, awayTo, awayKind string
+
 	// cell is the week grid's cell the hours are entered into, and row the key of
 	// the row added to it.
 	cell cellPicked
@@ -100,6 +111,20 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = m.cellSteps(a)
 	case "addRow":
 		steps = []*huh.Group{m.addRowStep(a)}
+	case "workNew", "workEdit":
+		steps = m.workSteps(doing, a)
+	case "workDelete":
+		steps = []*huh.Group{m.workDeleteStep(a)}
+	case "workPDF":
+		steps = []*huh.Group{m.fileStep("export", a)}
+	case "leaveNew":
+		steps = m.leaveSteps(a)
+	case "leaveDelete":
+		steps = []*huh.Group{m.leaveDeleteStep(a)}
+	case "awayNew":
+		steps = m.awaySteps(a)
+	case "awayDelete":
+		steps = []*huh.Group{m.awayDeleteStep(a)}
 	case "copyWeek":
 		steps = []*huh.Group{m.copyStep(a)}
 	case "stop":
@@ -239,6 +264,20 @@ func (m screen) request() tea.Cmd {
 		return m.saveCell()
 	case "copyWeek":
 		return m.copyWeek()
+	case "workNew", "workEdit":
+		return m.saveWorkDay()
+	case "workDelete":
+		return m.deleteWorkDay()
+	case "workPDF":
+		return m.exportWork()
+	case "leaveNew":
+		return m.saveLeave()
+	case "leaveDelete":
+		return m.deleteLeave()
+	case "awayNew":
+		return m.saveAway()
+	case "awayDelete":
+		return m.deleteAway()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown

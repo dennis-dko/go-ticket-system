@@ -61,6 +61,9 @@ type screen struct {
 	cell  weekCell
 	added []addedRow
 
+	// cal is the calendar's tab: the month and the cards beside it.
+	cal calendarState
+
 	// picking is the change an entry is being picked for in the card, and row the
 	// entry the cursor is on, by its place among those read. editing is the entry
 	// picked, while its form is open and its change on its way.
@@ -132,16 +135,15 @@ type screen struct {
 	asked *answers
 }
 
-// loaded is the day as the installation answered, the entries card, the week
-// grid, the templates, what it calls itself and says, the notices, and the
-// moment it was read. carded says whether the account may read its entries,
-// weeked whether the week was read - it is, while its tab is on screen -
-// templated whether its templates were read, and branded, noticed and placed
-// whether the rest could be read at all.
+// loaded is the day as the installation answered, the entries card, what the
+// tab on screen shows besides, the templates, what it calls itself and says, the
+// notices, and the moment it was read. carded says whether the account may read
+// its entries, templated whether its templates were read, and branded, noticed
+// and placed whether the rest could be read at all.
 type loaded struct {
 	shown     snapshot
 	card      entryCard
-	week      weekCard
+	tab       tabRead
 	templates []template
 	branding  branding
 	told      notices
@@ -149,7 +151,7 @@ type loaded struct {
 	at        time.Time
 	err       error
 
-	carded, weeked, templated, branded, noticed, placed bool
+	carded, templated, branded, noticed, placed bool
 }
 
 // done is what became of a change, in the sentence its command would print.
@@ -218,13 +220,13 @@ func (m screen) ask(now time.Time) (screen, tea.Cmd) {
 }
 
 // load reads the day again, the entries card as it is narrowed and as far as it
-// has been read, the week grid while its tab is on screen, what the installation
+// has been read, what the tab on screen shows besides, what the installation
 // calls itself and says, and the notices. A name, a banner or notices that could
 // not be asked for leave the ones shown: nothing else depends on them, and an
 // installation from before they were answered says nothing about them.
 func (m screen) load() tea.Cmd {
 	ctx, s, filter, shown := m.ctx, m.s, m.card.filter, len(m.card.items)
-	weekly, monday := m.currentTab().view == viewWeek, m.weekMonday()
+	view, monday, first, year := m.currentTab().view, m.weekMonday(), m.calendarMonth(), m.leaveYearShown()
 
 	return func() tea.Msg {
 		day, err := s.day(ctx)
@@ -234,7 +236,7 @@ func (m screen) load() tea.Cmd {
 
 		var (
 			card entryCard
-			week weekCard
+			tab  tabRead
 		)
 
 		carded := slices.Contains(day.permissions, model.PermTimesheetReadOwn)
@@ -244,9 +246,8 @@ func (m screen) load() tea.Cmd {
 			}
 		}
 
-		weeked := carded && weekly
-		if weeked {
-			if week, err = s.readWeek(ctx, monday); err != nil {
+		if carded {
+			if tab, err = s.readTab(ctx, view, monday, first, year); err != nil {
 				return loaded{at: time.Now(), err: err}
 			}
 		}
@@ -269,8 +270,8 @@ func (m screen) load() tea.Cmd {
 		told, toldErr := s.notices(ctx)
 		places, placesErr := s.holidayPlaces(ctx)
 
-		return loaded{shown: day, card: card, week: week, templates: kept, branding: named, told: told, places: places,
-			at: time.Now(), carded: carded, weeked: weeked, templated: templated, branded: nameErr == nil,
+		return loaded{shown: day, card: card, tab: tab, templates: kept, branding: named, told: told, places: places,
+			at: time.Now(), carded: carded, templated: templated, branded: nameErr == nil,
 			noticed: toldErr == nil, placed: placesErr == nil}
 	}
 }
@@ -313,6 +314,12 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.addPage(msg), nil
 	case weekRead:
 		return m.tookWeek(msg), nil
+	case monthRead:
+		return m.tookMonth(msg), nil
+	case leaveRead:
+		return m.tookLeave(msg), nil
+	case awayRead:
+		return m.tookAway(msg), nil
 	case history:
 		return m.showHistory(msg), nil
 	case checked:
@@ -381,11 +388,7 @@ func (m screen) take(msg loaded) screen {
 		m.card = msg.card
 	}
 
-	// The week as it was asked for, as the card is: one read for a week the grid
-	// has moved on from belongs to a grid that is gone.
-	if msg.weeked && msg.week.monday == m.weekMonday() {
-		m.week = msg.week
-	}
+	m = m.tookTab(msg.tab)
 
 	if msg.templated {
 		m.templates = msg.templates
@@ -635,7 +638,8 @@ func (m screen) calledFor(doing string) string {
 	running.shown.clock.Running = true
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
-		m.workbookChoices(), m.weekChoices()} {
+		m.workbookChoices(), m.weekChoices(), m.calendarChoices(), m.workChoices(),
+		m.leaveChoices(), m.awayChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -687,6 +691,24 @@ func (m screen) stepName() string {
 		return l.text("track.wb.file", "File")
 	case "row":
 		return l.text("field.project", "Project")
+	case "workDay":
+		return l.text("field.date", "Date")
+	case "workStart":
+		return l.text("field.start", "Start")
+	case "workEnd":
+		return l.text("field.end", "End")
+	case "workBreaks":
+		return l.text("field.breakMinutes", "Breaks (minutes)")
+	case "leaveDays":
+		return l.text("vacation.days", "Days of leave a year")
+	case "leaveYear":
+		return l.text("vacation.fromYear", "From the year")
+	case "awayFrom":
+		return l.text("field.from", "From")
+	case "awayTo":
+		return l.text("field.to", "To")
+	case "awayKind":
+		return l.text("field.kind", "Reason")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

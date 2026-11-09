@@ -93,6 +93,8 @@ func (m screen) pickPrompt() string {
 		return l.text("track.pick.template", "Choose the template to delete.")
 	case "cell":
 		return l.text("track.pick.cell", "Choose the cell with the arrows, then press enter.")
+	case "showDay":
+		return l.text("track.pick.day", "Choose a day with something booked on it, then press enter.")
 	}
 
 	return l.text("track.pick.edit", "Choose the entry to correct.")
@@ -109,10 +111,10 @@ func (m screen) pickable(e entry) bool {
 func (m screen) startPicking(doing string) screen {
 	m.picking, m.news, m.failure, m.ticked = doing, "", "", nil
 
-	// The templates card shows every template, so its picking starts at the
-	// first; the entries card starts at the first entry on screen.
+	// The templates card and a day show every row they have, so their picking
+	// starts at the first; the entries card starts at the first entry on screen.
 	first := 0
-	if !m.pickingTemplate() {
+	if m.scrolls() {
 		first = m.top
 	}
 
@@ -127,7 +129,7 @@ func (m screen) startPicking(doing string) screen {
 		return m
 	}
 
-	if !m.pickingTemplate() {
+	if m.scrolls() {
 		m.top = m.inView(m.row)
 	}
 
@@ -141,18 +143,49 @@ func (m screen) pickingTemplate() bool {
 }
 
 // pickCount is how many rows there are to pick from: the templates or the
-// entries read.
+// entries.
 func (m screen) pickCount() int {
-	if m.pickingTemplate() {
+	switch {
+	case m.pickingTemplate():
 		return len(m.templates)
+	case m.pickingWorkDay():
+		return len(m.cal.month.work.Days)
+	case m.picking == "leaveDelete":
+		return len(m.cal.leave.Entitlements)
+	case m.picking == "awayDelete":
+		return len(m.cal.away)
 	}
 
-	return len(m.card.items)
+	return len(m.pickEntries())
+}
+
+// pickEntries are the entries one is picked from: the open day's on the
+// calendar's tab, and the entries card's everywhere else.
+func (m screen) pickEntries() []entry {
+	if m.currentTab().view == viewCalendar {
+		return m.dayEntries()
+	}
+
+	return m.card.items
+}
+
+// scrolls reports whether picking moves the entries card along: the card shows
+// as many entries as the window holds, a day and the templates every one.
+func (m screen) scrolls() bool {
+	return !m.pickingTemplate() && m.currentTab().view == viewTimesheets
 }
 
 // pickableAt reports whether the row at can be picked; every template can.
 func (m screen) pickableAt(at int) bool {
-	return m.pickingTemplate() || m.pickable(m.card.items[at])
+	switch {
+	case m.pickingTemplate(), m.picking == "leaveDelete", m.picking == "awayDelete":
+		return true
+	case m.pickingWorkDay():
+		// A day booked on without times has nothing to take back.
+		return m.picking != "workDelete" || m.cal.month.work.Days[at].Recorded
+	}
+
+	return m.pickable(m.pickEntries()[at])
 }
 
 // stepPick is the next row that can be picked from the one at from, in the
@@ -213,7 +246,7 @@ func (m screen) pickKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.picked()
 	}
 
-	if !m.pickingTemplate() {
+	if m.scrolls() {
 		m.top = m.inView(m.row)
 	}
 
@@ -230,7 +263,25 @@ func (m screen) picked() (tea.Model, tea.Cmd) {
 		return m.open("tplDelete")
 	}
 
-	doing, e := m.picking, m.card.items[m.row]
+	if m.picking == "awayDelete" {
+		m.picking, m.cal.chosenAway = "", m.cal.away[m.row]
+
+		return m.open("awayDelete")
+	}
+
+	if m.picking == "leaveDelete" {
+		m.picking, m.cal.chosenLeave = "", m.cal.leave.Entitlements[m.row]
+
+		return m.open("leaveDelete")
+	}
+
+	if doing := m.picking; m.pickingWorkDay() {
+		m.picking, m.cal.picked = "", m.cal.month.work.Days[m.row]
+
+		return m.open(doing)
+	}
+
+	doing, e := m.picking, m.pickEntries()[m.row]
 
 	if m.several() && len(m.ticked) == 0 {
 		m.ticked = []uint{e.ID}

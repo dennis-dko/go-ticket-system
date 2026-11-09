@@ -2,6 +2,7 @@ package cli
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,12 +32,20 @@ func (m screen) choices() []choice {
 			changes = append(m.clockChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subTemplates:
 			changes = append(m.templateChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subWork:
+			changes = append(m.workChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subLeave:
+			changes = append(m.leaveChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subAway:
+			changes = append(m.awayChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subWorkbook:
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
 		case m.currentTab().view == viewWeek:
 			changes = m.weekChoices()
+		case m.currentTab().view == viewCalendar:
+			changes = m.calendarChoices()
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -62,6 +71,8 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case m.picking == "cell":
 		return m.cellKey(k)
+	case m.picking == "showDay":
+		return m.dayKey(k)
 	case m.picking != "":
 		return m.pickKey(k)
 	}
@@ -69,10 +80,8 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	choices := m.choices()
 	at := min(m.cursor, len(choices)-1)
 
-	if m.currentTab().view == viewWeek {
-		if next, cmd, ok := m.weekKey(k.String()); ok {
-			return next, cmd
-		}
+	if next, cmd, ok := m.moveKey(k.String()); ok {
+		return next, cmd
 	}
 
 	switch k.String() {
@@ -124,6 +133,12 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "cell":
 		return m.startCell()
+	case "showDay":
+		return m.startDay()
+	case "closeDay":
+		m.cal.day, m.cursor = "", 0
+
+		return m, nil
 	}
 
 	if sub, ok := strings.CutPrefix(doing, "menu:"); ok {
@@ -169,6 +184,15 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		if active := m.activeProjects(); len(active) > 0 {
 			asked.project = active[0].ID
 		}
+	case "workNew", "workEdit", "workDelete":
+		asked = m.workAnswers(doing)
+	case "workPDF":
+		asked.file = m.workFileName()
+	case "leaveNew":
+		asked.leaveYear = strconv.Itoa(m.leaveYearShown())
+	case "awayNew":
+		today := m.today().Format(time.DateOnly)
+		asked.awayFrom, asked.awayTo, asked.awayKind = today, today, absenceKinds[0]
 	case "addRow":
 		if addable := m.addable(m.weekRows()); len(addable) > 0 {
 			asked.row = addable[0].key
@@ -266,6 +290,9 @@ func (m screen) help(look palette) string {
 	case m.picking == "cell":
 		keys = [][2]string{{"←/→", l.text("track.key.day", "day")}, {"↑/↓", l.text("track.key.row", "row")},
 			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")}}
+	case m.picking == "showDay":
+		keys = [][2]string{{"←/→", l.text("track.key.day", "day")}, {"↑/↓", l.text("track.key.week", "week")},
+			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")}}
 	case m.picking != "":
 		keys = [][2]string{{"↑", l.text("track.huh.up", "up")}, {"↓", l.text("track.huh.down", "down")}}
 
@@ -280,11 +307,24 @@ func (m screen) help(look palette) string {
 			keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
 		}
 
-		if m.currentTab().view == viewWeek {
+		switch m.currentTab().view {
+		case viewWeek:
 			keys = append(keys, [2]string{"</>", l.text("track.key.weeks", "weeks")})
 
 			if m.weekShown != "" {
 				keys = append(keys, [2]string{"t", l.text("week.thisWeek", "This week")})
+			}
+		case viewCalendar:
+			if m.sub == subLeave {
+				keys = append(keys, [2]string{"</>", l.text("track.key.years", "years")})
+
+				break
+			}
+
+			keys = append(keys, [2]string{"</>", l.text("track.key.months", "months")})
+
+			if m.cal.shown != "" {
+				keys = append(keys, [2]string{"t", l.text("cal.today", "Today")})
 			}
 		}
 
