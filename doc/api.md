@@ -62,6 +62,25 @@ to them instead, in the time entries narrowed to its day and project. `a` adds a
 row for a project the week has nothing on yet, and `c` copies last week into the
 days of this one that have nothing booked, after asking (`POST /me/weeks/copy`).
 
+*Calendar*, after it, draws the month as the page's calendar: the days under the
+weekdays from Monday, each with the hours booked on it, a public holiday or a day
+away marked and named under the grid, and the month's total (`GET /timesheets`
+for the month, every page of it, and `GET /me/days`). `<` and `>` move it a month
+back and on, and `t` brings it back to today's month. `s` opens a day with
+something booked on it, picked with the arrows, and lists its entries, which are
+corrected, deleted and shown in their earlier versions as under *Time entries*.
+`z` opens the working time of the month (`GET /me/workdays`): a day's start, end
+and breaks recorded or corrected (`PUT /me/workdays/{date}`) and taken back after
+asking (`DELETE /me/workdays/{date}`), with the limits of the Working Hours Act
+it went past, and the card saved as a PDF (`POST /exports/document`, never over a
+file that is there already). `u` opens the year's leave (`GET /me/vacation`),
+whose years `<` and `>` move while it is open: days given a year from a year on
+(`PUT /me/vacation`) and taken back (`DELETE /me/vacation/{fromYear}`), with the
+right to set one's own settings. `a` opens the days away of the year
+(`GET /me/absences`), recorded over a range for one reason (`POST /me/absences`)
+and taken back one at a time (`DELETE /me/absences/{day}`), for an account that
+may book its own time.
+
 *My account*, the last tab, holds the account's own settings, each chosen by its
 number, and a change is sent to the route the browser sends it to:
 

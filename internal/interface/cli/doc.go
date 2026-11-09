@@ -17,7 +17,8 @@
 // On a terminal, the client with no command opens a screen drawn with Bubble
 // Tea and huh, headed by the web interface's tabs as far as it has been taught
 // them: the stopwatch running and the entries, the week as a grid of projects
-// and days, the account's settings, and a form for each change. The commands
+// and days, the calendar of a month with its working time, leave and days away,
+// the account's settings, and a form for each change. The commands
 // stay, because a script reads lines and a screen reader reads lines too, where
 // a drawn screen serves neither; both make their changes through the same
 // functions and say what they did in the same words.
