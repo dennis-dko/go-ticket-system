@@ -634,7 +634,7 @@ func (m screen) calledFor(doing string) string {
 	running.shown.clock.Running = true
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
-		m.workbookChoices(), m.weekChoices(), m.calendarChoices()} {
+		m.workbookChoices(), m.weekChoices(), m.calendarChoices(), m.workChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -686,6 +686,14 @@ func (m screen) stepName() string {
 		return l.text("track.wb.file", "File")
 	case "row":
 		return l.text("field.project", "Project")
+	case "workDay":
+		return l.text("field.date", "Date")
+	case "workStart":
+		return l.text("field.start", "Start")
+	case "workEnd":
+		return l.text("field.end", "End")
+	case "workBreaks":
+		return l.text("field.breakMinutes", "Breaks (minutes)")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

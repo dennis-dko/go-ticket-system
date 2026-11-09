@@ -48,6 +48,12 @@ func (g grid) line(widths []int, cells []string, width int) string {
 
 	for i, cell := range cells {
 		if i == len(cells)-1 {
+			// The last column takes what is left, unless it holds figures, which
+			// line up at the right whatever column they are in.
+			if i < len(g.right) && g.right[i] {
+				cell = strings.Repeat(" ", max(widths[i]-lipgloss.Width(cell), 0)) + cell
+			}
+
 			b.WriteString(cell)
 
 			break

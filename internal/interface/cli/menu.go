@@ -31,6 +31,8 @@ func (m screen) choices() []choice {
 			changes = append(m.clockChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subTemplates:
 			changes = append(m.templateChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subWork:
+			changes = append(m.workChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subWorkbook:
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
@@ -177,6 +179,10 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		if active := m.activeProjects(); len(active) > 0 {
 			asked.project = active[0].ID
 		}
+	case "workNew", "workEdit", "workDelete":
+		asked = m.workAnswers(doing)
+	case "workPDF":
+		asked.file = m.workFileName()
 	case "addRow":
 		if addable := m.addable(m.weekRows()); len(addable) > 0 {
 			asked.row = addable[0].key

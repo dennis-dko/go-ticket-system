@@ -145,8 +145,11 @@ func (m screen) pickingTemplate() bool {
 // pickCount is how many rows there are to pick from: the templates or the
 // entries.
 func (m screen) pickCount() int {
-	if m.pickingTemplate() {
+	switch {
+	case m.pickingTemplate():
 		return len(m.templates)
+	case m.pickingWorkDay():
+		return len(m.cal.month.work.Days)
 	}
 
 	return len(m.pickEntries())
@@ -170,7 +173,15 @@ func (m screen) scrolls() bool {
 
 // pickableAt reports whether the row at can be picked; every template can.
 func (m screen) pickableAt(at int) bool {
-	return m.pickingTemplate() || m.pickable(m.pickEntries()[at])
+	switch {
+	case m.pickingTemplate():
+		return true
+	case m.pickingWorkDay():
+		// A day booked on without times has nothing to take back.
+		return m.picking != "workDelete" || m.cal.month.work.Days[at].Recorded
+	}
+
+	return m.pickable(m.pickEntries()[at])
 }
 
 // stepPick is the next row that can be picked from the one at from, in the
@@ -246,6 +257,12 @@ func (m screen) picked() (tea.Model, tea.Cmd) {
 		m.picking, m.chosen = "", m.templates[m.row]
 
 		return m.open("tplDelete")
+	}
+
+	if doing := m.picking; m.pickingWorkDay() {
+		m.picking, m.cal.picked = "", m.cal.month.work.Days[m.row]
+
+		return m.open(doing)
 	}
 
 	doing, e := m.picking, m.pickEntries()[m.row]

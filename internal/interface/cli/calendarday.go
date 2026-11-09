@@ -42,7 +42,7 @@ func (m screen) calendarChoices() []choice {
 		choices = append(choices, choice{"s", "showDay", l.text("track.cal.show", "Show a day")})
 	}
 
-	return choices
+	return append(choices, choice{"z", "menu:" + subWork, l.text("work.title", "Working time") + " …"})
 }
 
 // bookedDays are the days of the month shown that something is booked on.

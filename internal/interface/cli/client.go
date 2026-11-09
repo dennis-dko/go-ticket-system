@@ -82,6 +82,16 @@ func (c *client) fetch(ctx context.Context, path string) ([]byte, error) {
 	return c.send(ctx, http.MethodGet, path, "", nil, maxFile)
 }
 
+// render sends a document to be laid out, and reads the file it comes back as.
+func (c *client) render(ctx context.Context, path string, document any) ([]byte, error) {
+	encoded, err := json.Marshal(document)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.send(ctx, http.MethodPost, path, "application/json", bytes.NewReader(encoded), maxFile)
+}
+
 // upload sends a file the way a browser's form sends one, named name, beside the
 // fields given, and reads the data of the answer into into.
 func (c *client) upload(ctx context.Context, path, name string, content []byte, fields map[string]string, into any) error {

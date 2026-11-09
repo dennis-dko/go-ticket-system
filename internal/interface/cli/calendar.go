@@ -19,15 +19,21 @@ type calendarState struct {
 	month calendarCard
 	shown string
 
+	// day is the day open under the month, and cursor the one moved to while one
+	// is picked.
 	day, cursor string
+
+	// picked is the day of the working time picked to be corrected or taken back.
+	picked workDay
 }
 
 // calendarCard is the month as it was read: its first day, as it travels, every
-// entry booked in it, and what each of its days is besides.
+// entry booked in it, what each of its days is besides, and its working time.
 type calendarCard struct {
 	first   string
 	entries []entry
 	days    []weekDay
+	work    workMonth
 }
 
 // monthRead is a month read on its own, for a calendar moved to it.
@@ -36,14 +42,20 @@ type monthRead struct {
 	err  error
 }
 
-// readMonth reads the month from its first day to its last.
+// readMonth reads the month from its first day to its last, and its working time
+// with it, which follows the calendar's month as the page's card does.
 func (s *session) readMonth(ctx context.Context, first string) (calendarCard, error) {
 	entries, days, err := s.readDays(ctx, first, lastOfMonth(first))
 	if err != nil {
 		return calendarCard{}, err
 	}
 
-	return calendarCard{first: first, entries: entries, days: days}, nil
+	work, err := s.readWork(ctx, first)
+	if err != nil {
+		return calendarCard{}, err
+	}
+
+	return calendarCard{first: first, entries: entries, days: days, work: work}, nil
 }
 
 // firstOfMonth is the first of the month a day falls in, as it travels.
@@ -124,7 +136,10 @@ func (m screen) calendarBody(look palette, width int) []string {
 		return []string{look.muted.Render(m.s.lang.text("track.cal.reading", "Reading the month …"))}
 	}
 
-	if m.cal.day != "" {
+	switch {
+	case m.sub == subWork:
+		return []string{m.workCardView(look, width)}
+	case m.cal.day != "":
 		return []string{m.monthView(look, width), m.dayCardView(look, width)}
 	}
 
@@ -286,3 +301,6 @@ func (l language) monthName(at time.Time) string {
 
 	return names[at.Month()-1]
 }
+
+// subWork names the working time's menu, opened from the calendar's own.
+const subWork = "work"

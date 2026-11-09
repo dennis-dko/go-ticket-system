@@ -123,26 +123,33 @@ func (m screen) exportTo() tea.Cmd {
 			return done{err: err}
 		}
 
-		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
-		if err != nil {
-			return done{err: err}
-		}
-
-		_, err = file.Write(book)
-		if closed := file.Close(); err == nil {
-			err = closed
-		}
-
-		if err != nil {
-			return done{err: err}
-		}
-
-		if whole, err := filepath.Abs(path); err == nil {
-			path = whole
-		}
-
-		return done{said: s.lang.text("wb.exported", "Export saved") + " – " + path}
+		return s.saved(path, book)
 	}
+}
+
+// saved writes a file an export came back as to a path that is not taken - never
+// over a file, not even one that has come since the path was asked for - and says
+// where it went.
+func (s *session) saved(path string, content []byte) done {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return done{err: err}
+	}
+
+	_, err = file.Write(content)
+	if closed := file.Close(); err == nil {
+		err = closed
+	}
+
+	if err != nil {
+		return done{err: err}
+	}
+
+	if whole, err := filepath.Abs(path); err == nil {
+		path = whole
+	}
+
+	return done{said: s.lang.text("wb.exported", "Export saved") + " – " + path}
 }
 
 // checkFile reads the file named and sends it to be checked.
