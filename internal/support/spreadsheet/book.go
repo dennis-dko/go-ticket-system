@@ -409,9 +409,9 @@ func rowsOf(r io.Reader, table Table) ([][]string, error) {
 // again and again. A cell naming a negative shared string panicked every release
 // up to v2.11.0 - GHSA-wcg2-648h-mhxq, from a 54 KB file the upload bound let
 // through - and ten of the fifteen advisories published against v2.11.0 on
-// 2026-10-09 describe a panic on crafted input as well. go.mod requires the
-// upstream commit that fixes all of them, ahead of a release, so no panic is
-// known to reach this guard today; it stays for the next one.
+// 2026-10-09 describe a panic on crafted input as well. go.mod requires v2.11.1,
+// the first release carrying the upstream commit that fixes all of them, so no
+// panic is known to reach this guard today; it stays for the next one.
 //
 // GoFr recovers a panic inside a handler, so the process survives either way.
 // What the guard buys is a person being told their file cannot be read -
