@@ -177,7 +177,8 @@ func (m screen) chooseOnCard(doing string) (tea.Model, tea.Cmd, bool) {
 		m.busy = true
 
 		return m, m.more(), true
-	case "edit", "delete", "history", "assign", "deleteSome", "tplDelete", "workEdit", "workDelete":
+	case "edit", "delete", "history", "assign", "deleteSome", "tplDelete", "workEdit", "workDelete",
+		"leaveDelete":
 		return m.startPicking(doing), nil, true
 	case "write":
 		m.busy = true
@@ -230,6 +231,8 @@ func (m screen) subName() string {
 		return m.s.lang.text("wb.title", "Spreadsheet")
 	case subWork:
 		return m.s.lang.text("work.title", "Working time")
+	case subLeave:
+		return m.s.lang.text("track.leave.title", "Leave")
 	}
 
 	return m.s.lang.text("ts.entries", "Entries")

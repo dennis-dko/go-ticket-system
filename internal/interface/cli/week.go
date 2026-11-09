@@ -172,6 +172,11 @@ func (m screen) moveKey(key string) (tea.Model, tea.Cmd, bool) {
 	case viewWeek:
 	case viewCalendar:
 		step, away = m.stepMonth, m.cal.shown != ""
+
+		// The leave's card has arrows of its own, for its years.
+		if m.sub == subLeave {
+			step, away = m.stepYear, false
+		}
 	default:
 		return m, nil, false
 	}

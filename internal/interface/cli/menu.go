@@ -2,6 +2,7 @@ package cli
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +34,8 @@ func (m screen) choices() []choice {
 			changes = append(m.templateChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subWork:
 			changes = append(m.workChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subLeave:
+			changes = append(m.leaveChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subWorkbook:
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
@@ -183,6 +186,8 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		asked = m.workAnswers(doing)
 	case "workPDF":
 		asked.file = m.workFileName()
+	case "leaveNew":
+		asked.leaveYear = strconv.Itoa(m.leaveYearShown())
 	case "addRow":
 		if addable := m.addable(m.weekRows()); len(addable) > 0 {
 			asked.row = addable[0].key
@@ -305,6 +310,12 @@ func (m screen) help(look palette) string {
 				keys = append(keys, [2]string{"t", l.text("week.thisWeek", "This week")})
 			}
 		case viewCalendar:
+			if m.sub == subLeave {
+				keys = append(keys, [2]string{"</>", l.text("track.key.years", "years")})
+
+				break
+			}
+
 			keys = append(keys, [2]string{"</>", l.text("track.key.months", "months")})
 
 			if m.cal.shown != "" {

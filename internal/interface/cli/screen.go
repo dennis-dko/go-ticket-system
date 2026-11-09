@@ -226,7 +226,7 @@ func (m screen) ask(now time.Time) (screen, tea.Cmd) {
 // installation from before they were answered says nothing about them.
 func (m screen) load() tea.Cmd {
 	ctx, s, filter, shown := m.ctx, m.s, m.card.filter, len(m.card.items)
-	view, monday, first := m.currentTab().view, m.weekMonday(), m.calendarMonth()
+	view, monday, first, year := m.currentTab().view, m.weekMonday(), m.calendarMonth(), m.leaveYearShown()
 
 	return func() tea.Msg {
 		day, err := s.day(ctx)
@@ -247,7 +247,7 @@ func (m screen) load() tea.Cmd {
 		}
 
 		if carded {
-			if tab, err = s.readTab(ctx, view, monday, first); err != nil {
+			if tab, err = s.readTab(ctx, view, monday, first, year); err != nil {
 				return loaded{at: time.Now(), err: err}
 			}
 		}
@@ -316,6 +316,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.tookWeek(msg), nil
 	case monthRead:
 		return m.tookMonth(msg), nil
+	case leaveRead:
+		return m.tookLeave(msg), nil
 	case history:
 		return m.showHistory(msg), nil
 	case checked:
@@ -634,7 +636,8 @@ func (m screen) calledFor(doing string) string {
 	running.shown.clock.Running = true
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
-		m.workbookChoices(), m.weekChoices(), m.calendarChoices(), m.workChoices()} {
+		m.workbookChoices(), m.weekChoices(), m.calendarChoices(), m.workChoices(),
+		m.leaveChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -694,6 +697,10 @@ func (m screen) stepName() string {
 		return l.text("field.end", "End")
 	case "workBreaks":
 		return l.text("field.breakMinutes", "Breaks (minutes)")
+	case "leaveDays":
+		return l.text("vacation.days", "Days of leave a year")
+	case "leaveYear":
+		return l.text("vacation.fromYear", "From the year")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

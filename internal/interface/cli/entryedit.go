@@ -150,6 +150,8 @@ func (m screen) pickCount() int {
 		return len(m.templates)
 	case m.pickingWorkDay():
 		return len(m.cal.month.work.Days)
+	case m.picking == "leaveDelete":
+		return len(m.cal.leave.Entitlements)
 	}
 
 	return len(m.pickEntries())
@@ -174,7 +176,7 @@ func (m screen) scrolls() bool {
 // pickableAt reports whether the row at can be picked; every template can.
 func (m screen) pickableAt(at int) bool {
 	switch {
-	case m.pickingTemplate():
+	case m.pickingTemplate(), m.picking == "leaveDelete":
 		return true
 	case m.pickingWorkDay():
 		// A day booked on without times has nothing to take back.
@@ -257,6 +259,12 @@ func (m screen) picked() (tea.Model, tea.Cmd) {
 		m.picking, m.chosen = "", m.templates[m.row]
 
 		return m.open("tplDelete")
+	}
+
+	if m.picking == "leaveDelete" {
+		m.picking, m.cal.chosenLeave = "", m.cal.leave.Entitlements[m.row]
+
+		return m.open("leaveDelete")
 	}
 
 	if doing := m.picking; m.pickingWorkDay() {

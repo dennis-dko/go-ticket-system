@@ -97,12 +97,13 @@ func (m screen) moveTab(by int) screen {
 type tabRead struct {
 	week            weekCard
 	month           calendarCard
+	leave           leaveYear
 	weeked, monthed bool
 }
 
 // readTab reads what the tab on screen shows besides the day: the week moved to,
 // or the month.
-func (s *session) readTab(ctx context.Context, view, monday, first string) (tabRead, error) {
+func (s *session) readTab(ctx context.Context, view, monday, first string, year int) (tabRead, error) {
 	var (
 		read tabRead
 		err  error
@@ -113,7 +114,10 @@ func (s *session) readTab(ctx context.Context, view, monday, first string) (tabR
 		read.week, err = s.readWeek(ctx, monday)
 		read.weeked = err == nil
 	case viewCalendar:
-		read.month, err = s.readMonth(ctx, first)
+		if read.month, err = s.readMonth(ctx, first); err == nil {
+			read.leave, err = s.readLeave(ctx, year)
+		}
+
 		read.monthed = err == nil
 	}
 
@@ -132,6 +136,10 @@ func (m screen) tookTab(read tabRead) screen {
 		m.cal.month = read.month
 	}
 
+	if read.monthed && read.leave.Year == m.leaveYearShown() {
+		m.cal.leave = read.leave
+	}
+
 	return m
 }
 
@@ -145,7 +153,7 @@ func (m screen) toTab(by int) (tea.Model, tea.Cmd) {
 	case viewWeek:
 		return m, m.readWeekNow()
 	case viewCalendar:
-		return m, m.readMonthNow()
+		return m, tea.Batch(m.readMonthNow(), m.readLeaveNow())
 	}
 
 	return m, nil

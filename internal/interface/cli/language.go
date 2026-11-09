@@ -182,6 +182,17 @@ func (l language) hours(h float64) string {
 // 1,234.50 in English and 1.234,50 in German.
 func (l language) number(v float64) string { return l.words.Number(v) }
 
+// filled writes a figure the way the page's fillIn puts one into a sentence: a
+// whole number as it is, and a fraction to two places, as hours are written
+// everywhere else on screen.
+func (l language) filled(v float64) string {
+	if v == math.Trunc(v) {
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	}
+
+	return l.number(v)
+}
+
 // share writes a figure with the places it has, as the page's fmtShare writes the
 // week's: 2.5, 8 and 0.125 in English, 2,5 in German. Fifteen significant digits
 // are kept, which is what a sum of hours survives as a double, so 0.1 and 0.2
@@ -352,10 +363,7 @@ func (l language) refusalValues(code string, values []any) []string {
 				written[i] = writers[named[i]](v)
 			}
 		case float64:
-			written[i] = l.number(v)
-			if v == math.Trunc(v) {
-				written[i] = strconv.FormatFloat(v, 'f', -1, 64)
-			}
+			written[i] = l.filled(v)
 		case nil:
 			written[i] = ""
 		default:

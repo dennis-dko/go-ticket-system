@@ -41,6 +41,10 @@ type answers struct {
 	// and workBreaks what it is recorded as.
 	workDay, workStart, workEnd, workBreaks string
 
+	// leaveDays and leaveYear are how many days of leave a year gives, and from
+	// which year on.
+	leaveDays, leaveYear string
+
 	// cell is the week grid's cell the hours are entered into, and row the key of
 	// the row added to it.
 	cell cellPicked
@@ -110,6 +114,10 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = []*huh.Group{m.workDeleteStep(a)}
 	case "workPDF":
 		steps = []*huh.Group{m.fileStep("export", a)}
+	case "leaveNew":
+		steps = m.leaveSteps(a)
+	case "leaveDelete":
+		steps = []*huh.Group{m.leaveDeleteStep(a)}
 	case "copyWeek":
 		steps = []*huh.Group{m.copyStep(a)}
 	case "stop":
@@ -255,6 +263,10 @@ func (m screen) request() tea.Cmd {
 		return m.deleteWorkDay()
 	case "workPDF":
 		return m.exportWork()
+	case "leaveNew":
+		return m.saveLeave()
+	case "leaveDelete":
+		return m.deleteLeave()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown

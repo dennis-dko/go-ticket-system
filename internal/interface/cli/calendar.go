@@ -25,6 +25,13 @@ type calendarState struct {
 
 	// picked is the day of the working time picked to be corrected or taken back.
 	picked workDay
+
+	// leave is the year of leave as it was last read, leaveShown the year it was
+	// moved to - zero for this year - and chosenLeave the days given a year picked
+	// to be taken back.
+	leave       leaveYear
+	leaveShown  int
+	chosenLeave entitlement
 }
 
 // calendarCard is the month as it was read: its first day, as it travels, every
@@ -139,6 +146,8 @@ func (m screen) calendarBody(look palette, width int) []string {
 	switch {
 	case m.sub == subWork:
 		return []string{m.workCardView(look, width)}
+	case m.sub == subLeave:
+		return []string{m.leaveCardView(look, width)}
 	case m.cal.day != "":
 		return []string{m.monthView(look, width), m.dayCardView(look, width)}
 	}
