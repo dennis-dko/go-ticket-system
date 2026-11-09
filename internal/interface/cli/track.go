@@ -497,10 +497,18 @@ func (s *session) startClock(ctx context.Context, body map[string]any, name stri
 	return s.lang.text("track.started", "Started at {0} on {1}.", started.In(zone).Format("15:04"), name), nil
 }
 
-// stopClock stops the stopwatch and books what it measured.
-func (s *session) stopClock(ctx context.Context, projects []project) (string, error) {
+// stopClock stops the stopwatch and books what it measured, up to endedAt where
+// the work ended earlier - a day and a time on the owner's wall clock - and up
+// to now where that is empty, which the installation reads from a stop with no
+// body at all.
+func (s *session) stopClock(ctx context.Context, projects []project, endedAt string) (string, error) {
+	var body any
+	if endedAt != "" {
+		body = map[string]string{"endedAt": endedAt}
+	}
+
 	var booked entry
-	if err := s.api.call(ctx, http.MethodPost, "/me/timer/stop", nil, &booked); err != nil {
+	if err := s.api.call(ctx, http.MethodPost, "/me/timer/stop", body, &booked); err != nil {
 		return "", err
 	}
 
@@ -574,7 +582,7 @@ func (s *session) stop(ctx context.Context, line commandLine) error {
 		return err
 	}
 
-	return s.report(s.stopClock(ctx, projects))
+	return s.report(s.stopClock(ctx, projects, ""))
 }
 
 func (s *session) switchTo(ctx context.Context, line commandLine) error {

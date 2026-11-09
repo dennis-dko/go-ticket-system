@@ -4,34 +4,47 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+// subClock names the stopwatch card's menu, opened from the time entries' own.
+const subClock = "clock"
+
 // timesheetChoices are the time entries' menu: the changes the stopwatch can
-// take as it stands, and the menu of the entries card. A change it cannot take -
-// stopping one that is not running - is not offered, and its key does nothing.
+// take as it stands, and the menus of the stopwatch and the entries cards. A
+// change it cannot take - stopping one that is not running - is not offered, and
+// its key does nothing. An account that may not write its own time is offered
+// its entries alone, as the page shows it neither the clock nor the form.
 func (m screen) timesheetChoices() []choice {
 	l := m.s.lang
 
 	entries := choice{"e", "menu:" + subEntries, l.text("ts.entries", "Entries") + " …"}
+	book := choice{"b", "book", l.text("track.form.book", "Book time by hand")}
+	clock := choice{"u", "menu:" + subClock, l.text("timer.title", "Stopwatch") + " …"}
 
-	if m.shown.clock.Running {
+	switch {
+	case !m.mayWrite():
+		return []choice{entries}
+	case m.forgotten():
+		// Stopping it means saying when the work ended; a switch is refused.
+		return []choice{{"x", "end", l.text("track.form.stop", "Stop the stopwatch")}, book, clock, entries}
+	case m.shown.clock.Running:
 		return []choice{
 			{"w", "switch", l.text("track.form.switch", "Switch to another project")},
 			{"x", "stop", l.text("track.form.stop", "Stop the stopwatch")},
-			{"b", "book", l.text("track.form.book", "Book time by hand")},
-			entries,
+			book, clock, entries,
 		}
 	}
 
-	return []choice{
-		{"s", "start", l.text("track.form.start", "Start the stopwatch")},
-		{"b", "book", l.text("track.form.book", "Book time by hand")},
-		entries,
-	}
+	return []choice{{"s", "start", l.text("track.form.start", "Start the stopwatch")}, book, entries}
 }
 
-// timesheetBody is what the time entries show above their menu: the stopwatch,
-// and once the day is read the entries card with rows of its entries.
+// timesheetBody is what the time entries show above their menu: the stopwatch
+// where the account may use one, and once the day is read the entries card with
+// rows of its entries.
 func (m screen) timesheetBody(look palette, width, rows int) []string {
-	shown := []string{m.stopwatch(look, width)}
+	var shown []string
+
+	if !m.loaded || m.mayWrite() {
+		shown = append(shown, m.stopwatch(look, width))
+	}
 
 	if m.loaded {
 		shown = append(shown, m.entryCardView(look, width, rows))

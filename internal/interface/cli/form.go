@@ -23,9 +23,13 @@ type answers struct {
 	day         string
 	stop        bool
 
-	// confirmed is the answer to whether an entry is deleted, no until it is
-	// given.
+	// confirmed is the answer to whether something is deleted or discarded, no
+	// until it is given.
 	confirmed bool
+
+	// clockDay and clockTime are a moment on the owner's wall clock, when the
+	// stopwatch's work started or ended.
+	clockDay, clockTime string
 
 	// from, to, search and scope are what the entries are narrowed to; see
 	// entryFilter.
@@ -69,6 +73,10 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = []*huh.Group{m.assignStep(a)}
 	case "deleteSome":
 		steps = []*huh.Group{m.deleteSomeStep(a)}
+	case "adjust", "end":
+		steps = m.clockSteps(doing, a)
+	case "discard":
+		steps = []*huh.Group{m.discardStep(a)}
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -192,6 +200,8 @@ func (m screen) request() tea.Cmd {
 		return m.transferSome()
 	case "deleteSome":
 		return m.deleteSome()
+	case "adjust", "end", "discard":
+		return m.clockChange()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown
@@ -224,7 +234,7 @@ func (m screen) request() tea.Cmd {
 			return nil
 		}
 
-		change = func() (string, error) { return s.stopClock(ctx, shown.projects) }
+		change = func() (string, error) { return s.stopClock(ctx, shown.projects, "") }
 	case "book":
 		worked, err := s.lang.parseHours(strings.TrimSpace(a.hours))
 		if err != nil {

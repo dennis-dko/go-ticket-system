@@ -563,9 +563,14 @@ func (m screen) changeName() string {
 // calledFor is what the menu calls a change, in whichever of its menus offers
 // it.
 func (m screen) calledFor(doing string) string {
-	for _, c := range append(m.choicesFor(doing), m.entryChoices()...) {
-		if c.doing == doing {
-			return c.called
+	running := m
+	running.shown.clock.Running = true
+
+	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices()} {
+		for _, c := range menu {
+			if c.doing == doing {
+				return c.called
+			}
 		}
 	}
 
@@ -603,6 +608,10 @@ func (m screen) stepName() string {
 		return l.text("filter.search", "Search in descriptions")
 	case "scope":
 		return l.text("field.project", "Project")
+	case "clockDay":
+		return l.text("field.date", "Date")
+	case "clockTime":
+		return l.text("timer.time", "Time")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

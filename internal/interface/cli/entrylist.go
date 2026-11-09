@@ -213,6 +213,10 @@ func (m screen) page(down bool) screen {
 
 // subName is what the card whose menu is open is called.
 func (m screen) subName() string {
+	if m.sub == subClock {
+		return m.s.lang.text("timer.title", "Stopwatch")
+	}
+
 	return m.s.lang.text("ts.entries", "Entries")
 }
 

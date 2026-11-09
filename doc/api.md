@@ -19,7 +19,13 @@ tabs, with `←` and `→` between them. Under *Time entries* are the stopwatch
 ticking, the entries as the page lists them, and a form for each change. `s`
 starts the stopwatch, `w` switches it to another project and books what has
 run, `x` stops it and books what it measured - after asking - and `b` books hours
-by hand. `e` opens the entries' own menu. It corrects an entry in the booking
+by hand. `u` opens the stopwatch's own menu while it runs: it corrects the start
+(`PUT /me/timer`), books up to an earlier end (`POST /me/timer/stop` with
+`endedAt`), or discards the measured time after asking (`DELETE /me/timer`). A
+stopwatch running longer than one entry can hold is stopped only by saying when
+the work ended, as the page asks it. The stopwatch and the booking are offered
+only to an account that may write its own time. `e` opens the entries' own
+menu. It corrects an entry in the booking
 form filled with it (`PUT /timesheets/{id}`), deletes one after asking
 (`DELETE /timesheets/{id}`) and shows what one said before it was corrected
 (`GET /timesheets/{id}/revisions`) - the change first, then the entry, picked

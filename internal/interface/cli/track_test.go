@@ -85,7 +85,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		switch route {
 		case "POST /me/timer":
 			f.stopped = false
-		case "POST /me/timer/stop":
+		case "POST /me/timer/stop", "DELETE /me/timer":
 			f.stopped = true
 		case "PUT /me/language":
 			f.language, _ = body["language"].(string)
@@ -97,7 +97,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 	stopped, language, theme, alertHours := f.stopped, f.language, f.theme, f.alertHours
 	override, overridden := f.answers[route]
 
-	rights := []string{"settings:write:own", "timesheets:read:own"}
+	rights := []string{"settings:write:own", "timesheets:read:own", "timesheets:write:own"}
 	if f.permissions != nil {
 		rights = f.permissions
 	}
@@ -147,6 +147,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" ||
 		strings.HasPrefix(route, "PUT /timesheets/") || strings.HasPrefix(route, "DELETE /timesheets/") ||
+		route == "DELETE /me/timer" ||
 		(strings.HasPrefix(route, "POST /timesheets/") && strings.HasSuffix(route, "/transfer")) {
 		data = `{}`
 	}

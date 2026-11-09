@@ -26,6 +26,8 @@ func (m screen) choices() []choice {
 		switch {
 		case m.sub == subEntries:
 			changes = append(m.entryChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subClock:
+			changes = append(m.clockChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
 		default:
@@ -133,6 +135,8 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		m.asked = m.filterAnswers()
 	case "edit":
 		m.asked = m.correctionAnswers()
+	case "adjust", "end", "discard":
+		m.asked = m.clockAnswers(doing)
 	case "assign":
 		// The first of the projects offered, rather than none, which is not one
 		// of them.
