@@ -23,6 +23,10 @@ type answers struct {
 	day         string
 	stop        bool
 
+	// from, to, search and scope are what the entries are narrowed to; see
+	// entryFilter.
+	from, to, search, scope string
+
 	// setting is which of the account's settings the settings form changes, and
 	// the rest what it is changed to; see setting.go.
 	setting                           string
@@ -53,6 +57,8 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = []*huh.Group{huh.NewGroup(project), huh.NewGroup(m.describe(&a.description))}
 	case "settings":
 		steps = m.settingSteps(a)
+	case "filter":
+		steps = m.filterSteps(a)
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).

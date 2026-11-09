@@ -71,8 +71,7 @@ func (m screen) currentTab() tab {
 }
 
 // moveTab moves by steps through the tabs this account may open, round the
-// ends, and puts the cursor on the first line of the menu, which is another
-// tab's menu now.
+// ends, and puts the cursor on the first line of the new tab's own menu.
 func (m screen) moveTab(by int) screen {
 	open := m.openTabs()
 	if len(open) < 2 {
@@ -82,16 +81,17 @@ func (m screen) moveTab(by int) screen {
 	current := m.currentTab().view
 	at := slices.IndexFunc(open, func(t tab) bool { return t.view == current })
 
-	m.view, m.cursor = open[(at+by+len(open))%len(open)].view, 0
+	m.view, m.sub, m.cursor = open[(at+by+len(open))%len(open)].view, "", 0
 
 	return m
 }
 
-// tabBody is what the tab on screen shows above its menu. My account shows its
-// settings in the menu itself, each with what it is set to now.
-func (m screen) tabBody(look palette, width int) []string {
+// tabBody is what the tab on screen shows above its menu, with rows of the
+// entries. My account shows its settings in the menu itself, each with what it
+// is set to now.
+func (m screen) tabBody(look palette, width, rows int) []string {
 	if m.currentTab().view == viewTimesheets {
-		return m.timesheetBody(look, width)
+		return m.timesheetBody(look, width, rows)
 	}
 
 	return nil

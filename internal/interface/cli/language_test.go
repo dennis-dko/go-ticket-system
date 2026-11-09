@@ -280,8 +280,9 @@ func TestTheScreenSpeaksGerman(t *testing.T) {
 	m.width = 100
 
 	shows := ansi.Strip(m.View().Content)
-	for _, said := range []string{"Zeiterfassung", "Zeiteinträge", "Mein Konto", "seit 09:12", "3,00 Std.", "2,50 Std.  Consulting",
-		"kein Projekt", "Wähle, was als Nächstes passieren soll.", "←/→ Reiter", "↑ hoch", "↓ runter", "enter bestätigen"} {
+	for _, said := range []string{"Zeiterfassung", "Zeiteinträge", "Mein Konto", "seit 09:12", "Einträge", "Alle Projekte",
+		"Datum", "Projekt", "Stunden", "Beschreibung", "Consulting", "2,50", "Kein Projekt",
+		"Wähle, was als Nächstes passieren soll.", "←/→ Reiter", "↑ hoch", "↓ runter", "enter bestätigen"} {
 		if !strings.Contains(shows, said) {
 			t.Errorf("the screen shows\n%s\nwithout %q", shows, said)
 		}

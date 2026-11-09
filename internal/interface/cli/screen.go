@@ -15,6 +15,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/dennis-dko/go-time-recording/internal/domain/model"
 	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
 )
 
@@ -24,8 +25,9 @@ import (
 // the installation nothing.
 const refreshEvery = 30 * time.Second
 
-// screen is the client on a terminal: the stopwatch running live, what today has
-// booked, a menu of the changes it can take, and a form for each of them.
+// screen is the client on a terminal: the web interface's tabs, under them the
+// stopwatch running live and the entries, a menu of the changes it can take,
+// and a form for each of them.
 //
 // It makes those changes through the same session as the commands, so it can
 // do nothing they cannot, and it says what it did in their words. It keeps the
@@ -36,10 +38,18 @@ type screen struct {
 	s    *session
 	host string
 
-	width int
+	// width and height are the window's: how wide the frame is drawn, and how
+	// many of the entries fit in it.
+	width, height int
 
 	// view is the tab moved to, by the name the page gives it; see currentTab.
-	view string
+	// sub is the card whose menu is open under it, empty for the tab's own.
+	view, sub string
+
+	// card is the entries card, and top the first of its entries on screen where
+	// the window holds fewer than were read.
+	card entryCard
+	top  int
 
 	// dark is what the terminal said its background is, and measured whether it
 	// said anything; see darkness.
@@ -91,18 +101,20 @@ type screen struct {
 	asked *answers
 }
 
-// loaded is the day as the installation answered, what it calls itself and
-// says, the notices, and the moment it was read. branded and noticed say whether
-// those two could be read at all.
+// loaded is the day as the installation answered, the entries card, what it
+// calls itself and says, the notices, and the moment it was read. carded says
+// whether the account may read its entries, and branded, noticed and placed
+// whether the rest could be read at all.
 type loaded struct {
 	shown    snapshot
+	card     entryCard
 	branding branding
 	told     notices
 	places   holidayPlaces
 	at       time.Time
 	err      error
 
-	branded, noticed, placed bool
+	carded, branded, noticed, placed bool
 }
 
 // done is what became of a change, in the sentence its command would print.
@@ -170,25 +182,35 @@ func (m screen) ask(now time.Time) (screen, tea.Cmd) {
 	return m, m.load()
 }
 
-// load reads the day again, what the installation calls itself and says, and
-// the notices. A name, a banner or notices that could not be asked for leave the
-// ones shown: nothing else depends on them, and an installation from before
-// they were answered says nothing about them.
+// load reads the day again, the entries card as it is narrowed and as far as it
+// has been read, what the installation calls itself and says, and the notices.
+// A name, a banner or notices that could not be asked for leave the ones shown:
+// nothing else depends on them, and an installation from before they were
+// answered says nothing about them.
 func (m screen) load() tea.Cmd {
-	ctx, s := m.ctx, m.s
+	ctx, s, filter, shown := m.ctx, m.s, m.card.filter, len(m.card.items)
 
 	return func() tea.Msg {
-		shown, err := s.snapshot(ctx)
+		day, err := s.day(ctx)
 		if err != nil {
 			return loaded{at: time.Now(), err: err}
+		}
+
+		var card entryCard
+
+		carded := slices.Contains(day.permissions, model.PermTimesheetReadOwn)
+		if carded {
+			if card, err = s.readCard(ctx, filter, shown); err != nil {
+				return loaded{at: time.Now(), err: err}
+			}
 		}
 
 		named, nameErr := s.branding(ctx)
 		told, toldErr := s.notices(ctx)
 		places, placesErr := s.holidayPlaces(ctx)
 
-		return loaded{shown: shown, branding: named, told: told, places: places, at: time.Now(),
-			branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
+		return loaded{shown: day, card: card, branding: named, told: told, places: places, at: time.Now(),
+			carded: carded, branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
 	}
 }
 
@@ -211,7 +233,7 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.press(msg)
 		}
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
+		m.width, m.height = msg.Width, msg.Height
 	case tea.BackgroundColorMsg:
 		m.dark, m.measured = msg.IsDark(), true
 	case tick:
@@ -226,6 +248,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, second()
 	case loaded:
 		return m.read(msg)
+	case morePage:
+		return m.addPage(msg), nil
 	case done:
 		m.news, m.failure = msg.said, ""
 		if msg.err != nil {
@@ -281,6 +305,15 @@ func (m screen) take(msg loaded) screen {
 
 	m.shown, m.readAt, m.loaded, m.stale = msg.shown, msg.at, true, ""
 
+	// The card as it was asked for: one read under a filter changed since belongs
+	// to a list that is gone, and the read the change started is on its way.
+	switch {
+	case !msg.carded:
+		m.card = entryCard{filter: m.card.filter}
+	case msg.card.filter == m.card.filter:
+		m.card = msg.card
+	}
+
 	if msg.branded {
 		m.banner = msg.branding.banner
 
@@ -302,121 +335,6 @@ func (m screen) take(msg loaded) screen {
 	}
 
 	return m
-}
-
-// choice is one line of the menu: what it does, what it is called, and the key
-// that does it without moving there. The keys stay the same in every language,
-// so a hand that knows them does not have to learn them again.
-type choice struct{ key, doing, called string }
-
-// choices are the menu: what the tab on screen offers, and reading the day again
-// and closing the screen, which every tab offers. A tab offers nothing before
-// the day is read or while a change is on its way.
-func (m screen) choices() []choice {
-	l := m.s.lang
-
-	var changes []choice
-
-	if m.loaded && !m.busy {
-		switch m.currentTab().view {
-		case viewAccount:
-			changes = m.settingChoices()
-		default:
-			changes = m.timesheetChoices()
-		}
-	}
-
-	return append(changes,
-		choice{"r", "refresh", l.text("track.menu.refresh", "Read the day again")},
-		choice{"q", "quit", l.text("track.menu.quit", "Close the screen")})
-}
-
-// press answers a key while no form is open: a move to another tab, a move
-// through the menu, enter on the line moved to, or the key of a change.
-func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	choices := m.choices()
-	at := min(m.cursor, len(choices)-1)
-
-	switch k.String() {
-	case "left", "shift+tab":
-		return m.moveTab(-1), nil
-	case "right", "tab":
-		return m.moveTab(1), nil
-	case "up", "k":
-		m.cursor = max(at-1, 0)
-
-		return m, nil
-	case "down", "j":
-		m.cursor = min(at+1, len(choices)-1)
-
-		return m, nil
-	case "enter":
-		return m.choose(choices[at].doing)
-	}
-
-	for _, c := range choices {
-		if c.key == k.String() {
-			return m.choose(c.doing)
-		}
-	}
-
-	return m, nil
-}
-
-// choose does what a line of the menu offers.
-func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
-	switch doing {
-	case "quit":
-		return m, tea.Quit
-	case "refresh":
-		if m.reading {
-			return m, nil
-		}
-
-		return m.ask(time.Now())
-	}
-
-	if setting, ok := strings.CutPrefix(doing, "setting:"); ok {
-		return m.openSetting(setting)
-	}
-
-	return m.open(doing)
-}
-
-// open puts up the form for a change, with what the last one said cleared away.
-func (m screen) open(doing string) (tea.Model, tea.Cmd) {
-	m.doing, m.news, m.failure = doing, "", ""
-	m.asked = &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
-	m.form = m.formFor(doing)
-
-	return m, m.form.Init()
-}
-
-// fillIn hands a message to the open form, and sends the change once the form
-// is answered.
-func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
-	form, cmd := m.form.Update(msg)
-	m.form = form.(*huh.Form)
-
-	switch m.form.State {
-	case huh.StateAborted:
-		m.form = nil
-
-		return m, nil
-	case huh.StateCompleted:
-		m.form = nil
-
-		change := m.request()
-		if change == nil {
-			return m, nil
-		}
-
-		m.busy = true
-
-		return m, change
-	}
-
-	return m, cmd
 }
 
 // elapsed is how long the stopwatch has run: what the installation measured
@@ -449,10 +367,31 @@ func (m screen) contentWidth() int {
 // its padding.
 func (m screen) inner() int { return m.contentWidth() - 6 }
 
-// View draws the screen in a frame: the installation's name, who and which
-// build, the page's tabs, where on the screen somebody is, and under it either
-// what the tab shows and its menu, or the form that is open.
+// View draws the screen, with as many of the entries as the window has room for.
 func (m screen) View() tea.View {
+	v := tea.NewView(m.frame(m.listRoom()))
+	v.AltScreen = true
+	v.WindowTitle = m.windowTitle()
+
+	return v
+}
+
+// listRoom is how many of the entries the window has room for: its height less
+// everything else on the screen, and never fewer than a list needs to be read.
+// A window that has not said how high it is has room for all of them.
+func (m screen) listRoom() int {
+	if m.height == 0 {
+		return len(m.card.items)
+	}
+
+	return max(m.height-lipgloss.Height(m.frame(0)), listFewest)
+}
+
+// frame draws the screen in a frame, with rows of the entries: the
+// installation's name, who and which build, the page's tabs, where on the screen
+// somebody is, and under it either what the tab shows and its menu, or the form
+// that is open.
+func (m screen) frame(rows int) string {
 	look := paletteFor(m.darkness())
 	width := m.inner()
 	rule := look.muted.Render(strings.Repeat("─", width))
@@ -482,7 +421,7 @@ func (m screen) View() tea.View {
 			parts = append(parts, wrapped.Render(look.ask.Render("! "+line)))
 		}
 
-		parts = append(parts, m.tabBody(look, width)...)
+		parts = append(parts, m.tabBody(look, width, rows)...)
 		parts = append(parts, rule, look.ask.Render(m.menuPrompt()), m.menu(look, width))
 	}
 
@@ -498,11 +437,7 @@ func (m screen) View() tea.View {
 	frame := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(look.frame).
 		Padding(1, 2).Width(m.contentWidth())
 
-	v := tea.NewView(lipgloss.NewStyle().Margin(1, 2).Render(frame.Render(strings.Join(parts, "\n\n"))))
-	v.AltScreen = true
-	v.WindowTitle = m.windowTitle()
-
-	return v
+	return lipgloss.NewStyle().Margin(1, 2).Render(frame.Render(strings.Join(parts, "\n\n")))
 }
 
 // heading is the installation's name, once it has been read, and the client's
@@ -556,11 +491,16 @@ func nonEmpty(words ...string) []string {
 	return said
 }
 
-// breadcrumb says where on the screen somebody is: the tab, and while a form is
-// open the change it asks about and the step it is at, the last of them in the
-// accent. A step called what its change is called is said once.
+// breadcrumb says where on the screen somebody is: the tab, the card whose menu
+// is open, and while a form is open the change it asks about and the step it is
+// at, the last of them in the accent. A step called what its change is called is
+// said once.
 func (m screen) breadcrumb(look palette) string {
 	steps := []string{m.tabName(m.currentTab())}
+
+	if m.sub != "" {
+		steps = append(steps, m.subName())
+	}
 
 	if m.form != nil {
 		change := m.changeName()
@@ -587,7 +527,7 @@ func (m screen) changeName() string {
 		return m.settingName(m.asked.setting)
 	}
 
-	for _, c := range m.choicesFor(m.doing) {
+	for _, c := range append(m.choicesFor(m.doing), m.entryChoices()...) {
 		if c.doing == m.doing {
 			return c.called
 		}
@@ -619,28 +559,17 @@ func (m screen) stepName() string {
 		return l.text("field.hours", "Hours")
 	case "day":
 		return l.text("field.day", "Day")
+	case "from":
+		return l.text("field.from", "From")
+	case "to":
+		return l.text("field.to", "To")
+	case "search":
+		return l.text("filter.search", "Search in descriptions")
+	case "scope":
+		return l.text("field.project", "Project")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())
-}
-
-// menu is the choices, the one the cursor is on in the accent behind a >, each
-// with its key at the end of its line.
-func (m screen) menu(look palette, width int) string {
-	choices := m.choices()
-	at := min(m.cursor, len(choices)-1)
-	rows := make([]string, len(choices))
-
-	for i, c := range choices {
-		line := "  " + c.called
-		if i == at {
-			line = look.title.Render("> " + c.called)
-		}
-
-		rows[i] = spread(width, line, look.key.Render(c.key))
-	}
-
-	return strings.Join(rows, "\n")
 }
 
 // statusLine says what the last change did, or why the day shown may be old.
@@ -657,31 +586,6 @@ func (m screen) statusLine(look palette) string {
 	}
 
 	return ""
-}
-
-// help names the keys that move between the tabs and through the menu, the way
-// huh names its own under a form - so the menu and the forms say it alike. A
-// change's own key stands at the end of its line instead.
-func (m screen) help(look palette) string {
-	l := m.s.lang
-
-	var keys [][2]string
-
-	if len(m.openTabs()) > 1 {
-		keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
-	}
-
-	keys = append(keys,
-		[2]string{"↑", l.text("track.huh.up", "up")},
-		[2]string{"↓", l.text("track.huh.down", "down")},
-		[2]string{"enter", l.text("track.huh.confirm", "confirm")})
-
-	named := make([]string, len(keys))
-	for i, k := range keys {
-		named[i] = look.muted.Render(k[0]+" ") + look.muted.Faint(true).Render(k[1])
-	}
-
-	return strings.Join(named, look.muted.Faint(true).Render(" • "))
 }
 
 // formHelp names the keys of the field the open form is asking about, as huh

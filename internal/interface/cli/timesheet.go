@@ -1,40 +1,40 @@
 package cli
 
 import (
-	"fmt"
-	"strings"
-
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/ansi"
 )
 
 // timesheetChoices are the time entries' menu: the changes the stopwatch can
-// take as it stands. A change it cannot take - stopping one that is not running
-// - is not offered, and its key does nothing.
+// take as it stands, and the menu of the entries card. A change it cannot take -
+// stopping one that is not running - is not offered, and its key does nothing.
 func (m screen) timesheetChoices() []choice {
 	l := m.s.lang
+
+	entries := choice{"e", "menu:" + subEntries, l.text("ts.entries", "Entries") + " …"}
 
 	if m.shown.clock.Running {
 		return []choice{
 			{"w", "switch", l.text("track.form.switch", "Switch to another project")},
 			{"x", "stop", l.text("track.form.stop", "Stop the stopwatch")},
 			{"b", "book", l.text("track.form.book", "Book time by hand")},
+			entries,
 		}
 	}
 
 	return []choice{
 		{"s", "start", l.text("track.form.start", "Start the stopwatch")},
 		{"b", "book", l.text("track.form.book", "Book time by hand")},
+		entries,
 	}
 }
 
 // timesheetBody is what the time entries show above their menu: the stopwatch,
-// and once the day is read what today has booked.
-func (m screen) timesheetBody(look palette, width int) []string {
+// and once the day is read the entries card with rows of its entries.
+func (m screen) timesheetBody(look palette, width, rows int) []string {
 	shown := []string{m.stopwatch(look, width)}
 
 	if m.loaded {
-		shown = append(shown, m.todayList(look, width))
+		shown = append(shown, m.entryCardView(look, width, rows))
 	}
 
 	return shown
@@ -65,44 +65,4 @@ func (m screen) stopwatch(look palette, width int) string {
 	right := look.muted.Render(l.text("track.since", "since {0}", clock.StartedAt.In(m.shown.zone).Format("15:04")))
 
 	return spread(width, left, right)
-}
-
-// todayList is what today has booked, entry by entry, under the day and its
-// total.
-func (m screen) todayList(look palette, width int) string {
-	l := m.s.lang
-	entries := m.shown.today
-	day := l.weekday(m.readAt.In(m.shown.zone))
-
-	heading := spread(width, look.strong.Render(day), look.strong.Render(l.hours(total(entries))))
-
-	if len(entries) == 0 {
-		return heading + "\n" + look.muted.Render(l.text("track.nothingYet", "Nothing booked yet."))
-	}
-
-	names := make([]string, len(entries))
-	column := 0
-
-	for i, e := range entries {
-		names[i] = l.nameOf(m.shown.projects, e.ProjectID)
-		column = max(column, lipgloss.Width(names[i]))
-	}
-
-	column = min(column, width/2)
-	rows := []string{heading}
-	hoursWidth := hoursColumn(l.hoursOf(entries)...)
-
-	for i, e := range entries {
-		name := ansi.Truncate(names[i], column, "…")
-		row := fmt.Sprintf("   %*s  %s", hoursWidth, l.hours(e.DurationHours),
-			name+strings.Repeat(" ", column-lipgloss.Width(name)))
-
-		if e.Description != nil && *e.Description != "" {
-			row += "  " + look.muted.Render(*e.Description)
-		}
-
-		rows = append(rows, ansi.Truncate(row, width, "…"))
-	}
-
-	return strings.Join(rows, "\n")
 }

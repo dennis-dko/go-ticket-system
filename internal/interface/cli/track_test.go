@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,6 +35,10 @@ type fakeInstallation struct {
 
 	// answers are what a test has a route answer, over what it answers by itself.
 	answers map[string]string
+
+	// list answers the entries' list for what its query asks, where a test gives
+	// it one.
+	list func(url.Values) string
 }
 
 func newFakeInstallation(t *testing.T) (*fakeInstallation, *httptest.Server) {
@@ -63,8 +68,18 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		_ = json.Unmarshal(raw, &body)
 	}
 
+	// What a request asked in its query is kept beside its body, under "?".
+	if r.URL.RawQuery != "" {
+		if body == nil {
+			body = map[string]any{}
+		}
+
+		body["?"] = r.URL.Query()
+	}
+
 	f.mu.Lock()
 	f.sent[route] = append(f.sent[route], body)
+	list := f.list
 
 	if f.refuseAs == "" {
 		switch route {
@@ -124,6 +139,10 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	if route == "GET /me/timer" && stopped {
 		data = `{"running":false,"elapsedHours":0}`
+	}
+
+	if route == "GET /timesheets" && list != nil {
+		data = list(r.URL.Query())
 	}
 
 	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" {

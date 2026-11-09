@@ -292,12 +292,21 @@ type project struct {
 	Status string `json:"status"`
 }
 
-// entry is a time entry, as the API answers with one.
+// entry is a time entry, as the API answers with one. RecordedBy and UpdatedBy
+// name a manager who booked or changed it in the owner's name, and are nil for
+// the owner's own.
 type entry struct {
-	ProjectID     *uint   `json:"projectId"`
-	Date          string  `json:"date"`
-	DurationHours float64 `json:"durationHours"`
-	Description   *string `json:"description"`
+	ProjectID     *uint    `json:"projectId"`
+	Date          string   `json:"date"`
+	DurationHours float64  `json:"durationHours"`
+	Description   *string  `json:"description"`
+	RecordedBy    *actedBy `json:"recordedBy"`
+	UpdatedBy     *actedBy `json:"updatedBy"`
+}
+
+// actedBy is who acted on somebody else's entry, as the API names them.
+type actedBy struct {
+	Name string `json:"name"`
 }
 
 // stopwatch is the running clock, as /me/timer answers.
@@ -345,8 +354,21 @@ type snapshot struct {
 	today    []entry
 }
 
-// snapshot reads the token owner's day.
+// snapshot reads the token owner's day, and what today has booked.
 func (s *session) snapshot(ctx context.Context) (snapshot, error) {
+	now, err := s.day(ctx)
+	if err != nil {
+		return now, err
+	}
+
+	now.today, err = s.entriesOn(ctx, time.Now().In(now.zone).Format(time.DateOnly))
+
+	return now, err
+}
+
+// day reads the token owner's day without what today has booked, which the
+// screen shows in its entries card instead.
+func (s *session) day(ctx context.Context) (snapshot, error) {
 	var (
 		now snapshot
 		err error
@@ -360,11 +382,7 @@ func (s *session) snapshot(ctx context.Context) (snapshot, error) {
 		return now, err
 	}
 
-	if err := s.api.call(ctx, http.MethodGet, "/me/timer", nil, &now.clock); err != nil {
-		return now, err
-	}
-
-	now.today, err = s.entriesOn(ctx, time.Now().In(now.zone).Format(time.DateOnly))
+	err = s.api.call(ctx, http.MethodGet, "/me/timer", nil, &now.clock)
 
 	return now, err
 }

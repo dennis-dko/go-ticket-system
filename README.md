@@ -252,7 +252,7 @@ and says what it did — for a script, an alias or a screen reader.
     </td>
     <td width="50%" valign="top">
       <img src="doc/image/terminal-switch.png" alt="The form that switches the stopwatch to another project, one question at a time, with the active projects to choose from">
-      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand. <code>←</code> and <code>→</code> move between the tabs. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away and <code>q</code> closes the screen.</p>
+      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, <code>b</code> books hours by hand, and <code>e</code> opens the entries' own menu - filtered as the page filters them, a page at a time. <code>←</code> and <code>→</code> move between the tabs. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away and <code>q</code> closes the screen.</p>
     </td>
   </tr>
 </table>
