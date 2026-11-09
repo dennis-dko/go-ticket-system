@@ -48,8 +48,9 @@ type answers struct {
 	// awayFrom, awayTo and awayKind are the first and the last day away, and why.
 	awayFrom, awayTo, awayKind string
 
-	// statsFrom and statsTo are the period the hours are asked for.
-	statsFrom, statsTo string
+	// statsFrom and statsTo are the period the hours are asked for, and
+	// balanceFrom and balanceTo the one the balance is calculated for.
+	statsFrom, statsTo, balanceFrom, balanceTo string
 
 	// cell is the week grid's cell the hours are entered into, and row the key of
 	// the row added to it.
@@ -127,8 +128,10 @@ func (m screen) formFor(doing string) *huh.Form {
 	case "awayNew":
 		steps = m.awaySteps(a)
 	case "statsPeriod":
-		steps = m.periodSteps(a)
-	case "statsPDF":
+		steps = m.periodSteps("stats", &a.statsFrom, &a.statsTo)
+	case "balancePeriod":
+		steps = m.periodSteps("balance", &a.balanceFrom, &a.balanceTo)
+	case "statsPDF", "balancePDF":
 		steps = []*huh.Group{m.fileStep("export", a)}
 	case "awayDelete":
 		steps = []*huh.Group{m.awayDeleteStep(a)}
@@ -285,6 +288,8 @@ func (m screen) request() tea.Cmd {
 		return m.saveAway()
 	case "statsPDF":
 		return m.exportStats()
+	case "balancePDF":
+		return m.exportBalance()
 	case "awayDelete":
 		return m.deleteAway()
 	}

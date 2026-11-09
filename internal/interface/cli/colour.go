@@ -48,13 +48,14 @@ func mixed(a, b color.Color, share float64) color.Color {
 }
 
 // palette is the styles the screen draws with. tab and tabOn are the page's
-// tabs, the one on screen filled with the accent as app.css fills it. levels are
+// tabs, the one on screen filled with the accent as app.css fills it. credit
+// and debt are a balance's sign, as its .plus and .minus colour one. levels are
 // the year's tiles from a day with nothing booked to one with the most: the
 // quiet colour, then the accent mixed into the background in the shares app.css
 // mixes it.
 type palette struct {
 	title, strong, muted, ok, failed, key, ask lipgloss.Style
-	tab, tabOn                                 lipgloss.Style
+	tab, tabOn, credit, debt                   lipgloss.Style
 	levels                                     [6]lipgloss.Style
 
 	frame, idle, running color.Color
@@ -71,6 +72,8 @@ func paletteFor(dark bool) palette {
 
 	return palette{
 		levels:  levels,
+		credit:  lipgloss.NewStyle().Bold(true).Foreground(c.green),
+		debt:    lipgloss.NewStyle().Bold(true).Foreground(c.danger),
 		title:   lipgloss.NewStyle().Bold(true).Foreground(c.accent),
 		strong:  lipgloss.NewStyle().Bold(true),
 		muted:   lipgloss.NewStyle().Foreground(c.muted),

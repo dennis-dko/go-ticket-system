@@ -14,9 +14,10 @@ import (
 
 // overtimeState is the overtime's tab: the hours of the period last read, the
 // period chosen - empty for the page's own - and the first of its days on screen
-// where the window holds fewer than the period has; and the year last read for
-// the tiles, the year chosen - zero for this one - and the first of its months
-// on screen.
+// where the window holds fewer than the period has; the year last read for the
+// tiles, the year chosen - zero for this one - and the first of its months on
+// screen; and the balance last calculated, its period chosen and the first of
+// its days on screen, likewise.
 type overtimeState struct {
 	stats    statistics
 	from, to string
@@ -24,6 +25,10 @@ type overtimeState struct {
 
 	year               yearDays
 	yearShown, yearTop int
+
+	balance                overtimeBalance
+	balanceFrom, balanceTo string
+	balanceTop             int
 }
 
 // statistics is a period's hours as /me/statistics answers them: every day of
@@ -115,20 +120,22 @@ func (m screen) tookStats(msg statsRead) screen {
 }
 
 // overtimeChoices are the overtime's menu: choosing the period, the year's
-// tiles, and the hours as a document.
+// tiles, the balance, and the hours as a document.
 func (m screen) overtimeChoices() []choice {
 	l := m.s.lang
 
 	return []choice{
-		{"z", "statsPeriod", l.text("track.stats.period", "Choose the period")},
+		{"z", "statsPeriod", l.text("track.period", "Choose the period")},
 		{"y", "menu:" + subYear, l.text("field.year", "Year") + " …"},
+		{"s", "menu:" + subBalance, l.text("ot.balance", "Balance") + " …"},
 		{"p", "statsPDF", l.text("action.exportPdf", "Export as PDF")},
 	}
 }
 
-// periodSteps ask for the first and the last day of the period, as the page's
-// two fields do.
-func (m screen) periodSteps(a *answers) []*huh.Group {
+// periodSteps ask for the first and the last day of a period, as the page's two
+// fields do: the fields named for the card - stats or balance - with From and
+// To after it.
+func (m screen) periodSteps(card string, from, to *string) []*huh.Group {
 	l := m.s.lang
 
 	day := func(key, question string, into *string) *huh.Group {
@@ -137,8 +144,8 @@ func (m screen) periodSteps(a *answers) []*huh.Group {
 	}
 
 	return []*huh.Group{
-		day("statsFrom", l.text("track.ask.from", "From which day on?"), &a.statsFrom),
-		day("statsTo", l.text("track.ask.to", "Up to which day?"), &a.statsTo),
+		day(card+"From", l.text("track.ask.from", "From which day on?"), from),
+		day(card+"To", l.text("track.ask.to", "Up to which day?"), to),
 	}
 }
 
@@ -153,8 +160,11 @@ func (m screen) choosePeriod(a answers) (tea.Model, tea.Cmd) {
 // overtimeBody is what the overtime shows above its menu: the hours of the period,
 // once they have been read, or the year's card while its menu is open.
 func (m screen) overtimeBody(look palette, width, rows int) []string {
-	if m.sub == subYear {
+	switch m.sub {
+	case subYear:
 		return m.yearBody(look, width, rows)
+	case subBalance:
+		return m.balanceBody(look, width, rows)
 	}
 
 	if from, to := m.statsPeriod(); m.ot.stats.From != from || m.ot.stats.To != to {

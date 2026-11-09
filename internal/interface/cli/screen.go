@@ -64,7 +64,8 @@ type screen struct {
 	// cal is the calendar's tab: the month and the cards beside it.
 	cal calendarState
 
-	// ot is the overtime's tab: the hours of a period, and the year's tiles.
+	// ot is the overtime's tab: the hours of a period, the year's tiles and the
+	// balance.
 	ot overtimeState
 
 	// picking is the change an entry is being picked for in the card, and row the
@@ -327,6 +328,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.tookStats(msg), nil
 	case yearRead:
 		return m.tookYear(msg), nil
+	case balanceRead:
+		return m.tookBalance(msg), nil
 	case history:
 		return m.showHistory(msg), nil
 	case checked:
@@ -466,10 +469,11 @@ func (m screen) View() tea.View {
 // listRoom is how many rows of the list on screen the window has room for: its
 // height less everything else on the screen, and never fewer than a list needs
 // to be read. A window that has not said how high it is has room for all of
-// them - the entries, the days of a period or the year's months.
+// them - the entries, the days of a period or of a balance, or the year's
+// months.
 func (m screen) listRoom() int {
 	if m.height == 0 {
-		return max(len(m.card.items), len(m.ot.stats.Days), yearMonths)
+		return max(len(m.card.items), len(m.ot.stats.Days), yearMonths, len(m.ot.balance.Days))
 	}
 
 	return max(m.height-lipgloss.Height(m.frame(0)), listFewest)
@@ -647,7 +651,7 @@ func (m screen) calledFor(doing string) string {
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
 		m.workbookChoices(), m.weekChoices(), m.calendarChoices(), m.workChoices(),
-		m.leaveChoices(), m.awayChoices(), m.overtimeChoices()} {
+		m.leaveChoices(), m.awayChoices(), m.overtimeChoices(), m.balanceChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -717,9 +721,9 @@ func (m screen) stepName() string {
 		return l.text("field.to", "To")
 	case "awayKind":
 		return l.text("field.kind", "Reason")
-	case "statsFrom":
+	case "statsFrom", "balanceFrom":
 		return l.text("field.from", "From")
-	case "statsTo":
+	case "statsTo", "balanceTo":
 		return l.text("field.to", "To")
 	}
 

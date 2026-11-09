@@ -202,13 +202,15 @@ func (m screen) narrow(filter entryFilter) (tea.Model, tea.Cmd) {
 }
 
 // page moves the list on screen a window's worth down or up, no further than its
-// ends: the entries, the days of a period, or the year's months.
+// ends: the entries, the days of a period or of a balance, or the year's months.
 func (m screen) page(down bool) screen {
 	rows := m.listRoom()
 
 	switch {
 	case m.currentTab().view == viewOvertime && m.sub == subYear:
 		m.ot.yearTop = paged(m.ot.yearTop, rows, yearMonths, down)
+	case m.currentTab().view == viewOvertime && m.sub == subBalance:
+		m.ot.balanceTop = paged(m.ot.balanceTop, rows, len(m.ot.balance.Days), down)
 	case m.currentTab().view == viewOvertime:
 		m.ot.top = paged(m.ot.top, rows, len(m.ot.stats.Days), down)
 	case m.currentTab().view == viewTimesheets:
@@ -253,6 +255,8 @@ func (m screen) subName() string {
 		return m.s.lang.text("absence.title", "Days away")
 	case subYear:
 		return m.s.lang.text("field.year", "Year")
+	case subBalance:
+		return m.s.lang.text("ot.balance", "Balance")
 	}
 
 	return m.s.lang.text("ts.entries", "Entries")
