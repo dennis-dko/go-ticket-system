@@ -64,6 +64,9 @@ type screen struct {
 	// cal is the calendar's tab: the month and the cards beside it.
 	cal calendarState
 
+	// ot is the overtime's tab: the hours of a period.
+	ot overtimeState
+
 	// picking is the change an entry is being picked for in the card, and row the
 	// entry the cursor is on, by its place among those read. editing is the entry
 	// picked, while its form is open and its change on its way.
@@ -226,7 +229,7 @@ func (m screen) ask(now time.Time) (screen, tea.Cmd) {
 // installation from before they were answered says nothing about them.
 func (m screen) load() tea.Cmd {
 	ctx, s, filter, shown := m.ctx, m.s, m.card.filter, len(m.card.items)
-	view, monday, first, year := m.currentTab().view, m.weekMonday(), m.calendarMonth(), m.leaveYearShown()
+	at := m.tabAt()
 
 	return func() tea.Msg {
 		day, err := s.day(ctx)
@@ -247,7 +250,7 @@ func (m screen) load() tea.Cmd {
 		}
 
 		if carded {
-			if tab, err = s.readTab(ctx, view, monday, first, year); err != nil {
+			if tab, err = s.readTab(ctx, at); err != nil {
 				return loaded{at: time.Now(), err: err}
 			}
 		}
@@ -320,6 +323,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.tookLeave(msg), nil
 	case awayRead:
 		return m.tookAway(msg), nil
+	case statsRead:
+		return m.tookStats(msg), nil
 	case history:
 		return m.showHistory(msg), nil
 	case checked:
@@ -461,7 +466,7 @@ func (m screen) View() tea.View {
 // A window that has not said how high it is has room for all of them.
 func (m screen) listRoom() int {
 	if m.height == 0 {
-		return len(m.card.items)
+		return max(len(m.card.items), len(m.ot.stats.Days))
 	}
 
 	return max(m.height-lipgloss.Height(m.frame(0)), listFewest)
@@ -639,7 +644,7 @@ func (m screen) calledFor(doing string) string {
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
 		m.workbookChoices(), m.weekChoices(), m.calendarChoices(), m.workChoices(),
-		m.leaveChoices(), m.awayChoices()} {
+		m.leaveChoices(), m.awayChoices(), m.overtimeChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -709,6 +714,10 @@ func (m screen) stepName() string {
 		return l.text("field.to", "To")
 	case "awayKind":
 		return l.text("field.kind", "Reason")
+	case "statsFrom":
+		return l.text("field.from", "From")
+	case "statsTo":
+		return l.text("field.to", "To")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

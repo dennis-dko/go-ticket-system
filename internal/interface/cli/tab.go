@@ -23,6 +23,7 @@ const (
 	viewTimesheets = "timesheets"
 	viewWeek       = "week"
 	viewCalendar   = "calendar"
+	viewOvertime   = "overtime"
 	viewAccount    = "settings"
 )
 
@@ -35,6 +36,7 @@ var tabs = []tab{
 	{viewTimesheets, model.PermTimesheetReadOwn},
 	{viewWeek, model.PermTimesheetReadOwn},
 	{viewCalendar, model.PermTimesheetReadOwn},
+	{viewOvertime, model.PermTimesheetReadOwn},
 	{viewAccount, ""},
 }
 
@@ -92,31 +94,53 @@ func (m screen) moveTab(by int) screen {
 	return m
 }
 
-// tabRead is what a read of the day brings besides for the tab on screen: the
-// week's grid on the week's tab, and the month on the calendar's.
-type tabRead struct {
-	week            weekCard
-	month           calendarCard
-	leave           leaveYear
-	away            []absence
-	weeked, monthed bool
+// tabAt is what the tab on screen reads besides the day, as it stands when the
+// read is asked for: which tab, the week moved to, the month and the year of
+// leave, and the period of hours. One value rather than a list of strings side
+// by side, where two swapped would still compile.
+type tabAt struct {
+	view, monday, first, from, to string
+	year                          int
 }
 
-// readTab reads what the tab on screen shows besides the day: the week moved to,
-// or the month.
-func (s *session) readTab(ctx context.Context, view, monday, first string, year int) (tabRead, error) {
-	var (
-		read tabRead
-		err  error
-	)
+// tabAt is what a read of the day asks for besides, now.
+func (m screen) tabAt() tabAt {
+	from, to := m.statsPeriod()
 
-	switch view {
+	return tabAt{view: m.currentTab().view, monday: m.weekMonday(), first: m.calendarMonth(), from: from, to: to,
+		year: m.leaveYearShown()}
+}
+
+// tabRead is what a read of the day brings besides for the tab on screen: the
+// week's grid on the week's tab, the month and the cards beside it on the
+// calendar's, and the hours of a period on the overtime's - with the period they
+// were asked for.
+type tabRead struct {
+	week                    weekCard
+	month                   calendarCard
+	leave                   leaveYear
+	away                    []absence
+	stats                   statistics
+	asked                   tabAt
+	weeked, monthed, statsd bool
+}
+
+// readTab reads what the tab on screen shows besides the day.
+func (s *session) readTab(ctx context.Context, at tabAt) (tabRead, error) {
+	var err error
+
+	read := tabRead{asked: at}
+
+	switch at.view {
 	case viewWeek:
-		read.week, err = s.readWeek(ctx, monday)
+		read.week, err = s.readWeek(ctx, at.monday)
 		read.weeked = err == nil
+	case viewOvertime:
+		read.stats, err = s.readStatistics(ctx, at.from, at.to)
+		read.statsd = err == nil
 	case viewCalendar:
-		if read.month, err = s.readMonth(ctx, first); err == nil {
-			read.leave, err = s.readLeave(ctx, year)
+		if read.month, err = s.readMonth(ctx, at.first); err == nil {
+			read.leave, err = s.readLeave(ctx, at.year)
 		}
 
 		if err == nil {
@@ -149,6 +173,10 @@ func (m screen) tookTab(read tabRead) screen {
 		m.cal.away = read.away
 	}
 
+	if from, to := m.statsPeriod(); read.statsd && read.asked.from == from && read.asked.to == to {
+		m.ot.stats = read.stats
+	}
+
 	return m
 }
 
@@ -163,6 +191,8 @@ func (m screen) toTab(by int) (tea.Model, tea.Cmd) {
 		return m, m.readWeekNow()
 	case viewCalendar:
 		return m, tea.Batch(m.readMonthNow(), m.readLeaveNow(), m.readAwayNow())
+	case viewOvertime:
+		return m, m.readStatsNow()
 	}
 
 	return m, nil
@@ -179,6 +209,8 @@ func (m screen) tabBody(look palette, width, rows int) []string {
 		return m.weekBody(look, width)
 	case viewCalendar:
 		return m.calendarBody(look, width)
+	case viewOvertime:
+		return m.overtimeBody(look, width, rows)
 	}
 
 	return nil
@@ -204,6 +236,8 @@ func (m screen) tabName(t tab) string {
 		return l.text("nav.week", "Week")
 	case viewCalendar:
 		return l.text("nav.calendar", "Calendar")
+	case viewOvertime:
+		return l.text("nav.overtime", "Overtime")
 	case viewAccount:
 		return l.text("nav.settings", "My account")
 	}

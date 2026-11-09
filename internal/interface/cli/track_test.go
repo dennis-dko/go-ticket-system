@@ -40,10 +40,12 @@ type fakeInstallation struct {
 
 	// list answers the entries' list for what its query asks, where a test gives
 	// it one, and imports answers an import, checked or written. days answers the
-	// days of a range, which daysOf does where a test gives none.
+	// days of a range, which daysOf does where a test gives none, and stats the
+	// hours of a period, which statisticsOf does.
 	list    func(url.Values) string
 	imports func(dryRun bool) string
 	days    func(url.Values) string
+	stats   func(url.Values) string
 }
 
 func newFakeInstallation(t *testing.T) (*fakeInstallation, *httptest.Server) {
@@ -100,7 +102,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	f.mu.Lock()
 	f.sent[route] = append(f.sent[route], body)
-	list, imports, days := f.list, f.imports, f.days
+	list, imports, days, stats := f.list, f.imports, f.days, f.stats
 
 	if f.refuseAs == "" {
 		switch route {
@@ -197,6 +199,14 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data = days(r.URL.Query())
+	}
+
+	if route == "GET /me/statistics" {
+		if stats == nil {
+			stats = statisticsOf
+		}
+
+		data = stats(r.URL.Query())
 	}
 
 	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" ||

@@ -204,6 +204,10 @@ func (m screen) narrow(filter entryFilter) (tea.Model, tea.Cmd) {
 // page moves the entries card a window's worth of entries down or up, no further
 // than its ends.
 func (m screen) page(down bool) screen {
+	if m.currentTab().view == viewOvertime {
+		return m.pageDays(down)
+	}
+
 	if m.currentTab().view != viewTimesheets {
 		return m
 	}

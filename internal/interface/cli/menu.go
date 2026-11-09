@@ -46,6 +46,8 @@ func (m screen) choices() []choice {
 			changes = m.weekChoices()
 		case m.currentTab().view == viewCalendar:
 			changes = m.calendarChoices()
+		case m.currentTab().view == viewOvertime:
+			changes = m.overtimeChoices()
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -190,6 +192,10 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		asked.file = m.workFileName()
 	case "leaveNew":
 		asked.leaveYear = strconv.Itoa(m.leaveYearShown())
+	case "statsPeriod":
+		asked.statsFrom, asked.statsTo = m.statsPeriod()
+	case "statsPDF":
+		asked.file = m.statsFileName()
 	case "awayNew":
 		today := m.today().Format(time.DateOnly)
 		asked.awayFrom, asked.awayTo, asked.awayKind = today, today, absenceKinds[0]
@@ -238,6 +244,8 @@ func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.narrow(m.asked.filtered())
 		case "addRow":
 			return m.addRow(m.asked.row)
+		case "statsPeriod":
+			return m.choosePeriod(*m.asked)
 		case "bookTemplate":
 			return m.openWith("book", m.fromTemplate(m.asked.template, m.asked.day))
 		}
