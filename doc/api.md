@@ -81,6 +81,20 @@ right to set one's own settings. `a` opens the days away of the year
 and taken back one at a time (`DELETE /me/absences/{day}`), for an account that
 may book its own time.
 
+*Overtime*, after it, holds the page's three cards. The hours of a period come
+first, drawn as the page's charts: a bar a day, the empty days among them, a bar
+a project and a bar an activity (`GET /me/statistics`), from the first of the
+month to today until `z` chooses another period, paged with PgUp and PgDn where
+the window holds fewer days than the period has, and saved as a PDF with `p`
+(`POST /exports/document`). `y` opens the year as the page's tiles - a column a
+week, a row a weekday, each day shaded by the hours booked on it - with the year
+before beside it up to the same day and both month by month (`GET /me/days` for
+each whole year); `<` and `>` move it a year back and on while it is open. `s`
+opens the balance (`GET /users/{id}/overtime`, the id being the one `GET /me`
+names), calculated as it opens for the first of the month to today: every day
+that counts with what was booked, what it asked and the difference, which rule
+counted them, and the total, with `z` for another period and `p` for a PDF.
+
 *My account*, the last tab, holds the account's own settings, each chosen by its
 number, and a change is sent to the route the browser sends it to:
 
