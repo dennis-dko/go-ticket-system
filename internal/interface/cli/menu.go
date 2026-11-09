@@ -38,7 +38,7 @@ func (m screen) choices() []choice {
 		case m.currentTab().view == viewWeek:
 			changes = m.weekChoices()
 		case m.currentTab().view == viewCalendar:
-			// The month is moved with < and >, which the keys under the menu name.
+			changes = m.calendarChoices()
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -64,6 +64,8 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case m.picking == "cell":
 		return m.cellKey(k)
+	case m.picking == "showDay":
+		return m.dayKey(k)
 	case m.picking != "":
 		return m.pickKey(k)
 	}
@@ -124,6 +126,12 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "cell":
 		return m.startCell()
+	case "showDay":
+		return m.startDay()
+	case "closeDay":
+		m.cal.day, m.cursor = "", 0
+
+		return m, nil
 	}
 
 	if sub, ok := strings.CutPrefix(doing, "menu:"); ok {
@@ -265,6 +273,9 @@ func (m screen) help(look palette) string {
 		keys = [][2]string{{"esc", l.text("history.close", "Close")}}
 	case m.picking == "cell":
 		keys = [][2]string{{"←/→", l.text("track.key.day", "day")}, {"↑/↓", l.text("track.key.row", "row")},
+			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")}}
+	case m.picking == "showDay":
+		keys = [][2]string{{"←/→", l.text("track.key.day", "day")}, {"↑/↓", l.text("track.key.week", "week")},
 			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")}}
 	case m.picking != "":
 		keys = [][2]string{{"↑", l.text("track.huh.up", "up")}, {"↓", l.text("track.huh.down", "down")}}

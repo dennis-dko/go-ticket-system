@@ -634,7 +634,7 @@ func (m screen) calledFor(doing string) string {
 	running.shown.clock.Running = true
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
-		m.workbookChoices(), m.weekChoices()} {
+		m.workbookChoices(), m.weekChoices(), m.calendarChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called

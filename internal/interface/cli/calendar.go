@@ -18,6 +18,8 @@ import (
 type calendarState struct {
 	month calendarCard
 	shown string
+
+	day, cursor string
 }
 
 // calendarCard is the month as it was read: its first day, as it travels, every
@@ -86,7 +88,8 @@ func (m screen) stepMonth(months int) (tea.Model, tea.Cmd) {
 		shown = ""
 	}
 
-	m.cal.shown = shown
+	// A day open under the month goes with it.
+	m.cal.shown, m.cal.day = shown, ""
 
 	return m, m.readMonthNow()
 }
@@ -119,6 +122,10 @@ func (m screen) tookMonth(msg monthRead) screen {
 func (m screen) calendarBody(look palette, width int) []string {
 	if m.cal.month.first != m.calendarMonth() {
 		return []string{look.muted.Render(m.s.lang.text("track.cal.reading", "Reading the month …"))}
+	}
+
+	if m.cal.day != "" {
+		return []string{m.monthView(look, width), m.dayCardView(look, width)}
 	}
 
 	return []string{m.monthView(look, width)}
@@ -182,12 +189,15 @@ func (m screen) monthView(look palette, width int) string {
 
 		// The hours beside their own day rather than against the next one, and a
 		// day nothing is booked on quiet, as the page draws only those with entries
-		// as something to press.
+		// as something to press. The day being picked is filled with the accent,
+		// and today is written in it.
 		cell := fmt.Sprintf("%2d%s %-5s", d, mark, hours)
 
 		switch {
-		case date == today:
+		case m.picking == "showDay" && date == m.cal.cursor:
 			cell = look.tabOn.Render(cell)
+		case date == today:
+			cell = look.title.Render(cell)
 		case hours == "":
 			cell = look.muted.Render(cell)
 		}
