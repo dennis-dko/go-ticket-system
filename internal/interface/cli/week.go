@@ -17,10 +17,12 @@ type weekCard struct {
 	days    []weekDay
 }
 
-// weekDay is one day as /me/days answers it: what it asks, why it may ask less -
-// a day away or a public holiday - and whether it counts towards the balance.
+// weekDay is one day as /me/days answers it: what was booked on it, what it
+// asks, why it may ask less - a day away or a public holiday - and whether it
+// counts towards the balance.
 type weekDay struct {
 	Date              string  `json:"date"`
+	Booked            float64 `json:"booked"`
 	Target            float64 `json:"target"`
 	Absence           string  `json:"absence"`
 	Holiday           string  `json:"holiday"`
@@ -65,16 +67,24 @@ func (s *session) readDays(ctx context.Context, from, to string) ([]entry, []wee
 		}
 	}
 
+	days, err := s.daysFrom(ctx, from, to)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return entries, days, nil
+}
+
+// daysFrom reads what /me/days says of each day from one day to another.
+func (s *session) daysFrom(ctx context.Context, from, to string) ([]weekDay, error) {
 	var answer struct {
 		Days []weekDay `json:"days"`
 	}
 
 	q := url.Values{"from": {from}, "to": {to}}
-	if err := s.api.call(ctx, http.MethodGet, "/me/days?"+q.Encode(), nil, &answer); err != nil {
-		return nil, nil, err
-	}
+	err := s.api.call(ctx, http.MethodGet, "/me/days?"+q.Encode(), nil, &answer)
 
-	return entries, answer.Days, nil
+	return answer.Days, err
 }
 
 // today is the owner's day by this machine's clock, in the zone they keep their
@@ -162,9 +172,10 @@ func (m screen) tookWeek(msg weekRead) screen {
 	return m
 }
 
-// moveKey answers the keys that move the week or the calendar on the tab on
-// screen: < back, > on, and t to the week or month today is in, once the tab
-// shows another. ok is false for any other key, and on any other tab.
+// moveKey answers the keys that move the week, the calendar or the year's tiles
+// on the tab on screen: < back, > on, and t to the week or month today is in,
+// once the tab shows another. ok is false for any other key, and on any other
+// tab.
 func (m screen) moveKey(key string) (tea.Model, tea.Cmd, bool) {
 	step, away := m.stepWeek, m.weekShown != ""
 
@@ -177,6 +188,13 @@ func (m screen) moveKey(key string) (tea.Model, tea.Cmd, bool) {
 		if m.sub == subLeave {
 			step, away = m.stepYear, false
 		}
+	case viewOvertime:
+		// Only the year's tiles move; the hours move by the period chosen.
+		if m.sub != subYear {
+			return m, nil, false
+		}
+
+		step, away = m.stepTiles, false
 	default:
 		return m, nil, false
 	}

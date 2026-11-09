@@ -40,12 +40,18 @@ func (m screen) choices() []choice {
 			changes = append(m.awayChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subWorkbook:
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subYear:
+			changes = []choice{{"esc", "back", l.text("track.menu.back", "Back")}}
+		case m.sub == subBalance:
+			changes = append(m.balanceChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
 		case m.currentTab().view == viewWeek:
 			changes = m.weekChoices()
 		case m.currentTab().view == viewCalendar:
 			changes = m.calendarChoices()
+		case m.currentTab().view == viewOvertime:
+			changes = m.overtimeChoices()
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -144,6 +150,17 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 	if sub, ok := strings.CutPrefix(doing, "menu:"); ok {
 		m.sub, m.cursor = sub, 0
 
+		// The year and the balance are read when their card opens, and with the
+		// day only while it is open: two years of days are the most any read on
+		// the screen asks for, and a balance is a calculation over every day of
+		// its period.
+		switch sub {
+		case subYear:
+			return m, m.readYearNow()
+		case subBalance:
+			return m, m.readBalanceNow()
+		}
+
 		return m, nil
 	}
 
@@ -190,6 +207,14 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		asked.file = m.workFileName()
 	case "leaveNew":
 		asked.leaveYear = strconv.Itoa(m.leaveYearShown())
+	case "statsPeriod":
+		asked.statsFrom, asked.statsTo = m.statsPeriod()
+	case "balancePeriod":
+		asked.balanceFrom, asked.balanceTo = m.balancePeriod()
+	case "statsPDF":
+		asked.file = m.statsFileName()
+	case "balancePDF":
+		asked.file = m.balanceFileName()
 	case "awayNew":
 		today := m.today().Format(time.DateOnly)
 		asked.awayFrom, asked.awayTo, asked.awayKind = today, today, absenceKinds[0]
@@ -238,6 +263,10 @@ func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.narrow(m.asked.filtered())
 		case "addRow":
 			return m.addRow(m.asked.row)
+		case "statsPeriod":
+			return m.choosePeriod(*m.asked)
+		case "balancePeriod":
+			return m.chooseBalancePeriod(*m.asked)
 		case "bookTemplate":
 			return m.openWith("book", m.fromTemplate(m.asked.template, m.asked.day))
 		}
@@ -325,6 +354,10 @@ func (m screen) help(look palette) string {
 
 			if m.cal.shown != "" {
 				keys = append(keys, [2]string{"t", l.text("cal.today", "Today")})
+			}
+		case viewOvertime:
+			if m.sub == subYear {
+				keys = append(keys, [2]string{"</>", l.text("track.key.years", "years")})
 			}
 		}
 

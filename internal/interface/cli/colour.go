@@ -2,6 +2,7 @@ package cli
 
 import (
 	"image/color"
+	"math"
 
 	"charm.land/lipgloss/v2"
 
@@ -11,9 +12,10 @@ import (
 // tones are the web interface's colours, light or dark, so that the terminal
 // and the browser look like one application: app.css holds the same ones. ask
 // is its teal, the charts' second hue there, which says what the screen wants
-// to know.
+// to know, and bg the page's background, which the year's tiles mix the accent
+// into.
 type tones struct {
-	accent, onAccent, muted, danger, green, line, ask color.Color
+	accent, onAccent, muted, danger, green, line, ask, bg color.Color
 }
 
 // tonesFor is the colours for a dark terminal or a light one.
@@ -28,14 +30,33 @@ func tonesFor(dark bool) tones {
 		green:    lipgloss.Color("#2e9e5b"),
 		line:     pick(lipgloss.Color("#dfe3e8"), lipgloss.Color("#2c333b")),
 		ask:      pick(lipgloss.Color("#12a19a"), lipgloss.Color("#3fc9c0")),
+		bg:       pick(lipgloss.Color("#f5f6f8"), lipgloss.Color("#14171a")),
 	}
 }
 
+// mixed is share of a and the rest of b, channel by channel, as app.css's
+// color-mix in srgb mixes them.
+func mixed(a, b color.Color, share float64) color.Color {
+	r1, g1, b1, _ := a.RGBA()
+	r2, g2, b2, _ := b.RGBA()
+
+	channel := func(x, y uint32) uint8 {
+		return uint8(math.Round((float64(x)*share + float64(y)*(1-share)) / 0x101))
+	}
+
+	return color.RGBA{R: channel(r1, r2), G: channel(g1, g2), B: channel(b1, b2), A: 0xff}
+}
+
 // palette is the styles the screen draws with. tab and tabOn are the page's
-// tabs, the one on screen filled with the accent as app.css fills it.
+// tabs, the one on screen filled with the accent as app.css fills it. credit
+// and debt are a balance's sign, as its .plus and .minus colour one. levels are
+// the year's tiles from a day with nothing booked to one with the most: the
+// quiet colour, then the accent mixed into the background in the shares app.css
+// mixes it.
 type palette struct {
 	title, strong, muted, ok, failed, key, ask lipgloss.Style
-	tab, tabOn                                 lipgloss.Style
+	tab, tabOn, credit, debt                   lipgloss.Style
+	levels                                     [6]lipgloss.Style
 
 	frame, idle, running color.Color
 }
@@ -44,7 +65,15 @@ type palette struct {
 func paletteFor(dark bool) palette {
 	c := tonesFor(dark)
 
+	levels := [6]lipgloss.Style{lipgloss.NewStyle().Foreground(c.muted)}
+	for i, share := range []float64{0.30, 0.48, 0.64, 0.82, 1} {
+		levels[i+1] = lipgloss.NewStyle().Foreground(mixed(c.accent, c.bg, share))
+	}
+
 	return palette{
+		levels:  levels,
+		credit:  lipgloss.NewStyle().Bold(true).Foreground(c.green),
+		debt:    lipgloss.NewStyle().Bold(true).Foreground(c.danger),
 		title:   lipgloss.NewStyle().Bold(true).Foreground(c.accent),
 		strong:  lipgloss.NewStyle().Bold(true),
 		muted:   lipgloss.NewStyle().Foreground(c.muted),

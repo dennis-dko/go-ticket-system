@@ -65,14 +65,14 @@ func listOf(most int, bookings ...booking) func(url.Values) string {
 
 // dayMark is what /me/days says about a day besides its date.
 type dayMark struct {
-	target           float64
+	target, booked   float64
 	holiday, absence string
 	counts           bool
 }
 
 // daysOf answers /me/days for the range its query asks: eight hours asked of a
 // day from Monday to Friday and none of a weekend, where marks says nothing else
-// about it, and no day counting towards the balance.
+// about it, nothing booked, and no day counting towards the balance.
 func daysOf(marks map[string]dayMark) func(url.Values) string {
 	return func(q url.Values) string {
 		from, _ := time.Parse(time.DateOnly, q.Get("from"))
@@ -89,7 +89,7 @@ func daysOf(marks map[string]dayMark) func(url.Values) string {
 			}
 
 			if mark, ok := marks[date]; ok {
-				day["target"], day["counts"] = mark.target, mark.counts
+				day["target"], day["counts"], day["booked"] = mark.target, mark.counts, mark.booked
 				day["holiday"], day["absence"] = mark.holiday, mark.absence
 			}
 

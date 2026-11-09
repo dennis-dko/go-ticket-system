@@ -201,23 +201,41 @@ func (m screen) narrow(filter entryFilter) (tea.Model, tea.Cmd) {
 	return m.ask(m.now)
 }
 
-// page moves the entries card a window's worth of entries down or up, no further
-// than its ends.
+// page moves the list on screen a window's worth down or up, no further than its
+// ends: the entries, the days of a period or of a balance, or the year's months.
 func (m screen) page(down bool) screen {
-	if m.currentTab().view != viewTimesheets {
-		return m
-	}
-
 	rows := m.listRoom()
-	last := max(len(m.card.items)-rows, 0)
 
-	if down {
-		m.top = min(m.top+rows, last)
-	} else {
-		m.top = max(min(m.top, last)-rows, 0)
+	switch {
+	case m.currentTab().view == viewOvertime && m.sub == subYear:
+		m.ot.yearTop = paged(m.ot.yearTop, rows, yearMonths, down)
+	case m.currentTab().view == viewOvertime && m.sub == subBalance:
+		m.ot.balanceTop = paged(m.ot.balanceTop, rows, len(m.ot.balance.Days), down)
+	case m.currentTab().view == viewOvertime:
+		m.ot.top = paged(m.ot.top, rows, len(m.ot.stats.Days), down)
+	case m.currentTab().view == viewTimesheets:
+		m.top = paged(m.top, rows, len(m.card.items), down)
 	}
 
 	return m
+}
+
+// paged is where a list of total rows starts once moved a window of rows down
+// or up from top, no further than its ends.
+func paged(top, rows, total int, down bool) int {
+	last := max(total-rows, 0)
+
+	if down {
+		return min(top+rows, last)
+	}
+
+	return max(min(top, last)-rows, 0)
+}
+
+// place says which rows of a list are on screen, and how to reach the rest.
+func (l language) place(top, rows, total int) string {
+	return l.text("track.list.rows", "{0}–{1} of {2} · pgup/pgdn", strconv.Itoa(top+1), strconv.Itoa(top+rows),
+		strconv.Itoa(total))
 }
 
 // subName is what the card whose menu is open is called.
@@ -235,6 +253,10 @@ func (m screen) subName() string {
 		return m.s.lang.text("track.leave.title", "Leave")
 	case subAway:
 		return m.s.lang.text("absence.title", "Days away")
+	case subYear:
+		return m.s.lang.text("field.year", "Year")
+	case subBalance:
+		return m.s.lang.text("ot.balance", "Balance")
 	}
 
 	return m.s.lang.text("ts.entries", "Entries")
@@ -342,8 +364,7 @@ func (m screen) entryCardView(look palette, width, rows int) string {
 	}
 
 	if rows < len(card.items) {
-		place = l.text("track.list.rows", "{0}–{1} of {2} · pgup/pgdn", strconv.Itoa(top+1), strconv.Itoa(top+rows),
-			strconv.Itoa(len(card.items)))
+		place = l.place(top, rows, len(card.items))
 	}
 
 	if tally != "" || place != "" {
