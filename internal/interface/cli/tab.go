@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"github.com/dennis-dko/go-time-recording/internal/domain/model"
@@ -19,6 +20,7 @@ type tab struct {
 // The views the screen has been taught, named as the page names them.
 const (
 	viewTimesheets = "timesheets"
+	viewWeek       = "week"
 	viewAccount    = "settings"
 )
 
@@ -29,6 +31,7 @@ const (
 // cannot do.
 var tabs = []tab{
 	{viewTimesheets, model.PermTimesheetReadOwn},
+	{viewWeek, model.PermTimesheetReadOwn},
 	{viewAccount, ""},
 }
 
@@ -86,12 +89,28 @@ func (m screen) moveTab(by int) screen {
 	return m
 }
 
+// toTab moves by steps through the tabs, and reads the week where it moves to
+// the week's: one read when the tab was last open may have been booked on since,
+// in the browser or under the time entries.
+func (m screen) toTab(by int) (tea.Model, tea.Cmd) {
+	m = m.moveTab(by)
+
+	if m.currentTab().view == viewWeek {
+		return m, m.readWeekNow()
+	}
+
+	return m, nil
+}
+
 // tabBody is what the tab on screen shows above its menu, with rows of the
 // entries. My account shows its settings in the menu itself, each with what it
 // is set to now.
 func (m screen) tabBody(look palette, width, rows int) []string {
-	if m.currentTab().view == viewTimesheets {
+	switch m.currentTab().view {
+	case viewTimesheets:
 		return m.timesheetBody(look, width, rows)
+	case viewWeek:
+		return m.weekBody(look, width)
 	}
 
 	return nil
@@ -112,7 +131,10 @@ func (m screen) menuPrompt() string {
 func (m screen) tabName(t tab) string {
 	l := m.s.lang
 
-	if t.view == viewAccount {
+	switch t.view {
+	case viewWeek:
+		return l.text("nav.week", "Week")
+	case viewAccount:
 		return l.text("nav.settings", "My account")
 	}
 

@@ -35,6 +35,8 @@ func (m screen) choices() []choice {
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
+		case m.currentTab().view == viewWeek:
+			// The week is moved with < and >, which the keys under the menu name.
 		default:
 			changes = m.timesheetChoices()
 		}
@@ -64,11 +66,17 @@ func (m screen) press(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	choices := m.choices()
 	at := min(m.cursor, len(choices)-1)
 
+	if m.currentTab().view == viewWeek {
+		if next, cmd, ok := m.weekKey(k.String()); ok {
+			return next, cmd
+		}
+	}
+
 	switch k.String() {
 	case "left", "shift+tab":
-		return m.moveTab(-1), nil
+		return m.toTab(-1)
 	case "right", "tab":
-		return m.moveTab(1), nil
+		return m.toTab(1)
 	case "pgup", "pgdown":
 		return m.page(k.String() == "pgdown"), nil
 	case "esc":
@@ -250,6 +258,14 @@ func (m screen) help(look palette) string {
 	default:
 		if len(m.openTabs()) > 1 {
 			keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})
+		}
+
+		if m.currentTab().view == viewWeek {
+			keys = append(keys, [2]string{"</>", l.text("track.key.weeks", "weeks")})
+
+			if m.weekShown != "" {
+				keys = append(keys, [2]string{"t", l.text("week.thisWeek", "This week")})
+			}
 		}
 
 		keys = append(keys,
