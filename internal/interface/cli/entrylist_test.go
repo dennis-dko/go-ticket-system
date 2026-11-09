@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -219,6 +221,25 @@ func TestMoreEntriesAreReadAPageAtATime(t *testing.T) {
 	}
 
 	w.close()
+}
+
+// The filter names the project it holds by the id as it is written, never one
+// cut short: an id larger than a platform's uint became another project's on a
+// 32-bit build and was named as that one.
+func TestTheFilterNamesTheProjectItHolds(t *testing.T) {
+	m := newScreen(context.Background(), &session{api: newClient("http://example.com", "gtr_x", language{}), out: io.Discard})
+	m.shown.projects = []project{{ID: 4, Name: "Consulting", Status: "active"}}
+
+	for _, tc := range []struct{ project, want string }{
+		{"4", "Consulting"},
+		{"4294967300", "project 4294967300"}, // 2³² + 4, which a 32-bit uint holds as 4
+	} {
+		m.card.filter.project = tc.project
+
+		if said := m.filterSummary(); said != tc.want {
+			t.Errorf("the filter on project %s is said as %q, want %q", tc.project, said, tc.want)
+		}
+	}
 }
 
 // A screen with more entries than its window has room for is drawn no taller

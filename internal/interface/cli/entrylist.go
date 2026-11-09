@@ -358,9 +358,15 @@ func (m screen) filterSummary() string {
 	case "none":
 		scope = l.text("report.noProject", "No project")
 	default:
-		id, _ := strconv.ParseUint(f.project, 10, 64)
-		picked := uint(id)
-		scope = l.nameOf(m.shown.projects, &picked)
+		// Found by the id as the filter writes it rather than turned back into a
+		// number, which on a 32-bit build cut a large id short into another's.
+		scope = l.text("track.projectNumber", "project {0}", f.project)
+
+		for _, p := range m.shown.projects {
+			if strconv.FormatUint(uint64(p.ID), 10) == f.project {
+				scope = p.Name
+			}
+		}
 	}
 
 	said := []string{scope}
