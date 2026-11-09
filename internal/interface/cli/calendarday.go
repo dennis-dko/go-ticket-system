@@ -42,8 +42,16 @@ func (m screen) calendarChoices() []choice {
 		choices = append(choices, choice{"s", "showDay", l.text("track.cal.show", "Show a day")})
 	}
 
-	return append(choices, choice{"z", "menu:" + subWork, l.text("work.title", "Working time") + " …"},
+	choices = append(choices, choice{"z", "menu:" + subWork, l.text("work.title", "Working time") + " …"},
 		choice{"u", "menu:" + subLeave, l.text("track.leave.title", "Leave") + " …"})
+
+	// The page's card for the days away is behind the right to book one's own
+	// time, not merely to read it.
+	if m.mayWrite() {
+		choices = append(choices, choice{"a", "menu:" + subAway, l.text("absence.title", "Days away") + " …"})
+	}
+
+	return choices
 }
 
 // bookedDays are the days of the month shown that something is booked on.

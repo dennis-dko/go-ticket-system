@@ -45,6 +45,9 @@ type answers struct {
 	// which year on.
 	leaveDays, leaveYear string
 
+	// awayFrom, awayTo and awayKind are the first and the last day away, and why.
+	awayFrom, awayTo, awayKind string
+
 	// cell is the week grid's cell the hours are entered into, and row the key of
 	// the row added to it.
 	cell cellPicked
@@ -118,6 +121,10 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = m.leaveSteps(a)
 	case "leaveDelete":
 		steps = []*huh.Group{m.leaveDeleteStep(a)}
+	case "awayNew":
+		steps = m.awaySteps(a)
+	case "awayDelete":
+		steps = []*huh.Group{m.awayDeleteStep(a)}
 	case "copyWeek":
 		steps = []*huh.Group{m.copyStep(a)}
 	case "stop":
@@ -267,6 +274,10 @@ func (m screen) request() tea.Cmd {
 		return m.saveLeave()
 	case "leaveDelete":
 		return m.deleteLeave()
+	case "awayNew":
+		return m.saveAway()
+	case "awayDelete":
+		return m.deleteAway()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown

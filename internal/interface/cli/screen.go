@@ -318,6 +318,8 @@ func (m screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.tookMonth(msg), nil
 	case leaveRead:
 		return m.tookLeave(msg), nil
+	case awayRead:
+		return m.tookAway(msg), nil
 	case history:
 		return m.showHistory(msg), nil
 	case checked:
@@ -637,7 +639,7 @@ func (m screen) calledFor(doing string) string {
 
 	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices(),
 		m.workbookChoices(), m.weekChoices(), m.calendarChoices(), m.workChoices(),
-		m.leaveChoices()} {
+		m.leaveChoices(), m.awayChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -701,6 +703,12 @@ func (m screen) stepName() string {
 		return l.text("vacation.days", "Days of leave a year")
 	case "leaveYear":
 		return l.text("vacation.fromYear", "From the year")
+	case "awayFrom":
+		return l.text("field.from", "From")
+	case "awayTo":
+		return l.text("field.to", "To")
+	case "awayKind":
+		return l.text("field.kind", "Reason")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

@@ -36,6 +36,8 @@ func (m screen) choices() []choice {
 			changes = append(m.workChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subLeave:
 			changes = append(m.leaveChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subAway:
+			changes = append(m.awayChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subWorkbook:
 			changes = append(m.workbookChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
@@ -188,6 +190,9 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		asked.file = m.workFileName()
 	case "leaveNew":
 		asked.leaveYear = strconv.Itoa(m.leaveYearShown())
+	case "awayNew":
+		today := m.today().Format(time.DateOnly)
+		asked.awayFrom, asked.awayTo, asked.awayKind = today, today, absenceKinds[0]
 	case "addRow":
 		if addable := m.addable(m.weekRows()); len(addable) > 0 {
 			asked.row = addable[0].key

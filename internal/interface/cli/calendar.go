@@ -32,6 +32,11 @@ type calendarState struct {
 	leave       leaveYear
 	leaveShown  int
 	chosenLeave entitlement
+
+	// away are the year's days away, and chosenAway the one picked to be taken
+	// back.
+	away       []absence
+	chosenAway absence
 }
 
 // calendarCard is the month as it was read: its first day, as it travels, every
@@ -148,6 +153,8 @@ func (m screen) calendarBody(look palette, width int) []string {
 		return []string{m.workCardView(look, width)}
 	case m.sub == subLeave:
 		return []string{m.leaveCardView(look, width)}
+	case m.sub == subAway:
+		return []string{m.awayCardView(look, width)}
 	case m.cal.day != "":
 		return []string{m.monthView(look, width), m.dayCardView(look, width)}
 	}

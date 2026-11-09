@@ -98,6 +98,7 @@ type tabRead struct {
 	week            weekCard
 	month           calendarCard
 	leave           leaveYear
+	away            []absence
 	weeked, monthed bool
 }
 
@@ -116,6 +117,10 @@ func (s *session) readTab(ctx context.Context, view, monday, first string, year 
 	case viewCalendar:
 		if read.month, err = s.readMonth(ctx, first); err == nil {
 			read.leave, err = s.readLeave(ctx, year)
+		}
+
+		if err == nil {
+			read.away, err = s.readAway(ctx)
 		}
 
 		read.monthed = err == nil
@@ -140,6 +145,10 @@ func (m screen) tookTab(read tabRead) screen {
 		m.cal.leave = read.leave
 	}
 
+	if read.monthed {
+		m.cal.away = read.away
+	}
+
 	return m
 }
 
@@ -153,7 +162,7 @@ func (m screen) toTab(by int) (tea.Model, tea.Cmd) {
 	case viewWeek:
 		return m, m.readWeekNow()
 	case viewCalendar:
-		return m, tea.Batch(m.readMonthNow(), m.readLeaveNow())
+		return m, tea.Batch(m.readMonthNow(), m.readLeaveNow(), m.readAwayNow())
 	}
 
 	return m, nil

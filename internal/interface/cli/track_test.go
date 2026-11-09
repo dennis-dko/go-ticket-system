@@ -173,6 +173,8 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		"GET /me/vacation": `{"year":` + r.URL.Query().Get("year") + `,"entitlement":30,"carriedOver":2,"taken":6.5,` +
 			`"planned":2,"remaining":23.5,"entitlements":[{"fromYear":2025,"days":30}]}`,
 		"GET /me/absences": `{"items":[],"totalCount":0}`,
+		"POST /me/absences": `{"items":[{"day":"2026-11-16","kind":"sick"},{"day":"2026-11-17","kind":"sick"},` +
+			`{"day":"2026-11-18","kind":"sick"}],"totalCount":3}`,
 		"GET /timesheets": `{"items":[{"projectId":4,"date":"2026-10-22","durationHours":2.5,"description":"review"},` +
 			`{"projectId":null,"date":"2026-10-22","durationHours":0.5}],"totalCount":2}`,
 	}[route]
