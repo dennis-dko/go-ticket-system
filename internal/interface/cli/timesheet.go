@@ -4,8 +4,12 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// subClock names the stopwatch card's menu, opened from the time entries' own.
-const subClock = "clock"
+// subClock and subTemplates name the stopwatch's and the templates' card menus,
+// opened from the time entries' own.
+const (
+	subClock     = "clock"
+	subTemplates = "templates"
+)
 
 // timesheetChoices are the time entries' menu: the changes the stopwatch can
 // take as it stands, and the menus of the stopwatch and the entries cards. A
@@ -18,27 +22,28 @@ func (m screen) timesheetChoices() []choice {
 	entries := choice{"e", "menu:" + subEntries, l.text("ts.entries", "Entries") + " …"}
 	book := choice{"b", "book", l.text("track.form.book", "Book time by hand")}
 	clock := choice{"u", "menu:" + subClock, l.text("timer.title", "Stopwatch") + " …"}
+	templates := choice{"v", "menu:" + subTemplates, l.text("tpl.title", "Templates") + " …"}
 
 	switch {
 	case !m.mayWrite():
 		return []choice{entries}
 	case m.forgotten():
 		// Stopping it means saying when the work ended; a switch is refused.
-		return []choice{{"x", "end", l.text("track.form.stop", "Stop the stopwatch")}, book, clock, entries}
+		return []choice{{"x", "end", l.text("track.form.stop", "Stop the stopwatch")}, book, clock, entries, templates}
 	case m.shown.clock.Running:
 		return []choice{
 			{"w", "switch", l.text("track.form.switch", "Switch to another project")},
 			{"x", "stop", l.text("track.form.stop", "Stop the stopwatch")},
-			book, clock, entries,
+			book, clock, entries, templates,
 		}
 	}
 
-	return []choice{{"s", "start", l.text("track.form.start", "Start the stopwatch")}, book, entries}
+	return []choice{{"s", "start", l.text("track.form.start", "Start the stopwatch")}, book, entries, templates}
 }
 
 // timesheetBody is what the time entries show above their menu: the stopwatch
 // where the account may use one, and once the day is read the entries card with
-// rows of its entries.
+// rows of its entries - or the templates card, while its menu is open.
 func (m screen) timesheetBody(look palette, width, rows int) []string {
 	var shown []string
 
@@ -46,7 +51,11 @@ func (m screen) timesheetBody(look palette, width, rows int) []string {
 		shown = append(shown, m.stopwatch(look, width))
 	}
 
-	if m.loaded {
+	switch {
+	case !m.loaded:
+	case m.sub == subTemplates:
+		shown = append(shown, m.templateCardView(look, width))
+	default:
 		shown = append(shown, m.entryCardView(look, width, rows))
 	}
 

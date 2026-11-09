@@ -61,6 +61,11 @@ type screen struct {
 	// ticked are the entries ticked for a change made to several, by id.
 	ticked []uint
 
+	// templates are the account's, read with the day, and chosen the one picked
+	// to be deleted.
+	templates []template
+	chosen    template
+
 	// past is an entry's history, shown until it is closed.
 	past *history
 
@@ -114,20 +119,22 @@ type screen struct {
 	asked *answers
 }
 
-// loaded is the day as the installation answered, the entries card, what it
-// calls itself and says, the notices, and the moment it was read. carded says
-// whether the account may read its entries, and branded, noticed and placed
-// whether the rest could be read at all.
+// loaded is the day as the installation answered, the entries card, the
+// templates, what it calls itself and says, the notices, and the moment it was
+// read. carded says whether the account may read its entries, templated whether
+// its templates were read, and branded, noticed and placed whether the rest
+// could be read at all.
 type loaded struct {
-	shown    snapshot
-	card     entryCard
-	branding branding
-	told     notices
-	places   holidayPlaces
-	at       time.Time
-	err      error
+	shown     snapshot
+	card      entryCard
+	templates []template
+	branding  branding
+	told      notices
+	places    holidayPlaces
+	at        time.Time
+	err       error
 
-	carded, branded, noticed, placed bool
+	carded, templated, branded, noticed, placed bool
 }
 
 // done is what became of a change, in the sentence its command would print.
@@ -218,12 +225,26 @@ func (m screen) load() tea.Cmd {
 			}
 		}
 
+		// The templates of an account that may book, as the page reads them; ones
+		// that could not be read leave those shown, like the name and the notices.
+		var (
+			kept      []template
+			templated bool
+		)
+
+		if slices.Contains(day.permissions, model.PermTimesheetWriteOwn) {
+			var keptErr error
+
+			kept, keptErr = s.templates(ctx)
+			templated = keptErr == nil
+		}
+
 		named, nameErr := s.branding(ctx)
 		told, toldErr := s.notices(ctx)
 		places, placesErr := s.holidayPlaces(ctx)
 
-		return loaded{shown: day, card: card, branding: named, told: told, places: places, at: time.Now(),
-			carded: carded, branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
+		return loaded{shown: day, card: card, templates: kept, branding: named, told: told, places: places, at: time.Now(),
+			carded: carded, templated: templated, branded: nameErr == nil, noticed: toldErr == nil, placed: placesErr == nil}
 	}
 }
 
@@ -327,6 +348,10 @@ func (m screen) take(msg loaded) screen {
 		m.card = entryCard{filter: m.card.filter}
 	case msg.card.filter == m.card.filter:
 		m.card = msg.card
+	}
+
+	if msg.templated {
+		m.templates = msg.templates
 	}
 
 	if msg.branded {
@@ -553,8 +578,11 @@ func (m screen) breadcrumb(look palette) string {
 // changeName is what the menu calls the change the open form asks about, and
 // for a setting what the setting is called.
 func (m screen) changeName() string {
-	if m.doing == "settings" {
+	switch m.doing {
+	case "settings":
 		return m.settingName(m.asked.setting)
+	case "bookTemplate":
+		return m.calledFor("book")
 	}
 
 	return m.calledFor(m.doing)
@@ -566,7 +594,7 @@ func (m screen) calledFor(doing string) string {
 	running := m
 	running.shown.clock.Running = true
 
-	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices()} {
+	for _, menu := range [][]choice{m.choicesFor(doing), running.clockChoices(), m.entryChoices(), m.templateChoices()} {
 		for _, c := range menu {
 			if c.doing == doing {
 				return c.called
@@ -612,6 +640,8 @@ func (m screen) stepName() string {
 		return l.text("field.date", "Date")
 	case "clockTime":
 		return l.text("timer.time", "Time")
+	case "template":
+		return l.text("tpl.one", "Template")
 	}
 
 	return m.settingStep(m.form.GetFocusedField().GetKey())

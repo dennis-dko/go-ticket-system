@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -28,6 +29,8 @@ func (m screen) choices() []choice {
 			changes = append(m.entryChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.sub == subClock:
 			changes = append(m.clockChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
+		case m.sub == subTemplates:
+			changes = append(m.templateChoices(), choice{"esc", "back", l.text("track.menu.back", "Back")})
 		case m.currentTab().view == viewAccount:
 			changes = m.settingChoices()
 		default:
@@ -126,25 +129,37 @@ func (m screen) choose(doing string) (tea.Model, tea.Cmd) {
 }
 
 // open puts up the form for a change, with what the last one said cleared away.
+// Booking by hand starts with the templates where there are any it can use, as
+// the page's booking form starts with its picker.
 func (m screen) open(doing string) (tea.Model, tea.Cmd) {
-	m.doing, m.news, m.failure = doing, "", ""
-	m.asked = &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
+	m.news, m.failure = "", ""
+	asked := &answers{day: m.readAt.In(m.shown.zone).Format(time.DateOnly), stop: true}
+
+	if doing == "book" && slices.ContainsFunc(m.templates, m.usable) {
+		doing = "bookTemplate"
+	}
 
 	switch doing {
 	case "filter":
-		m.asked = m.filterAnswers()
+		asked = m.filterAnswers()
 	case "edit":
-		m.asked = m.correctionAnswers()
+		asked = m.correctionAnswers()
 	case "adjust", "end", "discard":
-		m.asked = m.clockAnswers(doing)
+		asked = m.clockAnswers(doing)
 	case "assign":
 		// The first of the projects offered, rather than none, which is not one
 		// of them.
 		if active := m.activeProjects(); len(active) > 0 {
-			m.asked.project = active[0].ID
+			asked.project = active[0].ID
 		}
 	}
 
+	return m.openWith(doing, asked)
+}
+
+// openWith puts up the form for a change with the answers it starts from.
+func (m screen) openWith(doing string, asked *answers) (tea.Model, tea.Cmd) {
+	m.doing, m.asked = doing, asked
 	m.form = m.formFor(doing)
 
 	return m, m.form.Init()
@@ -164,9 +179,14 @@ func (m screen) fillIn(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case huh.StateCompleted:
 		m.form = nil
 
-		// A filter changes what the screen shows, not the installation.
-		if m.doing == "filter" {
+		// A filter changes what the screen shows, not the installation, and a
+		// template only fills the booking in: nothing is booked until its own
+		// form is answered.
+		switch m.doing {
+		case "filter":
 			return m.narrow(m.asked.filtered())
+		case "bookTemplate":
+			return m.openWith("book", m.fromTemplate(m.asked.template, m.asked.day))
 		}
 
 		change := m.request()

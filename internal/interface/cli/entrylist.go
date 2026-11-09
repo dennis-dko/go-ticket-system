@@ -177,7 +177,7 @@ func (m screen) chooseOnCard(doing string) (tea.Model, tea.Cmd, bool) {
 		m.busy = true
 
 		return m, m.more(), true
-	case "edit", "delete", "history", "assign", "deleteSome":
+	case "edit", "delete", "history", "assign", "deleteSome", "tplDelete":
 		return m.startPicking(doing), nil, true
 	}
 
@@ -213,8 +213,11 @@ func (m screen) page(down bool) screen {
 
 // subName is what the card whose menu is open is called.
 func (m screen) subName() string {
-	if m.sub == subClock {
+	switch m.sub {
+	case subClock:
 		return m.s.lang.text("timer.title", "Stopwatch")
+	case subTemplates:
+		return m.s.lang.text("tpl.title", "Templates")
 	}
 
 	return m.s.lang.text("ts.entries", "Entries")

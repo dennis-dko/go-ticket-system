@@ -133,6 +133,8 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 		"POST /me/timer/stop":   `{"projectId":4,"date":"2026-10-22","durationHours":1.5}`,
 		"POST /me/timer/switch": `{"booked":{"projectId":4,"date":"2026-10-22","durationHours":1.5}}`,
 		"POST /timesheets":      `{"projectId":4,"date":"2026-10-21","durationHours":1.5}`,
+		"GET /me/templates":     `{"items":[],"totalCount":0}`,
+		"POST /me/templates":    `{"id":9}`,
 		"GET /timesheets": `{"items":[{"projectId":4,"date":"2026-10-22","durationHours":2.5,"description":"review"},` +
 			`{"projectId":null,"date":"2026-10-22","durationHours":0.5}],"totalCount":2}`,
 	}[route]
@@ -147,7 +149,7 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 
 	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" ||
 		strings.HasPrefix(route, "PUT /timesheets/") || strings.HasPrefix(route, "DELETE /timesheets/") ||
-		route == "DELETE /me/timer" ||
+		route == "DELETE /me/timer" || strings.HasPrefix(route, "DELETE /me/templates/") ||
 		(strings.HasPrefix(route, "POST /timesheets/") && strings.HasSuffix(route, "/transfer")) {
 		data = `{}`
 	}

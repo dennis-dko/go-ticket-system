@@ -89,6 +89,8 @@ func (m screen) pickPrompt() string {
 	case "deleteSome":
 		return l.text("track.pick.deleteSome", "Tick the entries to delete with space, then press enter.") +
 			"  " + m.tickedCount()
+	case "tplDelete":
+		return l.text("track.pick.template", "Choose the template to delete.")
 	}
 
 	return l.text("track.pick.edit", "Choose the entry to correct.")
@@ -105,8 +107,15 @@ func (m screen) pickable(e entry) bool {
 func (m screen) startPicking(doing string) screen {
 	m.picking, m.news, m.failure, m.ticked = doing, "", "", nil
 
-	m.row = m.stepPick(m.top-1, 1)
-	if m.row == m.top-1 {
+	// The templates card shows every template, so its picking starts at the
+	// first; the entries card starts at the first entry on screen.
+	first := 0
+	if !m.pickingTemplate() {
+		first = m.top
+	}
+
+	m.row = m.stepPick(first-1, 1)
+	if m.row == first-1 {
 		m.row = m.stepPick(-1, 1)
 	}
 
@@ -116,16 +125,39 @@ func (m screen) startPicking(doing string) screen {
 		return m
 	}
 
-	m.top = m.inView(m.row)
+	if !m.pickingTemplate() {
+		m.top = m.inView(m.row)
+	}
 
 	return m
 }
 
-// stepPick is the next entry that can be picked from the one at from, in the
+// pickingTemplate reports whether what is being picked is a template rather
+// than an entry.
+func (m screen) pickingTemplate() bool {
+	return m.picking == "tplDelete"
+}
+
+// pickCount is how many rows there are to pick from: the templates or the
+// entries read.
+func (m screen) pickCount() int {
+	if m.pickingTemplate() {
+		return len(m.templates)
+	}
+
+	return len(m.card.items)
+}
+
+// pickableAt reports whether the row at can be picked; every template can.
+func (m screen) pickableAt(at int) bool {
+	return m.pickingTemplate() || m.pickable(m.card.items[at])
+}
+
+// stepPick is the next row that can be picked from the one at from, in the
 // direction by, or from itself where there is none.
 func (m screen) stepPick(from, by int) int {
-	for at := from + by; at >= 0 && at < len(m.card.items); at += by {
-		if m.pickable(m.card.items[at]) {
+	for at := from + by; at >= 0 && at < m.pickCount(); at += by {
+		if m.pickableAt(at) {
 			return at
 		}
 	}
@@ -167,8 +199,8 @@ func (m screen) pickKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			by = -1
 		}
 
-		target := min(max(m.row+by*m.listRoom(), 0), len(m.card.items)-1)
-		if next := m.stepPick(target-by, by); m.pickable(m.card.items[next]) {
+		target := min(max(m.row+by*m.listRoom(), 0), m.pickCount()-1)
+		if next := m.stepPick(target-by, by); m.pickableAt(next) {
 			m.row = next
 		}
 	case "esc":
@@ -179,7 +211,9 @@ func (m screen) pickKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.picked()
 	}
 
-	m.top = m.inView(m.row)
+	if !m.pickingTemplate() {
+		m.top = m.inView(m.row)
+	}
 
 	return m, nil
 }
@@ -188,6 +222,12 @@ func (m screen) pickKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 // history is read, and a correction or a deletion asks first. Where several are
 // picked and none is ticked, the one the cursor is on is the one meant.
 func (m screen) picked() (tea.Model, tea.Cmd) {
+	if m.pickingTemplate() {
+		m.picking, m.chosen = "", m.templates[m.row]
+
+		return m.open("tplDelete")
+	}
+
 	doing, e := m.picking, m.card.items[m.row]
 
 	if m.several() && len(m.ticked) == 0 {

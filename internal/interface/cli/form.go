@@ -31,6 +31,9 @@ type answers struct {
 	// stopwatch's work started or ended.
 	clockDay, clockTime string
 
+	// template is the one chosen to fill a booking in, zero for none.
+	template uint
+
 	// from, to, search and scope are what the entries are narrowed to; see
 	// entryFilter.
 	from, to, search, scope string
@@ -77,6 +80,12 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = m.clockSteps(doing, a)
 	case "discard":
 		steps = []*huh.Group{m.discardStep(a)}
+	case "bookTemplate":
+		steps = []*huh.Group{m.templateStep(a)}
+	case "tplNew":
+		steps = m.newTemplateSteps(a)
+	case "tplDelete":
+		steps = []*huh.Group{m.templateDeleteStep(a)}
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -202,6 +211,10 @@ func (m screen) request() tea.Cmd {
 		return m.deleteSome()
 	case "adjust", "end", "discard":
 		return m.clockChange()
+	case "tplNew":
+		return m.saveTemplate()
+	case "tplDelete":
+		return m.deleteTemplate()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown
