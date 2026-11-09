@@ -65,7 +65,13 @@ func (m screen) rowChoices() []choice {
 		choices = append(choices, choice{"h", "history", l.text("track.list.history", "Earlier versions of an entry")})
 	}
 
-	return choices
+	return append(choices, m.severalChoices()...)
+}
+
+// entryLabel names an entry by its day and hours, as the page names a row it
+// asks about.
+func (l language) entryLabel(e entry) string {
+	return l.date(e.Date) + ", " + l.hours(e.DurationHours)
 }
 
 // pickPrompt asks which entry the change being made is for.
@@ -77,6 +83,12 @@ func (m screen) pickPrompt() string {
 		return l.text("track.pick.delete", "Choose the entry to delete.")
 	case "history":
 		return l.text("track.pick.history", "Choose the entry whose earlier versions to show.")
+	case "assign":
+		return l.text("track.pick.assign", "Tick the entries to give a project with space, then press enter.") +
+			"  " + m.tickedCount()
+	case "deleteSome":
+		return l.text("track.pick.deleteSome", "Tick the entries to delete with space, then press enter.") +
+			"  " + m.tickedCount()
 	}
 
 	return l.text("track.pick.edit", "Choose the entry to correct.")
@@ -91,7 +103,7 @@ func (m screen) pickable(e entry) bool {
 // startPicking puts the cursor on the first entry on screen that can be picked
 // for doing, or the first in the card where none on screen can.
 func (m screen) startPicking(doing string) screen {
-	m.picking, m.news, m.failure = doing, "", ""
+	m.picking, m.news, m.failure, m.ticked = doing, "", "", nil
 
 	m.row = m.stepPick(m.top-1, 1)
 	if m.row == m.top-1 {
@@ -136,10 +148,15 @@ func (m screen) inView(row int) int {
 }
 
 // pickKey answers a key while an entry is being picked: a move to the next or the
-// previous entry that can be picked, or a window's worth of them, enter on the
-// one the cursor is on, and escape to put the picking away.
+// previous entry that can be picked, or a window's worth of them, space to tick
+// one where several are picked, enter on the one the cursor is on, and escape to
+// put the picking away.
 func (m screen) pickKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch k.String() {
+	case "space":
+		if m.several() {
+			m = m.tick()
+		}
 	case "up", "k":
 		m.row = m.stepPick(m.row, -1)
 	case "down", "j":
@@ -168,9 +185,15 @@ func (m screen) pickKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 }
 
 // picked makes the change the entry the cursor is on was picked for: its
-// history is read, and a correction or a deletion asks first.
+// history is read, and a correction or a deletion asks first. Where several are
+// picked and none is ticked, the one the cursor is on is the one meant.
 func (m screen) picked() (tea.Model, tea.Cmd) {
 	doing, e := m.picking, m.card.items[m.row]
+
+	if m.several() && len(m.ticked) == 0 {
+		m.ticked = []uint{e.ID}
+	}
+
 	m.picking, m.editing = "", e
 
 	if doing == "history" {
@@ -205,8 +228,7 @@ func (m screen) deleteStep(a *answers) *huh.Group {
 
 	return huh.NewGroup(huh.NewConfirm().Key("confirm").
 		Title(l.text("confirm.deleteTitle", "Delete for good?")).
-		Description(l.date(e.Date) + ", " + l.hours(e.DurationHours) + " " +
-			l.text("confirm.deleteText", "will be deleted. This cannot be undone.")).
+		Description(l.entryLabel(e) + " " + l.text("confirm.deleteText", "will be deleted. This cannot be undone.")).
 		Affirmative(l.text("track.form.deleteYes", "Delete")).Negative(l.text("action.cancel", "Cancel")).
 		Value(&a.confirmed))
 }

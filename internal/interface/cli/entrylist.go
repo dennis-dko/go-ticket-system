@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -176,7 +177,7 @@ func (m screen) chooseOnCard(doing string) (tea.Model, tea.Cmd, bool) {
 		m.busy = true
 
 		return m, m.more(), true
-	case "edit", "delete", "history":
+	case "edit", "delete", "history", "assign", "deleteSome":
 		return m.startPicking(doing), nil, true
 	}
 
@@ -292,18 +293,22 @@ func (m screen) entryCardView(look palette, width, rows int) string {
 	for i, line := range table.lines(inner)[top : top+rows] {
 		at := top + i
 
-		switch {
-		case m.picking == "":
-			line = "  " + line
-		case at == m.row:
-			line = look.title.Render("> ") + line
-		case !m.pickable(card.items[at]):
-			line = "  " + look.muted.Render(ansi.Strip(line))
-		default:
-			line = "  " + line
+		// The cursor's column, then a tick where several are being picked.
+		cursor, tick := " ", " "
+
+		if m.picking != "" && at == m.row {
+			cursor = look.title.Render(">")
 		}
 
-		lines = append(lines, line)
+		if m.several() && slices.Contains(m.ticked, card.items[at].ID) {
+			tick = look.ok.Render("✓")
+		}
+
+		if m.picking != "" && !m.pickable(card.items[at]) {
+			line = look.muted.Render(ansi.Strip(line))
+		}
+
+		lines = append(lines, cursor+tick+line)
 	}
 
 	var tally, place string

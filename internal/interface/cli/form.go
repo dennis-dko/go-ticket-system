@@ -65,6 +65,10 @@ func (m screen) formFor(doing string) *huh.Form {
 		steps = m.filterSteps(a)
 	case "delete":
 		steps = []*huh.Group{m.deleteStep(a)}
+	case "assign":
+		steps = []*huh.Group{m.assignStep(a)}
+	case "deleteSome":
+		steps = []*huh.Group{m.deleteSomeStep(a)}
 	case "stop":
 		steps = []*huh.Group{huh.NewGroup(huh.NewConfirm().Key("stop").
 			Title(l.text("track.form.stopQuestion", "Book {0} on {1}?", hoursAndMinutes(m.elapsed().Hours()), running)).
@@ -184,6 +188,10 @@ func (m screen) request() tea.Cmd {
 		return m.saveCorrection()
 	case "delete":
 		return m.deleteEntry()
+	case "assign":
+		return m.transferSome()
+	case "deleteSome":
+		return m.deleteSome()
 	}
 
 	ctx, s, a, shown := m.ctx, m.s, *m.asked, m.shown

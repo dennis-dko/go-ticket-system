@@ -23,7 +23,10 @@ by hand. `e` opens the entries' own menu. It corrects an entry in the booking
 form filled with it (`PUT /timesheets/{id}`), deletes one after asking
 (`DELETE /timesheets/{id}`) and shows what one said before it was corrected
 (`GET /timesheets/{id}/revisions`) - the change first, then the entry, picked
-in the list with the arrows and `enter`. It also narrows the entries by days,
+in the list with the arrows and `enter`. Several entries, ticked with the space
+bar, are given a project one after another (`POST /timesheets/{id}/transfer`,
+with the right to) or deleted after asking, as the page's bar does it. It also
+narrows the entries by days,
 words and project as the page's filters do (`GET /timesheets` with `from`,
 `to`, `q` and `projectId`), goes to the entries still waiting for a project, and
 reads the next 25; `PgUp` and `PgDn` page through what the window has no room

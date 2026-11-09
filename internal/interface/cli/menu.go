@@ -133,6 +133,12 @@ func (m screen) open(doing string) (tea.Model, tea.Cmd) {
 		m.asked = m.filterAnswers()
 	case "edit":
 		m.asked = m.correctionAnswers()
+	case "assign":
+		// The first of the projects offered, rather than none, which is not one
+		// of them.
+		if active := m.activeProjects(); len(active) > 0 {
+			m.asked.project = active[0].ID
+		}
 	}
 
 	m.form = m.formFor(doing)
@@ -205,10 +211,14 @@ func (m screen) help(look palette) string {
 	case m.past != nil:
 		keys = [][2]string{{"esc", l.text("history.close", "Close")}}
 	case m.picking != "":
-		keys = [][2]string{
-			{"↑", l.text("track.huh.up", "up")}, {"↓", l.text("track.huh.down", "down")},
-			{"enter", l.text("track.huh.confirm", "confirm")}, {"esc", l.text("track.key.cancel", "cancel")},
+		keys = [][2]string{{"↑", l.text("track.huh.up", "up")}, {"↓", l.text("track.huh.down", "down")}}
+
+		if m.several() {
+			keys = append(keys, [2]string{"space", l.text("track.key.tick", "tick")})
 		}
+
+		keys = append(keys, [2]string{"enter", l.text("track.huh.confirm", "confirm")},
+			[2]string{"esc", l.text("track.key.cancel", "cancel")})
 	default:
 		if len(m.openTabs()) > 1 {
 			keys = append(keys, [2]string{"←/→", l.text("track.key.tabs", "tabs")})

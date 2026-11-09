@@ -146,7 +146,8 @@ func (f *fakeInstallation) answer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(route, "PUT /me/") || route == "PUT /users/7/working-times" ||
-		strings.HasPrefix(route, "PUT /timesheets/") || strings.HasPrefix(route, "DELETE /timesheets/") {
+		strings.HasPrefix(route, "PUT /timesheets/") || strings.HasPrefix(route, "DELETE /timesheets/") ||
+		(strings.HasPrefix(route, "POST /timesheets/") && strings.HasSuffix(route, "/transfer")) {
 		data = `{}`
 	}
 

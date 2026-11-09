@@ -110,7 +110,7 @@ func (w *watched) press(keys ...string) {
 	named := map[string]rune{
 		"enter": tea.KeyEnter, "down": tea.KeyDown, "up": tea.KeyUp, "left": tea.KeyLeft, "right": tea.KeyRight,
 		"backspace": tea.KeyBackspace, "esc": tea.KeyEscape, "tab": tea.KeyTab,
-		"pgup": tea.KeyPgUp, "pgdown": tea.KeyPgDown,
+		"pgup": tea.KeyPgUp, "pgdown": tea.KeyPgDown, "space": tea.KeySpace,
 	}
 
 	for _, k := range keys {

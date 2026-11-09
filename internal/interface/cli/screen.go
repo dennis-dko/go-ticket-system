@@ -58,6 +58,9 @@ type screen struct {
 	row     int
 	editing entry
 
+	// ticked are the entries ticked for a change made to several, by id.
+	ticked []uint
+
 	// past is an entry's history, shown until it is closed.
 	past *history
 
