@@ -392,6 +392,32 @@ func TestEveryKeyTrackLooksUpIsInEveryDictionary(t *testing.T) {
 	}
 }
 
+// Where the client says what the page says, under the page's own key, it says
+// it in the page's English as well. The English beside each lookup is a copy of
+// what the page hands t(), and a copy nothing compares with the page is how the
+// terminal and the browser come to call one thing two things. A key the page
+// names only in its markup is not compared, because its script never says it.
+func TestTheClientSaysWhatThePageSaysInItsEnglish(t *testing.T) {
+	used, compared := lookups(t), 0
+
+	for _, key := range sortedKeys(used) {
+		page, ok := web.English(key)
+		if !ok || used[key].english == "" {
+			continue
+		}
+
+		compared++
+
+		if used[key].english != page {
+			t.Errorf("%s says %s as %q, where the page says %q", used[key].at, key, used[key].english, page)
+		}
+	}
+
+	if compared == 0 {
+		t.Fatal("no key the client shares with the page was compared, so the page's English was not read")
+	}
+}
+
 // place is one of {0}, {1} ... in a sentence.
 var place = regexp.MustCompile(`\{\d+\}`)
 
