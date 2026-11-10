@@ -33,6 +33,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -213,4 +215,35 @@ fun Warning(text: String) {
             .border(1.dp, mixed(tones.danger, tones.border, 0.4f), corners)
             .padding(horizontal = 14.dp, vertical = 10.dp),
     )
+}
+
+/** Divided is a quiet line across the card with [words] in its middle, between two ways of doing one thing. */
+@Composable
+fun Divided(words: String) {
+    val tones = LocalTones.current
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.weight(1f).height(1.dp).background(tones.border))
+        Text(words, color = tones.muted, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp))
+        Spacer(Modifier.weight(1f).height(1.dp).background(tones.border))
+    }
+}
+
+/** ScanIcon is a code in a viewfinder's four corners, in the colour of the words beside it. */
+@Composable
+fun ScanIcon(color: Color) {
+    Canvas(Modifier.size(20.dp)) {
+        val stroke = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+        val w = size.width
+        val arm = w * 0.3f
+
+        for ((x, y) in listOf(0f to 0f, w to 0f, 0f to w, w to w)) {
+            val dx = if (x == 0f) arm else -arm
+            val dy = if (y == 0f) arm else -arm
+            drawPath(Path().apply { moveTo(x + dx, y); lineTo(x, y); lineTo(x, y + dy) }, color, style = stroke)
+        }
+
+        val inner = w * 0.32f
+        drawRect(color, topLeft = Offset(inner, inner), size = Size(w - 2 * inner, w - 2 * inner))
+    }
 }

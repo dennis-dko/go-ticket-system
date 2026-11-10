@@ -1,5 +1,9 @@
 package io.github.dennisdko.gotimerecording
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,14 +31,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 
 /**
  * App is the whole of what the app shows: the connect form until it is
- * connected, the installation's web interface once it has a session for it, and
- * in between what it is waiting for or why it could not.
+ * connected, the camera while a token's code is being scanned, the
+ * installation's web interface once it has a session for it, and in between what
+ * it is waiting for or why it could not.
  */
 @Composable
 fun App(model: AppModel) {
@@ -63,6 +70,8 @@ fun App(model: AppModel) {
         )
     }
 
+    var scanning by rememberSaveable { mutableStateOf(false) }
+
     CompositionLocalProvider(LocalTones provides tones) {
         MaterialTheme(colorScheme = colors, typography = type) {
             Surface(Modifier.fillMaxSize(), color = tones.bg) {
@@ -70,8 +79,12 @@ fun App(model: AppModel) {
                 val connection = state.connection
 
                 when {
+                    // What a code holds is offered like a code opened from outside
+                    // the app: shown in the form, and connected to only once
+                    // whoever holds the phone says so.
+                    scanning -> ScanScreen(state.words, onFound = { model.offer(it); scanning = false }, onCancel = { scanning = false })
                     connection == null || state.offered != null ->
-                        ConnectScreen(state, model::connect, if (connection != null) model::decline else null)
+                        ConnectScreen(state, model::connect, if (connection != null) model::decline else null) { scanning = true }
                     state.ready -> WebScreen(connection.address, state.words, state.shown, model::disconnect)
                     else -> WaitScreen(state, model::retry, model::disconnect)
                 }
@@ -81,12 +94,29 @@ fun App(model: AppModel) {
 }
 
 @Composable
-private fun ConnectScreen(state: State, onConnect: (String, String) -> Unit, onCancel: (() -> Unit)?) {
+private fun ConnectScreen(state: State, onConnect: (String, String) -> Unit, onCancel: (() -> Unit)?, onScan: () -> Unit) {
     val words = state.words
     val tones = LocalTones.current
+    val context = LocalContext.current
 
     var address by rememberSaveable(state.offered) { mutableStateOf(state.offered?.address ?: state.connection?.address.orEmpty()) }
     var token by rememberSaveable(state.offered) { mutableStateOf(state.offered?.token.orEmpty()) }
+    var denied by rememberSaveable { mutableStateOf(false) }
+
+    // The camera is asked for when it is first needed, which is the moment
+    // somebody presses to scan - not when the app opens.
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        denied = !granted
+        if (granted) onScan()
+    }
+
+    val scan = {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            onScan()
+        } else {
+            ask.launch(Manifest.permission.CAMERA)
+        }
+    }
 
     val filled = address.isNotBlank() && token.isNotBlank()
 
@@ -95,7 +125,7 @@ private fun ConnectScreen(state: State, onConnect: (String, String) -> Unit, onC
             Text(
                 words.text(
                     "mobile.connect.text",
-                    "Make a token under My account, API tokens, then scan its code with the phone's camera - or enter the address and the token here.",
+                    "Make a token under My account, API tokens, and scan its code - or enter the address and the token yourself.",
                 ),
                 color = tones.muted,
                 fontSize = 15.sp,
@@ -113,6 +143,28 @@ private fun ConnectScreen(state: State, onConnect: (String, String) -> Unit, onC
                 )
             }
 
+            // The step that comes next is the one in the accent: scanning, until
+            // there is an address and a token to connect with.
+            Action(
+                words.text("mobile.scan.button", "Scan the code"),
+                primary = !filled,
+                onClick = scan,
+                icon = { ScanIcon(if (filled) tones.text else tones.accentText) },
+            )
+
+            if (denied) {
+                Text(
+                    words.text(
+                        "mobile.scan.denied",
+                        "The app may not use the camera. Allow it in the phone's settings - or enter the address and the token yourself.",
+                    ),
+                    color = tones.danger,
+                    fontSize = 13.sp,
+                )
+            }
+
+            Divided(words.text("mobile.connect.or", "or enter them yourself"))
+
             Field(words.text("mobile.connect.address", "Address"), address, { address = it }, KeyboardType.Uri)
             Field(words.text("mobile.connect.token", "Token"), token, { token = it }, KeyboardType.Password, secret = true)
 
@@ -120,7 +172,7 @@ private fun ConnectScreen(state: State, onConnect: (String, String) -> Unit, onC
 
             Action(
                 words.text("mobile.connect.submit", "Connect"),
-                primary = true,
+                primary = filled,
                 enabled = state.busy == null && filled,
                 onClick = { onConnect(address, token) },
             )
