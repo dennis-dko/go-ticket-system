@@ -8,15 +8,20 @@ import java.time.ZoneId
 /**
  * Reminders is what the installation says its owner chose to be reminded of, as
  * the app asks it with its token: after how many hours a running stopwatch is
- * mentioned - zero for never - when the one running started, and the last
- * working day with nothing booked on it, which the installation leaves out when
- * its owner asked not to be told.
+ * mentioned - zero for never - when the one running started, the last working
+ * day with nothing booked on it, which the installation leaves out when its
+ * owner asked not to be told, and whether they asked to be told of one at all.
  *
  * The rules are the installation's, and the app keeps no copy of them: it shows
  * what the installation answered a moment before, and nothing it has not just
  * been told.
  */
-data class Reminders(val alertHours: Int, val startedAt: Instant?, val unbookedDay: LocalDate?)
+data class Reminders(
+    val alertHours: Int,
+    val startedAt: Instant?,
+    val unbookedDay: LocalDate?,
+    val unbookedReminder: Boolean = false,
+)
 
 /** Notice is one notification the app shows: what it is about, so it is shown once, and its words. */
 data class Notice(val key: String, val title: String, val body: String)
@@ -86,6 +91,27 @@ fun stopwatchDue(reminders: Reminders): Instant? {
     if (reminders.alertHours <= 0) return null
 
     return started.plus(Duration.ofHours(reminders.alertHours.toLong()))
+}
+
+/**
+ * nextCheck is when the installation is to be asked again rather than at the
+ * next quarter-hourly check, which a dozing phone holds back until it wakes: the
+ * moment the running stopwatch passes the hours chosen, or the next [morning]
+ * on the phone's clock for somebody reminded of an unbooked day - whichever
+ * comes first, and null where neither lies ahead.
+ */
+fun nextCheck(reminders: Reminders, now: Instant, zone: ZoneId): Instant? {
+    val stopwatch = stopwatchDue(reminders)?.takeIf { it.isAfter(now) }
+    val unbooked = if (reminders.unbookedReminder) nextMorning(now, zone) else null
+
+    return listOfNotNull(stopwatch, unbooked).minOrNull()
+}
+
+private fun nextMorning(now: Instant, zone: ZoneId): Instant {
+    val today = now.atZone(zone).toLocalDate()
+    val atMorning = today.atTime(morning, 0).atZone(zone).toInstant()
+
+    return if (atMorning.isAfter(now)) atMorning else today.plusDays(1).atTime(morning, 0).atZone(zone).toInstant()
 }
 
 /** morning is the hour on the phone's clock before which an unbooked day is not mentioned. */
