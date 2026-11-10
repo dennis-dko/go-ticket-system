@@ -13,7 +13,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** Connection is an installation and the token the app asks it with: what the terminal client is given as GTR_URL and GTR_TOKEN. */
+/** Connection is an installation and the token the app asks it with. */
 data class Connection(val address: String, val token: String)
 
 /** connectScheme is the scheme of the address a token's code holds, which the app is registered for. */

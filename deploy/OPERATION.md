@@ -1291,24 +1291,6 @@ It moves two files: the version that would not serve becomes
 name back. No database, no configuration, nothing else touched. Start it as you
 normally would.
 
-### The terminal client
-
-`go-time-recording-client` is a binary of its own, released beside this one, and
-it does not serve anything: it books against an installation, through its API,
-as the owner of a personal token - see
-[doc/api.md](../doc/api.md#from-a-terminal). It reads `GTR_URL` and `GTR_TOKEN`
-from the environment, opens no port and touches no database, so it is the file
-to hand out to people who book from a terminal, with no server on their
-machine. It draws its screen only when its output is a terminal - over SSH as
-well, with nothing installed beside it - and prints lines otherwise.
-
-It belongs to the release it came with: what it asks the API for and how it
-reads the answers are that version's. Hand out the client of the version the
-installation runs, and the new one with every update; `--version` on either
-binary says which it is. The installation's binary was the client as well, as
-`track`, until the two were separated - asked for `track` now, it says where the
-client went and exits with 2 instead of starting.
-
 Under systemd, `systemctl stop`, roll back, `systemctl start` - the unit file
 still points at the same path.
 
@@ -1406,6 +1388,13 @@ systemctl stop gtr && cp go-time-recording-web_v1.3.0_linux_amd64 /opt/gtr/go-ti
 
 The schema migrates itself on the way up. There is no separate command, and
 nothing to run afterwards.
+
+Releases up to v0.4.2 carried a terminal client, `go-time-recording-client`,
+beside this binary. None does since: booking is the web interface's and the
+Android app's. An update neither replaces nor removes a client already handed
+out, and it knows only its own release's API, so take it out of use once the
+installation runs a later version. Asked for its old `track` command, this
+binary says where to book instead and exits with 2 rather than starting.
 
 ## Directory (LDAP) synchronisation
 

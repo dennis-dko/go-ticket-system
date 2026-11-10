@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Project time tracking in a single self-contained binary.</b><br>
-  A web interface, a REST API and a terminal client for recording where working
+  A web interface, a REST API and an Android app for recording where working
   hours go — self-hosted, on SQLite, PostgreSQL or MySQL.
 </p>
 
@@ -16,7 +16,7 @@
 <p align="center">
   <a href="#get-started">Get started</a> ·
   <a href="#a-tour">A tour</a> ·
-  <a href="#from-a-terminal">From a terminal</a> ·
+  <a href="#on-a-phone">On a phone</a> ·
   <a href="#how-it-fits-together">How it fits together</a> ·
   <a href="#what-it-does">What it does</a> ·
   <a href="#documentation">Documentation</a>
@@ -29,10 +29,9 @@
 
 ## Why Go-Time-Recording
 
-- 📦 **One file to run.** The interface, the API, the terminal client, the schema
-  migrations and the timezone database are compiled into one binary — for Linux,
-  Windows and macOS, and as an image for amd64 and arm64. Nothing to unpack beside
-  it.
+- 📦 **One file to run.** The interface, the API, the schema migrations and the
+  timezone database are compiled into one binary — for Linux, Windows and macOS,
+  and as an image for amd64 and arm64. Nothing to unpack beside it.
 - 🔒 **Your hours stay yours.** Every project belongs to one person, and nobody
   else — the administrator included — can read, total or correct anybody's time.
   An installation may switch on managers for the people an administrator assigns
@@ -138,13 +137,12 @@ working time first — `task readme:pictures` takes them again.
 
 ## How it fits together
 
-One process answers everybody: the browser, the terminal, the scripts, the
+One process answers everybody: the browser, the phone, the scripts, the
 calendar apps.
 
 ```mermaid
 flowchart TB
     people(["People<br/>browser · telephone"])
-    terminal(["A terminal<br/>go-time-recording-client"])
     scripts(["Scripts and tools<br/>personal API token"])
     calendars(["Calendar apps<br/>iCalendar subscription"])
 
@@ -160,7 +158,6 @@ flowchart TB
     telemetry["Prometheus · OpenTelemetry"]
 
     people --> ui --> api
-    terminal --> api
     scripts --> api
     calendars --> api
     installer -. chooses .-> db
@@ -178,7 +175,6 @@ flowchart LR
     stopwatch["Stopwatch"] --> entry
     form["Entry form"] --> entry
     grid["Week grid"] --> entry
-    terminal["Terminal"] --> entry
     workbook["Spreadsheet import"] --> entry
     entry[("Time entry<br/>day · hours · project · activity")]
     entry --> calendar["Calendar and year"]
@@ -214,8 +210,7 @@ docker compose up -d
 
 **As a single binary** — download `go-time-recording-web` for your platform
 from the [latest release](https://github.com/dennis-dko/go-time-recording/releases/latest)
-and start it. It is the whole installation; `go-time-recording-client` beside it
-is the [terminal client](#from-a-terminal), which only books against one.
+and start it. It is the whole installation.
 
 ```bash
 chmod +x go-time-recording-web_*_linux_amd64
@@ -237,126 +232,16 @@ task dev DB=sqlite      # or: go run ./cmd
 Running it for real — behind a proxy, with HTTPS, as a service — is
 [`deploy/OPERATION.md`](deploy/OPERATION.md).
 
-## From a terminal
-
-The terminal client, `go-time-recording-client`, books through an
-installation's API as the owner of a personal token, and serves nothing itself.
-On its own it opens a screen; with a command after it, it does that one thing
-and says what it did — for a script, an alias or a screen reader.
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <img src="doc/image/terminal.png" alt="The client's screen in a terminal, framed under the installation's name and the web interface's tabs: the stopwatch running on the website relaunch, the entries under it as the page lists them, and the menu of what it can do next">
-      <p><b>The day at a glance.</b> Under the installation's own name, who is signed in and which build of the client this is, and the web interface's tabs, the one on screen filled with the accent. The stopwatch counts the seconds, and the screen reads the day again every half minute, so a stopwatch stopped in the browser stops here too.</p>
-    </td>
-    <td width="50%" valign="top">
-      <img src="doc/image/terminal-switch.png" alt="The form that switches the stopwatch to another project, one question at a time, with the active projects to choose from">
-      <p><b>One question at a time.</b> The arrow keys and <code>enter</code> choose a change from the menu, or its key does it at once: <code>s</code> starts the stopwatch, <code>w</code> switches it to another project and books what has run, <code>x</code> stops it and books it after asking, and <code>b</code> books hours by hand. <code>e</code>, <code>u</code>, <code>t</code> and <code>v</code> open the menus of the page's cards - the entries, the stopwatch, the spreadsheet and the templates - where a change to an entry is chosen first and the entry picked in the list after it. <code>←</code> and <code>→</code> move between the tabs; under <i>Week</i> the hours go straight into a grid of projects and days, the cell picked with the arrows, and <code>&lt;</code> and <code>&gt;</code> move it a week back and on. Under <i>Calendar</i> the month shows a day's entries, the working time - saved as a PDF if asked - the year's leave and the days away. Under <i>Overtime</i> the hours of a period are drawn as the page's bars, <code>y</code> shows the year as its tiles and <code>s</code> calculates the balance. A form asks one thing at a time and the line above it says where it is; <code>esc</code> puts it away or goes back, and <code>q</code> closes the screen.</p>
-    </td>
-  </tr>
-</table>
-
-**It depends on the version of the installation.** The client is built from
-the same source as `go-time-recording-web`, the installation's binary, and
-released beside it with the same version. What it knows of the installation's
-API — the routes, the fields, the codes a refusal carries and the words the page
-has for them — is what that version has, so a client from another release may
-ask for something the installation does not have, or not understand what it
-answers. Use the client whose version is the installation's: the installation
-shows its version at the foot of every page, and
-`go-time-recording-client --version` says the client's. When the installation
-is updated, take the client of the new release as well.
-
-**Set it up once:**
-
-1. Download the terminal client for your platform from the
-   [release](https://github.com/dennis-dko/go-time-recording/releases) the
-   installation runs — `go-time-recording-client_<version>_<os>_<arch>` — and
-   put it on your `PATH` as `go-time-recording-client`, made executable with
-   `chmod +x` on Linux and macOS, or as `go-time-recording-client.exe` on
-   Windows.
-2. In the browser, under **My account → API tokens**, create a token and copy it:
-   it is shown once. It carries exactly the rights of your role, can be given a
-   number of days to last, and is revoked in the same list. Beside it, also once,
-   are the installation's address - what `GTR_URL` below is set to - and a QR
-   code holding the two together, for an app to scan instead of being typed
-   both - [the API page](doc/api.md#connecting-an-app) says what it holds.
-3. Tell the client where the installation is and who you are — in the
-   environment rather than as an argument, where a token would land in the
-   shell's history:
-
-   ```bash
-   export GTR_URL=https://time.example.com
-   export GTR_TOKEN=gtr_...
-   ```
-
-   On Windows, once for your account; every terminal opened afterwards has them:
-
-   ```powershell
-   [Environment]::SetEnvironmentVariable('GTR_URL', 'https://time.example.com', 'User')
-   [Environment]::SetEnvironmentVariable('GTR_TOKEN', 'gtr_...', 'User')
-   ```
-
-   The client checks the installation's certificate against the authorities the
-   operating system trusts, so one whose certificate comes from an authority of
-   its own needs that authority installed on the machine as well.
-
-**Then** `go-time-recording-client` opens the screen, and each change is a
-command as well:
-
-```bash
-go-time-recording-client status                 # the stopwatch, and today's total
-go-time-recording-client start Website -m "landing page"
-go-time-recording-client switch Mobile          # books what has run, carries on
-go-time-recording-client stop                   # books what it measured
-go-time-recording-client book 1:30 Customer -d 2026-10-21
-go-time-recording-client today                  # today's entries
-```
-
-A project is named as it is called, in any case, or by the start of its name
-when no other active project starts the same way; hours are written 1.5, 1,5 or
-1:30. `go-time-recording-client help` lists the commands, and
-[the API page](doc/api.md#from-a-terminal) says what the client answers, and
-with which exit status.
-
-The client speaks English or German: `--lang de` or `--lang en` anywhere on the
-line, `GTR_LANG` to keep one, and otherwise the language the account chose in
-the browser - or, where it chose none, the language the system is set to. In
-German it says what the installation refuses in the words the web interface has
-for it.
-
-**It follows the account, and changes the account rather than itself.** The
-installation's name and banner head the screen, and under the tabs it says
-what the browser's banners say: a stopwatch running past the hours chosen under
-*Reminders*, the last working day with nothing booked, a balance past one of its
-bounds. The tab **My account** changes what *My account* in the browser changes
-for oneself, each setting chosen by its number and shown with what it is set to:
-
-- the language;
-- the appearance;
-- the timezone;
-- where public holidays are kept;
-- the reminders;
-- the bounds of the balance;
-- the working hours.
-
-Every change is saved to the account, so the browser and the phone follow it
-too, and a choice made in the browser reaches an open screen at its next read.
-The colours follow what the terminal says its background is. The appearance the
-account chose counts only where the terminal says nothing, because a terminal's
-background can be drawn on but not changed.
-
 ## On a phone
 
 The Android app is the installation's own web interface, in an app: every view,
 card and form the browser has, in the same design, saved through the same API
 into the same database - and anything the web interface learns in a release,
 the app has with it. It is connected by the code a new token is shown with under
-**My account → API tokens**: scanned with the phone's camera, the code opens the
-app, which shows the installation it is asked to connect to and waits for a tap,
-because a code is a link any page could open. The address and the token can be
-typed in instead.
+**My account → API tokens**: the app scans it with its own camera screen, or the
+phone's camera opens it, and either way the app shows the installation it is
+asked to connect to and waits for a tap, because a code is a link any page could
+open. The address and the token can be typed in instead.
 
 The token signs the app in, so no password and no second factor are typed on
 the phone, and it keeps the web interface signed in for as long as the token is
@@ -390,7 +275,7 @@ installed on the phone, as the phone's browser does.
 | **Calendar subscription** | Booked days and days away in Outlook, Google or a telephone's calendar | [Calendar](doc/feature.md#your-days-in-your-own-calendar) |
 | **Accounts and roles** | Roles and their rights administered at run time; an administrator who runs the installation without keeping hours in it; managers for the accounts assigned to them, where an installation switches them on | [Access](doc/access.md) |
 | **Sign-in** | Passwords with TOTP, passkeys, LDAP and Active Directory with synchronisation, Kerberos, OpenID Connect | [Sign-in](doc/access.md#ldap) |
-| **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - and `go-time-recording-client` books through it from a terminal, on a screen of its own or a command at a time, as the Android app does from a phone | [API](doc/api.md) |
+| **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - one of which signs the Android app in | [API](doc/api.md) |
 | **Operations** | Health, metrics, traces, live log, maintenance mode, updates, restart, HTTPS with Let's Encrypt, the installation's own name and logo | [Configuration](doc/configuration.md) |
 
 ## Documentation
@@ -402,7 +287,7 @@ installed on the phone, as the phone's browser does.
 | [Accounts, roles and sign-in](doc/access.md) | Rights, the administrator, API tokens, LDAP, Kerberos and OpenID Connect |
 | [Security](doc/security.md) | Sessions, CSRF, passkeys, two factors, HTTPS, and what a copy of the database gives away |
 | [Configuration](doc/configuration.md) | Where each setting comes from, and what the interface can change |
-| [API](doc/api.md) | Booking from a terminal, what a refusal looks like, and what the metrics carry |
+| [API](doc/api.md) | Connecting an app, what a refusal looks like, and what the metrics carry |
 | [Architecture](doc/architecture.md) | The four layers, and the decisions that would otherwise surprise |
 | [Development](doc/development.md) | The environments, and the checks a change has to pass |
 | [Releases and deployment](doc/deployment.md) | How a release is made and what it carries |

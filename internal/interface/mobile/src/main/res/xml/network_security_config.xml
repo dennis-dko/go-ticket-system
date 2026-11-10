@@ -6,9 +6,9 @@
      public domain is served with a certificate from its operator's own CA,
      installed on the phone - which a passkey needs there anyway - and an app
      trusts only the system's unless it says otherwise. Plain HTTP as well,
-     because the terminal client takes an http address and so does the
-     browser, and refusing one here would refuse a working installation. Lint
-     reports both as risks, which they are; they are the browser's too. -->
+     because the browser takes an http address, and refusing one here would
+     refuse a working installation. Lint reports both as risks, which they are;
+     they are the browser's too. -->
 <network-security-config xmlns:tools="http://schemas.android.com/tools">
     <base-config
         cleartextTrafficPermitted="true"

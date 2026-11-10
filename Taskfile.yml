@@ -14,12 +14,10 @@ version: '3'
 
 vars:
   # The project's name, which the image is tagged with and a local SQLite file
-  # is called by; the two programs carry it in names of their own.
+  # is called by; the program carries it in a name of its own.
   APP_NAME: go-time-recording
   # The installation: the server and its web interface.
   WEB_NAME: go-time-recording-web
-  # The terminal client, a program of its own beside the one that serves.
-  CLIENT_NAME: go-time-recording-client
   BIN_DIR: bin
   CONFIG_SRC: cmd/configs
 
@@ -35,13 +33,6 @@ vars:
   # if there is none yet). Override for releases: task release VERSION=v1.2.3
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev"
-
-  # The commit and its day, which the terminal client shows under its title
-  # beside the version.
-  COMMIT:
-    sh: git rev-parse --short=8 HEAD 2>/dev/null || true
-  DAY:
-    sh: git show -s --format=%cs HEAD 2>/dev/null || true
 
 tasks:
   default:
@@ -515,7 +506,7 @@ tasks:
   # -------------------------------------------------------------------- ship
 
   build:
-    desc: 'Ship: build the binary and the terminal client into bin/, with the configuration beside them.'
+    desc: 'Ship: build the binary into bin/, with the configuration beside it.'
     deps: [tidy]
     cmds:
       # On Windows, the icon and the Properties tab - the same resource the
@@ -525,7 +516,6 @@ tasks:
       # reason to be unable to build the application.
       - '{{if eq OS "windows"}}sh build/windows-resource.sh {{.VERSION}} || echo "no goversioninfo on PATH - building without the resource"{{end}}'
       - task: build:binary
-      - task: build:client
       - '{{if eq OS "windows"}}sh build/windows-resource.sh --clean{{end}}'
 
   # The binary and its configuration, and nothing written anywhere but bin/: what
@@ -549,15 +539,6 @@ tasks:
       # ./cmd rather than ./cmd/main.go: naming the file builds that file, and a
       # .syso beside it in the package is not picked up.
       - go build -ldflags "-X main.version={{.VERSION}}" -o ./{{.BIN_DIR}}/{{.WEB_NAME}}{{exeExt}} ./cmd
-
-  # The terminal client, with the same version as the binary it belongs to. Not
-  # part of build:binary, which dev:watch builds on every save and which needs
-  # nothing the client has.
-  build:client:
-    internal: true
-    cmds:
-      - mkdir -p {{.BIN_DIR}}
-      - go build -ldflags "-X main.version={{.VERSION}} -X main.commit={{.COMMIT}} -X main.day={{.DAY}}" -o ./{{.BIN_DIR}}/{{.CLIENT_NAME}}{{exeExt}} ./cmd/client
 
   build:mobile:
     desc: 'Ship: build the Android app - its unit tests, lint and an unsigned APK - in its toolchain image.'
@@ -672,11 +653,6 @@ tasks:
       it skips everywhere else, CI included, so the pictures change only when
       somebody asks.
 
-      The terminal's pictures are taken the same way rather than drawn: the
-      terminal client the suite built runs in a pseudo-terminal against that
-      instance, a terminal emulator keeps what it draws, and the browser
-      photographs the emulator's cells.
-
       The letters are this machine's own fonts, so Windows and Linux take the
       same screen in different faces. Neither is wrong; one run takes them all,
       so the README does not mix them.
@@ -717,8 +693,7 @@ tasks:
     # a failure, and this must never be the reason `task clean` stops.
     cmds:
       # The installation, whether task dev started it or a suite's harness did
-      # and the test was killed mid-run: both build it under this name. Not the
-      # terminal client, which may be somebody's open screen in another window.
+      # and the test was killed mid-run: both build it under this name.
       - cmd: '{{if eq OS "windows"}}taskkill /F /IM {{.WEB_NAME}}.exe{{else}}pkill -f {{.WEB_NAME}}{{end}}'
         ignore_error: true
 

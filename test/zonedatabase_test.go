@@ -13,15 +13,16 @@ import (
 // it looks in its own installation, which a release built with -trimpath cannot
 // find, and in the copy a program links with time/tzdata. Without that copy, every
 // zone but UTC is unknown on Windows. The web binary has carried it since it first
-// read a zone. The terminal client did not, so on the machine it was installed on
-// it read its owner's Europe/Berlin as UTC: the stopwatch said it had started an
-// hour early, and the booking form offered the day in UTC.
+// read a zone. The terminal client this repository shipped beside it until
+// 2026-11 did not, so on the machine it was installed on it read its owner's
+// Europe/Berlin as UTC: the stopwatch said it had started an hour early, and the
+// booking form offered the day in UTC. A program added later is listed here.
 //
 // Measured rather than assumed: a program built with -trimpath and without the
 // import answers "unknown time zone Europe/Berlin" on Windows, and the same
 // program with it loads the zone.
 func TestEveryShippedProgramCarriesTheZoneDatabase(t *testing.T) {
-	for _, program := range []string{"../cmd", "../cmd/client"} {
+	for _, program := range []string{"../cmd"} {
 		out, err := exec.Command("go", "list", "-deps", program).Output()
 		if err != nil {
 			var said []byte

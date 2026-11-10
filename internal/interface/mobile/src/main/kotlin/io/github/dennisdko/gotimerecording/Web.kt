@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.view.ContextThemeWrapper
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -88,6 +89,13 @@ fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> U
                 if (dark) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar,
             ),
         ).apply {
+            // A WebView whose height is WRAP_CONTENT lays its page out in a viewport
+            // of no height, so every vh and dvh in the page comes to nothing - and
+            // WRAP_CONTENT is what AndroidView gives a view without layout params of
+            // its own. The page's opened menu and its tour, each held to 100dvh, were
+            // drawn as thin as their padding, under the cards they should cover.
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
 

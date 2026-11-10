@@ -148,11 +148,9 @@ that make the synchronisation's edge cases reproducible.
 Every language but English is one file - German is
 [`internal/support/i18n/locale/de.json`](../internal/support/i18n/locale/de.json) -
 and everything that says something reads it: the page, the installer, the
-terminal client, the Android app, the workbooks, the calendar feed and the foot
-of a PDF. English
-has no file. It is written where it is said, in the markup and beside every
-lookup, so a sentence a dictionary lacks is said in English rather than not at
-all.
+Android app, the workbooks, the calendar feed and the foot of a PDF. English has
+no file. It is written where it is said, in the markup and beside every lookup,
+so a sentence a dictionary lacks is said in English rather than not at all.
 
 A new language is two changes:
 
@@ -167,11 +165,11 @@ A new language is two changes:
 2. The code in `SupportedLanguages`, in
    [`internal/domain/model/user_model.go`](../internal/domain/model/user_model.go).
 
-Nothing else names a language: the choosers, the manifest, the installer, the
-terminal client and the Android app take the list from the files - the app
-carries the files themselves, copied in when it is built. `task test` says what is missing -
-a key the new file lacks, or has and German does not, a file not written the one
-way, a figure or a day it cannot write, or a language offered with no file.
+Nothing else names a language: the choosers, the manifest, the installer and
+the Android app take the list from the files - the app carries the files
+themselves, copied in when it is built. `task test` says what is missing - a key
+the new file lacks, or has and German does not, a file not written the one way,
+a figure or a day it cannot write, or a language offered with no file.
 
 ## The Android app
 
@@ -185,11 +183,10 @@ Android lint, and a release build shrunk by R8 into
 
 What can drift from the rest of the application unnoticed is checked from Go, in
 the same directory, by `task test`: every key the app looks up is in every
-dictionary, what it borrows it says in the English of the terminal client or the
-page, no sentence is written around the dictionaries, a refusal's values are
-written as the page's `REFUSAL_VALUES` says, the app answers to the address a
-token's code holds, and the dictionaries are copied from where everything else
-reads them.
+dictionary, what it borrows it says in the English of the page, no sentence is
+written around the dictionaries, a refusal's values are written as the page's
+`REFUSAL_VALUES` says, the app answers to the address a token's code holds, and
+the dictionaries are copied from where everything else reads them.
 
 The release build is unsigned here. A release is signed with the one key every
 release of the app is signed with, because Android installs an update only over

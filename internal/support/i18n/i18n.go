@@ -122,18 +122,14 @@ func Fill(sentence string, values ...string) string {
 
 // Translator says things in one language.
 type Translator struct {
-	language string
-	words    map[string]string
+	words map[string]string
 }
 
 // For is a Translator for a language. One there is no dictionary for says
 // everything in English.
 func For(language string) Translator {
-	return Translator{language: language, words: Dictionary(language)}
+	return Translator{words: Dictionary(language)}
 }
-
-// Language is the language it says things in.
-func (t Translator) Language() string { return t.language }
 
 // Text is what a key says in this language, or english where the dictionary
 // has nothing for it, with values put in where it says {0}, {1} ...
@@ -144,15 +140,6 @@ func (t Translator) Text(key, english string, values ...string) string {
 	}
 
 	return Fill(sentence, values...)
-}
-
-// Lookup is what a key says in this language, and false where the dictionary
-// has nothing for it - for a caller with an English sentence of its own to fall
-// back on, such as an installation's own words for a refusal.
-func (t Translator) Lookup(key string) (string, bool) {
-	sentence, ok := t.words[key]
-
-	return sentence, ok
 }
 
 // Number writes a figure to two places, the way the web interface writes one in
