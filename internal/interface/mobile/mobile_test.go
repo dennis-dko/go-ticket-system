@@ -508,6 +508,35 @@ func TestTheWebViewIsAsTallAsItsPlace(t *testing.T) {
 	}
 }
 
+// The page puts away its card about installing it as an app when it is shown in
+// the Android app, which is one already: there the card told somebody to look in
+// a browser's menu that is not on the screen. The page knows the app by the
+// bridge the app registers for saving files, so the name the page asks for is
+// the name Web.kt registers.
+func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
+	code, _ := lexed(source(t, "Web.kt"))
+
+	registered := regexp.MustCompile(`\bconst\s+val\s+filesInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
+	if registered == nil {
+		t.Fatal("Web.kt names no filesInterface, so the page cannot know it is in the app")
+	}
+
+	script := read(t, "../web/asset/app.js")
+
+	start := strings.Index(script, "function wireInstall()")
+	if start < 0 {
+		t.Fatal("app.js has no wireInstall")
+	}
+
+	install := script[start:]
+	install = install[:strings.Index(install, "\n}\n")]
+
+	if !strings.Contains(install, "'"+registered[1]+"' in window") {
+		t.Errorf("wireInstall does not ask for %s, the bridge the app registers, so the app "+
+			"shows a card about installing the page as an app", registered[1])
+	}
+}
+
 // The screens before the web interface takes over are drawn in its colours,
 // light and dark, so that they look like its own sign-in: Look.kt keeps them as
 // Tones, and they are app.css's custom properties - the band across the card is
