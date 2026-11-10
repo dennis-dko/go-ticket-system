@@ -664,6 +664,39 @@ tasks:
       - defer: rm -rf {{.TMP_DIR}}
       - go test -tags browser -count=1 -timeout 10m -v -run TestTheReadmePicturesAreTakenFromTheApplication ./test/browser/
 
+  readme:pictures:app:
+    desc: 'Upkeep: take the README''s pictures of the Android app, from an emulator.'
+    summary: |
+      Photographs the Android app into doc/image as app-*.png: the screen that
+      connects it, the camera screen that reads a token's code, and the web
+      interface it shows. Run it after changing one of them, and look at what
+      it took before committing it.
+
+      test/camera/android.sh does the work where adb and the emulator are -
+      inside WSL on Windows, in the distribution WSL_DISTRO names, Ubuntu
+      unless told otherwise. It serves a fresh instance there, which the
+      emulator reaches as 10.0.2.2, books a few working days into it, and
+      installs the app signed with a throwaway key over whatever was on the
+      emulator - never with the release key.
+
+      An emulator has to be running already, with a google_apis image: the
+      camera switches it to English, as the README is, and that needs root.
+      ANDROID_SDK_ROOT and JAVA_HOME say where the SDK and a JDK are inside
+      that shell, ~/android/sdk and ~/android/jdk unless set.
+    deps: [build:mobile]
+    vars:
+      WSL_DISTRO: '{{.WSL_DISTRO | default "Ubuntu"}}'
+    env:
+      GOTMPDIR: '{{.ROOT_DIR}}/{{.TMP_DIR}}'
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: '0'
+    cmds:
+      - mkdir -p {{.TMP_DIR}} {{.BIN_DIR}}/linux
+      - defer: rm -rf {{.TMP_DIR}}
+      - go build -ldflags "-X main.version={{.VERSION}}" -o ./{{.BIN_DIR}}/linux/{{.WEB_NAME}} ./cmd
+      - '{{if eq OS "windows"}}wsl -d {{.WSL_DISTRO}} -e {{end}}bash test/camera/android.sh'
+
   clean:
     desc: 'Upkeep: remove everything testing and building leave behind.'
     summary: |
