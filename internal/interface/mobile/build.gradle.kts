@@ -85,11 +85,10 @@ android {
     }
 }
 
-// The application's dictionaries, the very files the server and the terminal
-// client read, copied into the app as it is built rather than kept as a copy
-// here - so the app speaks every language the installation does from the first
-// screen on, before there is an installation to ask, and a new language is
-// still only its file.
+// The application's dictionaries, the very files the server reads, copied into
+// the app as it is built rather than kept as a copy here - so the app speaks
+// every language the installation does from the first screen on, before there
+// is an installation to ask, and a new language is still only its file.
 androidComponents {
     onVariants { variant ->
         variant.sources.assets?.addStaticSourceDirectory("../../support/i18n/locale")

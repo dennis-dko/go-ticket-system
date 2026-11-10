@@ -1,7 +1,7 @@
 // Package i18n is every language the application speaks besides English: one
 // dictionary a language, in locale/<language>.json, compiled into the binary
 // and read by everything that says something to somebody - the web interface,
-// which fetches /i18n/<language>.json, the installer, the terminal client, the
+// which fetches /i18n/<language>.json, the installer, the Android app, the
 // workbooks, the calendar feed and the foot of a PDF.
 //
 // English has no dictionary. It is the source, written where it is said - in the
@@ -11,7 +11,7 @@
 // hold the files and the list together.
 //
 // A dictionary maps a key to a sentence. The key says what the sentence is for
-// and who says it: installer.* the installer, track.* the terminal client,
+// and who says it: installer.* the installer, mobile.* the Android app,
 // workbook.* the spreadsheets, calendarFeed.* the calendar feed, the rest the web
 // interface, whose words the others borrow where they say the same thing - and
 // this package's own: language.name, number.* for how a figure is written, and

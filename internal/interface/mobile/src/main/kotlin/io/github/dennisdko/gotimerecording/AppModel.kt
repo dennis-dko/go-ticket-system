@@ -151,7 +151,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
      * only once the installation has answered as its owner's.
      */
     private fun open(connection: Connection, keep: Boolean) {
-        state = state.copy(busy = words.text("track.reading", "Reading {0} …", connection.address), said = null)
+        state = state.copy(busy = words.text("mobile.reading", "Reading {0} …", connection.address), said = null)
 
         viewModelScope.launch {
             val installation = Installation(connection.address, words)

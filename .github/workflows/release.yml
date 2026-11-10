@@ -254,13 +254,8 @@ jobs:
 
           # The same flags the image is built with, including the version: a
           # download that calls itself "dev" is worse than no version at all, and
-          # the footer reads exactly this variable. And the commit and its day,
-          # which the terminal client shows under its title beside the version;
-          # the web binary declares neither, and the linker passes over a -X
-          # for a variable a program does not have.
-          commit=$(git rev-parse --short=8 HEAD)
-          day=$(git show -s --format=%cs HEAD)
-          flags="-s -w -X main.version=${VERSION} -X main.commit=${commit} -X main.day=${day}"
+          # the footer reads exactly this variable.
+          flags="-s -w -X main.version=${VERSION}"
 
           # compile <file name stem> <package> <os> <arch> [extension]
           compile() {
@@ -282,12 +277,10 @@ jobs:
             file "dist/${name}"
           }
 
-          # Each platform gets the installation and the terminal client that
-          # belongs to it: from the same commit, with the same version stamped
-          # in, which is what the client answers --version with.
+          # Each platform gets the installation, from the same commit with the
+          # same version stamped in.
           build() {
             compile go-time-recording-web ./cmd "$@"
-            compile go-time-recording-client ./cmd/client "$@"
           }
 
           build linux   amd64
@@ -535,7 +528,6 @@ jobs:
           generate_release_notes: true
           files: |
             dist/go-time-recording-web_*
-            dist/go-time-recording-client_*
             dist/go-time-recording-mobile_*
             dist/SHA256SUMS
           # append_body puts this below the generated notes, which is where it
@@ -556,12 +548,10 @@ jobs:
             the migrations are compiled in.
 
             `go-time-recording-web_*` is the installation: the server and its web
-            interface. `go-time-recording-client_*` is the terminal client, which books
-            against an installation from the shell and serves nothing itself. It
-            belongs to this release: use it with an installation that runs this
-            version. `go-time-recording-mobile_*.apk` is the Android app, which does
-            what the terminal client does and belongs to this release the same way;
-            it is connected by scanning the code a new personal token is shown with.
+            interface. `go-time-recording-mobile_*.apk` is the Android app - the
+            installation's web interface in an app - which belongs to this release:
+            use it with an installation that runs this version. It is connected by
+            scanning the code a new personal token is shown with.
 
             An installation running a version from before the binary was called
             `go-time-recording-web` cannot update itself to this one from the

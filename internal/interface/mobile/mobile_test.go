@@ -271,8 +271,8 @@ func TestEveryKeyTheAppLooksUpIsInEveryDictionary(t *testing.T) {
 }
 
 // What the app borrows it says in the English of whoever it borrows it from -
-// the terminal client's sentences, the page's words, the i18n package's figures
-// - so the three never put one thing two ways in English either.
+// the page's words, the i18n package's figures - so the two never put one thing
+// two ways in English either.
 func TestTheAppSaysWhatTheOthersSayInTheirEnglish(t *testing.T) {
 	theirs := othersEnglish(t)
 
@@ -294,8 +294,7 @@ func TestTheAppSaysWhatTheOthersSayInTheirEnglish(t *testing.T) {
 	}
 }
 
-// othersEnglish is what the terminal client, the i18n package and the page say
-// in English, by key.
+// othersEnglish is what the i18n package and the page say in English, by key.
 func othersEnglish(t *testing.T) map[string]map[string]bool {
 	t.Helper()
 
@@ -308,7 +307,7 @@ func othersEnglish(t *testing.T) map[string]map[string]bool {
 		said[key][english] = true
 	}
 
-	for _, dir := range []string{"../cli", "../../support/i18n"} {
+	for _, dir := range []string{"../../support/i18n"} {
 		names, err := filepath.Glob(filepath.Join(filepath.FromSlash(dir), "*.go"))
 		if err != nil {
 			t.Fatal(err)
@@ -531,9 +530,9 @@ func TestEveryDictionaryWritesADayAndATimeInPartsTheAppReads(t *testing.T) {
 	}
 }
 
-// The app is built with the dictionaries the server and the terminal client
-// read - the directory itself, not a copy of it - so a language added there is
-// spoken by the app as well.
+// The app is built with the dictionaries the server reads - the directory
+// itself, not a copy of it - so a language added there is spoken by the app as
+// well.
 func TestTheAppCarriesTheDictionariesEveryoneElseReads(t *testing.T) {
 	m := regexp.MustCompile(`addStaticSourceDirectory\("([^"]+)"\)`).FindStringSubmatch(read(t, "build.gradle.kts"))
 	if m == nil {

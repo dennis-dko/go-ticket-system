@@ -109,11 +109,10 @@ type APITokenResponse struct {
 	Secret  *string `json:"secret,omitempty"`
 
 	// ConnectURI is what an app reaches this installation with as the token's
-	// owner: go-time-recording://connect?url=...&token=..., carrying the two
-	// values the terminal client reads as GTR_URL and GTR_TOKEN. QR is the same
-	// address as a code to scan, an SVG data URI. Both carry the secret, so both
-	// exist where it does - in the answer that created the token - and nowhere
-	// else.
+	// owner: go-time-recording://connect?url=...&token=..., carrying the
+	// installation's address and the token. QR is the same address as a code
+	// to scan, an SVG data URI. Both carry the secret, so both exist where it
+	// does - in the answer that created the token - and nowhere else.
 	ConnectURI *string `json:"connectUri,omitempty"`
 	QR         *string `json:"qr,omitempty"`
 }

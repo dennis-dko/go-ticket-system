@@ -112,7 +112,7 @@ class Installation(private val address: String, private val words: Language) {
         val url = try {
             URL(address.trimEnd('/') + path)
         } catch (e: java.net.MalformedURLException) {
-            throw Refused(words.text("track.badAddress", "\"{0}\" is not an address this can ask", address))
+            throw Refused(words.text("mobile.notAnAddress", "\"{0}\" is not an address this can ask", address))
         }
 
         return (url.openConnection() as HttpURLConnection).apply {
@@ -123,10 +123,10 @@ class Installation(private val address: String, private val words: Language) {
     }
 
     private fun unreachable(e: IOException): Refused =
-        Refused(words.text("track.unreachable", "could not reach {0}", address) + ": " + e.message)
+        Refused(words.text("mobile.unreachable", "could not reach {0}", address) + ": " + e.message)
 
     private fun notThis(): Refused =
-        Refused(words.text("track.notThisApplication", "{0} answered with something that is not this application's", address))
+        Refused(words.text("mobile.notThisApplication", "{0} answered with something that is not this application's", address))
 
     private companion object {
         /** requestTimeout bounds one request: a phone waiting on an installation that has gone away should say so. */

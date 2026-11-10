@@ -33,10 +33,10 @@ func asset(t *testing.T, path string) string {
 }
 
 // otherReaders are the parts of each dictionary the page does not read, each
-// held to its readers by tests of their own: the installer's, the terminal
-// client's, the Android app's, the workbooks', the calendar feed's, and the
-// i18n package's own figures and days.
-var otherReaders = []string{"installer.", "track.", "mobile.", "workbook.", "calendarFeed.", "number.", "layout."}
+// held to its readers by tests of their own: the installer's, the Android
+// app's, the workbooks', the calendar feed's, and the i18n package's own
+// figures and days.
+var otherReaders = []string{"installer.", "mobile.", "workbook.", "calendarFeed.", "number.", "layout."}
 
 // dictionaries are what the page says in each language but English, by
 // language: the files the binary carries and hands the page, with the keys the
@@ -609,7 +609,7 @@ func TestOneWordForTheTour(t *testing.T) {
 // verb. A Sie opening a sentence before a singular verb is the pronoun for a zone
 // or a clock - "Sie bestimmt, auf welchen Kalendertag ..." - and is not counted.
 func TestTheGermanSaysDu(t *testing.T) {
-	// The whole of it, the installer's and the terminal client's sentences
+	// The whole of it, the installer's and the Android app's sentences
 	// included: one product, one form of address.
 	dict := i18n.Dictionary("de")
 

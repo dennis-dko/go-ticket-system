@@ -76,8 +76,8 @@ func TestATokenValueDoesNotOutliveTheScreen(t *testing.T) {
 			code, p.visible("#token-qr"))
 	}
 
-	// And what the code holds besides the value, as text: the address an app or
-	// the terminal client is given with it, for somebody who cannot scan.
+	// And what the code holds besides the value, as text: the address an app is
+	// given with it, for somebody who cannot scan.
 	var origin string
 
 	p.run("read the page's origin", chromedp.Evaluate(`location.origin`, &origin))

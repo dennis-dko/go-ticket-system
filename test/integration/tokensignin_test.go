@@ -5,11 +5,37 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
 )
+
+// tokenSignIn hands a personal token over for a session the way the Android app
+// does: the token and nothing else - no session, no CSRF token.
+func tokenSignIn(t *testing.T, base, token string) response {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, base+"/api/v1/auth/token", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("the token's sign-in: %v", err)
+	}
+
+	defer func() { _ = resp.Body.Close() }()
+
+	read, _ := io.ReadAll(resp.Body)
+
+	return response{Status: resp.StatusCode, Body: read, Header: resp.Header}
+}
 
 // signedInAs is the account a sign-in's answer names.
 func signedInAs(t *testing.T, answer response) string {
@@ -101,7 +127,7 @@ func TestATokenSignsItsOwnerInToTheWebInterface(t *testing.T) {
 	a, _, worker := startWithWorker(t)
 	_, secret := madeToken(t, worker, "phone")
 
-	answer := asTheClients(t, a.BaseURL(), secret, http.MethodPost, "/auth/token", nil)
+	answer := tokenSignIn(t, a.BaseURL(), secret)
 	if answer.Status != http.StatusCreated || signedInAs(t, answer) != "wera@example.com" {
 		t.Fatalf("the token's sign-in answered %d %s", answer.Status, answer.Body)
 	}
@@ -126,7 +152,7 @@ func TestTakingATokenBackEndsTheSessionItOpened(t *testing.T) {
 	a, admin, worker := startWithWorker(t)
 	id, secret := madeToken(t, worker, "phone")
 
-	phone := sessionCookieOf(asTheClients(t, a.BaseURL(), secret, http.MethodPost, "/auth/token", nil))
+	phone := sessionCookieOf(tokenSignIn(t, a.BaseURL(), secret))
 	if phone == "" {
 		t.Fatal("the token opened no session to take back")
 	}
@@ -169,7 +195,7 @@ func TestASessionATokenOpenedEndsNoLaterThanTheToken(t *testing.T) {
 
 	// A minute's slack, for a database that keeps a moment to the second: what is
 	// being caught is a session outliving its token by two days.
-	expires := sessionExpiryOf(t, asTheClients(t, a.BaseURL(), token.Secret, http.MethodPost, "/auth/token", nil))
+	expires := sessionExpiryOf(t, tokenSignIn(t, a.BaseURL(), token.Secret))
 	if expires.After(token.ExpiresAt.Add(time.Minute)) {
 		t.Errorf("the session runs until %s, the token only until %s", expires, token.ExpiresAt)
 	}
@@ -201,7 +227,7 @@ func TestATokensSignInIsTheTokensOwnerWhateverCookieComesWithIt(t *testing.T) {
 		t.Fatal("the administrator's client holds no session cookie to send")
 	}
 
-	answer := asTheClients(t, a.BaseURL(), secret, http.MethodPost, "/auth/token", nil)
+	answer := tokenSignIn(t, a.BaseURL(), secret)
 	if signedInAs(t, answer) != "wera@example.com" {
 		t.Fatalf("the token signed in somebody else: %s", answer.Body)
 	}
@@ -230,7 +256,7 @@ func TestWhatIsNoUsableTokenOpensNoSession(t *testing.T) {
 		{"no token at all", "", http.StatusForbidden},
 		{"a token nobody made", "gtr_" + "0123456789abcdef0123456789abcdef", http.StatusUnauthorized},
 	} {
-		answer := asTheClients(t, a.BaseURL(), tc.token, http.MethodPost, "/auth/token", nil)
+		answer := tokenSignIn(t, a.BaseURL(), tc.token)
 		if answer.Status != tc.status || sessionCookieOf(answer) != "" {
 			t.Errorf("%s was answered %d %s, want %d and no session", tc.name, answer.Status, answer.Body, tc.status)
 		}
@@ -238,7 +264,7 @@ func TestWhatIsNoUsableTokenOpensNoSession(t *testing.T) {
 
 	worker.must(worker.api(http.MethodDelete, fmt.Sprintf("/me/tokens/%d", id), nil), http.StatusOK, http.StatusNoContent)
 
-	if answer := asTheClients(t, a.BaseURL(), secret, http.MethodPost, "/auth/token", nil); answer.Status != http.StatusUnauthorized ||
+	if answer := tokenSignIn(t, a.BaseURL(), secret); answer.Status != http.StatusUnauthorized ||
 		sessionCookieOf(answer) != "" {
 		t.Errorf("a token taken back was answered %d %s", answer.Status, answer.Body)
 	}
@@ -253,7 +279,7 @@ func TestWhatIsNoUsableTokenOpensNoSession(t *testing.T) {
 	admin.must(admin.api(http.MethodPut, fmt.Sprintf("/users/%d/password", me.User.ID),
 		map[string]any{"password": "a-chosen-reset-password"}), http.StatusOK)
 
-	answer := asTheClients(t, a.BaseURL(), other, http.MethodPost, "/auth/token", nil)
+	answer := tokenSignIn(t, a.BaseURL(), other)
 	if answer.Status == http.StatusCreated || sessionCookieOf(answer) != "" {
 		t.Errorf("a token whose owner was given a password to replace opened a session: %d %s", answer.Status, answer.Body)
 	}
@@ -270,12 +296,12 @@ func TestATokensSignInKeepsToMaintenance(t *testing.T) {
 
 	setMaintenance(t, admin, true, "")
 
-	if answer := asTheClients(t, a.BaseURL(), workers, http.MethodPost, "/auth/token", nil); answer.Status == http.StatusCreated ||
+	if answer := tokenSignIn(t, a.BaseURL(), workers); answer.Status == http.StatusCreated ||
 		sessionCookieOf(answer) != "" {
 		t.Errorf("during maintenance the worker's token opened a session: %d %s", answer.Status, answer.Body)
 	}
 
-	if answer := asTheClients(t, a.BaseURL(), admins, http.MethodPost, "/auth/token", nil); answer.Status != http.StatusCreated ||
+	if answer := tokenSignIn(t, a.BaseURL(), admins); answer.Status != http.StatusCreated ||
 		sessionCookieOf(answer) == "" {
 		t.Errorf("during maintenance the administrator's token was answered %d %s", answer.Status, answer.Body)
 	}

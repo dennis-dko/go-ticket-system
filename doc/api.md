@@ -3,181 +3,23 @@
 Responses are wrapped by the framework: `{"data": ...}` or `{"error": ...}`.
 The full reference is at `/api-docs`; the highlights:
 
-## From a terminal
-
-The terminal client, `go-time-recording-client`, books through this API as the
-owner of a personal token, made under *My account*, API tokens. It is a binary
-of its own, released beside the installation's, and it belongs to that release:
-what it asks for and how it reads the answers - the routes, the fields, the
-codes a refusal carries and the values the page writes its own way - are those
-of the version it was built from. `go-time-recording-client --version` says
-which that is, and it should be the version the installation shows at the foot
-of its pages.
-
-On its own, on a terminal, it opens a screen headed by the web interface's
-tabs, with `←` and `→` between them. Under *Time entries* are the stopwatch
-ticking, the entries as the page lists them, and a form for each change. `s`
-starts the stopwatch, `w` switches it to another project and books what has
-run, `x` stops it and books what it measured - after asking - and `b` books hours
-by hand. `u` opens the stopwatch's own menu while it runs: it corrects the start
-(`PUT /me/timer`), books up to an earlier end (`POST /me/timer/stop` with
-`endedAt`), or discards the measured time after asking (`DELETE /me/timer`). A
-stopwatch running longer than one entry can hold is stopped only by saying when
-the work ended, as the page asks it. The stopwatch and the booking are offered
-only to an account that may write its own time. `v` opens the templates
-(`GET /me/templates`): it keeps a new one (`POST /me/templates`) and deletes one
-after asking; booking by hand starts with the templates that can fill it in, and
-nothing is booked until its form is answered. `t` opens the spreadsheet: it
-saves the entries as the entries card narrows them to an `.xlsx` file
-(`GET /timesheets/export`, never over a file that is there already), and imports
-one as the page does - checked first (`POST /timesheets/import` with `dryRun`),
-each refused row with why, and written only once every row can be. `e` opens the
-entries' own menu. It corrects an entry in the booking
-form filled with it (`PUT /timesheets/{id}`), deletes one after asking
-(`DELETE /timesheets/{id}`) and shows what one said before it was corrected
-(`GET /timesheets/{id}/revisions`) - the change first, then the entry, picked
-in the list with the arrows and `enter`. Several entries, ticked with the space
-bar, are given a project one after another (`POST /timesheets/{id}/transfer`,
-with the right to) or deleted after asking, as the page's bar does it. It also
-narrows the entries by days,
-words and project as the page's filters do (`GET /timesheets` with `from`,
-`to`, `q` and `projectId`), goes to the entries still waiting for a project, and
-reads the next 25; `PgUp` and `PgDn` page through what the window has no room
-for. `r`
-reads the day again, which the screen also does every half minute, so a
-stopwatch stopped in the browser stops here too; `esc` puts a form away or goes
-back from a card's menu, and `q` closes the screen, which leaves a line saying
-how the stopwatch was left.
-
-*Week*, the next tab, draws the week as the page's grid: the projects as rows
-and the days as columns, each day's sum and each row's total, and under them
-what the days came to, what they asked and what was left over (`GET /timesheets`
-from Monday to Sunday, every page of it, and `GET /me/days`). `<` and `>` move it
-a week back and on, and `t` brings it back to this week. `e` enters hours into a
-cell, picked with the arrows after it: a number in an empty cell books it
-(`POST /timesheets`), a changed number corrects the one entry behind it by its
-hours alone (`PUT /timesheets/{id}`), and an emptied cell takes that entry back
-after asking (`DELETE /timesheets/{id}`). A cell several entries make up leads
-to them instead, in the time entries narrowed to its day and project. `a` adds a
-row for a project the week has nothing on yet, and `c` copies last week into the
-days of this one that have nothing booked, after asking (`POST /me/weeks/copy`).
-
-*Calendar*, after it, draws the month as the page's calendar: the days under the
-weekdays from Monday, each with the hours booked on it, a public holiday or a day
-away marked and named under the grid, and the month's total (`GET /timesheets`
-for the month, every page of it, and `GET /me/days`). `<` and `>` move it a month
-back and on, and `t` brings it back to today's month. `s` opens a day with
-something booked on it, picked with the arrows, and lists its entries, which are
-corrected, deleted and shown in their earlier versions as under *Time entries*.
-`z` opens the working time of the month (`GET /me/workdays`): a day's start, end
-and breaks recorded or corrected (`PUT /me/workdays/{date}`) and taken back after
-asking (`DELETE /me/workdays/{date}`), with the limits of the Working Hours Act
-it went past, and the card saved as a PDF (`POST /exports/document`, never over a
-file that is there already). `u` opens the year's leave (`GET /me/vacation`),
-whose years `<` and `>` move while it is open: days given a year from a year on
-(`PUT /me/vacation`) and taken back (`DELETE /me/vacation/{fromYear}`), with the
-right to set one's own settings. `a` opens the days away of the year
-(`GET /me/absences`), recorded over a range for one reason (`POST /me/absences`)
-and taken back one at a time (`DELETE /me/absences/{day}`), for an account that
-may book its own time.
-
-*Overtime*, after it, holds the page's three cards. The hours of a period come
-first, drawn as the page's charts: a bar a day, the empty days among them, a bar
-a project and a bar an activity (`GET /me/statistics`), from the first of the
-month to today until `z` chooses another period, paged with PgUp and PgDn where
-the window holds fewer days than the period has, and saved as a PDF with `p`
-(`POST /exports/document`). `y` opens the year as the page's tiles - a column a
-week, a row a weekday, each day shaded by the hours booked on it - with the year
-before beside it up to the same day and both month by month (`GET /me/days` for
-each whole year); `<` and `>` move it a year back and on while it is open. `s`
-opens the balance (`GET /users/{id}/overtime`, the id being the one `GET /me`
-names), calculated as it opens for the first of the month to today: every day
-that counts with what was booked, what it asked and the difference, which rule
-counted them, and the total, with `z` for another period and `p` for a PDF.
-
-*My account*, the last tab, holds the account's own settings, each chosen by its
-number, and a change is sent to the route the browser sends it to:
-
-| Setting | Route |
-|---|---|
-| language | `PUT /me/language` |
-| appearance | `PUT /me/theme` |
-| timezone | `PUT /me/timezone` |
-| public holidays | `PUT /me/holidays` |
-| reminders | `PUT /me/reminders` |
-| bounds of the balance | `PUT /me/balance-limits` |
-| working hours | `PUT /users/{id}/working-times` |
-
-A token can therefore change exactly what its owner could change in the browser.
-What the screen shows besides the day it reads with the day: `/me` for the
-account's choices, `/branding` for the installation's name and banner, and
-`/me/notices` and `/me/holidays`. An installation that answers none of the last
-three leaves them out rather than failing the screen.
-
-<img src="image/terminal.png" alt="The client's screen in a terminal: the stopwatch running for an hour and twenty minutes on the website relaunch, and today's three entries under it" width="600">
-
-Each change is a command as well, for a script, an alias or a screen reader -
-which read lines, where the screen draws:
-
-```bash
-export GTR_URL=https://time.example.com GTR_TOKEN=gtr_...
-go-time-recording-client
-go-time-recording-client start Website -m "release notes"
-go-time-recording-client status
-go-time-recording-client switch Webshop
-go-time-recording-client stop
-go-time-recording-client book 1:30 consulting -m "call" -d 2026-10-21
-go-time-recording-client today
-```
-
-A project is named as it is called, or by the start of its name, among the
-active ones; hours are written 1.5, 1,5 or 1:30. The stopwatch it starts is the
-one the browser shows, running on the server, so stopping it anywhere stops it
-everywhere. The address and the token come from the environment rather than from
-flags, because a token on a command line lands in the shell's history and in every
-process listing. The installation's certificate is checked against the
-authorities the operating system trusts, so one whose certificate comes from an
-authority of its own needs that authority installed on the machine as well. It
-exits with 0 when done, 1 when the installation refused or could not be reached -
-in the installation's own words - and 2 for a command line it could not read,
-which is what a script tells the two apart by. `go-time-recording-client help`
-lists the commands, and so does the client on its own wherever its output is not
-a terminal, so a script that runs it bare gets lines and status 2 rather than a
-screen waiting for keys.
-
-It speaks English or German. `--lang de` or `--lang en` may stand anywhere on
-the line, `GTR_LANG` keeps one, and otherwise it is the language the account
-chose in the browser, which the client asks the installation for before
-anything else. Where the account chose none, it is the language the system is
-set to - `LC_ALL`, `LC_MESSAGES` or `LANG`, and on Windows, which sets none of
-them, the language of its own screens - and so is what the client says before
-it knows whose token it holds: its help, and a missing address or token. A
-language that is asked for and not had is refused with status 2; one the system
-is set to is only a guess, and anything but German there is English. In German,
-the client says what the installation refuses the way the German web interface
-does - from the code and the values the refusal carries, so a day in it is
-written 06.10.2026 - and keeps the installation's English only where the
-interface has no sentence for it.
-
 ## Connecting an app
 
-An app that books the way the terminal client does needs the same two values:
-the installation's address and a personal token. A token is made under *My
-account*, API tokens, and the card shows both once: as text, the token's value
-and the address, and together, as a QR code. The code holds a connection
-address:
+An app that books through this API needs two values: the installation's
+address and a personal token. A token is made under *My account*, API tokens,
+and the card shows both once: as text, the token's value and the address, and
+together, as a QR code. The code holds a connection address:
 
 ```text
 go-time-recording://connect?token=gtr_...&url=https%3A%2F%2Ftime.example.com
 ```
 
-`url` is what the terminal client reads as `GTR_URL` - the address the browser
-reached the installation at when the token was made, scheme and host without a
-path - and `token` what it reads as `GTR_TOKEN`. Both are query-encoded, and the
-order of the two is not to be relied on. An app registers the scheme
-`go-time-recording`, so that scanning the code with the phone's camera opens
-it, and from then on asks the API with `Authorization: Bearer <token>` as the
-client does.
+`url` is the address the browser reached the installation at when the token
+was made, scheme and host without a path, and `token` is the token itself.
+Both are query-encoded, and the order of the two is not to be relied on. An
+app registers the scheme `go-time-recording`, so that scanning the code with
+the phone's camera opens it, and from then on asks the API with
+`Authorization: Bearer <token>`.
 
 The Android app in this repository, released as
 `go-time-recording-mobile_<version>.apk`, is such an app. It fills its connect
@@ -194,8 +36,8 @@ The code is the credential. Whoever photographs it acts as the account until
 the token expires or is revoked, so it is shown where nobody else is looking,
 and a token whose code somebody else may have seen is revoked rather than kept.
 
-An app depends on the installation's version as the terminal client does: what
-it asks for and how it reads the answers are one release's API.
+An app depends on the installation's version: what it asks for and how it reads
+the answers are one release's API.
 `GET /api/v1/branding` answers anybody, signed in or not, and its `version`
 says which release that is.
 
