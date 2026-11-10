@@ -492,6 +492,23 @@ func TestTheAppAnswersToTheAddressATokensCodeHolds(t *testing.T) {
 	}
 }
 
+// The web interface is laid out in a WebView exactly as tall as its place. One
+// whose height is WRAP_CONTENT - which AndroidView gives a view without layout
+// params of its own - lays its page out in a viewport of no height, so the
+// page's 100dvh comes to nothing: its opened menu and its tour were drawn as thin
+// as their padding, under the cards they should have covered. Nothing here runs
+// a WebView, so what is held is the line in the code that sets the height.
+func TestTheWebViewIsAsTallAsItsPlace(t *testing.T) {
+	code, _ := lexed(source(t, "Web.kt"))
+
+	fills := regexp.MustCompile(`\blayoutParams\s*=\s*ViewGroup\.LayoutParams\(\s*` +
+		`ViewGroup\.LayoutParams\.MATCH_PARENT,\s*ViewGroup\.LayoutParams\.MATCH_PARENT\s*\)`)
+
+	if !fills.MatchString(code) {
+		t.Error("Web.kt does not give the WebView MATCH_PARENT layout params, so the page's 100dvh may be nothing")
+	}
+}
+
 // Every dictionary writes a day and a time in parts of a Go layout the app knows
 // - the very parts Language.pattern reads, taken from it - because anything else is
 // written out by the app as it stands, and 2.1.2006 would read as a date to
