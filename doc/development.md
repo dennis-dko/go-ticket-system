@@ -202,6 +202,17 @@ To try a change on a phone, `gradle assembleDebug` in the same image builds an
 APK signed with a debug key instead. Android installs it over no released app
 and no released app over it, so one is uninstalled before the other goes on.
 
+The README's pictures of the app are taken from it, as the others are, by
+[`test/camera/android.sh`](../test/camera/android.sh): `task readme:pictures:app`
+builds the app and the installation for Linux, and the script serves that
+installation beside an emulator that is already running, books a few days into
+it, installs the release build signed with a throwaway key and photographs four
+screens into `doc/image`. It runs where adb and the emulator are - inside WSL on
+Windows, with the SDK and a JDK under `~/android` unless `ANDROID_SDK_ROOT` and
+`JAVA_HOME` say otherwise. The emulator wants a google_apis image, because the
+camera switches it to English with root; the camera puts back the size it draws
+at, and leaves it in English.
+
 ## Verify
 
 ```bash

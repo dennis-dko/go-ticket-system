@@ -243,6 +243,30 @@ phone's camera opens it, and either way the app shows the installation it is
 asked to connect to and waits for a tap, because a code is a link any page could
 open. The address and the token can be typed in instead.
 
+<table>
+  <tr>
+    <td width="25%" valign="top">
+      <img src="doc/image/app-connect.png" alt="The app's first screen, drawn as the web interface's sign-in card: a button to scan a token's code, and the address and the token to type in instead">
+      <p><b>Connected once.</b> By the code a token is shown with, or by its address and value typed in.</p>
+    </td>
+    <td width="25%" valign="top">
+      <img src="doc/image/app-scan.png" alt="The app's camera screen: the camera's picture under a veil, and a framed window to hold over a token's code">
+      <p><b>Scanned in the app.</b> Its own camera screen fills the form; it connects only once Connect is pressed.</p>
+    </td>
+    <td width="25%" valign="top">
+      <img src="doc/image/app-stopwatch.png" alt="The web interface in the app: the stopwatch running on a project for an hour and twenty minutes, and the form that books time below it">
+      <p><b>The web interface.</b> Every screen the browser has, in the same design.</p>
+    </td>
+    <td width="25%" valign="top">
+      <img src="doc/image/app-menu.png" alt="The web interface's menu opened in the app over the page: the appearance, the language, signing out and the tabs">
+      <p><b>Its menu.</b> The tabs, the appearance, the language and the way out.</p>
+    </td>
+  </tr>
+</table>
+
+These are taken from the app on an emulator by [a script](test/camera/android.sh)
+— `task readme:pictures:app` takes them again.
+
 The token signs the app in, so no password and no second factor are typed on
 the phone, and it keeps the web interface signed in for as long as the token is
 good. Signing out in it disconnects the app as well, so a phone handed on does
