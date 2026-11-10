@@ -8395,6 +8395,20 @@ function drawBranding(branding) {
       : '';
   }
 
+  const appLink = $('#install-android-link');
+  if (appLink) appLink.href = releaseOfTheApp(branding.version);
+}
+
+/**
+ * The release the Android app is downloaded from: the one this installation
+ * runs, because the app belongs to the release it was built with. A build that
+ * is no release - "dev", or how far a source tree is from its last tag - has no
+ * release of its own, and is sent to the newest one.
+ */
+function releaseOfTheApp(version) {
+  const releases = 'https://github.com/dennis-dko/go-time-recording/releases';
+
+  return /^v\d+\.\d+\.\d+$/.test(version ?? '') ? `${releases}/tag/${version}` : `${releases}/latest`;
 }
 
 /**
@@ -10941,7 +10955,8 @@ const TOUR_STEPS = [
     title: () => t('tour.install.title', 'An app of its own'),
     text: () => t('tour.install.text',
       'Installed, the time recording opens from the home screen or the start menu like an '
-      + 'app of its own, without the browser around it.'),
+      + 'app of its own, without the browser around it. For Android the card also leads to '
+      + 'the Android app.'),
   },
   {
     target: '#form-my-timezone',
