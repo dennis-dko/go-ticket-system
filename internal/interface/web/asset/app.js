@@ -15676,8 +15676,12 @@ let installOffer = null;
 
 function wireInstall() {
   // Running as the installed app already: there is nothing to offer, and a card
-  // offering it would read as though the installation had not worked.
-  if (window.matchMedia?.('(display-mode: standalone)').matches) {
+  // offering it would read as though the installation had not worked. Inside the
+  // Android app as well, which is an app of its own and has no browser around it:
+  // the card sent somebody there to a browser's menu that is not on the screen.
+  // The app is known by the bridge it registers for saving files, which its
+  // WebView puts on the window before any script of the page runs.
+  if (window.matchMedia?.('(display-mode: standalone)').matches || 'GoTimeRecordingFiles' in window) {
     const card = $('#install-card');
     if (card) card.hidden = true;
 
