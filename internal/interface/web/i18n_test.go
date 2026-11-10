@@ -563,6 +563,23 @@ func TestOneWordForAnHour(t *testing.T) {
 	}
 }
 
+// One word for a password, in every German sentence the application says.
+//
+// German said Passwort forty-one times and Kennwort twenty-five, on one screen
+// as often as not: the form headed "Passwort ändern" was walked to by a bubble
+// titled "Dein Kennwort", and the card about signing in through an organisation
+// said Kennwort beside the passkey card's Passwort. Passwort is the one kept,
+// because the forms, the fields and most sentences already said it. Read over
+// the whole dictionary rather than the page's part, because the installer and
+// the Android app say it too.
+func TestOneWordForAPassword(t *testing.T) {
+	for key, sentence := range i18n.Dictionary("de") {
+		if strings.Contains(strings.ToLower(sentence), "kennw") {
+			t.Errorf("%s says Kennwort, where every other German sentence says Passwort: %s", key, sentence)
+		}
+	}
+}
+
 // One word for the tour.
 //
 // German called it a Rundgang on the welcome screen and in every sentence about
