@@ -234,11 +234,14 @@ func encrypt(plain []byte, sub Subscription, sender *ecdh.PrivateKey, salt []byt
 		return nil, fmt.Errorf("encrypting the message: %w", err)
 	}
 
-	// One record, ended by the delimiter that says it is the last.
-	record := append(append(make([]byte, 0, len(plain)+1), plain...), 0x02)
-	if len(record)+gcm.Overhead() > recordSize {
+	// One record, ended by the delimiter that says it is the last. Measured before
+	// anything is made of it, so that a message too long for one record is refused
+	// rather than copied first - and the size that is allocated is a bounded one.
+	if len(plain) > recordSize-1-gcm.Overhead() {
 		return nil, fmt.Errorf("a push message of %d bytes is more than one record holds", len(plain))
 	}
+
+	record := append(append(make([]byte, 0, len(plain)+1), plain...), 0x02)
 
 	header := make([]byte, 0, len(salt)+5+len(senderKey))
 	header = append(header, salt...)
