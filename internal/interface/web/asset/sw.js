@@ -1,6 +1,7 @@
 /*
- * What lets the installed application open without a network, and where a
- * notification it showed leads back to - nothing else.
+ * What lets the installed application open without a network, shows a reminder
+ * pushed while no page is open, and is where a notification leads back to -
+ * nothing else.
  *
  * It keeps the shell - the document, the script, the stylesheet, the pictures -
  * as last fetched, and hands it out when the installation cannot be reached.
@@ -30,6 +31,17 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys()
     .then((names) => Promise.all(names.filter((name) => name !== SHELL).map((name) => caches.delete(name))))
     .then(() => self.clients.claim()));
+});
+
+// A reminder pushed by the installation - a stopwatch past its hours, an unbooked
+// day - shown as its notification, whether or not a page is open. The tag is the
+// page's own for the same reminder, so one the page showed itself is replaced
+// rather than shown twice.
+self.addEventListener('push', (event) => {
+  const message = event.data ? event.data.json() : {};
+  if (!message.title) return;
+
+  event.waitUntil(self.registration.showNotification(message.title, { body: message.body, tag: message.tag }));
 });
 
 // A notification - a stopwatch run past the hours its owner chose - leads back

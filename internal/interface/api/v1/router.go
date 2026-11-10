@@ -38,6 +38,7 @@ type Handlers struct {
 	Exports    *rest.ExportHandler
 	AdminLog   *rest.AdminLogHandler
 	Team       *rest.TeamHandler
+	Push       *rest.PushHandler
 	Statements *rest.StatementHandler
 }
 
@@ -122,6 +123,11 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.GET(base+"/settings/managers", h.Team.Switch)
 	app.PUT(base+"/settings/managers", h.Team.SaveSwitch)
 
+	// Whether the reminders are pushed to browsers at all - shipped off, because
+	// every push leaves through the push service of the browser's maker.
+	app.GET(base+"/settings/push", h.Push.Switch)
+	app.PUT(base+"/settings/push", h.Push.SaveSwitch)
+
 	// What is waiting for a restart, and the restart itself. Under /settings/
 	// like the rest, which also keeps it reachable during maintenance mode - the
 	// settings that need a restart are exactly the ones somebody is likely to be
@@ -198,6 +204,9 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 
 	// What about one's own time deserves a banner, worked out where the rules are.
 	app.GET(base+"/me/notices", h.Me.Notices)
+	app.GET(base+"/me/push", h.Push.State)
+	app.POST(base+"/me/push", h.Push.Subscribe)
+	app.DELETE(base+"/me/push", h.Push.Unsubscribe)
 	app.PUT(base+"/me/balance-limits", h.Me.SetBalanceLimits)
 
 	// When somebody worked, a day at a time - theirs, like their entries.

@@ -1477,6 +1477,11 @@
           <button type="button" class="secondary" id="notify-allow" hidden data-i18n="remind.allowNotifications">Allow notifications in this browser</button>
         </div>
         <p class="muted" id="notify-state"></p>
+        <div class="row" id="push-mine" hidden>
+          <button type="button" class="secondary" id="push-subscribe" data-i18n="push.subscribe">Push the reminders to this browser</button>
+          <button type="button" class="secondary" id="push-unsubscribe" hidden data-i18n="push.unsubscribe">Stop pushing to this browser</button>
+        </div>
+        <p class="muted" id="push-state" hidden data-i18n="push.pushed">The reminders are pushed to this browser, even while it is closed.</p>
       </form>
 
       <!-- The week the balance is measured against, a figure per weekday. A plan
@@ -1876,6 +1881,19 @@
         <p class="muted" data-i18n="team.switchHint">A manager looks after the time and projects of the accounts an administrator assigns to them under Users, beside their own. Whoever is looked after sees who, under My account, and every entry a manager books or changes carries the manager's name. A manager learns that a day was away, never why, and never sees anybody's working times.</p>
         <div class="grid">
           <label class="switch"><input type="checkbox" name="enabled"><span class="switch-track"></span><span class="switch-label" data-i18n="team.switchEnabled">This installation has managers</span></label>
+        </div>
+        <button type="submit" data-i18n="action.save">Save</button>
+      </form>
+
+      <!-- Whether the reminders are pushed to browsers at all. Shipped off, decided
+           by the maintainer on 2026-11-10: every push leaves through the push
+           service of the browser's maker, and whether this installation talks to
+           them is its administrator's to decide. -->
+      <form method="post" id="form-push" class="card form">
+        <h2 data-i18n="push.switchTitle">Push notifications</h2>
+        <p class="muted" data-i18n="push.switchHint">The reminders - a stopwatch past the hours its owner chose, the last working day with nothing booked - are pushed to the browsers people switch them on for under My account, even while no page is open. Each push leaves through the push service of the browser's maker: Google's for Chrome, Mozilla's for Firefox, Apple's for Safari. It is encrypted for that browser alone, so the push service carries it without reading it - but it learns that this installation sent something, and when.</p>
+        <div class="grid">
+          <label class="switch"><input type="checkbox" name="enabled"><span class="switch-track"></span><span class="switch-label" data-i18n="push.switchEnabled">This installation pushes reminders</span></label>
         </div>
         <button type="submit" data-i18n="action.save">Save</button>
       </form>

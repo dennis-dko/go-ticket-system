@@ -2069,6 +2069,100 @@
         }
       }
     },
+    "/me/push": {
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Whether the caller's browsers can be pushed to",
+        "description": "Answers {\"enabled\": true, \"publicKey\": \"BP4z...\", \"endpoints\": [\"https://fcm.googleapis.com/fcm/send/...\"]}: whether the installation pushes reminders, the key a browser subscribes with - empty while it does not - and the addresses of the caller's own subscribed browsers, so a page can tell whether the one it is open in is among them. Needs `timesheets:read:own`.",
+        "responses": {
+          "200": {
+            "description": "The caller's push state"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Push the caller's reminders to a browser",
+        "description": "Takes the browser's subscription as the browser writes it out, {\"endpoint\": \"...\", \"keys\": {\"p256dh\": \"...\", \"auth\": \"...\"}}, and answers as GET does. Refused with pushOff while the installation does not push, pushServiceUnknown for an address that is not the push service of a browser's maker over https, and pushSubscriptionInvalid for keys no message can be encrypted for. A browser subscribed by another account before is this caller's from then on. Needs `timesheets:read:own`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endpoint": {
+                    "type": "string"
+                  },
+                  "keys": {
+                    "type": "object",
+                    "properties": {
+                      "p256dh": {
+                        "type": "string"
+                      },
+                      "auth": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The caller's push state, with this browser among the endpoints"
+          },
+          "400": {
+            "description": "Not a push service, or not a push channel's keys"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "409": {
+            "description": "The installation does not push reminders"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Stop pushing to one of the caller's browsers",
+        "description": "Takes {\"endpoint\": \"...\"}, and forgets that browser if it is one of the caller's. Signed in is all it needs, so that no right withdrawn since keeps somebody from taking a browser of theirs back.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endpoint": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The browser is not pushed to"
+          },
+          "401": {
+            "description": "Not signed in"
+          }
+        }
+      }
+    },
     "/me/balance-limits": {
       "put": {
         "tags": [
@@ -2994,6 +3088,53 @@
         ],
         "summary": "Switch managers on or off",
         "description": "Takes {\"enabled\": true}. While it is off, a team right reaches nobody and every assignment waits, kept: switching it on again restores what an administrator had set up rather than starting over. Only then does anybody see a colleague's time at all - and only an account an administrator assigned to them, whose owner is told so under GET /me/managers. Needs `settings:manage`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The switch as it now stands"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      }
+    },
+    "/settings/push": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Whether the installation pushes reminders",
+        "description": "Answers {\"enabled\": false}. Shipped off. Needs `settings:manage`.",
+        "responses": {
+          "200": {
+            "description": "The switch"
+          },
+          "403": {
+            "description": "Missing permission"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Switch pushing reminders on or off",
+        "description": "Takes {\"enabled\": true}. While it is on, the reminders - a stopwatch past the hours its owner chose, the last working day with nothing booked - are pushed to the browsers people subscribe under POST /me/push, through the push service of each browser's maker. The installation's signing key is made the first time it is switched on and kept when it is switched off, so the same browsers are reached once it is on again. Needs `settings:manage`.",
         "requestBody": {
           "required": true,
           "content": {

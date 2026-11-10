@@ -20,7 +20,7 @@ What the application does, and the rules it keeps while doing it.
 | API access | Personal tokens, scoped by the owner's current role |
 | Android app | The installation's own web interface in an app, so everything the browser does in the same design, connected by scanning the code a new token is shown with, which signs it in; released with every version as `go-time-recording-mobile_<version>.apk`, signed with one key so each release installs over the last |
 | Stopwatch | Start and stop the clock; the measured time becomes an entry, to the second. A start pressed late can be corrected, a clock left running is booked up to the time the work ended, and switching to the next project books the clock and carries on from the same second |
-| Reminders | A banner names the last working day with nothing booked on it and leads to the booking form on that day; another says when the stopwatch has run longer than its owner chose - ten hours unless they chose otherwise - with a notification as well where the browser allows one. Both are chosen under *My account* |
+| Reminders | A banner names the last working day with nothing booked on it and leads to the booking form on that day; another says when the stopwatch has run longer than its owner chose - ten hours unless they chose otherwise - with a notification as well where the browser allows one, and pushed to a closed browser where the installation pushes. Both are chosen under *My account* |
 | Finding entries | The list narrows by project, by period and by text in the description, and the export follows the same filters |
 | Entry history | Every correction of an entry keeps the version it replaced - its day, hours, project and description, and when it was replaced - whether it was made in the form, by moving the entry to another project, on the week grid or for a whole selection at once. The entry's owner opens it from the entry; deleting the entry deletes its history |
 | Hour budgets | A project may carry the hours its owner means to spend on it; the list shows how much of that is booked, marked from four fifths and past the whole, and the booking that crosses either says so |
@@ -145,6 +145,15 @@ well when the stopwatch crosses those hours while the page is open - a phone's
 browser too, because it is shown through the page's service worker, and pressing
 it leads back to the page; one found already past them on loading gets the
 banner alone.
+
+Where the installation pushes reminders - off until somebody who administers it
+switches that on under *Settings* - both reach a browser even while no page of
+it is open, once its owner has chosen *Push the reminders to this browser* under
+*My account*: the stopwatch in the minute its hours pass, the unbooked day at
+eight in the morning on its owner's clock. Each push is encrypted for that
+browser alone and leaves through the push service of the browser's maker;
+signing out of the browser takes it out of the pushes, so whoever uses it next
+is not reminded of somebody else's day.
 
 It is your own balance. Somebody else's is their recorded time, totalled, so it
 takes the same right as reading their entries — which only a manager holds, for the
