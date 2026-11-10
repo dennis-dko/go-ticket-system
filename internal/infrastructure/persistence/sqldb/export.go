@@ -50,6 +50,7 @@ var accountExport = []struct {
 	{"absences", "SELECT day, kind FROM absences WHERE user_id = ? ORDER BY day"},
 	{"leave-entitlements", "SELECT from_year, days FROM vacation_entitlements WHERE user_id = ? ORDER BY from_year"},
 	{"calendar-subscription", "SELECT prefix, created_at, last_read_at FROM calendar_feeds WHERE user_id = ?"},
+	{"push-subscriptions", "SELECT origin, created_at FROM push_subscriptions WHERE user_id = ? ORDER BY id"},
 	{"openid-links", "SELECT issuer, subject, created_at FROM openid_identities WHERE user_id = ? ORDER BY id"},
 	{"working-times", "SELECT day, start_minute, end_minute, break_minutes " +
 		"FROM work_days WHERE user_id = ? ORDER BY day"},
