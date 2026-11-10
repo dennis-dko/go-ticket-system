@@ -342,9 +342,20 @@ func othersEnglish(t *testing.T) map[string]map[string]bool {
 		}
 	}
 
+	// A sentence too long for one line is written as several literals joined
+	// with +, and it is the whole of it the page says.
 	script := read(t, "../web/asset/app.js")
-	for _, m := range regexp.MustCompile(`\bt\(\s*'((?:[^'\\]|\\.)+)',\s*'((?:[^'\\]|\\.)*)'`).FindAllStringSubmatch(script, -1) {
-		say(m[1], strings.NewReplacer(`\'`, `'`, `\\`, `\`).Replace(m[2]))
+	literal := regexp.MustCompile(`'((?:[^'\\]|\\.)*)'`)
+	unescape := strings.NewReplacer(`\'`, `'`, `\\`, `\`)
+
+	for _, m := range regexp.MustCompile(`\bt\(\s*'((?:[^'\\]|\\.)+)',\s*((?:'(?:[^'\\]|\\.)*'\s*\+?\s*)+)`).FindAllStringSubmatch(script, -1) {
+		var english strings.Builder
+
+		for _, part := range literal.FindAllStringSubmatch(m[2], -1) {
+			english.WriteString(unescape.Replace(part[1]))
+		}
+
+		say(m[1], english.String())
 	}
 
 	markup := read(t, "../web/asset/index.html")
