@@ -1,5 +1,6 @@
 /*
- * What lets the installed application open without a network, and nothing else.
+ * What lets the installed application open without a network, and where a
+ * notification it showed leads back to - nothing else.
  *
  * It keeps the shell - the document, the script, the stylesheet, the pictures -
  * as last fetched, and hands it out when the installation cannot be reached.
@@ -29,6 +30,15 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys()
     .then((names) => Promise.all(names.filter((name) => name !== SHELL).map((name) => caches.delete(name))))
     .then(() => self.clients.claim()));
+});
+
+// A notification - a stopwatch run past the hours its owner chose - leads back
+// to the page: the window already open where there is one, a new one otherwise.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then((windows) => (windows.length > 0 ? windows[0].focus() : self.clients.openWindow('/'))));
 });
 
 self.addEventListener('fetch', (event) => {
