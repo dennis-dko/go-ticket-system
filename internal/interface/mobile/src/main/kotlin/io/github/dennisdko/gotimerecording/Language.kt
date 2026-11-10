@@ -12,12 +12,11 @@ import java.time.format.DateTimeFormatter
  * is built - so the app speaks every language the installation does, and a new
  * language is still only its file.
  *
- * Its own sentences are the dictionaries' mobile.* entries. What the terminal
- * client says as well it says in its track.* words, and what the web interface
- * says - a refusal, a field, the unit of an hour - in the page's, so the three
- * never put one thing two ways. English has no file: the empty dictionary is
- * English, and a sentence a dictionary lacks is said in the English written
- * where it is said.
+ * Its own sentences are the dictionaries' mobile.* entries, and what the web
+ * interface says as well - a refusal, a field, the unit of an hour - it says in
+ * the page's, so the two never put one thing two ways. English has no file: the
+ * empty dictionary is English, and a sentence a dictionary lacks is said in the
+ * English written where it is said.
  */
 class Language(val code: String, private val dictionary: Map<String, String>) {
 
@@ -31,8 +30,8 @@ class Language(val code: String, private val dictionary: Map<String, String>) {
     /**
      * number writes a figure to two places the way the web interface does: 1,234.50
      * in English and 1.234,50 in German. Rounded as Go rounds it - half to even on
-     * an exact tie, which 0.125 hours is - so the app, the terminal and the page
-     * never disagree about the last digit.
+     * an exact tie, which 0.125 hours is - so the app and the page never disagree
+     * about the last digit.
      */
     fun number(v: Double): String {
         val point = text("number.point", ".")
@@ -62,21 +61,7 @@ class Language(val code: String, private val dictionary: Map<String, String>) {
     /** time writes the time of day, in the Go layout a dictionary names as layout.time. */
     fun time(at: ZonedDateTime): String = DateTimeFormatter.ofPattern(pattern(text("layout.time", "15:04"))).format(at)
 
-    /** weekday writes a day of the week and its date as the terminal client heads today: Tuesday, 27 October. */
-    fun weekday(day: LocalDate): String {
-        val days = text("track.weekdays", "").split(' ').filter { it.isNotEmpty() }
-        val months = text("track.months", "").split(' ').filter { it.isNotEmpty() }
-
-        val name = if (days.size == 7) days[day.dayOfWeek.value % 7] else english(day.dayOfWeek.name)
-        val month = if (months.size == 12) months[day.monthValue - 1] else english(day.month.name)
-
-        return text("track.weekday", "{0}, {1} {2}", name, day.dayOfMonth.toString(), month)
-    }
-
     companion object {
-
-        /** english is an enum's name as English writes it: MONDAY is Monday. */
-        private fun english(name: String): String = name.lowercase().replaceFirstChar { it.uppercase() }
 
         /**
          * fill puts values into a sentence where it says {0}, {1} ..., as the i18n

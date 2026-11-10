@@ -44,7 +44,7 @@ fun Language.refused(status: Int, reason: String, body: String): String {
         if (message.isNotEmpty()) return message
     }
 
-    return text("track.answered", "the installation answered {0} {1}", status.toString(), reason)
+    return text("mobile.answered", "the installation answered {0} {1}", status.toString(), reason)
 }
 
 /**

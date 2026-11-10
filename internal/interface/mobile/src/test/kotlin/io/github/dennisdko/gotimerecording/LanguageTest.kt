@@ -16,14 +16,11 @@ class LanguageTest {
             "unit.hours" to "Std.",
             "layout.day" to "02.01.2006",
             "layout.time" to "15:04",
-            "track.weekday" to "{0}, {1}. {2}",
-            "track.weekdays" to "Sonntag Montag Dienstag Mittwoch Donnerstag Freitag Samstag",
-            "track.months" to "Januar Februar März April Mai Juni Juli August September Oktober November Dezember",
         ),
     )
 
     // A figure is written to the last digit as the i18n package writes it, which
-    // is how the page and the terminal client write it too. Every expectation is
+    // is how the page writes it too. Every expectation is
     // what Go printed for the same value, not a reading of how Go rounds - the
     // ties and the near-ties are where a port goes wrong.
     @Test
@@ -69,13 +66,11 @@ class LanguageTest {
 
         assertEquals("2026-10-29", english.day(day))
         assertEquals("29.10.2026", german.day(day))
-        assertEquals("Thursday, 29 October", english.weekday(day))
-        assertEquals("Donnerstag, 29. Oktober", german.weekday(day))
     }
 
     @Test
     fun aSentenceADictionaryLacksIsSaidInEnglish() {
-        assertEquals("Started at 09:12 on A.", german.text("track.started", "Started at {0} on {1}.", "09:12", "A"))
+        assertEquals("Reading time.example.com …", german.text("mobile.reading", "Reading {0} …", "time.example.com"))
         assertEquals("Std.", german.text("unit.hours", "h"))
     }
 }
