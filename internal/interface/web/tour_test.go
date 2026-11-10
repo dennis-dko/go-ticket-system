@@ -2,6 +2,7 @@ package web_test
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,170 @@ func TestEveryTourStepTargetsSomethingThatExists(t *testing.T) {
 
 		if !strings.Contains(html, `id="`+strings.TrimPrefix(selector, "#")+`"`) {
 			t.Errorf("tour step points at %q, which is not in the page", selector)
+		}
+	}
+}
+
+// notInTheTour are the cards on a screen the walk through leaves out, each
+// with the reason. A card is named by its id, or by the first id inside it
+// where it has none.
+var notInTheTour = map[string]string{
+	"the card holding #welcome-title": "the welcome screen, which the first step - " +
+		"the title that leads there - describes",
+	"welcome-week":   "part of the welcome screen the first step describes",
+	"welcome-recent": "part of the welcome screen the first step describes",
+	"calendar-day-card": "the entries of the day picked in the month, which the month's " +
+		"step says a click opens",
+	"overtime-result":  "the answer to the balance form above it, hidden until it is asked",
+	"report-result":    "the answer to the report form above it, hidden until it is asked",
+	"statement-result": "the answer to the statement form above it, hidden until it is asked",
+	"the card holding #table-roles": "the roles the form above it makes, which that " +
+		"form's step describes",
+	"the card holding #tour-restart": "the walk through itself, started again from here",
+	"sync-elsewhere": "the directory's step says whose the run is, in the words that " +
+		"suit the account reading it",
+	"sync-card": "the directory's step describes the run below the directory",
+}
+
+// screenCard is a card on one of the screens, and every id inside it -
+// its own included.
+type screenCard struct {
+	name string
+	ids  map[string]bool
+}
+
+var (
+	markupComment = regexp.MustCompile(`(?s)<!--.*?-->`)
+	markupTag     = regexp.MustCompile(`<(/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>`)
+	markupID      = regexp.MustCompile(`\bid="([^"]+)"`)
+	markupClass   = regexp.MustCompile(`\bclass="([^"]+)"`)
+)
+
+// emptyElements close themselves, so they never wait for an end tag.
+var emptyElements = map[string]bool{
+	"area": true, "base": true, "br": true, "col": true, "embed": true, "hr": true,
+	"img": true, "input": true, "link": true, "meta": true, "source": true,
+	"track": true, "wbr": true,
+}
+
+// screenCards reads every element whose class names card inside a screen -
+// an element whose class names view - with the ids inside it. An end tag
+// closes whatever was left open inside its element, so a paragraph or a
+// cell closed implicitly does not hold the stack open.
+func screenCards(t *testing.T, html string) []screenCard {
+	t.Helper()
+
+	type open struct {
+		name       string
+		card       int
+		screen     bool
+		insideView bool
+	}
+
+	var (
+		cards []screenCard
+		stack []open
+	)
+
+	for _, tag := range markupTag.FindAllStringSubmatch(markupComment.ReplaceAllString(html, ""), -1) {
+		closing, name, attrs := tag[1] == "/", strings.ToLower(tag[2]), tag[3]
+
+		if closing {
+			for i := len(stack) - 1; i >= 0; i-- {
+				if stack[i].name == name {
+					stack = stack[:i]
+
+					break
+				}
+			}
+
+			continue
+		}
+
+		var classes []string
+		if match := markupClass.FindStringSubmatch(attrs); match != nil {
+			classes = strings.Fields(match[1])
+		}
+
+		id := ""
+		if match := markupID.FindStringSubmatch(attrs); match != nil {
+			id = match[1]
+		}
+
+		insideView := len(stack) > 0 && (stack[len(stack)-1].insideView || stack[len(stack)-1].screen)
+		element := open{name: name, card: -1, screen: slices.Contains(classes, "view"), insideView: insideView}
+
+		if insideView && slices.Contains(classes, "card") {
+			cards = append(cards, screenCard{name: id, ids: map[string]bool{}})
+			element.card = len(cards) - 1
+		}
+
+		if id != "" {
+			for _, outer := range append(stack, element) {
+				if outer.card >= 0 {
+					cards[outer.card].ids[id] = true
+
+					if cards[outer.card].name == "" {
+						cards[outer.card].name = "the card holding #" + id
+					}
+				}
+			}
+		}
+
+		if !emptyElements[name] && !strings.HasSuffix(attrs, "/") {
+			stack = append(stack, element)
+		}
+	}
+
+	if len(cards) == 0 {
+		t.Fatal("found no cards on any screen")
+	}
+
+	return cards
+}
+
+// Every card on a screen is in the walk through, or is named in notInTheTour
+// with the reason it is not.
+//
+// Nothing asked this, and the walk fell behind the screens it walks: measured
+// against them, twenty-four cards had no step - the week, the leave, the days
+// away, the working time, the year, the statement, the bounds and the
+// reminders, the holidays, the calendar subscription, the export and the
+// managers among them. The test for the tour's targets could not notice,
+// because every target it had still existed.
+//
+// A step that rings something inside a card counts for the card, so the month
+// stands for the calendar's card and the accounts table for the users'.
+func TestEveryCardIsInTheTour(t *testing.T) {
+	targets := map[string]bool{}
+	for _, match := range tourTargetPattern.FindAllStringSubmatch(tourSection(t), -1) {
+		targets[strings.TrimPrefix(match[1], "#")] = true
+	}
+
+	named := map[string]bool{}
+
+	for _, card := range screenCards(t, asset(t, "/")) {
+		named[card.name] = true
+
+		walked := false
+		for id := range card.ids {
+			walked = walked || targets[id]
+		}
+
+		_, leftOut := notInTheTour[card.name]
+
+		switch {
+		case walked && leftOut:
+			t.Errorf("%s is in the tour, and notInTheTour still says why it is not", card.name)
+		case !walked && !leftOut:
+			t.Errorf("%s is in no step of the tour: give it one, or name it in notInTheTour "+
+				"with the reason it has none", card.name)
+		}
+	}
+
+	for name := range notInTheTour {
+		if !named[name] {
+			t.Errorf("notInTheTour names %s, which is no card on any screen", name)
 		}
 	}
 }

@@ -10597,6 +10597,24 @@ const TOUR_STEPS = [
       + 'Every table worth moving this way has the same pair on its own screen.'),
   },
   {
+    target: '#templates-card',
+    view: 'timesheets',
+    permission: 'timesheets:write:own',
+    title: () => t('tour.templates.title', 'Templates'),
+    text: () => t('tour.templates.text',
+      'Bookings you make often, kept with "Save as template" in the form above. A template '
+      + 'only fills the form in: nothing is booked until you press Book.'),
+  },
+  {
+    target: '#week-card',
+    view: 'week',
+    permission: 'timesheets:read:own',
+    title: () => t('tour.week.title', 'The week as a grid'),
+    text: () => t('tour.week.text',
+      'A row for each project and a column for each day. A number typed into an empty cell '
+      + 'books it, and a changed number corrects the entry behind it.'),
+  },
+  {
     target: '#calendar-days',
     view: 'calendar',
     permission: 'timesheets:read:own',
@@ -10606,13 +10624,49 @@ const TOUR_STEPS = [
       + 'it, and click one of those entries to correct it.'),
   },
   {
+    target: '#workday-card',
+    view: 'calendar',
+    permission: 'timesheets:read:own',
+    title: () => t('tour.workday.title', 'Your working time'),
+    text: () => t('tour.workday.text',
+      'When you began, when you finished and how long your breaks were, beside the hours you '
+      + 'booked - and as a PDF. Days past a limit of the Working Hours Act are marked.'),
+  },
+  {
+    target: '#vacation-card',
+    view: 'calendar',
+    permission: 'timesheets:read:own',
+    title: () => t('tour.leave.title', 'Your leave'),
+    text: () => t('tour.leave.text',
+      'How many days of leave a year gives you, what was carried over, taken and planned, '
+      + 'and how many are left.'),
+  },
+  {
+    target: '#absence-card',
+    view: 'calendar',
+    permission: 'timesheets:write:own',
+    title: () => t('tour.absence.title', 'Days away'),
+    text: () => t('tour.absence.text',
+      'Leave, illness and days taken against overtime, recorded over a range. Only the days '
+      + 'your week asks something of count, so a fortnight of leave is ten working days.'),
+  },
+  {
     target: '#chart-days',
     view: 'overtime',
     permission: 'timesheets:read:own',
     title: () => t('tour.stats.title', 'Your own figures'),
     text: () => t('tour.stats.text',
-      'Hours per day and per project, over any period you choose. Yours alone, and '
-      + 'nobody else sees them.'),
+      'Hours per day, per project and per activity, over any period you choose. Yours alone, '
+      + 'and nobody else sees them.'),
+  },
+  {
+    target: '#year-card',
+    view: 'overtime',
+    permission: 'timesheets:read:own',
+    title: () => t('tour.year.title', 'The year at a glance'),
+    text: () => t('tour.year.text',
+      'Every day of the year as a tile, darker the more you booked, with public holidays and '
+      + 'days away marked - and the year so far beside the last one up to the same day.'),
   },
   {
     target: '#form-overtime',
@@ -10635,6 +10689,15 @@ const TOUR_STEPS = [
       + 'on them. Two people on the same job keep a project each.'),
   },
   {
+    target: '#table-projects',
+    view: 'projects',
+    permission: 'projects:read',
+    title: () => t('tour.projectList.title', 'Where each project stands'),
+    text: () => t('tour.projectList.text',
+      'Only an active project takes hours. Complete one when the work is done, and archive it '
+      + 'once it is completed: its hours stay readable.'),
+  },
+  {
     target: '#form-report',
     view: 'report',
     permission: 'reports:read:own',
@@ -10643,6 +10706,15 @@ const TOUR_STEPS = [
       'What you booked over a period: on one project, across all of them at once, or only '
       + 'the hours you never assigned to one. Your own hours - there is no breakdown per '
       + 'colleague, because nobody sees what anybody else recorded.'),
+  },
+  {
+    target: '#form-statement',
+    view: 'report',
+    permission: 'reports:read:own',
+    title: () => t('tour.statement.title', 'A statement of work'),
+    text: () => t('tour.statement.text',
+      'The hours of your billable projects in a period, at their rate and totalled per '
+      + 'currency. Not an invoice: the number, the tax and the customer are yours to write.'),
   },
   {
     target: '#form-user',
@@ -10681,20 +10753,31 @@ const TOUR_STEPS = [
       + 'is measured against, and nobody but you sets it.'),
   },
   {
-    target: '#form-my-timezone',
+    target: '#form-balance-bounds',
     view: 'settings',
-    title: () => t('tour.myZone.title', 'Your timezone'),
-    text: () => t('tour.myZone.text',
-      'It decides which calendar day a booking lands on. It is taken from your browser the '
-      + 'first time you sign in, and this is where you disagree with that.'),
+    permission: 'settings:write:own',
+    title: () => t('tour.bounds.title', 'Bounds for your balance'),
+    text: () => t('tour.bounds.text',
+      'Two figures your running balance should stay between, as on a flexitime account. '
+      + 'While it lies outside them, a banner says so on every screen.'),
   },
   {
-    target: '#totp-card',
+    target: '#form-reminders',
     view: 'settings',
-    title: () => t('tour.totp.title', 'A second factor'),
-    text: () => t('tour.totp.text',
-      'A code from an authenticator app, set up by scanning a QR code - or by typing the '
-      + 'secret, where scanning is not an option.'),
+    permission: 'timesheets:write:own',
+    title: () => t('tour.reminders.title', 'Reminders'),
+    text: () => t('tour.reminders.text',
+      'A banner when the stopwatch has run longer than you choose, or when your last working '
+      + 'day has nothing booked on it. For the stopwatch, this browser can notify you as well.'),
+  },
+  {
+    target: '#schedule-card',
+    view: 'settings',
+    permission: 'settings:write:own',
+    title: () => t('tour.schedule.title', 'Your week'),
+    text: () => t('tour.schedule.text',
+      'How many hours each weekday asks of you, for the overtime balance. A plan applies from '
+      + 'the day you choose; the weeks before it keep the plan they had.'),
   },
   {
     target: '#passkey-card',
@@ -10705,12 +10788,62 @@ const TOUR_STEPS = [
       + 'can register several, one per device.'),
   },
   {
+    target: '#openid-card',
+    view: 'settings',
+    title: () => t('tour.openid.title', 'Signing in through your organisation'),
+    text: () => t('tour.openid.text',
+      'Link your account to your organisation\'s sign-in provider and sign in there, with its '
+      + 'own second factor. Your password keeps working alongside it.'),
+  },
+  {
+    target: '#install-card',
+    view: 'settings',
+    title: () => t('tour.install.title', 'An app of its own'),
+    text: () => t('tour.install.text',
+      'Installed, the time recording opens from the home screen or the start menu like an '
+      + 'app of its own, without the browser around it.'),
+  },
+  {
+    target: '#form-my-timezone',
+    view: 'settings',
+    title: () => t('tour.myZone.title', 'Your timezone'),
+    text: () => t('tour.myZone.text',
+      'It decides which calendar day a booking lands on. It is taken from your browser the '
+      + 'first time you sign in, and this is where you disagree with that.'),
+  },
+  {
+    target: '#form-my-holidays',
+    view: 'settings',
+    title: () => t('tour.myHolidays.title', 'Your public holidays'),
+    text: () => t('tour.myHolidays.text',
+      'The public holidays where you work: marked in the calendar and on the week, and left '
+      + 'out of your leave. Leave it on the installation\'s unless you work somewhere else.'),
+  },
+  {
+    target: '#totp-card',
+    view: 'settings',
+    title: () => t('tour.totp.title', 'A second factor'),
+    text: () => t('tour.totp.text',
+      'A code from an authenticator app, set up by scanning a QR code - or by typing the '
+      + 'secret, where scanning is not an option.'),
+  },
+  {
+    target: '#feed-card',
+    view: 'settings',
+    permission: 'timesheets:read:own',
+    title: () => t('tour.feed.title', 'Your days in your own calendar'),
+    text: () => t('tour.feed.text',
+      'An address that puts your booked hours and your days away into Outlook, Google or your '
+      + 'phone\'s calendar. Whoever has it can read them, so it is shown only once.'),
+  },
+  {
     target: '#token-card',
     view: 'settings',
-    title: () => t('tour.tokens.title', 'Tokens for scripts'),
+    title: () => t('tour.tokens.title', 'Tokens for scripts and the app'),
     text: () => t('tour.tokens.text',
-      'A personal token lets a script book time as you, and carries exactly the rights your '
-      + 'role has at the time it is used. It is shown once, when it is created.'),
+      'A personal token lets a script book time as you, and connects the Android app that '
+      + 'scans its code. It carries exactly the rights your role has when it is used, and is '
+      + 'shown once, when it is created.'),
   },
   {
     target: '#form-password',
@@ -10719,6 +10852,49 @@ const TOUR_STEPS = [
     text: () => t('tour.password.text',
       'Changing it ends every other session but this one. An account that signs in through '
       + 'the directory has no password here to change.'),
+  },
+  {
+    target: '#managers-card',
+    view: 'settings',
+    title: () => t('tour.myManagers.title', 'Who may see your time'),
+    text: () => t('tour.myManagers.text',
+      'Nobody but you, unless the installation has managers and an administrator assigns you '
+      + 'one. Whoever may would be named here.'),
+  },
+  {
+    target: '#export-card',
+    view: 'settings',
+    title: () => t('tour.export.title', 'Everything about you'),
+    text: () => t('tour.export.text',
+      'Everything this installation keeps about your account, as a ZIP to take with you. '
+      + 'Passwords, second factors, tokens and keys stay out of it.'),
+  },
+  {
+    target: '#restart-card',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.restart.title', 'Restarting'),
+    text: () => t('tour.restart.text',
+      'Some settings are read only while the application starts. Saved ones wait here until '
+      + 'a restart applies them, and this is where to restart on purpose.'),
+  },
+  {
+    target: '#update-card',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.update.title', 'Which version runs here'),
+    text: () => t('tour.update.text',
+      'The version this installation runs, and whether a newer one is out. Where it can '
+      + 'replace itself, it downloads and installs the new one from here.'),
+  },
+  {
+    target: '#form-maintenance',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.maintenance.title', 'Maintenance mode'),
+    text: () => t('tour.maintenance.text',
+      'Closes the installation with an explanation, shown on the sign-in screen as well - '
+      + 'so somebody who cannot get in is told why rather than left guessing.'),
   },
   {
     target: '#form-branding',
@@ -10730,6 +10906,42 @@ const TOUR_STEPS = [
       + 'is what tells a test instance from the real one at a glance.'),
   },
   {
+    target: '#form-managers',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.managers.title', 'Managers'),
+    text: () => t('tour.managers.text',
+      'Switched on, a manager looks after the time and projects of the accounts you assign '
+      + 'to them under Users. A manager learns that a day was away, never why.'),
+  },
+  {
+    target: '#form-operational',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.limits.title', 'Limits and lifetimes'),
+    text: () => t('tour.limits.text',
+      'How long a session lasts, how many requests a caller may make, and the figures a '
+      + 'new account starts on.'),
+  },
+  {
+    target: '#form-timezone',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.zone.title', 'The installation\'s timezone'),
+    text: () => t('tour.zone.text',
+      'Which calendar day a booking falls on, for everybody who has not chosen their own '
+      + 'under My account.'),
+  },
+  {
+    target: '#form-holidays',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.holidays.title', 'The installation\'s public holidays'),
+    text: () => t('tour.holidays.text',
+      'A country and, where its holidays differ, a state or a region, for everybody who has '
+      + 'not chosen their own. Until a choice is saved, nobody keeps any.'),
+  },
+  {
     target: '#form-datasource',
     view: 'admin',
     permission: 'settings:manage',
@@ -10737,6 +10949,15 @@ const TOUR_STEPS = [
     text: () => t('tour.database.text',
       'Which database this installation writes to. The connection is tested before it is '
       + 'saved, and the change applies at the next start.'),
+  },
+  {
+    target: '#form-telemetry',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.telemetry.title', 'Metrics and tracing'),
+    text: () => t('tour.telemetry.text',
+      'The log level, the metrics endpoint and where traces are exported to. The level applies '
+      + 'at once; the other two are read when the process starts, so they wait for the next one.'),
   },
   {
     target: '#form-ldap',
@@ -10757,31 +10978,23 @@ const TOUR_STEPS = [
         .replace('{0}', roleTitle(ADMINISTERING_ROLE))),
   },
   {
-    target: '#form-maintenance',
+    target: '#form-openid',
     view: 'admin',
     permission: 'settings:manage',
-    title: () => t('tour.maintenance.title', 'Maintenance mode'),
-    text: () => t('tour.maintenance.text',
-      'Closes the installation with an explanation, shown on the sign-in screen as well - '
-      + 'so somebody who cannot get in is told why rather than left guessing.'),
+    title: () => t('tour.provider.title', 'A sign-in provider'),
+    text: () => t('tour.provider.text',
+      'People can sign in through your organisation\'s provider instead of with a password, '
+      + 'once each has linked their account to it. Nobody gets an account just because the '
+      + 'provider knows them.'),
   },
   {
-    target: '#form-operational',
+    target: '#changes-card',
     view: 'admin',
     permission: 'settings:manage',
-    title: () => t('tour.limits.title', 'Limits and lifetimes'),
-    text: () => t('tour.limits.text',
-      'How long a session lasts, how many requests a caller may make, and the figures a '
-      + 'new account starts on.'),
-  },
-  {
-    target: '#form-telemetry',
-    view: 'admin',
-    permission: 'settings:manage',
-    title: () => t('tour.telemetry.title', 'Metrics and tracing'),
-    text: () => t('tour.telemetry.text',
-      'The log level, the metrics endpoint and where traces are exported to. The level applies '
-      + 'at once; the other two are read when the process starts, so they wait for the next one.'),
+    title: () => t('tour.changes.title', 'Who changed what'),
+    text: () => t('tour.changes.text',
+      'Every account, role and setting created, changed or deleted, every switch of '
+      + 'maintenance mode and every restart, with who did it, newest first.'),
   },
   {
     target: '#log-card',
