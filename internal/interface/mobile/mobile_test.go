@@ -342,9 +342,20 @@ func othersEnglish(t *testing.T) map[string]map[string]bool {
 		}
 	}
 
+	// A sentence too long for one line is written as several literals joined
+	// with +, and it is the whole of it the page says.
 	script := read(t, "../web/asset/app.js")
-	for _, m := range regexp.MustCompile(`\bt\(\s*'((?:[^'\\]|\\.)+)',\s*'((?:[^'\\]|\\.)*)'`).FindAllStringSubmatch(script, -1) {
-		say(m[1], strings.NewReplacer(`\'`, `'`, `\\`, `\`).Replace(m[2]))
+	literal := regexp.MustCompile(`'((?:[^'\\]|\\.)*)'`)
+	unescape := strings.NewReplacer(`\'`, `'`, `\\`, `\`)
+
+	for _, m := range regexp.MustCompile(`\bt\(\s*'((?:[^'\\]|\\.)+)',\s*((?:'(?:[^'\\]|\\.)*'\s*\+?\s*)+)`).FindAllStringSubmatch(script, -1) {
+		var english strings.Builder
+
+		for _, part := range literal.FindAllStringSubmatch(m[2], -1) {
+			english.WriteString(unescape.Replace(part[1]))
+		}
+
+		say(m[1], english.String())
 	}
 
 	markup := read(t, "../web/asset/index.html")
@@ -534,6 +545,29 @@ func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
 	if !strings.Contains(install, "'"+registered[1]+"' in window") {
 		t.Errorf("wireInstall does not ask for %s, the bridge the app registers, so the app "+
 			"shows a card about installing the page as an app", registered[1])
+	}
+}
+
+// The page asks the phone for the notifications the app shows its reminders as,
+// through the bridge the app registers for them - a WebView has no
+// Notification, and without the bridge the Reminders card says no browser can
+// show any. So the name the page asks for is the name Web.kt registers, and the
+// app declares the permission it asks the phone for.
+func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) {
+	code, _ := lexed(source(t, "Web.kt"))
+
+	registered := regexp.MustCompile(`\bconst\s+val\s+notificationsInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
+	if registered == nil {
+		t.Fatal("Web.kt names no notificationsInterface, so the page cannot ask the phone for notifications")
+	}
+
+	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]) {
+		t.Errorf("app.js does not ask for %s, the bridge the app registers, so in the app the "+
+			"Reminders card says that no browser can show notifications", registered[1])
+	}
+
+	if !strings.Contains(read(t, "src/main/AndroidManifest.xml"), `android:name="android.permission.POST_NOTIFICATIONS"`) {
+		t.Error("the app does not declare POST_NOTIFICATIONS, so the phone is never asked and no reminder is shown")
 	}
 }
 

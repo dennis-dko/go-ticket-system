@@ -75,7 +75,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         private set
 
     init {
-        state.connection?.let { open(it, keep = false) }
+        state.connection?.let {
+            open(it, keep = false)
+            startReminders(application)
+        }
     }
 
     /** offer shows the connect form filled with what a scanned code holds; nothing is changed until somebody connects. */
@@ -128,6 +131,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         val held = connection?.let { cookies.getCookie(it.address) }.orEmpty()
 
         store.forget()
+        stopReminders(getApplication())
         cookies.removeAllCookies(null)
         state = State(words = words, connection = null)
 
@@ -170,7 +174,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                     installation.handOver(connection.token).forEach { cookies.setCookie(connection.address, it) }
                     cookies.flush()
 
-                    if (keep) store.save(connection)
+                    if (keep) {
+                        store.save(connection)
+                        startReminders(getApplication())
+                    }
                     replaced?.let { signOut(it, held) }
 
                     state.copy(connection = connection, offered = null, ready = true, shown = state.shown + 1)

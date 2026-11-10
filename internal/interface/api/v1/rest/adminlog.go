@@ -49,6 +49,7 @@ var administrativeChanges = []struct {
 	{http.MethodPut, "/api/v1/settings/datasource", "settings.datasource", ""},
 	{http.MethodPut, "/api/v1/settings/telemetry", "settings.telemetry", ""},
 	{http.MethodPut, "/api/v1/settings/managers", "settings.managers", "enabled"},
+	{http.MethodPut, "/api/v1/settings/push", "settings.push", "enabled"},
 	{http.MethodPost, "/api/v1/settings/restart", "installation.restart", ""},
 	{http.MethodPost, "/api/v1/settings/update", "installation.update", ""},
 	{http.MethodPost, "/api/v1/setup/complete", "installation.setup", ""},

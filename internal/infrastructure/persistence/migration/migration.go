@@ -189,6 +189,9 @@ func All(dialect string) map[int64]migration.Migrate {
 		20261103020000: {UP: func(d migration.Datasource) error {
 			return rememberWhichTokenOpenedASession(d, dialect)
 		}},
+		20261110010000: {UP: func(d migration.Datasource) error {
+			return keepPushSubscriptions(d, dialect)
+		}},
 	}
 }
 
@@ -2017,6 +2020,28 @@ func placeEveryHolidayStateInGermany(d migration.Datasource, dialect string) err
 	}
 
 	return nil
+}
+
+// keepPushSubscriptions keeps the browsers each person asked for the reminders to
+// be pushed to: the push service's address, the two keys a message is encrypted
+// for, and the address the browser reached the installation at.
+//
+// The endpoint is unique, because a browser's push channel is one subscription
+// and is what one is replaced and forgotten by; the constraint is the table's
+// index as well, so one statement makes it. It is bounded at 700 so that MySQL
+// can index it in four-byte characters, which a push service's address - some
+// two hundred and fifty characters - comes nowhere near. Not unique per person:
+// somebody with two browsers has two.
+func keepPushSubscriptions(d migration.Datasource, dialect string) error {
+	return execAll(d, fmt.Sprintf(`CREATE TABLE push_subscriptions (
+		%s,
+		user_id %s NOT NULL REFERENCES users(id),
+		endpoint VARCHAR(700) NOT NULL UNIQUE,
+		p256dh VARCHAR(100) NOT NULL,
+		auth VARCHAR(50) NOT NULL,
+		origin VARCHAR(255) NOT NULL,
+		created_at %s NOT NULL
+	)`, primaryKey(dialect), foreignKeyID(dialect), timestamp(dialect)))
 }
 
 // rememberWhichTokenOpenedASession records the personal token a session was

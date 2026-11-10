@@ -1097,6 +1097,32 @@ A refused round is written to the log as a warning, prefixed `signing in through
 the provider:`, with the provider's own reason - the sign-in screen says only
 that the provider did not confirm it.
 
+## Pushing reminders to browsers
+
+Off until somebody who administers the installation switches it on under
+**Settings → Push notifications**; nothing is configured in the environment.
+Then each person chooses, browser by browser, under **My account → Reminders**.
+
+- **The server posts to the push services of the browsers' makers**, over https
+  and to nothing else: `fcm.googleapis.com` for Chrome and the browsers built on
+  it, `*.push.services.mozilla.com` for Firefox, `*.push.apple.com` for Safari and
+  `*.notify.windows.com` for Edge. A subscription naming any other address is
+  refused, so nobody can make the installation post into its own network. A
+  firewall that lets it reach only some of these reaches only those people's
+  browsers.
+- **A push is encrypted for the one browser it is for** (RFC 8291) and signed
+  with the installation's own key (RFC 8292). The push service carries it without
+  reading it, and learns that this installation sent something to that browser,
+  and when.
+- **The signing key** is made the first time push is switched on and kept in the
+  database, sealed with `SECRET_KEY` as the second factors are. Switching push
+  off keeps it, so the same browsers are reached when it is on again. Like the
+  second factors it cannot be read once `SECRET_KEY` is lost or changed; nothing
+  is pushed then, and the check says why in the log.
+- **Each reminder is pushed in the minute it falls due** by a check that runs
+  every minute while push is on. An instance that is down in that minute does not
+  push that reminder later - the banner on the page still says it.
+
 ## Updating from the interface
 
 *Settings* carries a **Version** card. It says what is running, what the newest

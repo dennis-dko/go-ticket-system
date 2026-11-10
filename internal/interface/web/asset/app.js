@@ -4830,6 +4830,139 @@ function wireManagers() {
     () => viewTimeOf(event.target.value), null, null));
 }
 
+/** Whether the installation pushes reminders, as the server last said it - unless it is being changed. */
+async function loadPushSwitch() {
+  const form = $('#form-push');
+  if (!form || beingEdited(form)) return;
+
+  const state = await api('/settings/push');
+
+  form.elements.enabled.checked = Boolean(state.enabled);
+  form.elements.enabled.defaultChecked = Boolean(state.enabled);
+}
+
+/**
+ * Whether this browser can be pushed to at all: a service worker to show what
+ * arrives, and a push manager to subscribe through. The Android app's WebView
+ * has neither, and shows the reminders as notifications of its own instead.
+ */
+function pushable() {
+  return 'serviceWorker' in navigator && 'PushManager' in window;
+}
+
+/**
+ * The Reminders card's part about pushing to this browser: offered where the
+ * installation pushes and the browser can be pushed to, and saying so where this
+ * browser is already among the reader's subscribed ones.
+ */
+async function drawPushState() {
+  const box = $('#push-mine');
+  const pushed = $('#push-state');
+  if (!box || !pushed) return;
+
+  box.hidden = true;
+  pushed.hidden = true;
+
+  // Where it cannot be asked, nothing is offered that could only fail; the
+  // Reminders card's other parts stand either way.
+  try {
+    const state = pushable() && can('timesheets:read:own') ? await api('/me/push') : null;
+    if (!state?.enabled) return;
+
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    const mine = Boolean(subscription && (state.endpoints ?? []).includes(subscription.endpoint));
+
+    $('#push-subscribe').hidden = mine;
+    $('#push-unsubscribe').hidden = !mine;
+    pushed.hidden = !mine;
+    box.hidden = false;
+  } catch {
+    box.hidden = true;
+  }
+}
+
+/** The key a browser subscribes with, from the base64url the server writes to the bytes the browser takes. */
+function pushKeyBytes(key) {
+  const padded = key.replaceAll('-', '+').replaceAll('_', '/').padEnd(Math.ceil(key.length / 4) * 4, '=');
+
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+}
+
+/**
+ * Subscribes this browser and hands its subscription to the installation. The
+ * browser's own leave to notify is asked for first, because a push it could not
+ * show is one nobody sees; a refusal is said by the card's line about it.
+ */
+async function subscribeThisBrowser() {
+  const state = await api('/me/push');
+  if (!state.enabled) return;
+
+  if (Notification.permission === 'default') await Notification.requestPermission();
+
+  drawNotifyState();
+
+  if (Notification.permission !== 'granted') return;
+
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: pushKeyBytes(state.publicKey),
+  });
+
+  await api('/me/push', { method: 'POST', body: JSON.stringify(subscription.toJSON()) });
+}
+
+/**
+ * Takes this browser out of the pushes: the installation forgets it, and the
+ * browser drops the subscription. Where the installation cannot be told, the
+ * push service is, by the browser, and answers the next push as gone.
+ */
+async function unsubscribeThisBrowser() {
+  const registration = await navigator.serviceWorker?.getRegistration();
+  const subscription = await registration?.pushManager?.getSubscription();
+  if (!subscription) return;
+
+  try {
+    await api('/me/push', { method: 'DELETE', body: JSON.stringify({ endpoint: subscription.endpoint }) });
+  } finally {
+    await subscription.unsubscribe();
+  }
+}
+
+/**
+ * Takes the browser out of the pushes when somebody signs out of it, so whoever
+ * uses it next is not pushed the reminders of whoever left. A sign-out goes
+ * ahead whatever this answers.
+ */
+async function forgetThisBrowsersPush() {
+  try {
+    await unsubscribeThisBrowser();
+  } catch {
+    // Signing out is not held up by a push channel; the browser dropped it either way.
+  }
+}
+
+function wirePush() {
+  const form = $('#form-push');
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const enabled = form.elements.enabled.checked;
+
+    saveForm(form, () => api('/settings/push', {
+      method: 'PUT', body: JSON.stringify({ enabled }),
+    }), t('push.switchSaved', 'Push notifications saved'), refreshAll);
+  });
+
+  $('#push-subscribe')?.addEventListener('click', () => mutate(
+    () => subscribeThisBrowser(), null, drawPushState));
+
+  $('#push-unsubscribe')?.addEventListener('click', () => mutate(
+    () => unsubscribeThisBrowser(), null, drawPushState));
+}
+
 async function loadUsers() {
   // Listing accounts is a permission, and administering them is the only thing this
   // list is for now.
@@ -7234,6 +7367,7 @@ function fillSettingsForm() {
   // The same for the reminders, which guard themselves too.
   fillReminders();
   drawNotifyState();
+  drawPushState();
 
   // Not over somebody who is part way through filling it in. This runs after
   // every save on the screen and after a language is chosen, and it used to
@@ -8494,6 +8628,7 @@ async function loadAdmin() {
 
   await loadMaintenance();
   await loadManagersSwitch();
+  await loadPushSwitch();
 
   const branding = await api('/branding');
   const form = $('#form-branding');
@@ -8787,6 +8922,7 @@ const CHANGE_SENTENCES = {
   'settings.datasource': () => t('change.datasource', 'Changed the database connection'),
   'settings.telemetry': () => t('change.telemetry', 'Changed logging, metrics and tracing'),
   'settings.managers': () => t('change.managers', 'Switched managers {1}'),
+  'settings.push': () => t('change.push', 'Switched push notifications {1}'),
   'installation.restart': () => t('change.restart', 'Restarted the application'),
   'installation.update': () => t('change.update', 'Started an update'),
   'installation.setup': () => t('change.setup', 'Completed the setup'),
@@ -8800,6 +8936,8 @@ function describeChange(entry) {
     'settings.maintenance': () => (entry.detail === 'true'
       ? t('change.on', 'on') : t('change.off', 'off')),
     'settings.managers': () => (entry.detail === 'true'
+      ? t('change.on', 'on') : t('change.off', 'off')),
+    'settings.push': () => (entry.detail === 'true'
       ? t('change.on', 'on') : t('change.off', 'off')),
   }[entry.action]?.() ?? entry.detail;
 
@@ -10260,6 +10398,8 @@ async function endTheSessionQuietly() {
 }
 
 async function doLogout() {
+  // While the session still is one: the installation is told with it.
+  await forgetThisBrowsersPush();
   await endTheSessionQuietly();
 
   // Somebody who signs out means it: a reload of the sign-in screen must not
@@ -10913,6 +11053,15 @@ const TOUR_STEPS = [
     text: () => t('tour.managers.text',
       'Switched on, a manager looks after the time and projects of the accounts you assign '
       + 'to them under Users. A manager learns that a day was away, never why.'),
+  },
+  {
+    target: '#form-push',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.push.title', 'Push notifications'),
+    text: () => t('tour.push.text',
+      'Whether the reminders reach a browser that is closed. Off until you switch it on, '
+      + 'because every push leaves through the push service of the browser\'s maker.'),
   },
   {
     target: '#form-operational',
@@ -15309,19 +15458,33 @@ function openTheBookingFormOn(day) {
 
 /**
  * Tells somebody looking at another window that the stopwatch has passed the
- * hours they chose, where the browser allows it. A browser that offers
- * notifications only through a service worker - Chrome on Android - refuses the
- * constructor, and then the banner is all there is.
+ * hours they chose, where the browser allows it. Through the service worker
+ * where one is registered, because a browser that shows notifications only from
+ * one - Chrome on Android - refuses the page's own constructor, and a phone's
+ * browser was left with the banner alone. The constructor is for a page with no
+ * worker, and where neither works the banner is all there is.
  */
-function notifyTheLongStopwatch() {
+async function notifyTheLongStopwatch() {
   if (!('Notification' in window) || Notification.permission !== 'granted' || !runningTimer) return;
 
+  const title = t('timer.longTitle', 'The stopwatch is still running');
+  const options = {
+    body: fillIn(t('timer.longBody', 'Since {1}, longer than the {0} you chose.'),
+      [alertHoursText(), fmtMoment(runningTimer.startedAt)]),
+    tag: 'gtr-stopwatch',
+  };
+
   try {
-    new Notification(t('timer.longTitle', 'The stopwatch is still running'), {
-      body: fillIn(t('timer.longBody', 'Since {1}, longer than the {0} you chose.'),
-        [alertHoursText(), fmtMoment(runningTimer.startedAt)]),
-      tag: 'gtr-stopwatch',
-    });
+    // getRegistration rather than ready, which waits for ever where nothing was
+    // ever registered.
+    const registration = await navigator.serviceWorker?.getRegistration();
+    if (registration) {
+      await registration.showNotification(title, options);
+
+      return;
+    }
+
+    new Notification(title, options);
   } catch {
     // The banner says it.
   }
@@ -15345,14 +15508,44 @@ function fillReminders() {
 }
 
 /**
+ * The Android app's notifications, where the page is shown in it. The app's
+ * WebView has no Notification of its own, so the app registers
+ * GoTimeRecordingNotifications instead: state() answers in the words of the
+ * browser's Notification.permission - granted, default or denied - and request()
+ * asks the phone, which answers by dispatching gtr-notifications on the window
+ * once its owner has chosen. The reminders themselves the app shows as
+ * notifications of its own, open or closed, asking the installation itself.
+ */
+function appNotifications() {
+  return window.GoTimeRecordingNotifications ?? null;
+}
+
+/**
  * Whether this browser will show a notification, and the button that asks it
  * where it has not been asked yet. A refusal can only be taken back in the
- * browser's own settings, so it is said rather than asked again.
+ * browser's own settings, so it is said rather than asked again. In the Android
+ * app the same is asked of the phone, in the app's words rather than a browser's.
  */
 function drawNotifyState() {
   const button = $('#notify-allow');
   const state = $('#notify-state');
   if (!button || !state) return;
+
+  const app = appNotifications();
+  if (app) {
+    const permission = app.state();
+
+    button.hidden = permission !== 'default';
+    swapTheLabel(button, 'remind.allowAppNotifications', 'Allow notifications from this app');
+    state.textContent = {
+      granted: () => t('remind.appNotifyGranted',
+        'This app shows the reminders as notifications, whether it is open or not.'),
+      denied: () => t('remind.appNotifyDenied',
+        'The phone blocks this app\'s notifications; that can only be changed in its settings.'),
+    }[permission]?.() ?? '';
+
+    return;
+  }
 
   const permission = 'Notification' in window ? Notification.permission : 'unsupported';
 
@@ -17965,10 +18158,21 @@ function wireForms() {
   });
 
   $('#notify-allow').addEventListener('click', async () => {
+    const app = appNotifications();
+
+    // The phone answers in its own time, with gtr-notifications below.
+    if (app) {
+      app.request();
+
+      return;
+    }
+
     if ('Notification' in window) await Notification.requestPermission();
 
     drawNotifyState();
   });
+
+  window.addEventListener('gtr-notifications', drawNotifyState);
 
   $('#export-me').addEventListener('click', () => mutate(
     () => downloadFile(`${API}/me/export`, t('export.filename', 'everything-about-me'), 'zip'),
@@ -18205,6 +18409,7 @@ async function init() {
     wireLogViewer();
     wireMaintenance();
     wireManagers();
+    wirePush();
     $('#logout').addEventListener('click', doLogout);
     $('#language-picker').addEventListener('change', (e) => mutate(
       () => api('/me/language', { method: 'PUT', body: JSON.stringify({ language: e.target.value }) }),
