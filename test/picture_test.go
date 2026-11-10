@@ -15,8 +15,9 @@ import (
 // The README shows the pictures the camera takes, and the camera takes the
 // pictures the README shows.
 //
-// The camera is a case in the browser suite that runs only when asked, so
-// nothing else notices when the two part. A picture the README names and
+// The camera is a case in the browser suite, and for the Android app a script
+// that photographs an emulator. Both run only when asked, so nothing else
+// notices when the two part. A picture the README names and
 // doc/image does not hold is a broken image on the page most people see first;
 // one doc/image holds and nothing shows is downloaded by every clone and never
 // looked at; and one the camera does not take is never taken again, so it shows
@@ -67,8 +68,9 @@ func TestTheReadmeShowsWhatTheCameraTakes(t *testing.T) {
 	}
 }
 
-// picturesTheCameraTakes reads the file names the camera's case writes: the
-// second argument of shoot and shootCard, and the third of keep.
+// picturesTheCameraTakes reads the file names the camera's case writes - the
+// second argument of shoot and shootCard, and the third of keep - and the
+// name the app's camera hands shoot on a line of its own.
 func picturesTheCameraTakes(t *testing.T) map[string]bool {
 	t.Helper()
 
@@ -109,6 +111,15 @@ func picturesTheCameraTakes(t *testing.T) map[string]bool {
 
 		return true
 	})
+
+	script, err := os.ReadFile(filepath.Join("..", "test", "camera", "android.sh"))
+	if err != nil {
+		t.Fatalf("reading the app's camera: %v", err)
+	}
+
+	for _, shot := range regexp.MustCompile(`(?m)^\s*shoot ([a-z0-9-]+)\s*$`).FindAllStringSubmatch(string(script), -1) {
+		taken[shot[1]+".png"] = true
+	}
 
 	return taken
 }
