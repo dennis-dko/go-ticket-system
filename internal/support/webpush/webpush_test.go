@@ -123,6 +123,21 @@ func TestAMessageIsReadByTheBrowserItIsFor(t *testing.T) {
 	}
 }
 
+// A message is one record: the longest that fits is encrypted, and one byte more
+// is refused rather than sent as something no browser could read.
+func TestAMessageLongerThanOneRecordIsRefused(t *testing.T) {
+	sub := Subscription{P256dh: receiverPublic, Auth: receiverSecret}
+	longest := recordSize - 1 - 16
+
+	if _, err := Encrypt(make([]byte, longest), sub); err != nil {
+		t.Errorf("a message of %d bytes, which one record holds, is refused: %v", longest, err)
+	}
+
+	if _, err := Encrypt(make([]byte, longest+1), sub); err == nil {
+		t.Errorf("a message of %d bytes, more than one record holds, is encrypted", longest+1)
+	}
+}
+
 // The signature names the push service as its audience, says whom to contact,
 // lasts twelve hours, and is the installation's: the public key beside it checks it.
 func TestAMessageIsSignedForItsPushService(t *testing.T) {
