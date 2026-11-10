@@ -548,6 +548,29 @@ func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
 	}
 }
 
+// The page asks the phone for the notifications the app shows its reminders as,
+// through the bridge the app registers for them - a WebView has no
+// Notification, and without the bridge the Reminders card says no browser can
+// show any. So the name the page asks for is the name Web.kt registers, and the
+// app declares the permission it asks the phone for.
+func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) {
+	code, _ := lexed(source(t, "Web.kt"))
+
+	registered := regexp.MustCompile(`\bconst\s+val\s+notificationsInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
+	if registered == nil {
+		t.Fatal("Web.kt names no notificationsInterface, so the page cannot ask the phone for notifications")
+	}
+
+	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]) {
+		t.Errorf("app.js does not ask for %s, the bridge the app registers, so in the app the "+
+			"Reminders card says that no browser can show notifications", registered[1])
+	}
+
+	if !strings.Contains(read(t, "src/main/AndroidManifest.xml"), `android:name="android.permission.POST_NOTIFICATIONS"`) {
+		t.Error("the app does not declare POST_NOTIFICATIONS, so the phone is never asked and no reminder is shown")
+	}
+}
+
 // The screens before the web interface takes over are drawn in its colours,
 // light and dark, so that they look like its own sign-in: Look.kt keeps them as
 // Tones, and they are app.css's custom properties - the band across the card is

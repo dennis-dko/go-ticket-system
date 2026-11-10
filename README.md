@@ -273,9 +273,11 @@ good. Signing out in it disconnects the app as well, so a phone handed on does
 not sign its next holder back in; and a phone that is lost is signed out by
 revoking its token under **My account → API tokens**, at once. A file the web interface saves - a report, an
 export - is saved where the phone's file picker says, and a file it asks for
-is chosen there too. Two things stay in a browser: the browser's notifications
-for a long-running stopwatch, where the banner on the page still says it, and
-passkeys and signing in through your organisation, which are set up there.
+is chosen there too. The reminders are notifications of the app's own, whether
+it is open or not, once they are allowed under **My account → Reminders**: the
+stopwatch past the hours chosen, and the last working day with nothing booked.
+Two things stay in a browser: passkeys and signing in through your organisation,
+which are set up there.
 
 **It belongs to the release it was built with.** Download
 `go-time-recording-mobile_<version>.apk` from the

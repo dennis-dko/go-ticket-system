@@ -15345,14 +15345,44 @@ function fillReminders() {
 }
 
 /**
+ * The Android app's notifications, where the page is shown in it. The app's
+ * WebView has no Notification of its own, so the app registers
+ * GoTimeRecordingNotifications instead: state() answers in the words of the
+ * browser's Notification.permission - granted, default or denied - and request()
+ * asks the phone, which answers by dispatching gtr-notifications on the window
+ * once its owner has chosen. The reminders themselves the app shows as
+ * notifications of its own, open or closed, asking the installation itself.
+ */
+function appNotifications() {
+  return window.GoTimeRecordingNotifications ?? null;
+}
+
+/**
  * Whether this browser will show a notification, and the button that asks it
  * where it has not been asked yet. A refusal can only be taken back in the
- * browser's own settings, so it is said rather than asked again.
+ * browser's own settings, so it is said rather than asked again. In the Android
+ * app the same is asked of the phone, in the app's words rather than a browser's.
  */
 function drawNotifyState() {
   const button = $('#notify-allow');
   const state = $('#notify-state');
   if (!button || !state) return;
+
+  const app = appNotifications();
+  if (app) {
+    const permission = app.state();
+
+    button.hidden = permission !== 'default';
+    swapTheLabel(button, 'remind.allowAppNotifications', 'Allow notifications from this app');
+    state.textContent = {
+      granted: () => t('remind.appNotifyGranted',
+        'This app shows the reminders as notifications, whether it is open or not.'),
+      denied: () => t('remind.appNotifyDenied',
+        'The phone blocks this app\'s notifications; that can only be changed in its settings.'),
+    }[permission]?.() ?? '';
+
+    return;
+  }
 
   const permission = 'Notification' in window ? Notification.permission : 'unsupported';
 
@@ -17965,10 +17995,21 @@ function wireForms() {
   });
 
   $('#notify-allow').addEventListener('click', async () => {
+    const app = appNotifications();
+
+    // The phone answers in its own time, with gtr-notifications below.
+    if (app) {
+      app.request();
+
+      return;
+    }
+
     if ('Notification' in window) await Notification.requestPermission();
 
     drawNotifyState();
   });
+
+  window.addEventListener('gtr-notifications', drawNotifyState);
 
   $('#export-me').addEventListener('click', () => mutate(
     () => downloadFile(`${API}/me/export`, t('export.filename', 'everything-about-me'), 'zip'),

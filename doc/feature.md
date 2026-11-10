@@ -20,7 +20,7 @@ What the application does, and the rules it keeps while doing it.
 | API access | Personal tokens, scoped by the owner's current role |
 | Android app | The installation's own web interface in an app, so everything the browser does in the same design, connected by scanning the code a new token is shown with, which signs it in; released with every version as `go-time-recording-mobile_<version>.apk`, signed with one key so each release installs over the last |
 | Stopwatch | Start and stop the clock; the measured time becomes an entry, to the second. A start pressed late can be corrected, a clock left running is booked up to the time the work ended, and switching to the next project books the clock and carries on from the same second |
-| Reminders | A banner names the last working day with nothing booked on it and leads to the booking form on that day; another says when the stopwatch has run longer than its owner chose - ten hours unless they chose otherwise - with a notification as well where the browser allows one. Both are chosen under *My account* |
+| Reminders | A banner names the last working day with nothing booked on it and leads to the booking form on that day; another says when the stopwatch has run longer than its owner chose - ten hours unless they chose otherwise - with a notification as well where the browser allows one. The Android app shows both as notifications of its own, open or not. Both are chosen under *My account* |
 | Finding entries | The list narrows by project, by period and by text in the description, and the export follows the same filters |
 | Entry history | Every correction of an entry keeps the version it replaced - its day, hours, project and description, and when it was replaced - whether it was made in the form, by moving the entry to another project, on the week grid or for a whole selection at once. The entry's owner opens it from the entry; deleting the entry deletes its history |
 | Hour budgets | A project may carry the hours its owner means to spend on it; the list shows how much of that is booked, marked from four fifths and past the whole, and the booking that crosses either says so |
@@ -143,6 +143,15 @@ mentioned: ten, the most the Working Hours Act allows in a day, unless they choo
 otherwise, and never for zero. A browser that allows it shows a notification as
 well when the stopwatch crosses those hours while the page is open; one found
 already past them on loading gets the banner alone.
+
+The Android app shows both reminders as notifications of its own, whether it is
+open or not, once the Reminders card under *My account* has asked the phone for
+them. It asks the installation with its token every quarter of an hour, and again
+at the moment the stopwatch passes its hours, and shows nothing the installation
+has not just confirmed: a stopwatch stopped in the browser in the meantime is not
+said to be running, and a notice is taken back once it stops being true. The
+unbooked day waits for eight in the morning on the phone's clock. No push service
+is involved, so the app needs no Google Play services for it.
 
 It is your own balance. Somebody else's is their recorded time, totalled, so it
 takes the same right as reading their entries — which only a manager holds, for the
