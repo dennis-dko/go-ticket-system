@@ -6,10 +6,9 @@ The full reference is at `/api-docs`; the highlights:
 ## Connecting an app
 
 An app that books through this API needs two values: the installation's
-address and a personal token. A token is made under *My
-account*, API tokens, and the card shows both once: as text, the token's value
-and the address, and together, as a QR code. The code holds a connection
-address:
+address and a personal token. A token is made under *My account*, API tokens,
+and the card shows both once: as text, the token's value and the address, and
+together, as a QR code. The code holds a connection address:
 
 ```text
 go-time-recording://connect?token=gtr_...&url=https%3A%2F%2Ftime.example.com
@@ -37,8 +36,8 @@ The code is the credential. Whoever photographs it acts as the account until
 the token expires or is revoked, so it is shown where nobody else is looking,
 and a token whose code somebody else may have seen is revoked rather than kept.
 
-An app depends on the installation's version: what it asks for and how it
-reads the answers are one release's API.
+An app depends on the installation's version: what it asks for and how it reads
+the answers are one release's API.
 `GET /api/v1/branding` answers anybody, signed in or not, and its `version`
 says which release that is.
 
