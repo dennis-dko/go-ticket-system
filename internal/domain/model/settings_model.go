@@ -85,6 +85,17 @@ const (
 	// team rights on, and anything else - nothing stored, which is how it ships -
 	// leaves them granting nothing.
 	SettingManagers = "instance.managers"
+
+	// SettingWebPush is whether this installation pushes the reminders to the
+	// browsers people subscribe: "true" turns it on. It ships off, because every
+	// push leaves through the push service of the browser's maker.
+	SettingWebPush = "instance.push"
+
+	// SettingWebPushKey is the installation's private key for signing a push,
+	// sealed. It is made the first time push is switched on and kept after, so a
+	// browser subscribed before push was switched off is reached again once it is
+	// back on.
+	SettingWebPushKey = "instance.push.key"
 )
 
 // Branding is the instance's own labelling, editable by the administrator.

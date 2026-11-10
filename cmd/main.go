@@ -849,6 +849,11 @@ func main() {
 
 	statements := appservice.NewStatementService(timesheetRepo, projectRepo)
 
+	// Reminders pushed to the browsers people subscribe, where the installation
+	// allows it at all - which it ships not doing.
+	push := appservice.NewPushService(settingsRepo, sqldb.NewPushSubscriptionRepository(db, cfg.Dialect),
+		auth, timers, overtime).WithSecrets(secrets)
+
 	// Built here rather than inline, because both the middleware that reads it and
 	// the handler that clears it need the same instance - two would mean the
 	// switch takes effect for one of them and not the other.
@@ -1021,6 +1026,7 @@ func main() {
 		Timesheets: rest.NewTimesheetHandler(timesheets, timesheetDomain, authorizer, instanceTimezone),
 		Me:         rest.NewMeHandler(auth, sessions, overtime, authorizer, instanceTimezone).WithTeam(team),
 		Team:       rest.NewTeamHandler(team, authorizer),
+		Push:       rest.NewPushHandler(push, authorizer),
 		Statements: rest.NewStatementHandler(statements, authorizer, instanceTimezone),
 		Tokens:     rest.NewAPITokenHandler(apiTokens, authorizer),
 		LDAPSync:   rest.NewLDAPSyncHandler(ldapSync, authorizer),
@@ -1079,6 +1085,15 @@ func main() {
 
 		if removed > 0 {
 			ctx.Logger.Infof("pruned %d expired session(s)", removed)
+		}
+	})
+
+	// Reminders pushed to browsers a minute at a time: each run pushes what fell
+	// due in the minute that has just ended, so a reminder goes once however early
+	// or late in its minute the run comes. Nothing goes while push is off.
+	app.AddCronJob("* * * * *", "web-push", func(ctx *gofr.Context) {
+		if err := push.PushDue(ctx, time.Now()); err != nil {
+			ctx.Logger.Errorf("pushing reminders: %v", err)
 		}
 	})
 

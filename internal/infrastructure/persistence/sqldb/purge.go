@@ -63,6 +63,7 @@ func (r *UserRepository) PurgeUser(ctx context.Context, userID uint) error {
 			{"absences", "DELETE FROM absences WHERE user_id = ?"},
 			{"vacation entitlements", "DELETE FROM vacation_entitlements WHERE user_id = ?"},
 			{"calendar feeds", "DELETE FROM calendar_feeds WHERE user_id = ?"},
+			{"push subscriptions", "DELETE FROM push_subscriptions WHERE user_id = ?"},
 			{"openid identities", "DELETE FROM openid_identities WHERE user_id = ?"},
 			{"working days", "DELETE FROM work_days WHERE user_id = ?"},
 			// Both ends of an assignment: the accounts a manager looked after, and the
