@@ -4,6 +4,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- The camera reads a token's code and nothing else, asked for the first time
+         somebody presses to scan one. A phone without a camera still installs the
+         app and is connected by typing the address and the token. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <!-- Nothing of the app's is backed up or carried to another phone.
          allowBackup="false" is what says so up to Android 11, so the rules file
          lint asks for there would only repeat it; data_extraction_rule says it

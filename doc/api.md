@@ -22,8 +22,9 @@ the phone's camera opens it, and from then on asks the API with
 `Authorization: Bearer <token>`.
 
 The Android app in this repository, released as
-`go-time-recording-mobile_<version>.apk`, is such an app. It fills its connect
-form from the code and connects only once whoever holds the phone has seen the
+`go-time-recording-mobile_<version>.apk`, is such an app. It scans the code with
+a camera screen of its own as well, and fills its connect form from the code
+however it was read, and connects only once whoever holds the phone has seen the
 address and agreed, because a code is a link any page could open - and an app
 that connected on its own would send what somebody books to wherever such a link
 pointed.

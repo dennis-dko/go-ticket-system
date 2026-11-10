@@ -238,10 +238,10 @@ The Android app is the installation's own web interface, in an app: every view,
 card and form the browser has, in the same design, saved through the same API
 into the same database - and anything the web interface learns in a release,
 the app has with it. It is connected by the code a new token is shown with under
-**My account → API tokens**: scanned with the phone's camera, the code opens the
-app, which shows the installation it is asked to connect to and waits for a tap,
-because a code is a link any page could open. The address and the token can be
-typed in instead.
+**My account → API tokens**: the app scans it with its own camera screen, or the
+phone's camera opens it, and either way the app shows the installation it is
+asked to connect to and waits for a tap, because a code is a link any page could
+open. The address and the token can be typed in instead.
 
 The token signs the app in, so no password and no second factor are typed on
 the phone, and it keeps the web interface signed in for as long as the token is

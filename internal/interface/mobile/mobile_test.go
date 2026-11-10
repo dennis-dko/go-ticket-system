@@ -491,6 +491,85 @@ func TestTheAppAnswersToTheAddressATokensCodeHolds(t *testing.T) {
 	}
 }
 
+// The web interface is laid out in a WebView exactly as tall as its place. One
+// whose height is WRAP_CONTENT - which AndroidView gives a view without layout
+// params of its own - lays its page out in a viewport of no height, so the
+// page's 100dvh comes to nothing: its opened menu and its tour were drawn as thin
+// as their padding, under the cards they should have covered. Nothing here runs
+// a WebView, so what is held is the line in the code that sets the height.
+func TestTheWebViewIsAsTallAsItsPlace(t *testing.T) {
+	code, _ := lexed(source(t, "Web.kt"))
+
+	fills := regexp.MustCompile(`\blayoutParams\s*=\s*ViewGroup\.LayoutParams\(\s*` +
+		`ViewGroup\.LayoutParams\.MATCH_PARENT,\s*ViewGroup\.LayoutParams\.MATCH_PARENT\s*\)`)
+
+	if !fills.MatchString(code) {
+		t.Error("Web.kt does not give the WebView MATCH_PARENT layout params, so the page's 100dvh may be nothing")
+	}
+}
+
+// The screens before the web interface takes over are drawn in its colours,
+// light and dark, so that they look like its own sign-in: Look.kt keeps them as
+// Tones, and they are app.css's custom properties - the band across the card is
+// the sign-in band's.
+func TestTheAppsColoursAreThePagesColours(t *testing.T) {
+	css := read(t, "../web/asset/app.css")
+	look, _ := lexed(source(t, "Look.kt"))
+
+	page := func(selector string) map[string]string {
+		at := strings.Index(css, selector+" {")
+		if at < 0 {
+			t.Fatalf("app.css has no %s block", selector)
+		}
+
+		block := css[at : at+strings.Index(css[at:], "}")]
+		found := map[string]string{}
+
+		for _, m := range regexp.MustCompile(`--([a-z-]+):\s*(#[0-9a-fA-F]{6});`).FindAllStringSubmatch(block, -1) {
+			found[m[1]] = strings.ToLower(m[2])
+		}
+
+		return found
+	}
+
+	app := func(name string) map[string]string {
+		line := regexp.MustCompile(`val ` + name + ` = Tones\(([^\n]*)\)`).FindStringSubmatch(look)
+		if line == nil {
+			t.Fatalf("Look.kt has no Tones called %s", name)
+		}
+
+		found := map[string]string{}
+
+		for _, m := range regexp.MustCompile(`(\w+) = Color\(0xFF([0-9A-Fa-f]{6})\)`).FindAllStringSubmatch(line[1], -1) {
+			found[m[1]] = "#" + strings.ToLower(m[2])
+		}
+
+		return found
+	}
+
+	properties := map[string]string{
+		"bg": "bg", "surface": "surface", "border": "border", "text": "text", "muted": "muted",
+		"accent": "accent", "accentText": "accent-text", "danger": "danger",
+	}
+
+	for _, theme := range []struct{ tones, selector string }{{"light", ":root"}, {"dark", `:root[data-theme="dark"]`}} {
+		mine, theirs := app(theme.tones), page(theme.selector)
+
+		for field, property := range properties {
+			if mine[field] == "" || mine[field] != theirs[property] {
+				t.Errorf("the app's %s %s is %q, where app.css's --%s is %q", theme.tones, field, mine[field], property, theirs[property])
+			}
+		}
+	}
+
+	band := regexp.MustCompile(`\.login-band \{[^}]*background: (#[0-9a-fA-F]{6})`).FindStringSubmatch(css)
+	mine := regexp.MustCompile(`val band = Color\(0xFF([0-9A-Fa-f]{6})\)`).FindStringSubmatch(look)
+
+	if band == nil || mine == nil || "#"+strings.ToLower(mine[1]) != strings.ToLower(band[1]) {
+		t.Errorf("the app's band is %v, where the sign-in band's is %v", mine, band)
+	}
+}
+
 // Every dictionary writes a day and a time in parts of a Go layout the app knows
 // - the very parts Language.pattern reads, taken from it - because anything else is
 // written out by the app as it stands, and 2.1.2006 would read as a date to
