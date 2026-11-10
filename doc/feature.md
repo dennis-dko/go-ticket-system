@@ -141,8 +141,10 @@ about a day before the balance begins. The reminder is on until its owner switch
 it off under *My account*, beside the hours after which a running stopwatch is
 mentioned: ten, the most the Working Hours Act allows in a day, unless they choose
 otherwise, and never for zero. A browser that allows it shows a notification as
-well when the stopwatch crosses those hours while the page is open; one found
-already past them on loading gets the banner alone.
+well when the stopwatch crosses those hours while the page is open - a phone's
+browser too, because it is shown through the page's service worker, and pressing
+it leads back to the page; one found already past them on loading gets the
+banner alone.
 
 The Android app shows both reminders as notifications of its own, whether it is
 open or not, once the Reminders card under *My account* has asked the phone for

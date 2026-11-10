@@ -76,7 +76,8 @@ func TestTheLastUnbookedWorkingDayLeadsToTheBookingForm(t *testing.T) {
 // being made while the clock has already run two hours, which is a crossing like
 // any other. A clock found already past them on loading is mentioned by the banner
 // alone. The browser's notifications are stood in for, so what was asked of them
-// can be read back.
+// can be read back - both ways the page shows one: through its service worker,
+// where one is registered, and by the constructor where none is.
 func TestAStopwatchPastTheChosenHoursIsMentionedOnce(t *testing.T) {
 	t.Parallel()
 
@@ -87,11 +88,17 @@ func TestAStopwatchPastTheChosenHoursIsMentionedOnce(t *testing.T) {
 
 	p.awaitJSON(`(async () => {
 		window.notified = [];
+		const shown = (title, options) => window.notified.push({ title, body: options.body });
 		window.Notification = class {
 			static permission = 'granted';
 			static requestPermission() { return Promise.resolve('granted'); }
-			constructor(title, options) { window.notified.push({ title, body: options.body }); }
+			constructor(title, options) { shown(title, options); }
 		};
+		if (navigator.serviceWorker) {
+			navigator.serviceWorker.getRegistration = () => Promise.resolve({
+				showNotification: (title, options) => { shown(title, options); return Promise.resolve(); },
+			});
+		}
 
 		await api('/me/reminders', { method: 'PUT', body: JSON.stringify({ unbookedDay: true, timerAlertHours: 0 }) });
 		await loadMe();

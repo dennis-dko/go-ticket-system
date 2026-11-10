@@ -15309,19 +15309,33 @@ function openTheBookingFormOn(day) {
 
 /**
  * Tells somebody looking at another window that the stopwatch has passed the
- * hours they chose, where the browser allows it. A browser that offers
- * notifications only through a service worker - Chrome on Android - refuses the
- * constructor, and then the banner is all there is.
+ * hours they chose, where the browser allows it. Through the service worker
+ * where one is registered, because a browser that shows notifications only from
+ * one - Chrome on Android - refuses the page's own constructor, and a phone's
+ * browser was left with the banner alone. The constructor is for a page with no
+ * worker, and where neither works the banner is all there is.
  */
-function notifyTheLongStopwatch() {
+async function notifyTheLongStopwatch() {
   if (!('Notification' in window) || Notification.permission !== 'granted' || !runningTimer) return;
 
+  const title = t('timer.longTitle', 'The stopwatch is still running');
+  const options = {
+    body: fillIn(t('timer.longBody', 'Since {1}, longer than the {0} you chose.'),
+      [alertHoursText(), fmtMoment(runningTimer.startedAt)]),
+    tag: 'gtr-stopwatch',
+  };
+
   try {
-    new Notification(t('timer.longTitle', 'The stopwatch is still running'), {
-      body: fillIn(t('timer.longBody', 'Since {1}, longer than the {0} you chose.'),
-        [alertHoursText(), fmtMoment(runningTimer.startedAt)]),
-      tag: 'gtr-stopwatch',
-    });
+    // getRegistration rather than ready, which waits for ever where nothing was
+    // ever registered.
+    const registration = await navigator.serviceWorker?.getRegistration();
+    if (registration) {
+      await registration.showNotification(title, options);
+
+      return;
+    }
+
+    new Notification(title, options);
   } catch {
     // The banner says it.
   }
