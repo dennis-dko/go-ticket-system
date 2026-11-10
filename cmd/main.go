@@ -264,14 +264,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	// The terminal client was this binary's track command until it became a
-	// binary of its own, and the command line that used to start it is answered
-	// rather than ignored: an argument this binary does not know is passed over
-	// and the server starts, so following the old instructions would have served
-	// an installer and printed a setup token instead of booking an hour.
+	// The terminal client began as this binary's track command and is gone now,
+	// and the command line that started it is answered rather than ignored: an
+	// argument this binary does not know is passed over and the server starts, so
+	// a script still following the old instructions would serve an installer and
+	// print a setup token instead of booking an hour.
 	if len(os.Args) > 1 && os.Args[1] == "track" {
-		_, _ = fmt.Fprintln(os.Stderr, "the terminal client is a binary of its own now: "+
-			"go-time-recording-client, from the release this installation runs")
+		_, _ = fmt.Fprintln(os.Stderr, "there is no terminal client any more: "+
+			"book in the web interface, or in the Android app from the release this installation runs")
 		os.Exit(2)
 	}
 

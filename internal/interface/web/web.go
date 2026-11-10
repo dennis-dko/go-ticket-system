@@ -139,8 +139,8 @@ func Handler(branding BrandingFunc) func(http.Handler) http.Handler {
 			}
 
 			// A language's dictionary, from the ones the binary carries rather than
-			// from these assets: the installer and the terminal client read the
-			// same files. Before the fallback too, because it is not a file here.
+			// from these assets: the installer and the Android app read the same
+			// files. Before the fallback too, because it is not a file here.
 			if file, ok := strings.CutPrefix(path(r), dictionaryPath); ok {
 				serveDictionary(w, r, file)
 

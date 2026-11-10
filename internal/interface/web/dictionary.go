@@ -4,10 +4,8 @@ import (
 	"html"
 	"io/fs"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
 )
@@ -67,60 +65,6 @@ func languagesMeta(languages []string, name func(string) string) string {
 	}
 
 	return strings.Join(tags, "\n  ")
-}
-
-// English is what the page says under a key where it speaks no dictionary: the
-// English its script hands t(), read rather than copied, as REFUSAL_VALUES is. A
-// reader that names something as the page does - a public holiday, a kind of
-// absence - and has no dictionary of its own to name it in says the page's words
-// then, rather than a second copy of them that could come to say something else.
-// False for a key the script hands t() nothing under.
-func English(key string) (string, bool) {
-	said, ok := pageEnglish()[key]
-
-	return said, ok
-}
-
-// pageEnglish is every key the script hands t(), with its English, read once.
-var pageEnglish = sync.OnceValue(func() map[string]string {
-	script, err := fs.ReadFile(assets, "asset/app.js")
-	if err != nil {
-		return map[string]string{}
-	}
-
-	return englishIn(string(script))
-})
-
-// lookupCall is a call of t() with a key and its English, written as one quoted
-// literal or several joined with +, over as many lines as it takes; literal is
-// one of those quoted parts.
-var (
-	lookupCall = regexp.MustCompile(`t\(\s*'([a-zA-Z0-9._:-]+)'\s*,\s*((?:'(?:[^'\\]|\\.)*'\s*\+?\s*)+)\)`)
-	literal    = regexp.MustCompile(`'((?:[^'\\]|\\.)*)'`)
-)
-
-// englishIn reads every key the script hands t() and its English, the parts of
-// one joined and its escapes undone. A key handed t() at several places keeps
-// the English of the first.
-func englishIn(script string) map[string]string {
-	unescape := strings.NewReplacer(`\'`, `'`, `\\`, `\`, `\n`, "\n")
-	said := map[string]string{}
-
-	for _, call := range lookupCall.FindAllStringSubmatch(script, -1) {
-		if _, ok := said[call[1]]; ok {
-			continue
-		}
-
-		var english strings.Builder
-
-		for _, part := range literal.FindAllStringSubmatch(call[2], -1) {
-			english.WriteString(unescape.Replace(part[1]))
-		}
-
-		said[call[1]] = english.String()
-	}
-
-	return said
 }
 
 // RefusalValues is app.js's REFUSAL_VALUES, read rather than copied: for each

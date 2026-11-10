@@ -3764,7 +3764,7 @@ function applyPermissionVisibility(root = document) {
  *
  * Each lives in a file of its own, /i18n/<language>.json, which the server hands
  * out from the dictionaries the binary carries - the ones the installer and the
- * terminal client read as well - and is fetched the first time its language is
+ * Android app read as well - and is fetched the first time its language is
  * spoken. English has none and needs none: it is the source, in the markup and in
  * the fallbacks passed to t(), so a key a dictionary lacks degrades to English
  * rather than to a language nobody asked for.
@@ -7563,17 +7563,17 @@ function wireTokens() {
       $('#token-secret-value').textContent = created.secret;
       $('#token-secret').dataset.token = String(created.id);
 
-      // The address the value is used at, as the terminal client's GTR_URL -
-      // read out of the code's own URI rather than from this page, so that the
-      // text and the code cannot name two different installations.
+      // The address the value is used at - read out of the code's own URI rather
+      // than from this page, so that the text and the code cannot name two
+      // different installations.
       const address = new URLSearchParams(created.connectUri?.split('?')[1]).get('url');
       $('#token-address-value').textContent = address ?? '';
       $('#token-address').hidden = !address;
 
       // And the same value with the installation's address, as a code an app
-      // scans instead of being typed what the terminal client reads from
-      // GTR_URL and GTR_TOKEN. Not every answer brings one - a code that failed
-      // to render does not cost the token - and then there is only the value.
+      // scans instead of having the two typed into it. Not every answer brings
+      // one - a code that failed to render does not cost the token - and then
+      // there is only the value.
       const qr = $('#token-qr');
       qr.hidden = !created.qr;
       qr.alt = created.qr ? t('token.qrAlt', 'QR code with the address of this installation and the new token') : '';

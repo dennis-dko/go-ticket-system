@@ -22,10 +22,10 @@ val refusalValues: Map<String, Map<Int, String>> = mapOf(
 )
 
 /**
- * refused reads what the installation said when it refused a request, as the
- * terminal client does: not knowing the token in the app's own words, because
- * the installation's are about a session; anything else in the web interface's
- * words for the code it sent, and otherwise in the installation's own.
+ * refused reads what the installation said when it refused a request: not
+ * knowing the token in the app's own words, because the installation's are
+ * about a session; anything else in the web interface's words for the code it
+ * sent, and otherwise in the installation's own.
  */
 fun Language.refused(status: Int, reason: String, body: String): String {
     if (status == 401) {

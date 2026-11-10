@@ -11,8 +11,7 @@ import (
 )
 
 // A new token comes with what an app needs to use it, once: the address this
-// installation was reached at and the token itself - the two values the
-// terminal client is given as GTR_URL and GTR_TOKEN - as a
+// installation was reached at and the token itself, as a
 // go-time-recording://connect address and as a QR code of exactly that address.
 // The address opens the API as the token's owner, and the list of tokens never
 // shows any of it again.
