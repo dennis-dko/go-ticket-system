@@ -90,12 +90,16 @@ type Subscription struct {
 	Origin   string
 }
 
-// Message is what one push says: a notification's title and words, and the tag
-// that lets a newer notification take an older one's place.
+// Message is what one push says: a notification's title and words, the tag that
+// lets a newer notification take an older one's place, when what it says fell
+// due, and what it is about - so that a browser it reaches late, which a push
+// service holds a message for while it is closed, can ask whether it still holds.
 type Message struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
 	Tag   string `json:"tag"`
+	At    string `json:"at"`
+	About string `json:"about"`
 }
 
 // ErrGone is a push service saying a subscription no longer exists - the browser
@@ -133,7 +137,12 @@ func (k Keys) Send(ctx context.Context, client *http.Client, sub Subscription, m
 	req.Header.Set("Content-Encoding", "aes128gcm")
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("TTL", strconv.Itoa(int(ttl.Seconds())))
-	req.Header.Set("Urgency", "normal")
+
+	// Every message is a reminder about a moment, which RFC 8030 calls a
+	// time-sensitive alert. Google's push service hands a high one to a dozing
+	// phone at once and may hold a normal one until the phone wakes, which is
+	// exactly when a reminder about a moment is no use.
+	req.Header.Set("Urgency", "high")
 	req.Header.Set("Authorization", signed)
 
 	resp, err := client.Do(req)

@@ -1481,7 +1481,7 @@
           <button type="button" class="secondary" id="push-subscribe" data-i18n="push.subscribe">Push the reminders to this browser</button>
           <button type="button" class="secondary" id="push-unsubscribe" hidden data-i18n="push.unsubscribe">Stop pushing to this browser</button>
         </div>
-        <p class="muted" id="push-state" hidden data-i18n="push.pushed">The reminders are pushed to this browser, even while it is closed.</p>
+        <p class="muted" id="push-state" hidden data-i18n="push.pushed">The reminders are pushed to this browser, even while no page of it is open. On a computer the browser has to be running for that, in the background will do; one that was closed shows them when it is started again within the hour, as long as they still hold.</p>
       </form>
 
       <!-- The week the balance is measured against, a figure per weekday. A plan
@@ -1580,6 +1580,15 @@
         <p class="muted" id="install-phone" data-i18n="install.phone" hidden>To open it on a phone, type this address into the phone's browser or scan the code with the phone's camera; it can be installed from that browser.</p>
         <pre class="value" id="install-address" hidden></pre>
         <img id="install-qr" class="qr" alt="" hidden>
+        <!-- On Android the app is downloaded rather than offered by a browser. The
+             link names the newest release until the page knows its version, and
+             then the release this installation runs, because the app belongs to
+             the release it was built with. -->
+        <p class="muted" id="install-android" data-i18n="install.android">On Android the time recording is also an app of its own. It shows this interface, connects by scanning the code a new token shows under API tokens, and reminds you with notifications.</p>
+        <div class="row">
+          <a id="install-android-link" class="tab" href="https://github.com/dennis-dko/go-time-recording/releases/latest"
+             target="_blank" rel="noopener noreferrer" data-i18n="install.androidLink">The Android app on GitHub ↗</a>
+        </div>
       </div>
 
       <form method="post" id="form-my-timezone" class="card form">

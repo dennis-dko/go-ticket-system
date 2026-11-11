@@ -148,12 +148,20 @@ banner alone.
 
 The Android app shows both reminders as notifications of its own, whether it is
 open or not, once the Reminders card under *My account* has asked the phone for
-them. It asks the installation with its token every quarter of an hour, and again
-at the moment the stopwatch passes its hours, and shows nothing the installation
-has not just confirmed: a stopwatch stopped in the browser in the meantime is not
-said to be running, and a notice is taken back once it stops being true. The
-unbooked day waits for eight in the morning on the phone's clock. No push service
-is involved, so the app needs no Google Play services for it.
+them. It asks the installation with its token every quarter of an hour and when
+somebody leaves the app, and again at the moment a reminder falls due - the
+stopwatch passing its hours, eight in the morning on the phone's clock for the
+unbooked day - and shows nothing the installation has not just confirmed: a
+stopwatch stopped in the browser in the meantime is not said to be running, and a
+notice is taken back once it stops being true. No push service is involved, so the
+app needs no Google Play services for it.
+
+A phone that is put away dozes, and holds back everything an app could ask in the
+meantime until it wakes, except an exact alarm. Up to Android 13 the app sets one
+without asking; from Android 14 on it can once *Alarms & reminders* is allowed for
+it in the phone's settings, and without that a reminder falling due while the
+phone dozes arrives when it wakes. A stopwatch started in a browser is learnt of
+at the next quarter-hourly check, which a dozing phone holds back as well.
 
 Where the installation pushes reminders - off until somebody who administers it
 switches that on under *Settings* - both reach a browser even while no page of
@@ -162,7 +170,12 @@ it is open, once its owner has chosen *Push the reminders to this browser* under
 eight in the morning on its owner's clock. Each push is encrypted for that
 browser alone and leaves through the push service of the browser's maker;
 signing out of the browser takes it out of the pushes, so whoever uses it next
-is not reminded of somebody else's day.
+is not reminded of somebody else's day. A browser on a computer has to be running
+to be reached - in the background will do - and the push service holds a reminder
+for one that is closed for up to an hour. One that arrives more than a few minutes
+late is asked about again before it is shown, so a stopwatch stopped meanwhile is
+not said to be running, and it takes the notification shown for it before away
+with it.
 
 It is your own balance. Somebody else's is their recorded time, totalled, so it
 takes the same right as reading their entries — which only a manager holds, for the

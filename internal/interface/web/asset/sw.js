@@ -37,12 +37,63 @@ self.addEventListener('activate', (event) => {
 // day - shown as its notification, whether or not a page is open. The tag is the
 // page's own for the same reminder, so one the page showed itself is replaced
 // rather than shown twice.
+//
+// One that arrives late was held by the push service for a browser that was
+// closed - for up to the hour it is sent to live - and what it says may have
+// stopped being true meanwhile: a stopwatch stopped on another device, a day
+// booked since. So it is asked about again first, as the page and the app ask
+// about what they show, and one that no longer holds takes the notification shown
+// for it before away with it.
 self.addEventListener('push', (event) => {
   const message = event.data ? event.data.json() : {};
   if (!message.title) return;
 
-  event.waitUntil(self.registration.showNotification(message.title, { body: message.body, tag: message.tag }));
+  event.waitUntil(stillHolds(message).then(async (holds) => {
+    if (holds) {
+      await self.registration.showNotification(message.title, { body: message.body, tag: message.tag });
+
+      return;
+    }
+
+    const shown = await self.registration.getNotifications({ tag: message.tag });
+    shown.forEach((notification) => notification.close());
+  }));
 });
+
+/** How late a pushed reminder may arrive and still be shown unasked: the installation confirmed it as it sent it. */
+const PUSHED_FRESH = 5 * 60 * 1000;
+
+/**
+ * What the installation is asked about each kind of reminder, and whether its
+ * answer bears out what the reminder is about: the moment the stopwatch started -
+ * as a moment rather than as text, because the answer may write it with another
+ * zone's offset than the push does - and the day with nothing booked.
+ */
+const ASKED_AGAIN = {
+  'gtr-stopwatch': ['/api/v1/me/timer', (answer, about) => Boolean(answer?.running)
+    && Date.parse(answer.startedAt) === Date.parse(about)],
+  'gtr-unbooked': ['/api/v1/me/notices', (answer, about) => answer?.unbookedDay === about],
+};
+
+/** Whether a pushed reminder still holds: at once where it is fresh, and otherwise as the installation answers now. */
+async function stillHolds(message) {
+  const at = Date.parse(message.at);
+  if (!Number.isFinite(at) || Date.now() - at <= PUSHED_FRESH) return true;
+
+  const [path, bearsOut] = ASKED_AGAIN[message.tag] ?? [];
+  if (!path) return false;
+
+  try {
+    const response = await fetch(path, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    if (!response.ok) return false;
+
+    const answer = await response.json();
+
+    return bearsOut(answer?.data, message.about);
+  } catch {
+    return false;
+  }
+}
 
 // A notification - a stopwatch run past the hours its owner chose - leads back
 // to the page: the window already open where there is one, a new one otherwise.

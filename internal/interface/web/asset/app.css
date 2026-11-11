@@ -2468,6 +2468,10 @@ a.tab:hover {
   text-decoration: underline;
 }
 
+/* The one link that stands under a sentence rather than beside a button or a
+   heading starts where the sentence does. */
+#install-android-link { padding-left: 0; }
+
 /* ------------------------------------------------------------ setup wizard */
 
 /*

@@ -318,7 +318,9 @@ func (s *PushService) dueFor(ctx context.Context, userID uint, end time.Time, in
 					Title: words.Text("timer.longTitle", "The stopwatch is still running"),
 					Body: words.Text("timer.longBody", "Since {1}, longer than the {0} you chose.",
 						strconv.Itoa(hours)+" "+words.Text("unit.hours", "h"), words.Moment(timer.StartedAt.In(zone))),
-					Tag: "gtr-stopwatch",
+					Tag:   "gtr-stopwatch",
+					At:    at.UTC().Format(time.RFC3339),
+					About: timer.StartedAt.UTC().Format(time.RFC3339),
 				})
 			}
 		}
@@ -336,7 +338,9 @@ func (s *PushService) dueFor(ctx context.Context, userID uint, end time.Time, in
 				Body: words.Text("remind.unbooked",
 					"Nothing is booked on {0}, a working day by your plan. It can be added under {1}.",
 					words.Day(*notices.UnbookedDay), words.Text("nav.timesheets", "Time entries")),
-				Tag: "gtr-unbooked",
+				Tag:   "gtr-unbooked",
+				At:    end.UTC().Format(time.RFC3339),
+				About: notices.UnbookedDay.Format(time.DateOnly),
 			})
 		}
 	}

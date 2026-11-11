@@ -21,7 +21,7 @@ import java.time.OffsetDateTime
  * 2026-11-03, so that it can do whatever the browser can, in the same design, and
  * goes on doing so with every release without being built a second time.
  */
-class Installation(private val address: String, private val words: Language) {
+class Installation(private val address: String, private val words: Language, private val timeout: Int = requestTimeout) {
 
     /**
      * handOver opens a session for the owner of [token] and answers its cookies,
@@ -115,7 +115,8 @@ class Installation(private val address: String, private val words: Language) {
     /**
      * reminders is what the owner of [token] chose to be reminded of and what is
      * true right now: the hours their stopwatch is mentioned after, when the one
-     * running started, and the last working day with nothing booked on it. A part
+     * running started, the last working day with nothing booked on it, and
+     * whether they are reminded of such a day at all. A part
      * the token's role may not read is answered as nothing to remind of, as the
      * page's notices are, rather than as a refusal.
      */
@@ -129,6 +130,7 @@ class Installation(private val address: String, private val words: Language) {
             startedAt = timer?.takeIf { it.optBoolean("running") }?.optString("startedAt")
                 ?.takeIf { it.isNotBlank() }?.let { OffsetDateTime.parse(it).toInstant() },
             unbookedDay = notices?.optString("unbookedDay")?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
+            unbookedReminder = me.optJSONObject("reminders")?.optBoolean("unbookedDay", false) ?: false,
         )
     }
 
@@ -161,8 +163,8 @@ class Installation(private val address: String, private val words: Language) {
 
         return (url.openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = false
-            connectTimeout = requestTimeout
-            readTimeout = requestTimeout
+            connectTimeout = timeout
+            readTimeout = timeout
         }
     }
 
@@ -172,7 +174,7 @@ class Installation(private val address: String, private val words: Language) {
     private fun notThis(): Refused =
         Refused(words.text("mobile.notThisApplication", "{0} answered with something that is not this application's", address))
 
-    private companion object {
+    companion object {
         /** requestTimeout bounds one request: a phone waiting on an installation that has gone away should say so. */
         const val requestTimeout = 30_000
     }

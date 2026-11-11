@@ -36,6 +36,14 @@ class MainActivity : ComponentActivity() {
         model.resume()
     }
 
+    // Leaving the app is when a stopwatch started in it needs its alarm: the
+    // quarter-hourly check would find it too, but a phone that is put away dozes
+    // and holds that check back.
+    override fun onStop() {
+        super.onStop()
+        askNow(this)
+    }
+
     private fun offer(intent: Intent?) {
         val link = intent?.dataString ?: return
 

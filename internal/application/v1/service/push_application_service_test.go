@@ -341,17 +341,23 @@ func TestThePushSaysThePagesWordsInItsEnglish(t *testing.T) {
 	words := i18n.For("en")
 	berlin, _ := time.LoadLocation("Europe/Berlin")
 
+	// Each says when it fell due and what it is about, so that a browser it
+	// reaches late can ask the installation whether it still holds.
 	want := []webpush.Message{
 		{
 			Title: pageEnglish(t, "remind.title"),
 			Body:  i18n.Fill(pageEnglish(t, "remind.unbooked"), words.Day(day), pageEnglish(t, "nav.timesheets")),
 			Tag:   "gtr-unbooked",
+			At:    "2026-11-10T07:00:00Z",
+			About: "2026-11-09",
 		},
 		{
 			Title: pageEnglish(t, "timer.longTitle"),
 			Body: i18n.Fill(pageEnglish(t, "timer.longBody"), "2 "+pageEnglish(t, "unit.hours"),
 				words.Moment(started.In(berlin))),
-			Tag: "gtr-stopwatch",
+			Tag:   "gtr-stopwatch",
+			At:    "2026-11-10T09:00:00Z",
+			About: "2026-11-10T07:00:00Z",
 		},
 	}
 
