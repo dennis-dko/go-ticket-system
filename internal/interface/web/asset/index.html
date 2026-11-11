@@ -538,7 +538,7 @@
         </label>
         <label data-i18n="login.password">Password<input type="password" name="password" autocomplete="off" required>
         </label>
-        <label id="login-totp-field" hidden data-i18n="login.totp">Code from your authenticator app<input type="text" name="totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+        <label id="login-totp-field" hidden data-i18n="login.totp">Code from your authenticator app<input type="text" name="totp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
         </label>
         <p class="login-error" id="login-error" hidden></p>
         <div class="login-actions">
@@ -1642,15 +1642,22 @@
             <pre class="secret" id="totp-uri"></pre>
           </details>
         </div>
-        <div class="grid">
-          <label id="totp-code-field" hidden data-i18n="totp.code">Code<input type="text" id="totp-code" inputmode="numeric" maxlength="6">
-          </label>
-        </div>
-        <div class="row">
-          <button type="button" id="totp-begin" data-i18n="totp.enable">Enable</button>
-          <button type="button" id="totp-confirm" hidden data-i18n="totp.confirm">Confirm</button>
-          <button type="button" id="totp-disable" class="secondary" hidden data-i18n="totp.disable">Disable</button>
-        </div>
+        <!-- A form, so that a code is held to its rule before it is sent: it had
+             none, and five digits went to the server to be called wrong. Confirm
+             and Disable both submit it, and the account's state says which is
+             meant - Enter in the field presses the first of them, shown or not.
+             No draft: a code is good for half a minute. -->
+        <form method="post" id="form-totp" data-no-draft>
+          <div class="grid">
+            <label id="totp-code-field" hidden data-i18n="totp.code">Code<input type="text" id="totp-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
+            </label>
+          </div>
+          <div class="row">
+            <button type="button" id="totp-begin" data-i18n="totp.enable">Enable</button>
+            <button type="submit" id="totp-confirm" hidden data-i18n="totp.confirm">Confirm</button>
+            <button type="submit" id="totp-disable" class="secondary" hidden data-i18n="totp.disable">Disable</button>
+          </div>
+        </form>
       </div>
 
       <!-- The address a calendar program reads this person's recorded days from.
