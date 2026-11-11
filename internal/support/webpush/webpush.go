@@ -90,12 +90,16 @@ type Subscription struct {
 	Origin   string
 }
 
-// Message is what one push says: a notification's title and words, and the tag
-// that lets a newer notification take an older one's place.
+// Message is what one push says: a notification's title and words, the tag that
+// lets a newer notification take an older one's place, when what it says fell
+// due, and what it is about - so that a browser it reaches late, which a push
+// service holds a message for while it is closed, can ask whether it still holds.
 type Message struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
 	Tag   string `json:"tag"`
+	At    string `json:"at"`
+	About string `json:"about"`
 }
 
 // ErrGone is a push service saying a subscription no longer exists - the browser
