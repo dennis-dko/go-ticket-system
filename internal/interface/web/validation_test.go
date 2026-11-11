@@ -1,12 +1,15 @@
 package web_test
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/dennis-dko/go-time-recording/internal/domain/model"
 	"github.com/dennis-dko/go-time-recording/internal/support/security"
 )
 
@@ -47,17 +50,22 @@ func markupFields(t *testing.T) []markupField {
 
 	var (
 		fields []markupField
-		depth  int
+		forms  []string
 	)
 
 	for _, tag := range markupTag.FindAllStringSubmatch(markupComment.ReplaceAllString(asset(t, "/"), ""), -1) {
 		closing, name := tag[1] == "/", strings.ToLower(tag[2])
 
 		if name == "form" {
-			if closing {
-				depth--
-			} else {
-				depth++
+			if closing && len(forms) > 0 {
+				forms = forms[:len(forms)-1]
+			} else if !closing {
+				id := "(a form with no id)"
+				if match := markupID.FindStringSubmatch(tag[3]); match != nil {
+					id = match[1]
+				}
+
+				forms = append(forms, id)
 			}
 
 			continue
@@ -81,7 +89,12 @@ func markupFields(t *testing.T) []markupField {
 			key = attributes["name"]
 		}
 
-		fields = append(fields, markupField{key: key, attributes: attributes, inForm: depth > 0})
+		field := markupField{key: key, attributes: attributes, inForm: len(forms) > 0}
+		if field.inForm {
+			field.form = forms[len(forms)-1]
+		}
+
+		fields = append(fields, field)
 	}
 
 	if len(fields) < 100 {
@@ -95,6 +108,10 @@ type markupField struct {
 	key        string
 	attributes map[string]string
 	inForm     bool
+
+	// form is the id of the form holding the field, which tells apart two fields
+	// of the same name on two cards.
+	form string
 }
 
 // Everything a person types and submits is held to its rules by the browser
@@ -154,6 +171,102 @@ func TestEveryPatternSaysWhatItAsksFor(t *testing.T) {
 
 	if patterns == 0 {
 		t.Fatal("no field on the page is held to a pattern; the reading has stopped finding them")
+	}
+}
+
+// numberRule is what the server takes in a number field: its bounds, empty where
+// there is none, and the step - "any" where it takes any value between them, "1"
+// for a whole number.
+type numberRule struct{ min, max, step string }
+
+// figure writes a bound the way the markup writes it.
+func figure(value float64) string { return strconv.FormatFloat(value, 'f', -1, 64) }
+
+// numberRules are every number field on the screen, by its form and name, with
+// the server's rule for it. A field the markup holds to more than this refuses a
+// value the server takes - a 38.75-hour week's 7.75 hours a day, 23.33 days of
+// leave for part of a year, an idle time of 7 minutes, all refused by steps of a
+// half or of five while the server took them - and one held to less lets
+// somebody type what the server refuses.
+var numberRules = map[string]numberRule{
+	"form-timesheet/durationHours":        {figure(model.MinBookableHours), figure(model.HoursPerDay), "any"},
+	"form-workday/breakMinutes":           {"0", figure(model.MinutesPerDay - 1), "1"},
+	"form-vacation/days":                  {"0", figure(model.MaxEntitlementDays), "any"},
+	"form-vacation/fromYear":              {"1900", "9999", "1"},
+	"form-project/budgetHours":            {"0", figure(model.MaxBudgetHours), "any"},
+	"form-working-times/dailyTargetHours": {"0", figure(model.HoursPerDay), "any"},
+	"form-working-times/maxDailyHours":    {"0", figure(model.HoursPerDay), "any"},
+	"form-reminders/timerAlertHours":      {"0", figure(model.MaxTimerAlertHours), "1"},
+	"form-operational/sessionLifetimeHours": {
+		figure(model.MinSessionLifetimeHours), figure(model.MaxSessionLifetimeHours), "any",
+	},
+	"form-operational/rateLimit":              {figure(model.MinRateLimit), "", "1"},
+	"form-operational/rateLimitWindowSeconds": {"1", figure(model.MaxRateWindowSeconds), "1"},
+	"form-operational/ldapSyncMaxDeleteRatio": {"0", "1", "any"},
+	"form-telemetry/tracerRatio":              {"0", "1", "any"},
+	"form-ldap/port":                          {"1", figure(model.MaxPort), "1"},
+
+	// The server keeps a rate in hundredths and rounds what it is given, so the
+	// form asks for no finer a figure than is kept rather than rounding unseen.
+	"form-project/hourlyRate": {"0", figure(model.MaxHourlyRate), "0.01"},
+
+	// Zero switches the timeout off; between it and the floor the server refuses
+	// by the field's name, a rule of two parts the markup cannot state.
+	"form-operational/sessionIdleMinutes": {"0", figure(model.MaxSessionIdleMinutes), "1"},
+
+	// The server takes any cap above nothing, which the markup cannot state; a cap
+	// below the smallest booking is the closest it can.
+	"form-operational/maxDailyHours": {figure(model.MinBookableHours), figure(model.HoursPerDay), "any"},
+
+	// Bounds the server keeps unexported, beside the code that checks them:
+	// maxBalanceBound in overtime_application_service.go, and the days a token may
+	// last in apitoken_application_service.go.
+	"form-balance-bounds/upperBound": {"0", "10000", "any"},
+	"form-balance-bounds/lowerBound": {"-10000", "0", "any"},
+	"form-token/expiresInDays":       {"0", "3650", "1"},
+
+	// Not the server's: how often the log viewer asks again, which the page reads
+	// within these bounds itself.
+	"log-delay": {"0", "300", "1"},
+}
+
+// Every number field takes what the server takes, no more and no less, and a
+// number field is not added without saying what that is.
+func TestEveryNumberFieldTakesWhatTheServerTakes(t *testing.T) {
+	seen := map[string]bool{}
+
+	for _, field := range markupFields(t) {
+		if field.attributes["type"] != "number" {
+			continue
+		}
+
+		key := field.key
+		if field.inForm {
+			key = field.form + "/" + field.attributes["name"]
+		}
+
+		seen[key] = true
+
+		rule, named := numberRules[key]
+		if !named {
+			t.Errorf("%s is a number field numberRules does not name, so nothing says what it takes", key)
+
+			continue
+		}
+
+		// A number field with no step is held to whole numbers.
+		step := cmp.Or(field.attributes["step"], "1")
+
+		if field.attributes["min"] != rule.min || field.attributes["max"] != rule.max || step != rule.step {
+			t.Errorf("%s takes min %q, max %q in steps of %q; the server takes min %q, max %q in steps of %q",
+				key, field.attributes["min"], field.attributes["max"], step, rule.min, rule.max, rule.step)
+		}
+	}
+
+	for key := range numberRules {
+		if !seen[key] {
+			t.Errorf("numberRules names %s, which is no longer a number field", key)
+		}
 	}
 }
 

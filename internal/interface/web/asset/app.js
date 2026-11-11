@@ -3486,8 +3486,16 @@ function validityMessage(field) {
   if (validity.tooLong) return fillIn(t('valid.maxLength', 'At most {0} characters.'), [field.maxLength]);
   if (validity.tooShort) return fillIn(t('valid.minLength', 'At least {0} characters.'), [field.minLength]);
 
-  // A step, or whatever a later browser checks: its own words are better than a
-  // wrong sentence of ours.
+  // The steps that are left are the server's: whole numbers, and a rate in the
+  // hundredths it is kept in.
+  if (validity.stepMismatch) {
+    return Number(field.step) === 1
+      ? t('valid.wholeNumber', 'Please enter a whole number.')
+      : fillIn(t('valid.step', 'In steps of {0}.'), [Number(field.step)]);
+  }
+
+  // Whatever a later browser checks: its own words are better than a wrong
+  // sentence of ours.
   return '';
 }
 
