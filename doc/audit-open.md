@@ -18,10 +18,9 @@ What is below was raised and is not recorded as decided anywhere.
 
 ## Decisions waiting on the maintainer
 
-None today: the last were decided on 2026-10-09. The table stays for the next.
-
 | | Question |
 | --- | --- |
+| V1 | The directory synchronisation's schedule takes 120 characters in the form (`index.html`, `name="syncSchedule"`) and any length on the server, which checks only that the scheduler can read it. A valid expression can be longer - a list of every minute of an hour is about 170 characters - and the form refuses it. Raise the form's bound, drop it, or give the server the same one? Raised by the validation audit of 2026-11-12, whose rule is that both sides take the same; left open because which length a schedule may have is a choice, not a defect. |
 
 ## Measurements reading cannot make
 
