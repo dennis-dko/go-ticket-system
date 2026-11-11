@@ -826,7 +826,7 @@
   "project.noRate": "abrechenbar, noch ohne Satz",
   "project.open": "offen",
   "project.ratePerHour": "abrechenbar zu {0} die Stunde",
-  "push.pushed": "Die Erinnerungen werden an diesen Browser geschickt, auch wenn er geschlossen ist.",
+  "push.pushed": "Die Erinnerungen werden an diesen Browser geschickt, auch wenn keine Seite von ihm offen ist. Auf einem Computer muss der Browser dafür laufen, im Hintergrund genügt; war er geschlossen, zeigt er sie beim nächsten Start innerhalb einer Stunde, solange sie noch zutreffen.",
   "push.subscribe": "Erinnerungen an diesen Browser schicken",
   "push.switchEnabled": "Diese Installation schickt Erinnerungen per Push",
   "push.switchHint": "Die Erinnerungen – eine Stoppuhr über den gewählten Stunden, der letzte Arbeitstag ohne Buchung – werden an die Browser geschickt, für die man sie unter „Mein Konto“ einschaltet, auch wenn keine Seite offen ist. Jeder Push geht über den Push-Dienst des Browserherstellers: Googles für Chrome, Mozillas für Firefox, Apples für Safari. Er ist nur für diesen Browser verschlüsselt, der Push-Dienst trägt ihn also, ohne ihn zu lesen – erfährt aber, dass diese Installation etwas geschickt hat, und wann.",
