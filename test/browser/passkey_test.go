@@ -181,8 +181,13 @@ func TestTheBuiltInAdministratorIsNotOfferedPasskeys(t *testing.T) {
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
 		chromedp.WaitVisible("#form-password", chromedp.ByID))
 
-	if p.visible("#passkey-card") {
+	if p.visible("#form-passkey") {
 		t.Error("the built-in administrator must not be offered a passkey")
+	}
+
+	// And told so, where the card is, rather than left to wonder where it went.
+	if said := p.text("#passkey-elsewhere"); !p.visible("#passkey-elsewhere") || !strings.Contains(said, "built-in administrator") {
+		t.Errorf("the built-in administrator is not told why it has no passkeys: %q", said)
 	}
 
 	// And the reason this test now waits on something else, asserted rather than
@@ -505,8 +510,12 @@ func TestADirectoryAccountIsNotOfferedPasskeys(t *testing.T) {
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
 		chromedp.WaitVisible("#form-my-timezone", chromedp.ByID))
 
-	if p.visible("#passkey-card") {
+	if p.visible("#form-passkey") {
 		t.Error("an account the directory holds is offered a passkey the server would refuse")
+	}
+
+	if said := p.text("#passkey-elsewhere"); !p.visible("#passkey-elsewhere") || !strings.Contains(said, "directory") {
+		t.Errorf("an account the directory holds is not told why it has no passkeys: %q", said)
 	}
 }
 

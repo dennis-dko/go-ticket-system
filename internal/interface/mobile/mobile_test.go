@@ -534,17 +534,23 @@ func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
 
 	script := read(t, "../web/asset/app.js")
 
-	start := strings.Index(script, "function wireInstall()")
-	if start < 0 {
-		t.Fatal("app.js has no wireInstall")
-	}
+	// Each place the page behaves differently inside the app, and what it does
+	// there when it no longer recognises the app.
+	for function, otherwise := range map[string]string{
+		"wireInstall":             "shows a card about installing the page as an app",
+		"passkeysWithheldBecause": "says the phone's browser cannot use passkeys, where the app signs in with its token",
+	} {
+		start := strings.Index(script, "function "+function+"()")
+		if start < 0 {
+			t.Fatalf("app.js has no %s", function)
+		}
 
-	install := script[start:]
-	install = install[:strings.Index(install, "\n}\n")]
+		body := script[start:]
+		body = body[:strings.Index(body, "\n}\n")]
 
-	if !strings.Contains(install, "'"+registered[1]+"' in window") {
-		t.Errorf("wireInstall does not ask for %s, the bridge the app registers, so the app "+
-			"shows a card about installing the page as an app", registered[1])
+		if !strings.Contains(body, "'"+registered[1]+"' in window") {
+			t.Errorf("%s does not ask for %s, the bridge the app registers, so the app %s", function, registered[1], otherwise)
+		}
 	}
 }
 

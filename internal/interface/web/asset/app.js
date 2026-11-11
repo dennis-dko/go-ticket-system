@@ -10937,7 +10937,10 @@ const TOUR_STEPS = [
     target: '#passkey-card',
     view: 'settings',
     title: () => t('tour.passkey.title', 'Signing in without a password'),
-    text: () => t('tour.passkey.text',
+
+    // Where the card says why it offers none, the tour says the same rather than
+    // describing a form that is not there.
+    text: () => passkeysWithheldBecause() || t('tour.passkey.text',
       'A passkey stays on this device and unlocks with whatever already unlocks it. You '
       + 'can register several, one per device.'),
   },
@@ -16425,27 +16428,68 @@ async function signInWithPasskey() {
   });
 }
 
+/**
+ * Why this account is offered no passkey here, as the sentence the card says in
+ * place of the offer - or nothing, where it is offered one.
+ *
+ * The built-in administrator keeps its password on purpose, so it is never
+ * offered a passkey it might then come to rely on.
+ *
+ * isSystem here rather than administersOnly, which is the one place the two
+ * deliberately differ. Everything else reserved for the built-in account was
+ * reserved for what it *does*, and an account holding the admin role does the
+ * same things - but this is reserved for what it *is*: the guaranteed way back
+ * in, which a way back in tied to one particular phone would stop being.
+ * Somebody who administers because they were given the role is not that account
+ * and does not carry that guarantee, so withholding a phishing-resistant
+ * sign-in from them would cost security rather than protect it.
+ *
+ * Nor to an account the directory holds, and for the opposite reason: its
+ * sign-in has to go through the directory, which is the one place that can end
+ * it, and the server refuses to register a passkey that would go round it.
+ *
+ * Nor where nothing could make one: the Android app shows this page in a
+ * WebView, which has no passkeys, and signs in with its token instead; and a
+ * browser may have none, or be reaching the installation over plain HTTP, where
+ * browsers refuse them.
+ */
+function passkeysWithheldBecause() {
+  if (me.user.isSystem) {
+    return t('passkey.elsewhereSystem', 'Not offered to the built-in administrator, which keeps its '
+      + 'password: the way back in that works from any device.');
+  }
+
+  if (me.user.isExternal) {
+    return t('passkey.elsewhereDirectory', 'Not offered to an account from the directory, which signs '
+      + 'in through the directory: the one place that can end its sign-in.');
+  }
+
+  if ('GoTimeRecordingFiles' in window) {
+    return t('passkey.elsewhereApp', 'The app signs in with the token it was connected with, and '
+      + 'needs no passkey. Passkeys are set up and used in a browser.');
+  }
+
+  if (!passkeysAvailable) {
+    return t('passkey.elsewhereBrowser', 'This browser cannot use passkeys here: they need a browser '
+      + 'that supports them, over HTTPS.');
+  }
+
+  return '';
+}
+
 async function loadPasskeys() {
   const card = $('#passkey-card');
 
-  // The built-in administrator keeps its password on purpose, so it is never
-  // offered a passkey it might then come to rely on.
-  //
-  // isSystem here rather than administersOnly, which is the one place the two
-  // deliberately differ. Everything else reserved for the built-in account was
-  // reserved for what it *does*, and an account holding the admin role does the
-  // same things - but this is reserved for what it *is*: the guaranteed way back
-  // in, which a way back in tied to one particular phone would stop being.
-  // Somebody who administers because they were given the role is not that account
-  // and does not carry that guarantee, so withholding a phishing-resistant
-  // sign-in from them would cost security rather than protect it.
-  //
-  // Nor to an account the directory holds, and for the opposite reason: its
-  // sign-in has to go through the directory, which is the one place that can end
-  // it, and the server refuses to register a passkey that would go round it.
-  card.hidden = !passkeysAvailable || !me.user || me.user.isSystem || me.user.isExternal;
-
+  card.hidden = !me.user;
   if (card.hidden) return;
+
+  const withheld = passkeysWithheldBecause();
+
+  $('#passkey-offer').hidden = Boolean(withheld);
+  $('#passkey-elsewhere').hidden = !withheld;
+  $('#passkey-elsewhere').textContent = withheld;
+
+  if (withheld) return;
 
   const passkeys = (await api('/me/passkeys'))?.items ?? [];
 
