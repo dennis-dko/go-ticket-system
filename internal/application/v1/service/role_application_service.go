@@ -57,6 +57,10 @@ func (s *RoleApplicationService) CreateRole(
 		return nil, err
 	}
 
+	if model.TooLong(description, model.MaxDescriptionLength) {
+		return nil, apperror.InvalidFields("description")
+	}
+
 	return s.roles.Save(ctx, &model.Role{
 		Name:        strings.TrimSpace(name),
 		Description: strings.TrimSpace(description),
@@ -137,6 +141,12 @@ func (s *RoleApplicationService) UpdateRole(
 	}
 
 	if description != nil {
+		// As long as any other description may be, which the form has always said
+		// and the API did not.
+		if model.TooLong(*description, model.MaxDescriptionLength) {
+			return nil, apperror.InvalidFields("description")
+		}
+
 		role.Description = strings.TrimSpace(*description)
 	}
 

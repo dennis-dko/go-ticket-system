@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/dennis-dko/go-time-recording/internal/application/v1/command"
@@ -121,6 +122,25 @@ func TestCreateRoleRejectsUnknownPermission(t *testing.T) {
 
 	_, err := f.roles.CreateRole(context.Background(), "auditor", "",
 		[]string{model.PermUserRead, "timesheets:invent"})
+	requireKind(t, err, apperror.KindInvalid)
+}
+
+// A role's description is held to the length every other description is, which
+// the form already said: it took anything at all over the API.
+func TestARolesDescriptionIsHeldToTheLengthOfADescription(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	long := strings.Repeat("a", model.MaxDescriptionLength+1)
+
+	_, err := f.roles.CreateRole(ctx, "auditor", long, []string{model.PermUserRead})
+	requireKind(t, err, apperror.KindInvalid)
+
+	role, err := f.roles.CreateRole(ctx, "auditor", strings.Repeat("a", model.MaxDescriptionLength), []string{model.PermUserRead})
+	if err != nil {
+		t.Fatalf("a description of exactly the length allowed is refused: %v", err)
+	}
+
+	_, err = f.roles.UpdateRole(ctx, role.ID, nil, &long, nil)
 	requireKind(t, err, apperror.KindInvalid)
 }
 
