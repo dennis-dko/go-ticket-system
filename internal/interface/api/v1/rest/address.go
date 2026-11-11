@@ -16,8 +16,9 @@ type AddressResponse struct {
 }
 
 // Address handles GET /api/v1/me/address: this installation's address with a
-// QR code of it, which the card offering to install the page shows, for opening
-// the installation on a phone without typing its address.
+// QR code of it, for opening the installation on a phone without typing its
+// address. The card that showed it offers the Android app now, by a code of its
+// own; this stays for whoever asks it, being part of the API.
 //
 // The page names its own address as ?origin=, because a browser sends no Origin
 // with a GET a page makes of its own installation, and the address the page
