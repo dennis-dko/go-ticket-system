@@ -534,17 +534,23 @@ func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
 
 	script := read(t, "../web/asset/app.js")
 
-	start := strings.Index(script, "function wireInstall()")
-	if start < 0 {
-		t.Fatal("app.js has no wireInstall")
-	}
+	// Each place the page behaves differently inside the app, and what it does
+	// there when it no longer recognises the app.
+	for function, otherwise := range map[string]string{
+		"wireInstall":             "shows a card about installing the page as an app",
+		"passkeysWithheldBecause": "says the phone's browser cannot use passkeys, where the app signs in with its token",
+	} {
+		start := strings.Index(script, "function "+function+"()")
+		if start < 0 {
+			t.Fatalf("app.js has no %s", function)
+		}
 
-	install := script[start:]
-	install = install[:strings.Index(install, "\n}\n")]
+		body := script[start:]
+		body = body[:strings.Index(body, "\n}\n")]
 
-	if !strings.Contains(install, "'"+registered[1]+"' in window") {
-		t.Errorf("wireInstall does not ask for %s, the bridge the app registers, so the app "+
-			"shows a card about installing the page as an app", registered[1])
+		if !strings.Contains(body, "'"+registered[1]+"' in window") {
+			t.Errorf("%s does not ask for %s, the bridge the app registers, so the app %s", function, registered[1], otherwise)
+		}
 	}
 }
 
@@ -568,6 +574,26 @@ func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) 
 
 	if !strings.Contains(read(t, "src/main/AndroidManifest.xml"), `android:name="android.permission.POST_NOTIFICATIONS"`) {
 		t.Error("the app does not declare POST_NOTIFICATIONS, so the phone is never asked and no reminder is shown")
+	}
+}
+
+// The page tells the app when its session ended without its being signed out
+// of, through the bridge the app registers for it - the app cannot see that for
+// itself, and without it a token taken back left the app showing the page's own
+// sign-in form while it went on asking about the reminders with a token the
+// installation no longer knew. So the name the page tells is the name Web.kt
+// registers.
+func TestThePageTellsTheAppItsSessionEndedByTheBridgeItRegisters(t *testing.T) {
+	code, _ := lexed(source(t, "Web.kt"))
+
+	registered := regexp.MustCompile(`\bconst\s+val\s+sessionInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
+	if registered == nil {
+		t.Fatal("Web.kt names no sessionInterface, so the page cannot tell the app its session ended")
+	}
+
+	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]+"?.ended()") {
+		t.Errorf("app.js does not tell %s, the bridge the app registers, that its session ended, so a "+
+			"token taken back leaves the app on the page's own sign-in form", registered[1])
 	}
 }
 

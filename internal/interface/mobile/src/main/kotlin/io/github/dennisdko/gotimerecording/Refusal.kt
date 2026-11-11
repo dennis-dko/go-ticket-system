@@ -5,7 +5,14 @@ import org.json.JSONObject
 import java.time.LocalDate
 
 /** Refused is what the installation answered instead of doing something, in words the person holding the phone can read. */
-class Refused(message: String) : Exception(message)
+open class Refused(message: String) : Exception(message)
+
+/**
+ * TokenRefused is the installation no longer knowing the app's token - taken
+ * back under API tokens, or run out - which nothing the app retries can mend, so
+ * the app disconnects and says so rather than trying again.
+ */
+class TokenRefused(message: String) : Refused(message)
 
 /**
  * refusalValues names which values of which refusal the web interface writes in

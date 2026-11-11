@@ -37,14 +37,7 @@ class Installation(private val address: String, private val words: Language, pri
             connection.setRequestProperty("Accept", "application/json")
 
             val status = connection.responseCode
-            if (status == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw Refused(
-                    words.text(
-                        "mobile.connect.tokenUnknown",
-                        "The installation does not know this token. Make one under My account, API tokens, and scan its code.",
-                    ),
-                )
-            }
+            if (status == HttpURLConnection.HTTP_UNAUTHORIZED) throw tokenUnknown()
 
             if (status !in 200..299) {
                 val body = (connection.errorStream ?: connection.inputStream)?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
@@ -142,6 +135,7 @@ class Installation(private val address: String, private val words: Language, pri
             connection.setRequestProperty("Authorization", "Bearer $token")
             connection.setRequestProperty("Accept", "application/json")
 
+            if (connection.responseCode == HttpURLConnection.HTTP_UNAUTHORIZED) throw tokenUnknown()
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
 
             val body = connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
@@ -170,6 +164,13 @@ class Installation(private val address: String, private val words: Language, pri
 
     private fun unreachable(e: IOException): Refused =
         Refused(words.text("mobile.unreachable", "could not reach {0}", address) + ": " + e.message)
+
+    private fun tokenUnknown(): TokenRefused = TokenRefused(
+        words.text(
+            "mobile.connect.tokenUnknown",
+            "The installation does not know this token. Make one under My account, API tokens, and scan its code.",
+        ),
+    )
 
     private fun notThis(): Refused =
         Refused(words.text("mobile.notThisApplication", "{0} answered with something that is not this application's", address))

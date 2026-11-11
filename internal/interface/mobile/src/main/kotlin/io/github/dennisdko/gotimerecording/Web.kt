@@ -45,15 +45,17 @@ import java.net.URI
  * database. What the app adds is only what a page cannot do inside an app by
  * itself - choose a file, save one, open a link that is not the installation's,
  * ask the phone for the notifications its reminders are shown as -
- * and the one thing it watches the page for: signing out, which disconnects the
- * app as well, so that a phone handed on does not sign its next holder back in.
+ * and the two things it is told of: signing out, which it watches the page's
+ * requests for and which disconnects the app as well, so that a phone handed on
+ * does not sign its next holder back in; and a session that ended without that,
+ * which the page tells it of and [onSessionEnded] answers.
  *
  * [shown] counts the times the session was opened again, and the page is loaded
  * afresh whenever it changes.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> Unit) {
+fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> Unit, onSessionEnded: () -> Unit) {
     val context = LocalContext.current
     var back by remember { mutableStateOf(false) }
 
@@ -110,6 +112,8 @@ fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> U
                 },
                 filesInterface,
             )
+
+            addJavascriptInterface(Session { Handler(Looper.getMainLooper()).post(onSessionEnded) }, sessionInterface)
 
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -242,6 +246,21 @@ private class Notifications(private val context: Context, private val ask: () ->
 
 /** notificationsInterface is the name the page reaches [Notifications] by, which app.js asks for. */
 private const val notificationsInterface = "GoTimeRecordingNotifications"
+
+/**
+ * Session is how the page tells the app that its session ended without its
+ * being signed out of - which the app cannot see for itself, because the page
+ * learns it from an answer to one of its own requests. Signing out the app
+ * watches for in the requests, and that disconnects it instead.
+ */
+private class Session(private val ended: () -> Unit) {
+
+    @JavascriptInterface
+    fun ended() = ended.invoke()
+}
+
+/** sessionInterface is the name the page reaches [Session] by, which app.js tells when its session has ended. */
+private const val sessionInterface = "GoTimeRecordingSession"
 
 /** signsOut says whether a request is the web interface signing out of the installation the app shows. */
 fun signsOut(address: String, url: String): Boolean =
