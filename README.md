@@ -283,7 +283,8 @@ which are set up there.
 **It belongs to the release it was built with.** Download
 `go-time-recording-mobile_<version>.apk` from the
 [release](https://github.com/dennis-dko/go-time-recording/releases) the
-installation runs and open it on the phone; Android asks once whether the
+installation runs - **My account → Install the Android app** shows it as a code
+the phone's camera downloads it from - and open it on the phone; Android asks once whether the
 browser or file manager it was opened from may install apps. Every release is
 signed with the same key, so the next one installs over it. An installation
 whose certificate comes from an authority of its own needs that authority

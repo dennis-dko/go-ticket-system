@@ -1576,24 +1576,17 @@
         <button type="button" class="secondary" id="tour-restart" data-i18n="tour.card.start">Show the tour</button>
       </div>
 
-      <!-- The page as an app of its own, on a telephone's home screen or in a
-           desktop's start menu. The button is the browser's own offer, so it
-           appears only where the browser makes one; elsewhere the sentence says
-           where its menu keeps it. Taken away entirely once the page is running
-           as the installed app, where there is nothing left to offer. -->
+      <!-- The Android app, which every release carries: a code for a phone's
+           camera that downloads the one of the release this installation runs,
+           and that release's page. The server draws the code and names the
+           release, because the page has no QR encoder; until it answers, the link
+           names the newest release. Not shown inside the app, which is what the
+           card offers. -->
       <div class="card" id="install-card">
-        <h2 data-i18n="install.title">Install as an app</h2>
-        <p class="muted" data-i18n="install.text">Installed, the time recording opens from the home screen or the start menu like an app of its own, without the browser around it. A long press on its icon leads straight to the time entries, the calendar or the overtime.</p>
-        <p class="muted" id="install-manual" data-i18n="install.manual">Where no button appears here, the browser keeps the offer in its menu, as "Install app" or "Add to Home screen".</p>
-        <button type="button" class="secondary" id="install-now" hidden data-i18n="install.now">Install</button>
-        <p class="muted" id="install-phone" data-i18n="install.phone" hidden>To open it on a phone, type this address into the phone's browser or scan the code with the phone's camera; it can be installed from that browser.</p>
-        <pre class="value" id="install-address" hidden></pre>
+        <h2 data-i18n="install.title">Install the Android app</h2>
+        <p class="muted" data-i18n="install.text">On an Android phone the time recording is also an app of its own: it shows this interface and reminds you with notifications. Scan the code with the phone's camera to download it, open the file, and allow the installation the one time Android asks.</p>
         <img id="install-qr" class="qr" alt="" hidden>
-        <!-- On Android the app is downloaded rather than offered by a browser. The
-             link names the newest release until the page knows its version, and
-             then the release this installation runs, because the app belongs to
-             the release it was built with. -->
-        <p class="muted" id="install-android" data-i18n="install.android">On Android the time recording is also an app of its own. It shows this interface, connects by scanning the code a new token shows under API tokens, and reminds you with notifications.</p>
+        <p class="muted" data-i18n="install.connect">Once installed, the app connects by scanning the code a new token shows under API tokens.</p>
         <div class="row">
           <a id="install-android-link" class="tab" href="https://github.com/dennis-dko/go-time-recording/releases/latest"
              target="_blank" rel="noopener noreferrer" data-i18n="install.androidLink">The Android app on GitHub ↗</a>
