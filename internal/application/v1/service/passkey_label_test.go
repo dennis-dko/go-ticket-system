@@ -15,11 +15,11 @@ func TestAPasskeysNameIsCutByCharacters(t *testing.T) {
 	limit := model.PasskeyMaxNameLength
 
 	for name, want := range map[string]string{
-		"":                                        model.DefaultPasskeyName,
-		"   ":                                     model.DefaultPasskeyName,
-		"  Work laptop  ":                         "Work laptop",
-		strings.Repeat("a", limit-1) + "ü":        strings.Repeat("a", limit-1) + "ü",
-		strings.Repeat("ü", limit+5):              strings.Repeat("ü", limit),
+		"":                                 model.DefaultPasskeyName,
+		"   ":                              model.DefaultPasskeyName,
+		"  Work laptop  ":                  "Work laptop",
+		strings.Repeat("a", limit-1) + "ü": strings.Repeat("a", limit-1) + "ü",
+		strings.Repeat("ü", limit+5):       strings.Repeat("ü", limit),
 		strings.Repeat("a", limit) + "and beyond": strings.Repeat("a", limit),
 	} {
 		got := passkeyLabel(name)
