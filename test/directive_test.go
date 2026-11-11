@@ -74,9 +74,9 @@ func TestCLAUDEmdStillPointsAtWhatItSaysItDoes(t *testing.T) {
 			contains:  "WHERE name = '%s') WHERE role_id IS NULL",
 		},
 		{
-			reference: "internal/infrastructure/config/datasource.go:122",
+			reference: "internal/infrastructure/config/datasource.go:125",
 			resolved:  "internal/infrastructure/config/datasource.go",
-			line:      122,
+			line:      125,
 			contains:  "const configLocation",
 		},
 		{

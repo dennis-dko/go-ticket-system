@@ -198,6 +198,24 @@ func (s *PasskeyService) BeginRegistration(
 	return creation, token, nil
 }
 
+// passkeyLabel is the name a passkey is listed under: what its owner typed,
+// trimmed, the default where that is nothing, and no longer than the list shows -
+// cut by characters, as the form counts them. Cut by bytes, a name ending in a
+// letter like ü was split inside it and stored as something that was no longer
+// text, and a name of umlauts lost half of what the form had let it have.
+func passkeyLabel(name string) string {
+	label := strings.TrimSpace(name)
+	if label == "" {
+		return model.DefaultPasskeyName
+	}
+
+	if characters := []rune(label); len(characters) > model.PasskeyMaxNameLength {
+		label = string(characters[:model.PasskeyMaxNameLength])
+	}
+
+	return label
+}
+
 // FinishRegistration verifies what the browser created and stores it.
 func (s *PasskeyService) FinishRegistration(
 	ctx context.Context,
@@ -234,18 +252,9 @@ func (s *PasskeyService) FinishRegistration(
 			WithCode("passkeyUnverified")
 	}
 
-	label := strings.TrimSpace(name)
-	if label == "" {
-		label = model.DefaultPasskeyName
-	}
-
-	if len(label) > model.PasskeyMaxNameLength {
-		label = label[:model.PasskeyMaxNameLength]
-	}
-
 	return s.passkeys.Save(ctx, &model.Passkey{
 		UserID:          userID,
-		Name:            label,
+		Name:            passkeyLabel(name),
 		CredentialID:    credential.ID,
 		PublicKey:       credential.PublicKey,
 		AttestationType: credential.AttestationType,

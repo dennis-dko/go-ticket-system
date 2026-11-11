@@ -3453,6 +3453,18 @@ function wireValidityMessages() {
   }, true);
 }
 
+/**
+ * What each pattern a field is held to asks for, in words. The browser can only
+ * call a pattern "the requested format", which says nothing about what to type,
+ * and says it in its own language rather than the screen's - so every pattern
+ * the markup uses is named here, and TestEveryPatternSaysWhatItAsksFor fails on
+ * one that is not.
+ */
+const PATTERN_MESSAGES = {
+  '[0-9]{6}': () => t('valid.code', 'Please enter the six digits your authenticator app shows.'),
+  '[A-Za-z]{3}': () => t('valid.currency', 'Please enter the three letters of a currency, such as EUR.'),
+};
+
 /** What a field's rule says about its value, or nothing where it has no objection. */
 function validityMessage(field) {
   const { validity } = field;
@@ -3462,13 +3474,28 @@ function validityMessage(field) {
   if (validity.badInput) return t('valid.number', 'Please enter a number.');
   if (validity.typeMismatch && field.type === 'email') return t('valid.email', 'Please enter an email address.');
   if (validity.typeMismatch && field.type === 'url') return t('valid.url', 'Please enter a web address.');
+
+  // Before the lengths: a pattern says the whole of what the field takes, and
+  // "at least 6 characters" is true of a code and less use than what the six are.
+  if (validity.patternMismatch && PATTERN_MESSAGES[field.getAttribute('pattern')]) {
+    return PATTERN_MESSAGES[field.getAttribute('pattern')]();
+  }
+
   if (validity.rangeUnderflow) return fillIn(t('valid.min', 'At least {0}.'), [limit(field.min)]);
   if (validity.rangeOverflow) return fillIn(t('valid.max', 'At most {0}.'), [limit(field.max)]);
   if (validity.tooLong) return fillIn(t('valid.maxLength', 'At most {0} characters.'), [field.maxLength]);
   if (validity.tooShort) return fillIn(t('valid.minLength', 'At least {0} characters.'), [field.minLength]);
 
-  // A pattern, a step, or whatever a later browser checks: its own words are
-  // better than a wrong sentence of ours.
+  // The steps that are left are the server's: whole numbers, and a rate in the
+  // hundredths it is kept in.
+  if (validity.stepMismatch) {
+    return Number(field.step) === 1
+      ? t('valid.wholeNumber', 'Please enter a whole number.')
+      : fillIn(t('valid.step', 'In steps of {0}.'), [Number(field.step)]);
+  }
+
+  // Whatever a later browser checks: its own words are better than a wrong
+  // sentence of ours.
   return '';
 }
 
@@ -9930,7 +9957,7 @@ async function submitLogin(e) {
   // The password was right but the account has a second factor: ask for the
   // code instead of reporting a failed sign-in.
   if (result.totpRequired) {
-    $('#login-totp-field').hidden = false;
+    showCodeField($('#login-totp-field'), true);
     $('#login-error').textContent = t('login.totpNeeded', 'Please enter the code from your authenticator app.');
     $('#login-error').hidden = false;
     form.elements.totp.focus();
@@ -10113,7 +10140,7 @@ function askForTheCodeAfterATicket() {
     form.elements[name].closest('label').hidden = true;
   }
 
-  $('#login-totp-field').hidden = false;
+  showCodeField($('#login-totp-field'), true);
   $('#login-kerberos').hidden = true;
   $('#login-passkey').hidden = true;
   $('#login-kerberos-leave').hidden = false;
@@ -10142,7 +10169,7 @@ function backToThePasswordForm() {
   }
 
   form.elements.totp.value = '';
-  $('#login-totp-field').hidden = true;
+  showCodeField($('#login-totp-field'), false);
   $('#login-kerberos').hidden = !ticketsOffered;
   $('#login-passkey').hidden = !passkeysAvailable;
   $('#login-kerberos-leave').hidden = true;
@@ -10572,7 +10599,7 @@ function handBackTheScreen(message) {
   // sign-out otherwise, which on a shared machine hands the next person the
   // last one's name.
   $('#form-login').reset();
-  $('#login-totp-field').hidden = true;
+  showCodeField($('#login-totp-field'), false);
 
   // Asked again rather than kept from when the page opened: a provider an
   // administrator configured since is otherwise missing from the form until
@@ -10583,6 +10610,19 @@ function handBackTheScreen(message) {
 }
 
 // ------------------------------------------------------------- two-factor
+
+/**
+ * Shows a field for a second factor's code or puts it away, and with it whether
+ * its form asks for one: a field that is hidden and still required stops its
+ * form without a word, and one that is shown and not required lets an empty
+ * code through to be called wrong by the server.
+ */
+function showCodeField(label, shown) {
+  label.hidden = !shown;
+
+  const field = label.querySelector('input');
+  if (field) field.required = shown;
+}
 
 function renderTOTPState() {
   const enabled = me.user?.totpEnabled ?? false;
@@ -10604,7 +10644,7 @@ function renderTOTPState() {
   $('#totp-secret').textContent = '';
   $('#totp-uri').textContent = '';
   // Disabling also needs a current code, so the field stays visible for it.
-  $('#totp-code-field').hidden = !enabled;
+  showCodeField($('#totp-code-field'), enabled);
 }
 
 function wireTOTP() {
@@ -10624,13 +10664,27 @@ function wireTOTP() {
     $('#totp-manual').open = !setup.qr;
 
     $('#totp-setup').hidden = false;
-    $('#totp-code-field').hidden = false;
+    showCodeField($('#totp-code-field'), true);
     $('#totp-confirm').hidden = false;
     $('#totp-begin').hidden = true;
   }, null, null));
 
-  $('#totp-confirm').addEventListener('click', () => {
+  // Reached only once the browser has held the code to its rule. Which of the two
+  // is meant is the account's to say rather than the button's: Enter in the field
+  // presses the form's first button, and that is Confirm, hidden or not.
+  $('#form-totp').addEventListener('submit', (event) => {
+    event.preventDefault();
+
     const code = $('#totp-code').value.trim();
+
+    if (me.user?.totpEnabled) {
+      mutate(() => api(`/me/totp?code=${encodeURIComponent(code)}`, { method: 'DELETE' }),
+        t('totp.disabled', 'Two-factor authentication disabled'),
+        async () => { $('#totp-code').value = ''; await refreshAll(); });
+
+      return;
+    }
+
     mutate(() => api('/me/totp', { method: 'PUT', body: JSON.stringify({ code }) }),
       t('totp.enabled', 'Two-factor authentication enabled'),
       async () => {
@@ -10640,13 +10694,6 @@ function wireTOTP() {
         // Finished, so drawn from the account now - which the reload left alone.
         renderTOTPState();
       });
-  });
-
-  $('#totp-disable').addEventListener('click', () => {
-    const code = $('#totp-code').value.trim();
-    mutate(() => api(`/me/totp?code=${encodeURIComponent(code)}`, { method: 'DELETE' }),
-      t('totp.disabled', 'Two-factor authentication disabled'),
-      async () => { $('#totp-code').value = ''; await refreshAll(); });
   });
 }
 

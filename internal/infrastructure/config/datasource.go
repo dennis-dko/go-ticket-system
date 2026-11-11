@@ -23,6 +23,7 @@ import (
 	"github.com/lib/pq"
 	_ "modernc.org/sqlite"
 
+	"github.com/dennis-dko/go-time-recording/internal/domain/model"
 	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
 )
 
@@ -86,8 +87,10 @@ func (d Datasource) Validate() error {
 			missing = append(missing, "user")
 		}
 
+		// A port, not only a number: 70000 was saved and failed on connecting,
+		// where the directory's port was already held to the same bounds.
 		if d.Port != "" {
-			if _, err := strconv.Atoi(d.Port); err != nil {
+			if port, err := strconv.Atoi(d.Port); err != nil || port < 1 || port > model.MaxPort {
 				missing = append(missing, "port")
 			}
 		}
