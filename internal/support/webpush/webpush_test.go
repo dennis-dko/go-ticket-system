@@ -244,13 +244,16 @@ func TestSendPostsWhatAPushServiceAsksFor(t *testing.T) {
 	defer service.Close()
 
 	sub := Subscription{Endpoint: service.URL + "/push/abc", P256dh: receiverPublic, Auth: receiverSecret, Origin: "https://time.example.com"}
-	message := Message{Title: "The stopwatch is still running", Body: "Since 08:15", Tag: "gtr-stopwatch"}
+	message := Message{Title: "The stopwatch is still running", Body: "Since 08:15", Tag: "gtr-stopwatch",
+		At: "2026-11-10T09:15:00Z", About: "2026-11-10T07:15:00Z"}
 
 	if err := keys.Send(t.Context(), service.Client(), sub, message, time.Minute); err != nil {
 		t.Fatal(err)
 	}
 
-	for header, want := range map[string]string{"Content-Encoding": "aes128gcm", "TTL": "60", "Urgency": "normal"} {
+	// A reminder is about a moment: high, which a push service hands to a dozing
+	// phone at once rather than when it next wakes.
+	for header, want := range map[string]string{"Content-Encoding": "aes128gcm", "TTL": "60", "Urgency": "high"} {
 		if got.Header.Get(header) != want {
 			t.Errorf("%s is %q, want %q", header, got.Header.Get(header), want)
 		}

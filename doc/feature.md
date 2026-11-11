@@ -170,7 +170,12 @@ it is open, once its owner has chosen *Push the reminders to this browser* under
 eight in the morning on its owner's clock. Each push is encrypted for that
 browser alone and leaves through the push service of the browser's maker;
 signing out of the browser takes it out of the pushes, so whoever uses it next
-is not reminded of somebody else's day.
+is not reminded of somebody else's day. A browser on a computer has to be running
+to be reached - in the background will do - and the push service holds a reminder
+for one that is closed for up to an hour. One that arrives more than a few minutes
+late is asked about again before it is shown, so a stopwatch stopped meanwhile is
+not said to be running, and it takes the notification shown for it before away
+with it.
 
 It is your own balance. Somebody else's is their recorded time, totalled, so it
 takes the same right as reading their entries — which only a manager holds, for the
