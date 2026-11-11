@@ -126,6 +126,29 @@ class AppModel(application: Application) : AndroidViewModel(application) {
      * web interface, or asks to connect anew.
      */
     fun disconnect() {
+        state = forgotten()
+    }
+
+    /**
+     * sessionEnded is the page saying its session ended without its being signed
+     * out of: the session's idle time ran out, or the token it was opened with was
+     * taken back. The token says which - a new session for one still good, which
+     * the page is loaded afresh with, and the connect form, saying why, for one
+     * the installation no longer knows.
+     */
+    fun sessionEnded() {
+        val connection = state.connection ?: return
+        if (state.busy != null) return
+
+        open(connection, keep = false)
+    }
+
+    /**
+     * forgotten forgets the installation, its token and the web interface's
+     * session on this phone, ends the session, and is the state with nothing
+     * connected.
+     */
+    private fun forgotten(): State {
         val connection = state.connection
         val cookies = CookieManager.getInstance()
         val held = connection?.let { cookies.getCookie(it.address) }.orEmpty()
@@ -133,9 +156,10 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         store.forget()
         stopReminders(getApplication())
         cookies.removeAllCookies(null)
-        state = State(words = words, connection = null)
 
         connection?.let { signOut(it, held) }
+
+        return State(words = words, connection = null)
     }
 
     /**
@@ -182,6 +206,13 @@ class AppModel(application: Application) : AndroidViewModel(application) {
 
                     state.copy(connection = connection, offered = null, ready = true, shown = state.shown + 1)
                 }
+            } catch (refused: TokenRefused) {
+                // The app's own token taken back - under API tokens, in the app or
+                // anywhere else - or run out: the phone is disconnected, as a lost
+                // one is meant to be, and says why. A token being connected with
+                // anew that the installation does not know leaves the connection
+                // there was as it was.
+                if (keep) state.copy(said = refused.message) else forgotten().copy(said = refused.message)
             } catch (refused: Refused) {
                 state.copy(said = refused.message)
             }

@@ -75,6 +75,11 @@ suspend fun checkReminders(context: Context, timeout: Int = Installation.request
     // nothing to say until the next time it is asked.
     val reminders = try {
         Installation(connection.address, words, timeout).reminders(connection.token)
+    } catch (_: TokenRefused) {
+        // Taken back, or run out: nothing is asked with it again, and the app
+        // says why the next time it is opened.
+        stopReminders(context)
+        return true
     } catch (_: Refused) {
         return false
     } catch (_: RuntimeException) {

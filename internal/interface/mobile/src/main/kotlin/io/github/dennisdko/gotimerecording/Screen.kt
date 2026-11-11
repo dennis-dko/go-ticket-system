@@ -85,7 +85,7 @@ fun App(model: AppModel) {
                     scanning -> ScanScreen(state.words, onFound = { model.offer(it); scanning = false }, onCancel = { scanning = false })
                     connection == null || state.offered != null ->
                         ConnectScreen(state, model::connect, if (connection != null) model::decline else null) { scanning = true }
-                    state.ready -> WebScreen(connection.address, state.words, state.shown, model::disconnect)
+                    state.ready -> WebScreen(connection.address, state.words, state.shown, model::disconnect, model::sessionEnded)
                     else -> WaitScreen(state, model::retry, model::disconnect)
                 }
             }

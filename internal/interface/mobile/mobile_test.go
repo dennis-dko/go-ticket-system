@@ -577,6 +577,26 @@ func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) 
 	}
 }
 
+// The page tells the app when its session ended without its being signed out
+// of, through the bridge the app registers for it - the app cannot see that for
+// itself, and without it a token taken back left the app showing the page's own
+// sign-in form while it went on asking about the reminders with a token the
+// installation no longer knew. So the name the page tells is the name Web.kt
+// registers.
+func TestThePageTellsTheAppItsSessionEndedByTheBridgeItRegisters(t *testing.T) {
+	code, _ := lexed(source(t, "Web.kt"))
+
+	registered := regexp.MustCompile(`\bconst\s+val\s+sessionInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
+	if registered == nil {
+		t.Fatal("Web.kt names no sessionInterface, so the page cannot tell the app its session ended")
+	}
+
+	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]+"?.ended()") {
+		t.Errorf("app.js does not tell %s, the bridge the app registers, that its session ended, so a "+
+			"token taken back leaves the app on the page's own sign-in form", registered[1])
+	}
+}
+
 // A receiver the manifest does not name is never called, and nothing says so:
 // the alarm a reminder is set for goes off, and nothing in the app hears it. So
 // every BroadcastReceiver in the app's sources is a receiver of its manifest.

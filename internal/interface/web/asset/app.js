@@ -259,6 +259,13 @@ function refusalFrom(res, body) {
     } finally {
       endingTheSession = false;
     }
+
+    // And the Android app is told, which signs in with its token rather than a
+    // password and cannot see this for itself: it opens a new session where the
+    // token is still good, and asks for a new token where it was taken back. Not
+    // on signing out, which the app sees in the requests and answers by
+    // disconnecting - told then too, it would sign straight back in.
+    window.GoTimeRecordingSession?.ended();
   }
 
   return err;

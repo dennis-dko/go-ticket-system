@@ -271,7 +271,8 @@ The token signs the app in, so no password and no second factor are typed on
 the phone, and it keeps the web interface signed in for as long as the token is
 good. Signing out in it disconnects the app as well, so a phone handed on does
 not sign its next holder back in; and a phone that is lost is signed out by
-revoking its token under **My account → API tokens**, at once. A file the web interface saves - a report, an
+revoking its token under **My account → API tokens**, at once - from wherever it
+is revoked, the app then stops its reminders and asks for a new token's code. A file the web interface saves - a report, an
 export - is saved where the phone's file picker says, and a file it asks for
 is chosen there too. The reminders are notifications of the app's own, whether
 it is open or not, once they are allowed under **My account → Reminders**: the
