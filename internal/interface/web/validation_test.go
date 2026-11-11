@@ -205,6 +205,7 @@ var numberRules = map[string]numberRule{
 	"form-operational/ldapSyncMaxDeleteRatio": {"0", "1", "any"},
 	"form-telemetry/tracerRatio":              {"0", "1", "any"},
 	"form-ldap/port":                          {"1", figure(model.MaxPort), "1"},
+	"form-datasource/port":                    {"1", figure(model.MaxPort), "1"},
 
 	// The server keeps a rate in hundredths and rounds what it is given, so the
 	// form asks for no finer a figure than is kept rather than rounding unseen.

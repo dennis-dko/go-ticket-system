@@ -232,5 +232,6 @@ func isCollectorAddress(address string) bool {
 	return err == nil && number > 0 && number <= MaxPort
 }
 
-// MaxPort is the highest port number a collector address may name.
+// MaxPort is the highest port number there is, which a collector's address, the
+// database and the directory are each held to.
 const MaxPort = 65535

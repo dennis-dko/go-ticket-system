@@ -486,7 +486,7 @@ func (s *SettingsService) SaveLDAP(ctx context.Context, config model.LDAPConfig)
 			invalid = append(invalid, "userFilter")
 		}
 
-		if config.Port <= 0 || config.Port > 65535 {
+		if config.Port <= 0 || config.Port > model.MaxPort {
 			invalid = append(invalid, "port")
 		}
 
