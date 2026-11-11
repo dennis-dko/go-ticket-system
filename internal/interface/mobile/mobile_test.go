@@ -571,6 +571,26 @@ func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) 
 	}
 }
 
+// A receiver the manifest does not name is never called, and nothing says so:
+// the alarm a reminder is set for goes off, and nothing in the app hears it. So
+// every BroadcastReceiver in the app's sources is a receiver of its manifest.
+func TestEveryReceiverOfTheAppIsInItsManifest(t *testing.T) {
+	manifest := read(t, "src/main/AndroidManifest.xml")
+	receiver := regexp.MustCompile(`\bclass\s+([A-Z][A-Za-z0-9]*)\s*(?:\([^)]*\))?\s*:\s*BroadcastReceiver\(\)`)
+
+	for path, body := range sources(t) {
+		code, _ := lexed(body)
+
+		for _, found := range receiver.FindAllStringSubmatch(code, -1) {
+			named := regexp.MustCompile(`<receiver\b[^>]*\bandroid:name="\.` + regexp.QuoteMeta(found[1]) + `"`)
+
+			if !named.MatchString(manifest) {
+				t.Errorf("%s declares the receiver %s, which the manifest does not name, so Android never calls it", path, found[1])
+			}
+		}
+	}
+}
+
 // The screens before the web interface takes over are drawn in its colours,
 // light and dark, so that they look like its own sign-in: Look.kt keeps them as
 // Tones, and they are app.css's custom properties - the band across the card is

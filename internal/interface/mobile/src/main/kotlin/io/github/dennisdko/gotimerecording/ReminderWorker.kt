@@ -21,7 +21,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -30,8 +29,15 @@ import java.util.concurrent.TimeUnit
 /**
  * ReminderWorker shows the installation's reminders as the phone's own
  * notifications, whether the app is open or not: it asks the installation every
- * quarter of an hour, and again at the moment the running stopwatch passes the
- * hours chosen, which the quarter-hourly check could miss by as much.
+ * quarter of an hour, which is how the app learns of a stopwatch started in a
+ * browser.
+ *
+ * That is not enough on its own, because a dozing phone holds a worker back until
+ * it wakes - measured on an emulator in deep idle, where the check set for the
+ * stopwatch's moment waited on the network and ran the moment the phone woke. So
+ * every check also sets a [ReminderAlarm] for the moment the next reminder falls
+ * due, which the phone lets through while it dozes, and the app is asked about as
+ * soon as somebody leaves it, so a stopwatch started in it has its alarm at once.
  *
  * Nothing is shown that the installation has not just confirmed. A stopwatch
  * stopped in the browser in the meantime is asked about again rather than
@@ -43,40 +49,56 @@ import java.util.concurrent.TimeUnit
 class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val context = applicationContext
-        if (!mayNotify(context)) return Result.success()
-
-        val connection = ConnectionStore(context).load() ?: return Result.success()
-        val words = Dictionaries(context.assets).words(Locale.getDefault().language)
-
-        // Unreachable, or answering with something this cannot read: there is
-        // nothing to say until the next time it is asked.
-        val reminders = try {
-            Installation(connection.address, words).reminders(connection.token)
-        } catch (_: Refused) {
-            return Result.success()
-        } catch (_: RuntimeException) {
-            return Result.success()
-        }
-
-        val kept = context.getSharedPreferences(keptName, Context.MODE_PRIVATE)
-        val told = stillTold(reminders, kept.getStringSet(toldKey, emptySet()).orEmpty())
-        val now = Instant.now()
-        val due = noticesDue(reminders, now, ZoneId.systemDefault(), told, words)
-
-        // What is no longer true is taken back as well: a stopwatch stopped in
-        // the browser, or a day booked since, leaves no notice behind on the phone.
-        val manager = NotificationManagerCompat.from(context)
-        if (stopwatchDue(reminders)?.let { !now.isBefore(it) } != true) manager.cancel(stopwatchNotification)
-        if (reminders.unbookedDay == null) manager.cancel(unbookedNotification)
-
-        due.forEach { show(context, words, it) }
-        kept.edit { putStringSet(toldKey, told + due.map { it.key }) }
-
-        stopwatchDue(reminders)?.takeIf { it.isAfter(now) }?.let { askAt(context, Duration.between(now, it)) }
+        checkReminders(applicationContext)
 
         return Result.success()
     }
+}
+
+/**
+ * checkReminders asks the installation what is due and shows it, takes back what
+ * is no longer true, and sets the alarm for the next moment a reminder falls due.
+ * It says whether the installation answered, so that a check the alarm could not
+ * make is left to a worker; one with nothing to ask - no connection, or no leave
+ * to notify - counts as answered. [timeout] bounds each request.
+ */
+suspend fun checkReminders(context: Context, timeout: Int = Installation.requestTimeout): Boolean {
+    if (!mayNotify(context)) {
+        armReminderAlarm(context, null)
+        return true
+    }
+
+    val connection = ConnectionStore(context).load() ?: return true
+    val words = Dictionaries(context.assets).words(Locale.getDefault().language)
+
+    // Unreachable, or answering with something this cannot read: there is
+    // nothing to say until the next time it is asked.
+    val reminders = try {
+        Installation(connection.address, words, timeout).reminders(connection.token)
+    } catch (_: Refused) {
+        return false
+    } catch (_: RuntimeException) {
+        return false
+    }
+
+    val kept = context.getSharedPreferences(keptName, Context.MODE_PRIVATE)
+    val told = stillTold(reminders, kept.getStringSet(toldKey, emptySet()).orEmpty())
+    val now = Instant.now()
+    val zone = ZoneId.systemDefault()
+    val due = noticesDue(reminders, now, zone, told, words)
+
+    // What is no longer true is taken back as well: a stopwatch stopped in
+    // the browser, or a day booked since, leaves no notice behind on the phone.
+    val manager = NotificationManagerCompat.from(context)
+    if (stopwatchDue(reminders)?.let { !now.isBefore(it) } != true) manager.cancel(stopwatchNotification)
+    if (reminders.unbookedDay == null) manager.cancel(unbookedNotification)
+
+    due.forEach { show(context, words, it) }
+    kept.edit { putStringSet(toldKey, told + due.map { it.key }) }
+
+    armReminderAlarm(context, nextCheck(reminders, now, zone))
+
+    return true
 }
 
 /** startReminders starts asking for a connected app, keeping the schedule where there is one. */
@@ -90,11 +112,23 @@ fun startReminders(context: Context) {
 fun stopReminders(context: Context) {
     WorkManager.getInstance(context).apply {
         cancelUniqueWork(everyQuarter)
-        cancelUniqueWork(atTheMoment)
+        cancelUniqueWork(rightAway)
     }
 
+    armReminderAlarm(context, null)
     context.getSharedPreferences(keptName, Context.MODE_PRIVATE).edit { remove(toldKey) }
     NotificationManagerCompat.from(context).cancelAll()
+}
+
+/**
+ * askNow asks the installation as soon as there is a network: when somebody
+ * leaves the app, when the phone has just allowed notifications, and when an
+ * alarm could not reach the installation in its moment.
+ */
+fun askNow(context: Context) {
+    val request = OneTimeWorkRequestBuilder<ReminderWorker>().setConstraints(online()).build()
+
+    WorkManager.getInstance(context).enqueueUniqueWork(rightAway, ExistingWorkPolicy.REPLACE, request)
 }
 
 /** mayNotify says whether the phone lets the app show notifications at all: switched on, and from Android 13 on granted. */
@@ -122,16 +156,7 @@ fun notificationState(context: Context): String = when {
 fun askedForNotifications(context: Context) {
     context.getSharedPreferences(keptName, Context.MODE_PRIVATE).edit { putBoolean(askedKey, true) }
 
-    if (mayNotify(context)) askAt(context, Duration.ZERO)
-}
-
-private fun askAt(context: Context, delay: Duration) {
-    val request = OneTimeWorkRequestBuilder<ReminderWorker>()
-        .setInitialDelay(delay.toMillis(), TimeUnit.MILLISECONDS)
-        .setConstraints(online())
-        .build()
-
-    WorkManager.getInstance(context).enqueueUniqueWork(atTheMoment, ExistingWorkPolicy.REPLACE, request)
+    if (mayNotify(context)) askNow(context)
 }
 
 // The leave to notify is asked for once more just before, because it can be
@@ -171,9 +196,9 @@ private fun show(context: Context, words: Language, notice: Notice) {
 
 private fun online(): Constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-/** everyQuarter names the check every quarter of an hour, and atTheMoment the one when the stopwatch is due. */
+/** everyQuarter names the check every quarter of an hour, and rightAway the one asked for at once. */
 private const val everyQuarter = "reminders"
-private const val atTheMoment = "reminders-due"
+private const val rightAway = "reminders-now"
 
 /** keptName is where the app keeps what it has shown and whether it asked the phone. */
 private const val keptName = "reminders"

@@ -92,4 +92,36 @@ class ReminderTest {
         assertNull(stopwatchDue(Reminders(0, started, null)))
         assertNull(stopwatchDue(Reminders(3, null, null)))
     }
+
+    // A dozing phone holds the quarter-hourly check back, so the installation is
+    // asked again at the next moment a reminder falls due: the stopwatch's, or
+    // eight in the morning for somebody reminded of an unbooked day.
+    @Test
+    fun theInstallationIsAskedAgainWhenTheNextReminderFallsDue() {
+        val running = Reminders(alertHours = 2, startedAt = started, unbookedDay = null)
+
+        assertEquals(started.plusSeconds(2 * 3600), nextCheck(running, started.plusSeconds(60), berlin))
+        assertNull(nextCheck(running, started.plusSeconds(2 * 3600), berlin))
+
+        val mornings = Reminders(alertHours = 0, startedAt = null, unbookedDay = null, unbookedReminder = true)
+
+        assertEquals(Instant.parse("2026-11-10T07:00:00Z"), nextCheck(mornings, Instant.parse("2026-11-10T06:59:00Z"), berlin))
+        assertEquals(Instant.parse("2026-11-11T07:00:00Z"), nextCheck(mornings, Instant.parse("2026-11-10T07:00:00Z"), berlin))
+        assertEquals(Instant.parse("2026-11-11T07:00:00Z"), nextCheck(mornings.copy(unbookedDay = LocalDate.parse("2026-11-09")), Instant.parse("2026-11-10T16:00:00Z"), berlin))
+
+        assertNull(nextCheck(Reminders(alertHours = 0, startedAt = null, unbookedDay = null), started, berlin))
+    }
+
+    // Both asked for, whichever comes first: the stopwatch during the day, the
+    // morning for one started late in the evening.
+    @Test
+    fun theEarlierOfTwoRemindersIsAskedAboutFirst() {
+        val both = Reminders(alertHours = 2, startedAt = started, unbookedDay = null, unbookedReminder = true)
+
+        assertEquals(started.plusSeconds(2 * 3600), nextCheck(both, started.plusSeconds(60), berlin))
+
+        val evening = both.copy(alertHours = 12, startedAt = Instant.parse("2026-11-10T21:00:00Z"))
+
+        assertEquals(Instant.parse("2026-11-11T07:00:00Z"), nextCheck(evening, Instant.parse("2026-11-10T21:30:00Z"), berlin))
+    }
 }
