@@ -2130,7 +2130,7 @@
         <form method="post" id="form-sync-schedule" class="form">
           <div class="grid">
             <label class="wide" data-i18n="sync.schedule">Run automatically (cron, five fields — empty means only by hand)
-              <input type="text" name="syncSchedule" maxlength="120" placeholder="0 4 * * *" spellcheck="false">
+              <input type="text" name="syncSchedule" maxlength="255" placeholder="0 4 * * *" spellcheck="false">
             </label>
           </div>
           <p class="muted" data-i18n="sync.scheduleHint">Empty by default, and worth leaving empty until a preview has been read: an automatic run deletes without anybody looking. Applied at the next start — the scheduler is built while the application starts. It runs on the server's clock, which is UTC in the container this application ships, and not in the instance timezone.</p>

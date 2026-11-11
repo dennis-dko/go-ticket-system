@@ -130,6 +130,10 @@ func TestTheFormLimitsAreTheOnesTheServerEnforces(t *testing.T) {
 		// the server bounds both - so a long name was caught while typing and a
 		// long address only on pressing Save.
 		"email": model.MaxEmailLength,
+
+		// The form took 120 characters and the server any number, while an
+		// expression listing every minute of an hour is about 170.
+		"syncSchedule": model.MaxScheduleLength,
 	} {
 		t.Run(field, func(t *testing.T) {
 			pattern := regexp.MustCompile(

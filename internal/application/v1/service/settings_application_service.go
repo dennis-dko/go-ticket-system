@@ -441,7 +441,7 @@ func (s *SettingsService) SaveLDAP(ctx context.Context, config model.LDAPConfig)
 	// stored either way and the scheduler's own answer to an expression it cannot
 	// read is a line in the log and no job at all. An administrator would be told
 	// their nightly reconciliation was saved and it would simply never run.
-	if !model.ValidSchedule(config.SyncSchedule) {
+	if !model.ValidSchedule(config.SyncSchedule) || model.TooLong(config.SyncSchedule, model.MaxScheduleLength) {
 		return apperror.InvalidFields("syncSchedule")
 	}
 
