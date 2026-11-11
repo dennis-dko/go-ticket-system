@@ -133,7 +133,12 @@ func (k Keys) Send(ctx context.Context, client *http.Client, sub Subscription, m
 	req.Header.Set("Content-Encoding", "aes128gcm")
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("TTL", strconv.Itoa(int(ttl.Seconds())))
-	req.Header.Set("Urgency", "normal")
+
+	// Every message is a reminder about a moment, which RFC 8030 calls a
+	// time-sensitive alert. Google's push service hands a high one to a dozing
+	// phone at once and may hold a normal one until the phone wakes, which is
+	// exactly when a reminder about a moment is no use.
+	req.Header.Set("Urgency", "high")
 	req.Header.Set("Authorization", signed)
 
 	resp, err := client.Do(req)

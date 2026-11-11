@@ -250,7 +250,9 @@ func TestSendPostsWhatAPushServiceAsksFor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for header, want := range map[string]string{"Content-Encoding": "aes128gcm", "TTL": "60", "Urgency": "normal"} {
+	// A reminder is about a moment: high, which a push service hands to a dozing
+	// phone at once rather than when it next wakes.
+	for header, want := range map[string]string{"Content-Encoding": "aes128gcm", "TTL": "60", "Urgency": "high"} {
 		if got.Header.Get(header) != want {
 			t.Errorf("%s is %q, want %q", header, got.Header.Get(header), want)
 		}
