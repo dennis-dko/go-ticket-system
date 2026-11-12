@@ -94,6 +94,19 @@
     // (script-src 'self'). Opening index.html through a static server shows a
     // page that cannot load its own configuration and does not enforce the
     // policy the real one does - passing there means nothing.
-    "ritwickdey.liveserver"
+    "ritwickdey.liveserver",
+
+    // Gradle for Java switches itself on for any build.gradle.kts in the tree,
+    // which here means the Android app's, and its activate() then starts a
+    // Gradle server that refuses to run without JDK 17 or newer. It does so
+    // unconditionally - no setting is read before that check, and
+    // gradle.autoDetect only decides which tasks it lists - so a host without a
+    // JDK gets "JDK 17 or higher is required" in every window opened on this
+    // repository and a language server that never finishes starting. The app
+    // is built inside its own image (task build:mobile), which carries the JDK
+    // and the Android SDK, so nothing here asks the host for either - and a JDK
+    // alone would not be enough, because the build it would sync next is an
+    // Android one, whose SDK is in that image too.
+    "vscjava.vscode-gradle"
   ]
 }
