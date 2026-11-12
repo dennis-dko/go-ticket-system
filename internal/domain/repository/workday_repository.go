@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // WorkDayRepository keeps when each person worked, a day at a time.

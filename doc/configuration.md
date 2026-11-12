@@ -76,7 +76,7 @@ nothing sets the variable.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `APP_NAME` | `Time Recording` | the two-factor issuer, and the initial title until one is set under Settings |
+| `APP_NAME` | `Ticket System` | the two-factor issuer, and the initial title until one is set under Settings |
 | `HTTP_PORT` | `8000` | API and web interface |
 | `METRICS_PORT` | `2121` | Prometheus endpoint; `0` switches it off |
 | `DB_DIALECT` | – | `sqlite`, `postgres` or `mysql`. **Empty serves the installer** |

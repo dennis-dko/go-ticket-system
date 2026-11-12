@@ -9,7 +9,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // The end-to-end path a person actually walks: sign in, change the password,

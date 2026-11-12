@@ -100,11 +100,11 @@ jobs:
           cp .env.example .env.ci
           cat >> .env.ci <<'ENV'
           DB_PASSWORD=ci-only-not-a-real-password
-          TLS_DOMAINS=time.example.com
+          TLS_DOMAINS=tickets.example.com
           TLS_EMAIL=ops@example.com
           LDAP_ADMIN_PASSWORD=ci-only-not-a-real-password
           LDAP_BIND_PASSWORD=ci-only-not-a-real-password
-          KERBEROS_KEYTAB_FILE=/etc/go-time-recording/http.keytab
+          KERBEROS_KEYTAB_FILE=/etc/go-ticket-system/http.keytab
           ENV
 
           for files in \
@@ -312,10 +312,10 @@ jobs:
   # instances against one shared database file - what an administrator saves
   # being applied by the next start - and on a server the harness gives each
   # instance a database of its own, so those five skip themselves whenever
-  # GTR_TEST_DSN is set. The sqlite leg is the only place three of them run:
+  # GTS_TEST_DSN is set. The sqlite leg is the only place three of them run:
   # the directory schedule, and the two telemetry cases. The other two are the
   # tracing ones, which need a collector as well and so run in the directory and
-  # tracing job below - which likewise leaves GTR_TEST_DSN unset, and has to.
+  # tracing job below - which likewise leaves GTS_TEST_DSN unset, and has to.
   integration:
     name: Integration (${{ matrix.dialect }})
     runs-on: ubuntu-latest
@@ -329,15 +329,15 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: go-time-recording
-          POSTGRES_USER: gtr
-          POSTGRES_PASSWORD: gtr-test-password
+          POSTGRES_DB: go-ticket-system
+          POSTGRES_USER: gts
+          POSTGRES_PASSWORD: gts-test-password
         ports:
           - 5432:5432
         # Without this the tests start before the server can answer, and the
         # failure looks like a bug rather than a race.
         options: >-
-          --health-cmd "pg_isready -U gtr -d go-time-recording"
+          --health-cmd "pg_isready -U gts -d go-ticket-system"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -345,8 +345,8 @@ jobs:
       mysql:
         image: mysql:8.4
         env:
-          MYSQL_DATABASE: go-time-recording
-          MYSQL_ROOT_PASSWORD: gtr-test-root
+          MYSQL_DATABASE: go-ticket-system
+          MYSQL_ROOT_PASSWORD: gts-test-root
         ports:
           - 3306:3306
         options: >-
@@ -367,7 +367,7 @@ jobs:
         env:
           # Empty for the sqlite leg: the harness falls back to a file per test.
           # root on MySQL, because each test creates its own database.
-          GTR_TEST_DSN: ${{ matrix.dialect == 'postgres' && 'postgres://gtr:gtr-test-password@localhost:5432/go-time-recording?sslmode=disable' || matrix.dialect == 'mysql' && 'mysql://root:gtr-test-root@localhost:3306/go-time-recording' || '' }}
+          GTS_TEST_DSN: ${{ matrix.dialect == 'postgres' && 'postgres://gts:gts-test-password@localhost:5432/go-ticket-system?sslmode=disable' || matrix.dialect == 'mysql' && 'mysql://root:gts-test-root@localhost:3306/go-ticket-system' || '' }}
         # -parallel for the same reason as the browser job: every case starts its
         # own instance of the application against its own database, so there is
         # nothing shared to fight over and almost all of the time is spent waiting
@@ -379,8 +379,8 @@ jobs:
 
   # The two suites that were never run here at all.
   #
-  # Both guard themselves on an environment variable - GTR_TEST_LDAP and
-  # GTR_TEST_JAEGER - and nothing in this workflow set either, so both skipped in
+  # Both guard themselves on an environment variable - GTS_TEST_LDAP and
+  # GTS_TEST_JAEGER - and nothing in this workflow set either, so both skipped in
   # every run since they were written. A test binary that skips everything exits
   # 0 and looks exactly like one that passed, which is why nobody noticed. What
   # went unchecked is the directory reconciliation: the one operation in this
@@ -408,15 +408,15 @@ jobs:
         working-directory: test
         run: docker compose --profile ldap --profile traces up -d --build --wait
 
-      # No GTR_TEST_DSN, and that is load-bearing rather than an omission: five
+      # No GTS_TEST_DSN, and that is load-bearing rather than an omission: five
       # integration cases start two instances against one shared SQLite file and
       # skip themselves whenever a server DSN is set. Three of those are the
       # directory schedule and the two tracing cases this job exists for.
       - name: Directory and tracing tests
         env:
-          GTR_TEST_LDAP: localhost:5389
-          GTR_TEST_JAEGER: localhost:54317
-          GTR_TEST_JAEGER_QUERY: http://localhost:51686
+          GTS_TEST_LDAP: localhost:5389
+          GTS_TEST_JAEGER: localhost:54317
+          GTS_TEST_JAEGER_QUERY: http://localhost:51686
         run: |
           set -euo pipefail
           go test -tags integration -count=1 -timeout 15m -v \
@@ -450,7 +450,7 @@ jobs:
       # chromedp finds by itself; the browser job explains why that one.
       - name: Signing in with a ticket, in a browser
         env:
-          GTR_TEST_LDAP: localhost:5389
+          GTS_TEST_LDAP: localhost:5389
         run: |
           set -euo pipefail
           go test -tags browser -count=1 -timeout 10m -v -parallel 2 -run 'Ticket' \
@@ -630,11 +630,11 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build the toolchain image
-        run: docker build -t gtr-android - < internal/interface/mobile/Dockerfile
+        run: docker build -t gts-android - < internal/interface/mobile/Dockerfile
 
       - name: Test, lint and build the app
         run: >-
-          docker run --rm -v "$PWD:/src" -w /src/internal/interface/mobile gtr-android
+          docker run --rm -v "$PWD:/src" -w /src/internal/interface/mobile gts-android
           gradle --no-daemon --console=plain testDebugUnitTest assembleRelease lintRelease
 
   # Builds the Docker image on every PR as a smoke test. On pushes to main
@@ -660,7 +660,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: go-time-recording:ci
+          tags: go-ticket-system:ci
 
       - name: Log in to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // A save that cannot be finished leaves the connection that was working.
@@ -36,7 +36,7 @@ import (
 func TestASaveThatCannotFinishLeavesTheWorkingConnection(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "configs")
 	path := filepath.Join(dir, "datasource.json")
-	working := config.Datasource{Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Password: "secret"}
+	working := config.Datasource{Dialect: "postgres", Name: "gts", Host: "db", User: "gts", Password: "secret"}
 
 	if err := config.SaveDatasource(path, working); err != nil {
 		t.Fatal(err)

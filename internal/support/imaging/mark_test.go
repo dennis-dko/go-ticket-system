@@ -5,7 +5,7 @@ import (
 	"image/png"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/imaging"
+	"github.com/dennis-dko/go-ticket-system/internal/support/imaging"
 )
 
 // The mark is drawn at the size asked for, and is the mark: a blue tile with the

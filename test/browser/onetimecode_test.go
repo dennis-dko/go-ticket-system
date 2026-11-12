@@ -8,7 +8,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
 // What a second factor's code field says when the browser refuses what was typed.

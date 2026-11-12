@@ -1,4 +1,4 @@
-<h1 align="center"><img src="internal/interface/web/asset/favicon.svg" alt="" width="96"><br>Go-Time-Recording</h1>
+<h1 align="center"><img src="internal/interface/web/asset/favicon.svg" alt="" width="96"><br>Go-Ticket-System</h1>
 
 <p align="center">
   <b>Project time tracking in a single self-contained binary.</b><br>
@@ -7,10 +7,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/dennis-dko/go-time-recording/actions/workflows/ci.yml"><img src="https://github.com/dennis-dko/go-time-recording/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/dennis-dko/go-time-recording/releases/latest"><img src="https://img.shields.io/github/v/release/dennis-dko/go-time-recording?label=release" alt="Latest release"></a>
-  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/dennis-dko/go-time-recording" alt="Go version"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/dennis-dko/go-time-recording" alt="MIT licence"></a>
+  <a href="https://github.com/dennis-dko/go-ticket-system/actions/workflows/ci.yml"><img src="https://github.com/dennis-dko/go-ticket-system/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/dennis-dko/go-ticket-system/releases/latest"><img src="https://img.shields.io/github/v/release/dennis-dko/go-ticket-system?label=release" alt="Latest release"></a>
+  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/dennis-dko/go-ticket-system" alt="Go version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/dennis-dko/go-ticket-system" alt="MIT licence"></a>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
   <img src="doc/image/calendar.png" alt="The calendar: a month of booked hours, with two days of leave, a day off sick and a public holiday marked">
 </picture>
 
-## Why Go-Time-Recording
+## Why Go-Ticket-System
 
 - 📦 **One file to run.** The interface, the API, the schema migrations and the
   timezone database are compiled into one binary — for Linux, Windows and macOS,
@@ -146,7 +146,7 @@ flowchart TB
     scripts(["Scripts and tools<br/>personal API token"])
     calendars(["Calendar apps<br/>iCalendar subscription"])
 
-    subgraph binary["go-time-recording-web — one binary"]
+    subgraph binary["go-ticket-system-web — one binary"]
         installer["Installer<br/>until a database exists"]
         ui["Web interface<br/>embedded"]
         api["REST API<br/>/api/v1 · /api-docs"]
@@ -189,7 +189,7 @@ The first start, when nothing is configured yet:
 ```mermaid
 sequenceDiagram
     actor You
-    participant App as go-time-recording
+    participant App as go-ticket-system
     participant DB as Database
     You->>App: start it, with no database configured
     App-->>You: installer on :8000, setup token in the log
@@ -208,13 +208,13 @@ cp .env.example .env    # DB_PASSWORD is required
 docker compose up -d
 ```
 
-**As a single binary** — download `go-time-recording-web` for your platform
-from the [latest release](https://github.com/dennis-dko/go-time-recording/releases/latest)
+**As a single binary** — download `go-ticket-system-web` for your platform
+from the [latest release](https://github.com/dennis-dko/go-ticket-system/releases/latest)
 and start it. It is the whole installation.
 
 ```bash
-chmod +x go-time-recording-web_*_linux_amd64
-./go-time-recording-web_*_linux_amd64
+chmod +x go-ticket-system-web_*_linux_amd64
+./go-ticket-system-web_*_linux_amd64
 ```
 
 Then open <http://localhost:8000>. Without a database the binary serves the
@@ -281,8 +281,8 @@ Two things stay in a browser: passkeys and signing in through your organisation,
 which are set up there.
 
 **It belongs to the release it was built with.** Download
-`go-time-recording-mobile_<version>.apk` from the
-[release](https://github.com/dennis-dko/go-time-recording/releases) the
+`go-ticket-system-mobile_<version>.apk` from the
+[release](https://github.com/dennis-dko/go-ticket-system/releases) the
 installation runs - **My account → Install the Android app** shows it as a code
 the phone's camera downloads it from - and open it on the phone; Android asks once whether the
 browser or file manager it was opened from may install apps. Every release is

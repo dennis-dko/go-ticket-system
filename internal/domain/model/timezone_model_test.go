@@ -6,7 +6,7 @@ import (
 
 	_ "time/tzdata"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // The zone decides which calendar day a booking lands on, so a wrong answer

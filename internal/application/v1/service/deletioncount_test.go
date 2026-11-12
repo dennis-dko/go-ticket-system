@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/command"
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/memory"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/command"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/memory"
 )
 
 // loadCounting counts how often somebody's entries are loaded, as opposed to

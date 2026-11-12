@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/announce"
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
-	"github.com/dennis-dko/go-time-recording/internal/support/hosting"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/announce"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/support/hosting"
 )
 
 // fallingTransport falls over the moment it is asked for anything.
@@ -37,7 +37,7 @@ func TestAnInstallThatPanicsTakesItsAnnouncementBack(t *testing.T) {
 
 	t.Chdir(t.TempDir())
 
-	asset := fmt.Sprintf("go-time-recording-web_v9.9.9_%s_%s%s", runtime.GOOS, runtime.GOARCH, binarySuffix())
+	asset := fmt.Sprintf("go-ticket-system-web_v9.9.9_%s_%s%s", runtime.GOOS, runtime.GOARCH, binarySuffix())
 
 	var feed *httptest.Server
 
@@ -60,7 +60,7 @@ func TestAnInstallThatPanicsTakesItsAnnouncementBack(t *testing.T) {
 
 	hub := announce.New()
 	h := NewUpdateHandler(NewAuthorizer(false), source, hub, "v1.0.0", true).
-		WithConnection(appconfig.Datasource{Dialect: "sqlite", Name: "gtr.db"})
+		WithConnection(appconfig.Datasource{Dialect: "sqlite", Name: "gts.db"})
 
 	fell := func() (fell any) {
 		defer func() { fell = recover() }()

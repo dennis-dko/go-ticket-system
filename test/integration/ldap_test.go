@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // internal/infrastructure/directory is the one package here that talks to
@@ -28,14 +28,14 @@ import (
 // because a fake returns whatever the test told it to.
 //
 //	docker compose --profile ldap up -d --wait          (from test/)
-//	GTR_TEST_LDAP=localhost:5389 go test -tags integration ./test/integration
+//	GTS_TEST_LDAP=localhost:5389 go test -tags integration ./test/integration
 //
 // Or `task test:ldap`, which does both. The seed these cases rely on is
 // test/ldap/people.ldif, and each entry in it is there for a case below. The
 // directory around it - the suffix, ou=people and the bind account - is seeded
 // by the image, which is the deployment one from deploy/ldap.
 
-const ldapEnv = "GTR_TEST_LDAP"
+const ldapEnv = "GTS_TEST_LDAP"
 
 // The seed's own values. Repeated here rather than shared with the compose file,
 // because a test that reads its expectations from the thing under test proves
@@ -44,7 +44,7 @@ const (
 	ldapBaseDN   = "dc=example,dc=com"
 	ldapPeopleDN = "ou=people,dc=example,dc=com"
 	ldapBindDN   = "cn=admin,dc=example,dc=com"
-	ldapBindPass = "gtr-test-password"
+	ldapBindPass = "gts-test-password"
 )
 
 // requireLDAP skips unless a directory is configured and answering.

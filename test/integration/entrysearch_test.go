@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/spreadsheet"
+	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
 // Finding entries by what was written about them. The listing could be narrowed

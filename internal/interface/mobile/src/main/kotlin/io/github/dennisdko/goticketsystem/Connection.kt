@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
@@ -17,11 +17,11 @@ import javax.crypto.spec.GCMParameterSpec
 data class Connection(val address: String, val token: String)
 
 /** connectScheme is the scheme of the address a token's code holds, which the app is registered for. */
-const val connectScheme = "go-time-recording"
+const val connectScheme = "go-ticket-system"
 
 /**
  * connectionIn reads the address a token's code holds -
- * go-time-recording://connect?url=…&token=… - and answers null for anything
+ * go-ticket-system://connect?url=…&token=… - and answers null for anything
  * else. The order of the two values is not to be relied on, and both are
  * query-encoded.
  */

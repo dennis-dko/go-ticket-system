@@ -3,8 +3,8 @@ package rest
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // waitingFor reports whether one setting is in the list.

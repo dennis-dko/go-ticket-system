@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // A session ends for two different reasons, and they measure different things.

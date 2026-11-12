@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // Some of the dropdowns in this interface are filled by the server - the roles,

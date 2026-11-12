@@ -3,7 +3,7 @@ package web
 import (
 	"sync"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/imaging"
+	"github.com/dennis-dko/go-ticket-system/internal/support/imaging"
 )
 
 // icons converts logos and remembers what it converted.

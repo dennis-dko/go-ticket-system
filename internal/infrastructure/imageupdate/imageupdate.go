@@ -23,7 +23,7 @@ const (
 )
 
 // defaultRound is the updater's round when its sign of life does not say: the
-// script's own default for GTR_UPDATE_POLL.
+// script's own default for GTS_UPDATE_POLL.
 const defaultRound = 3 * time.Second
 
 // Outcomes the updater reports. Anything else is a failure and carries its own
@@ -109,7 +109,7 @@ func (u *Updater) Available() bool {
 // between rounds, and is taken for there while that file is younger than three
 // rounds and ten seconds more: one round lost to a busy machine is not a stopped
 // updater, three in a row are. The round comes from the file rather than from a
-// number here, because GTR_UPDATE_POLL sets it and a fixed window would take an
+// number here, because GTS_UPDATE_POLL sets it and a fixed window would take an
 // updater on a one-minute round for stopped between two of its rounds. An update
 // under way is no round at all - a pull and a recreate can take minutes - so it
 // counts as being there too.

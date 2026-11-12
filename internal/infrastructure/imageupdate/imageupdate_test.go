@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/imageupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/imageupdate"
 )
 
 // Nothing is available where nothing was configured, which is every deployment
@@ -100,7 +100,7 @@ func TestAnUpdaterThatSaysItIsThereIsAvailable(t *testing.T) {
 
 // How long a sign of life counts is the updater's own round, not a number here.
 //
-// GTR_UPDATE_POLL sets the round, and a fixed window would take an updater set to
+// GTS_UPDATE_POLL sets the round, and a fixed window would take an updater set to
 // a minute for stopped between two of its rounds. The file names the round, so a
 // slow updater can be told from a stopped one.
 func TestAnUpdaterIsHeardForAsLongAsItsOwnRoundSays(t *testing.T) {

@@ -23,8 +23,8 @@ import (
 	"github.com/lib/pq"
 	_ "modernc.org/sqlite"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // DatasourceFile is where the administered database connection is stored.
@@ -187,7 +187,7 @@ func InstallerSettings() Installer {
 
 	return Installer{
 		HTTPPort:   valueOr(cfg, "HTTP_PORT", "8000"),
-		AppName:    valueOr(cfg, "APP_NAME", "Time Recording"),
+		AppName:    valueOr(cfg, "APP_NAME", "Ticket System"),
 		SetupToken: strings.TrimSpace(cfg.Get("SETUP_TOKEN")),
 		Prefill: Datasource{
 			Dialect: strings.TrimSpace(cfg.Get("DB_DIALECT")),
@@ -427,7 +427,7 @@ func driverDSN(ds Datasource) (driver, dsn string, err error) {
 // compared with what went in.
 //
 // Measured, and the reason this exists: with no password a PostgreSQL connection
-// reads "password= dbname=gtr", the driver takes "dbname=gtr" for the password,
+// reads "password= dbname=gts", the driver takes "dbname=gts" for the password,
 // and the server opens the database named after the account. Against a server
 // that asks for no password the probe and GoFr both succeeded - and the
 // application created its tables in "postgres" while its log named the database

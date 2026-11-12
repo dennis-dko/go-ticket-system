@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
 // Two people saving at the same moment must both be served.
@@ -25,7 +25,7 @@ import (
 // was small enough that it took a browser suite under load to show it, which is
 // exactly the kind of failure that reaches a person and never a test.
 
-// The default dialect is SQLite, so this runs against it unless GTR_TEST_DSN
+// The default dialect is SQLite, so this runs against it unless GTS_TEST_DSN
 // points somewhere else - where it is still a fair test of concurrent writes.
 func TestConcurrentWritesAreServedRatherThanRefused(t *testing.T) {
 	t.Parallel()

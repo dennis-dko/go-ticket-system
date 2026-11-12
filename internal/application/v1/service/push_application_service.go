@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
-	"github.com/dennis-dko/go-time-recording/internal/support/webpush"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/internal/support/webpush"
 )
 
 // PushService pushes the reminders to the browsers people subscribe - a
@@ -318,7 +318,7 @@ func (s *PushService) dueFor(ctx context.Context, userID uint, end time.Time, in
 					Title: words.Text("timer.longTitle", "The stopwatch is still running"),
 					Body: words.Text("timer.longBody", "Since {1}, longer than the {0} you chose.",
 						strconv.Itoa(hours)+" "+words.Text("unit.hours", "h"), words.Moment(timer.StartedAt.In(zone))),
-					Tag:   "gtr-stopwatch",
+					Tag:   "gts-stopwatch",
 					At:    at.UTC().Format(time.RFC3339),
 					About: timer.StartedAt.UTC().Format(time.RFC3339),
 				})
@@ -338,7 +338,7 @@ func (s *PushService) dueFor(ctx context.Context, userID uint, end time.Time, in
 				Body: words.Text("remind.unbooked",
 					"Nothing is booked on {0}, a working day by your plan. It can be added under {1}.",
 					words.Day(*notices.UnbookedDay), words.Text("nav.timesheets", "Time entries")),
-				Tag:   "gtr-unbooked",
+				Tag:   "gts-unbooked",
 				At:    end.UTC().Format(time.RFC3339),
 				About: notices.UnbookedDay.Format(time.DateOnly),
 			})

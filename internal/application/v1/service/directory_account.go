@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // provisionExternal returns the local account for a directory user, creating

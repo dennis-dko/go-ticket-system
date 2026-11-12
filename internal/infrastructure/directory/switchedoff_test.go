@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // adTime writes a moment the way Active Directory counts it: 100-nanosecond steps

@@ -11,12 +11,12 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // SessionCookieName is the cookie carrying the session token.
-const SessionCookieName = "gtr_session"
+const SessionCookieName = "gts_session"
 
 // sessionContextKey types the context value so it cannot collide with a key
 // from another package.

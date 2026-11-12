@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // RoleRepository repository functions for roles

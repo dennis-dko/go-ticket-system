@@ -8,7 +8,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/oidctest"
+	"github.com/dennis-dko/go-ticket-system/test/oidctest"
 )
 
 // configureTheProvider has the signed-in administrator point the installation at

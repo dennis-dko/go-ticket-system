@@ -42,9 +42,9 @@ func TestAReminderPushedLateIsShownOnlyWhileItStillHolds(t *testing.T) {
 	onTime := time.Now().UTC().Format(time.RFC3339)
 	late := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339)
 
-	push.until("on time, about no stopwatch", "gtr-stopwatch", "on time", onTime, "2026-01-05T08:00:00Z")
-	push.once("late, about a stopwatch since stopped", "gtr-stopwatch", "stopped", late, "2026-01-05T08:00:00Z")
-	p.waitForNoNotification("gtr-stopwatch", "a late reminder of a stopwatch that is not running")
+	push.until("on time, about no stopwatch", "gts-stopwatch", "on time", onTime, "2026-01-05T08:00:00Z")
+	push.once("late, about a stopwatch since stopped", "gts-stopwatch", "stopped", late, "2026-01-05T08:00:00Z")
+	p.waitForNoNotification("gts-stopwatch", "a late reminder of a stopwatch that is not running")
 
 	// The stopwatch as the installation reports it, and as the push names it: in
 	// UTC, whatever offset the report writes it with.
@@ -57,12 +57,12 @@ func TestAReminderPushedLateIsShownOnlyWhileItStillHolds(t *testing.T) {
 		t.Fatalf("the stopwatch reports starting at %q: %v", reported, err)
 	}
 
-	push.once("late, about the stopwatch running", "gtr-stopwatch", "running", late, started.UTC().Format(time.RFC3339))
-	p.waitForNotification("gtr-stopwatch", "running")
+	push.once("late, about the stopwatch running", "gts-stopwatch", "running", late, started.UTC().Format(time.RFC3339))
+	p.waitForNotification("gts-stopwatch", "running")
 
-	push.until("on time, about a day", "gtr-unbooked", "unbooked", onTime, "2026-01-02")
-	push.once("late, about a day since booked", "gtr-unbooked", "booked", late, "2000-01-03")
-	p.waitForNoNotification("gtr-unbooked", "a late reminder of a day that is no longer unbooked")
+	push.until("on time, about a day", "gts-unbooked", "unbooked", onTime, "2026-01-02")
+	push.once("late, about a day since booked", "gts-unbooked", "booked", late, "2000-01-03")
+	p.waitForNoNotification("gts-unbooked", "a late reminder of a day that is no longer unbooked")
 }
 
 // pusher delivers pushes to the page's service worker, as the browser's own tools

@@ -11,18 +11,18 @@ and the card shows both once: as text, the token's value and the address, and
 together, as a QR code. The code holds a connection address:
 
 ```text
-go-time-recording://connect?token=gtr_...&url=https%3A%2F%2Ftime.example.com
+go-ticket-system://connect?token=gts_...&url=https%3A%2F%2Ftickets.example.com
 ```
 
 `url` is the address the browser reached the installation at when the token
 was made, scheme and host without a path, and `token` is the token itself.
 Both are query-encoded, and the order of the two is not to be relied on. An
-app registers the scheme `go-time-recording`, so that scanning the code with
+app registers the scheme `go-ticket-system`, so that scanning the code with
 the phone's camera opens it, and from then on asks the API with
 `Authorization: Bearer <token>`.
 
 The Android app in this repository, released as
-`go-time-recording-mobile_<version>.apk`, is such an app. It scans the code with
+`go-ticket-system-mobile_<version>.apk`, is such an app. It scans the code with
 a camera screen of its own as well, and fills its connect form from the code
 however it was read, and connects only once whoever holds the phone has seen the
 address and agreed, because a code is a link any page could open - and an app
@@ -123,10 +123,10 @@ somebody would act on it:
 
 | Metric | Says |
 | --- | --- |
-| `gtr_timesheet_hours_booked` | hours per entry — the sum is what was recorded, the count in how many pieces |
-| `gtr_signin_failures_total` | refused sign-ins, by reason — `credentials` is somebody guessing, `totp` a second factor that did not take, `directory` a directory that stopped answering, `database` this installation's own database that did |
-| `gtr_directory_accounts_total` | accounts the synchronisation created or deleted — the one operation that removes people together with their hours |
-| `gtr_directory_scheduled_runs_total` | what each scheduled synchronisation came to — `completed`, `refused` by a guard, or `failed`; GoFr's own `app_cron_job_success` counts all three as a success |
+| `gts_timesheet_hours_booked` | hours per entry — the sum is what was recorded, the count in how many pieces |
+| `gts_signin_failures_total` | refused sign-ins, by reason — `credentials` is somebody guessing, `totp` a second factor that did not take, `directory` a directory that stopped answering, `database` this installation's own database that did |
+| `gts_directory_accounts_total` | accounts the synchronisation created or deleted — the one operation that removes people together with their hours |
+| `gts_directory_scheduled_runs_total` | what each scheduled synchronisation came to — `completed`, `refused` by a guard, or `failed`; GoFr's own `app_cron_job_success` counts all three as a success |
 
 None of them carries a user, an address or a project name as a label. A label is
 a time series: one per person is both a memory leak in the collector and a list
@@ -134,7 +134,7 @@ of who works here, published on a port that asks for no password.
 
 **Before writing an alert:** a metric is published only once it has a value, so
 an installation that has had no refused sign-in publishes no
-`gtr_signin_failures_total` at all rather than publishing it as zero. Treat an
+`gts_signin_failures_total` at all rather than publishing it as zero. Treat an
 absent series as absent — `absent()` — rather than as a healthy zero.
 
 Operations: `/.well-known/health` and `/.well-known/alive` on the application's

@@ -109,8 +109,8 @@ type Branding struct {
 	// The two were one field, which is the right answer until the header's name
 	// is too long to be a tab: a tab is a couple of dozen characters wide before
 	// the browser cuts it off, and several of an installation's tabs are usually
-	// open at once. "Zeiterfassung der Beispiel GmbH & Co. KG" belongs across the
-	// top of the screen; the tab wants "Zeiterfassung".
+	// open at once. "Ticketsystem der Beispiel GmbH & Co. KG" belongs across the
+	// top of the screen; the tab wants "Ticketsystem".
 	//
 	// Empty means the title, so an installation that has never thought about this
 	// keeps what it had.
@@ -230,7 +230,7 @@ func BrandingKeysFor(language string) BrandingTextKeys { return brandingTextKeys
 
 // FallbackAppTitle is the name an instance carries when nothing else has been
 // configured - neither a title under Settings nor APP_NAME in the environment.
-const FallbackAppTitle = "Time Recording"
+const FallbackAppTitle = "Ticket System"
 
 // DefaultBranding is what a fresh instance shows.
 //

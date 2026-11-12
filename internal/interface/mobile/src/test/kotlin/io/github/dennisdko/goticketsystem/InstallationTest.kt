@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
@@ -39,13 +39,13 @@ class InstallationTest {
     @Test
     fun aTokenTakenBackIsToldApartFromOtherRefusals() {
         answering(401) { address ->
-            assertThrows(TokenRefused::class.java) { runBlocking { Installation(address, english).handOver("gtr_gone") } }
-            assertThrows(TokenRefused::class.java) { runBlocking { Installation(address, english).reminders("gtr_gone") } }
+            assertThrows(TokenRefused::class.java) { runBlocking { Installation(address, english).handOver("gts_gone") } }
+            assertThrows(TokenRefused::class.java) { runBlocking { Installation(address, english).reminders("gts_gone") } }
         }
 
         answering(500) { address ->
-            val opening = assertThrows(Refused::class.java) { runBlocking { Installation(address, english).handOver("gtr_kept") } }
-            val asking = assertThrows(Refused::class.java) { runBlocking { Installation(address, english).reminders("gtr_kept") } }
+            val opening = assertThrows(Refused::class.java) { runBlocking { Installation(address, english).handOver("gts_kept") } }
+            val asking = assertThrows(Refused::class.java) { runBlocking { Installation(address, english).reminders("gts_kept") } }
 
             assertFalse("a failing installation is taken for a token taken back", opening is TokenRefused || asking is TokenRefused)
         }

@@ -175,7 +175,7 @@ jobs:
     # Where the image waits while it is being checked. Named once, because three
     # steps have to agree about it.
     env:
-      STAGED_IMAGE: localhost:5000/go-time-recording:${{ needs.version.outputs.version }}
+      STAGED_IMAGE: localhost:5000/go-ticket-system:${{ needs.version.outputs.version }}
 
     # A registry on this runner, because the daemon cannot hold what is built
     # here. An image for two architectures is a manifest list, and `docker load`
@@ -280,7 +280,7 @@ jobs:
           # Each platform gets the installation, from the same commit with the
           # same version stamped in.
           build() {
-            compile go-time-recording-web ./cmd "$@"
+            compile go-ticket-system-web ./cmd "$@"
           }
 
           build linux   amd64
@@ -317,15 +317,15 @@ jobs:
         env:
           VERSION: ${{ needs.version.outputs.version }}
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
-          GTR_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          GTR_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          GTR_ANDROID_KEY_ALIAS: go-time-recording
-          GTR_ANDROID_KEYSTORE: /key/release.jks
+          GTS_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GTS_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GTS_ANDROID_KEY_ALIAS: go-ticket-system
+          GTS_ANDROID_KEYSTORE: /key/release.jks
           SIGNER_SHA256: b38ca23d7cc1ea62dcab31096dea87c5c6e98c8c197d8af084309adafb770050
         run: |
           set -euo pipefail
 
-          if [ -z "${ANDROID_KEYSTORE}" ] || [ -z "${GTR_ANDROID_KEYSTORE_PASSWORD}" ]; then
+          if [ -z "${ANDROID_KEYSTORE}" ] || [ -z "${GTS_ANDROID_KEYSTORE_PASSWORD}" ]; then
             echo "::error::the release environment has no ANDROID_KEYSTORE and ANDROID_KEYSTORE_PASSWORD, which the Android app is signed with"
             exit 1
           fi
@@ -334,14 +334,14 @@ jobs:
           mkdir -p "${key}"
           printf '%s' "${ANDROID_KEYSTORE}" | base64 -d > "${key}/release.jks"
 
-          docker build -t gtr-android - < internal/interface/mobile/Dockerfile
+          docker build -t gts-android - < internal/interface/mobile/Dockerfile
           docker run --rm -v "$PWD:/src" -v "${key}:/key:ro" -w /src/internal/interface/mobile \
-            -e VERSION -e GTR_ANDROID_KEYSTORE -e GTR_ANDROID_KEYSTORE_PASSWORD -e GTR_ANDROID_KEY_ALIAS -e GTR_ANDROID_KEY_PASSWORD \
-            gtr-android gradle --no-daemon --console=plain assembleRelease
+            -e VERSION -e GTS_ANDROID_KEYSTORE -e GTS_ANDROID_KEYSTORE_PASSWORD -e GTS_ANDROID_KEY_ALIAS -e GTS_ANDROID_KEY_PASSWORD \
+            gts-android gradle --no-daemon --console=plain assembleRelease
           rm -rf "${key}"
 
-          apk=bin/mobile/outputs/apk/release/go-time-recording-mobile-release.apk
-          signers=$(docker run --rm -v "$PWD:/src" gtr-android /opt/android-sdk/build-tools/36.0.0/apksigner verify --print-certs "/src/${apk}")
+          apk=bin/mobile/outputs/apk/release/go-ticket-system-mobile-release.apk
+          signers=$(docker run --rm -v "$PWD:/src" gts-android /opt/android-sdk/build-tools/36.0.0/apksigner verify --print-certs "/src/${apk}")
           echo "${signers}"
 
           if ! grep -q "certificate SHA-256 digest: ${SIGNER_SHA256}$" <<< "${signers}"; then
@@ -349,7 +349,7 @@ jobs:
             exit 1
           fi
 
-          cp "${apk}" "dist/go-time-recording-mobile_${VERSION}.apk"
+          cp "${apk}" "dist/go-ticket-system-mobile_${VERSION}.apk"
 
       # An asset larger than the versions already installed will download is one
       # none of them can take: the update card offers it, every install is turned
@@ -527,8 +527,8 @@ jobs:
           target_commitish: ${{ needs.version.outputs.sha }}
           generate_release_notes: true
           files: |
-            dist/go-time-recording-web_*
-            dist/go-time-recording-mobile_*
+            dist/go-ticket-system-web_*
+            dist/go-ticket-system-mobile_*
             dist/SHA256SUMS
           # append_body puts this below the generated notes, which is where it
           # belongs: the changelog is what a returning reader came for, and this
@@ -547,14 +547,14 @@ jobs:
             run it. It is self-contained: the interface, the timezone database and
             the migrations are compiled in.
 
-            `go-time-recording-web_*` is the installation: the server and its web
-            interface. `go-time-recording-mobile_*.apk` is the Android app - the
+            `go-ticket-system-web_*` is the installation: the server and its web
+            interface. `go-ticket-system-mobile_*.apk` is the Android app - the
             installation's web interface in an app - which belongs to this release:
             use it with an installation that runs this version. It is connected by
             scanning the code a new personal token is shown with.
 
             An installation running a version from before the binary was called
-            `go-time-recording-web` cannot update itself to this one from the
+            `go-ticket-system-web` cannot update itself to this one from the
             interface: it asks the release for a file under its old name, which
             releases no longer carry. Replace it by hand once; from then on it
             updates itself again.

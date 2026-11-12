@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/command"
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/memory"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/command"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/memory"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // feedFixture is the planned fixture with somebody's calendar feed beside it.
@@ -40,7 +40,7 @@ func newFeedFixture(t *testing.T) *feedFixture {
 
 	clock := service.Today(func(context.Context, *model.User) time.Time { return f.today })
 	name := service.CalendarName(func(_ context.Context, language string) string {
-		return "Zeiterfassung (" + language + ")"
+		return "Ticketsystem (" + language + ")"
 	})
 
 	return &feedFixture{
@@ -96,7 +96,7 @@ func TestACalendarFeedHasTheBookedDaysAndTheAbsences(t *testing.T) {
 	feed := f.read(t, f.subscribe(t))
 
 	for _, want := range []string{
-		"X-WR-CALNAME:Zeiterfassung (en)",
+		"X-WR-CALNAME:Ticketsystem (en)",
 		"DTSTART;VALUE=DATE:20260714\r\nDTEND;VALUE=DATE:20260715\r\nSUMMARY:7.50 h booked\r\n" +
 			`DESCRIPTION:2.50 h · Website\n5.00 h · Website`,
 		"DTSTART;VALUE=DATE:20260720\r\nDTEND;VALUE=DATE:20260721\r\nSUMMARY:Leave\r\n",
@@ -128,7 +128,7 @@ func TestACalendarFeedIsWrittenInItsOwnersLanguage(t *testing.T) {
 	// The comma is escaped, as the format asks of every comma in text; a calendar
 	// program shows it as the comma it is.
 	for _, want := range []string{
-		"X-WR-CALNAME:Zeiterfassung (de)",
+		"X-WR-CALNAME:Ticketsystem (de)",
 		`SUMMARY:7\,50 Std. gebucht` + "\r\n" + `DESCRIPTION:7\,50 Std. · Website` + "\r\n",
 		"SUMMARY:Urlaub\r\n",
 	} {
@@ -190,7 +190,7 @@ func TestAFeedReadsNothingTheOwnerCouldNotReadThemselves(t *testing.T) {
 	key := f.subscribe(t)
 	f.read(t, key)
 
-	f.unread(t, "gtrcal_somethingnobodywasgiven", "a key nobody was given")
+	f.unread(t, "gtscal_somethingnobodywasgiven", "a key nobody was given")
 	f.unread(t, strings.TrimPrefix(key, service.CalendarFeedKeyPrefix), "the key without its prefix")
 
 	role, err := f.roles.CreateRole(ctx, "auditor", "", []string{model.PermUserRead})

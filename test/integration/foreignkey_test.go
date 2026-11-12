@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // Only PostgreSQL refuses an entry that points at an account that is not there.

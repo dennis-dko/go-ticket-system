@@ -12,8 +12,8 @@ import (
 	gofrHTTP "gofr.dev/pkg/gofr/http"
 	"gofr.dev/pkg/gofr/logging"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // A restart into a database that does not answer is refused before anything is
@@ -32,15 +32,15 @@ func TestARestartIntoADatabaseThatDoesNotAnswerIsRefused(t *testing.T) {
 
 	// Nothing listens on port 1, so the probe is refused at once.
 	stored := appconfig.Datasource{
-		Dialect: "postgres", Name: "gtr", Host: "127.0.0.1", Port: "1",
-		User: "gtr", Password: "a-password", SSLMode: "disable",
+		Dialect: "postgres", Name: "gts", Host: "127.0.0.1", Port: "1",
+		User: "gts", Password: "a-password", SSLMode: "disable",
 	}
 
 	if err := appconfig.SaveDatasource(appconfig.DatasourceFile, stored); err != nil {
 		t.Fatal(err)
 	}
 
-	running := appconfig.Datasource{Dialect: "sqlite", Name: "gtr.db"}
+	running := appconfig.Datasource{Dialect: "sqlite", Name: "gts.db"}
 	h := NewRestartHandler(nil, NewAuthorizer(false), appconfig.Config{}, running, false, appconfig.Telemetry{})
 
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/settings/restart", nil)

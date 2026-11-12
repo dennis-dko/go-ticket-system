@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Single-page UI for the time recording API.
+ * Single-page UI for the ticket system API.
  *
  * Plain DOM APIs on purpose: the assets are embedded in the Go binary, so
  * keeping the UI build-step-free means `go build` is the only build there is.
@@ -265,7 +265,7 @@ function refusalFrom(res, body) {
     // token is still good, and asks for a new token where it was taken back. Not
     // on signing out, which the app sees in the requests and answers by
     // disconnecting - told then too, it would sign straight back in.
-    window.GoTimeRecordingSession?.ended();
+    window.GoTicketSystemSession?.ended();
   }
 
   return err;
@@ -358,7 +358,7 @@ async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers ?? {}) };
 
   if (!SAFE_METHODS.has(method)) {
-    headers['X-CSRF-Token'] = readCookie('gtr_csrf');
+    headers['X-CSRF-Token'] = readCookie('gts_csrf');
   }
 
   // A request this page makes by itself - a check on a timer - says so, and the
@@ -1536,7 +1536,7 @@ function placeholderValues() {
       hour: '2-digit', minute: '2-digit',
     }).format(now),
     version: lastBranding.version ?? '',
-    instance: lastBranding.title || 'Time Recording',
+    instance: lastBranding.title || 'Ticket System',
   };
 }
 
@@ -2925,7 +2925,7 @@ function directoryRoleChoices() {
  * typed it and this application does not leave one person's half-written work on
  * screen for the next.
  */
-const DRAFT_PREFIX = 'gtr.draft.';
+const DRAFT_PREFIX = 'gts.draft.';
 
 /**
  * Where one account's drafts are kept, apart from anybody else's.
@@ -2972,7 +2972,7 @@ function draftableFields(form) {
  * A form exposes its controls as named properties of itself, and those come
  * first: a form holding <input name="id"> answers form.id with that input. Two
  * forms here do - the time entry and the role - so both wrote their draft under
- * the key "gtr.draft.[object HTMLInputElement]", which is one key for two forms.
+ * the key "gts.draft.[object HTMLInputElement]", which is one key for two forms.
  * They overwrote each other, and on the way back in the first of them restored
  * whatever the other had left, then wrote its own emptiness over the top.
  *
@@ -4149,7 +4149,7 @@ function t(key, fallback) {
  * kept behind this - see adoptBrowserDefaults.
  */
 function adoptionMarker(userID) {
-  return `gtr.adopted.${userID}`;
+  return `gts.adopted.${userID}`;
 }
 
 /**
@@ -4301,7 +4301,7 @@ function keepTheShell() {
 }
 
 /** Where this account's bookings made without a connection wait on this device. */
-const OUTBOX_PREFIX = 'gtr_outbox_';
+const OUTBOX_PREFIX = 'gts_outbox_';
 
 /**
  * Whose outbox this page reads, or none before anybody is signed in.
@@ -4389,7 +4389,7 @@ async function alreadyBooked(kept) {
 }
 
 /** The name the outbox is sent under, one page at a time across every tab. */
-const OUTBOX_LOCK = 'gtr-outbox';
+const OUTBOX_LOCK = 'gts-outbox';
 
 /** Whether this page is sending the outbox now, where tabs cannot be asked. */
 let sendingOutbox = false;
@@ -8318,7 +8318,7 @@ function drawWelcome(title) {
   $('#login-welcome').textContent = fillIn(t('login.welcome', 'Welcome to {0}'), [title]);
 }
 
-const BUILT_IN_TITLE = 'Time Recording';
+const BUILT_IN_TITLE = 'Ticket System';
 
 function drawBranding(branding) {
   const title = brandingIn(branding, 'title') || BUILT_IN_TITLE;
@@ -8335,7 +8335,7 @@ function drawBranding(branding) {
   // chose. The tab's name resolved rather than both fields, since the tab is the
   // only thing that reads it.
   try {
-    localStorage.setItem('gtr.branding', JSON.stringify({
+    localStorage.setItem('gts.branding', JSON.stringify({
       title: tabTitle,
       logo: branding.logo ?? '',
     }));
@@ -10015,7 +10015,7 @@ let ticketsOffered = false;
  * sign-in that works clears it. sessionStorage, so it is this tab's and ends
  * with it.
  */
-const TICKET_HELD_BACK_KEY = 'gtr.kerberos.heldBack';
+const TICKET_HELD_BACK_KEY = 'gts.kerberos.heldBack';
 
 /** Whether the page may try the ticket before anybody asks it to. */
 function mayTryTheTicketUnasked() {
@@ -11585,7 +11585,7 @@ async function greetAfterSignIn() {
 function greetedThisVisit() {
   if (!me.user) return true;
 
-  const key = `gtr_greeted_${me.user.id}`;
+  const key = `gts_greeted_${me.user.id}`;
 
   try {
     if (sessionStorage.getItem(key)) return true;
@@ -12540,7 +12540,7 @@ function renderUpdate(state) {
   if (state.imageOutcome === 'none') {
     image.textContent = t('update.imageNothingNewer',
       'The last image update found nothing newer than the image this runs, so '
-      + 'nothing was changed. Where GTR_VERSION names a version, the image follows '
+      + 'nothing was changed. Where GTS_VERSION names a version, the image follows '
       + 'that setting rather than this card.');
   } else if (state.imageOutcome) {
     showRefusal(image, {
@@ -12763,7 +12763,7 @@ async function theVersionChanged() {
 }
 
 /** Where a message waits out a reload. */
-const AFTER_RELOAD_KEY = 'gtr_after_reload';
+const AFTER_RELOAD_KEY = 'gts_after_reload';
 
 /**
  * Keeps one sentence for the document that comes next.
@@ -14252,7 +14252,7 @@ async function downloadDocument(doc, name) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRF-Token': readCookie('gtr_csrf'),
+      'X-CSRF-Token': readCookie('gts_csrf'),
     },
     body: JSON.stringify(doc),
   });
@@ -14276,7 +14276,7 @@ async function sendWorkbook(dryRun) {
   const res = await reach(`${API}/timesheets/import`, {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'X-CSRF-Token': readCookie('gtr_csrf') },
+    headers: { 'X-CSRF-Token': readCookie('gts_csrf') },
     body,
   });
 
@@ -14985,7 +14985,7 @@ function buildSheetCard(spec) {
       + `?lang=${encodeURIComponent(activeLanguage())}`, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'X-CSRF-Token': readCookie('gtr_csrf') },
+      headers: { 'X-CSRF-Token': readCookie('gts_csrf') },
       body: form,
     });
 
@@ -15527,7 +15527,7 @@ async function notifyTheLongStopwatch() {
   const options = {
     body: fillIn(t('timer.longBody', 'Since {1}, longer than the {0} you chose.'),
       [alertHoursText(), fmtMoment(runningTimer.startedAt)]),
-    tag: 'gtr-stopwatch',
+    tag: 'gts-stopwatch',
   };
 
   try {
@@ -15566,14 +15566,14 @@ function fillReminders() {
 /**
  * The Android app's notifications, where the page is shown in it. The app's
  * WebView has no Notification of its own, so the app registers
- * GoTimeRecordingNotifications instead: state() answers in the words of the
+ * GoTicketSystemNotifications instead: state() answers in the words of the
  * browser's Notification.permission - granted, default or denied - and request()
- * asks the phone, which answers by dispatching gtr-notifications on the window
+ * asks the phone, which answers by dispatching gts-notifications on the window
  * once its owner has chosen. The reminders themselves the app shows as
  * notifications of its own, open or closed, asking the installation itself.
  */
 function appNotifications() {
-  return window.GoTimeRecordingNotifications ?? null;
+  return window.GoTicketSystemNotifications ?? null;
 }
 
 /**
@@ -15917,7 +15917,7 @@ function wireInstall() {
   // Inside the Android app there is nothing left to offer: it is the app the card
   // is about. The app is known by the bridge it registers for saving files, which
   // its WebView puts on the window before any script of the page runs.
-  if ('GoTimeRecordingFiles' in window) {
+  if ('GoTicketSystemFiles' in window) {
     const card = $('#install-card');
     if (card) card.hidden = true;
   }
@@ -16452,7 +16452,7 @@ function passkeysWithheldBecause() {
       + 'in through the directory: the one place that can end its sign-in.');
   }
 
-  if ('GoTimeRecordingFiles' in window) {
+  if ('GoTicketSystemFiles' in window) {
     return t('passkey.elsewhereApp', 'The app signs in with the token it was connected with, and '
       + 'needs no passkey. Passkeys are set up and used in a browser.');
   }
@@ -17286,7 +17286,7 @@ const THEME_RECHECK_MS = 60_000;
  * cleared on the way out, so the next person starts from the clock.
  */
 function setThemePreference(preference) {
-  const theme = window.gtrTheme;
+  const theme = window.gtsTheme;
 
   document.documentElement.dataset.themePreference = preference;
   document.documentElement.dataset.theme = theme.resolve(preference);
@@ -17340,7 +17340,7 @@ function applyAccountTheme() {
 /** Wires the appearance picker and keeps "automatic" honest as the day passes. */
 function wireTheme() {
   const picker = $('#theme-picker');
-  const theme = window.gtrTheme;
+  const theme = window.gtsTheme;
 
   picker.value = theme.stored();
   picker.addEventListener('change', (e) => setThemeForAccount(e.target.value));
@@ -17542,7 +17542,7 @@ function switchView(name) {
  * this is about one reload that is already in flight, not about where somebody
  * was yesterday. That is what rememberedView is for.
  */
-const PLACE_KEY = 'gtr.place';
+const PLACE_KEY = 'gts.place';
 
 /** Records the place, immediately before reloading. */
 function rememberPlace() {
@@ -17617,7 +17617,7 @@ function rememberedView() {
   if (!me.user) return '';
 
   try {
-    return localStorage.getItem(`gtr_view_${me.user.id}`) ?? '';
+    return localStorage.getItem(`gts_view_${me.user.id}`) ?? '';
   } catch {
     return '';
   }
@@ -17634,7 +17634,7 @@ function rememberView(name) {
   if (name === 'welcome') return;
 
   try {
-    localStorage.setItem(`gtr_view_${me.user.id}`, name);
+    localStorage.setItem(`gts_view_${me.user.id}`, name);
   } catch {
     // Nothing to do about a storage that will not take it.
   }
@@ -18207,7 +18207,7 @@ function wireForms() {
   $('#notify-allow').addEventListener('click', async () => {
     const app = appNotifications();
 
-    // The phone answers in its own time, with gtr-notifications below.
+    // The phone answers in its own time, with gts-notifications below.
     if (app) {
       app.request();
 
@@ -18219,7 +18219,7 @@ function wireForms() {
     drawNotifyState();
   });
 
-  window.addEventListener('gtr-notifications', drawNotifyState);
+  window.addEventListener('gts-notifications', drawNotifyState);
 
   $('#export-me').addEventListener('click', () => mutate(
     () => downloadFile(`${API}/me/export`, t('export.filename', 'everything-about-me'), 'zip'),

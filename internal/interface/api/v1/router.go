@@ -3,7 +3,7 @@ package v1
 import (
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/api/v1/rest"
+	"github.com/dennis-dko/go-ticket-system/internal/interface/api/v1/rest"
 )
 
 // Handlers bundles the handlers a route registration needs.

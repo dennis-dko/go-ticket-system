@@ -16,7 +16,7 @@ import (
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // Somebody in front of the installer is told what state the installation is in.
@@ -117,10 +117,10 @@ func TestTheInstallerSaysInTheReadersLanguageThatAConnectionFailed(t *testing.T)
 			`document.querySelector('#token').value = '`+setupToken(t, app)+`';`+
 				`document.querySelector('#dialect').value = 'postgres';`+
 				`document.querySelector('#dialect').dispatchEvent(new Event('change'));`+
-				`document.querySelector('#name').value = 'gtr';`+
+				`document.querySelector('#name').value = 'gts';`+
 				`document.querySelector('#host').value = '127.0.0.1';`+
 				`document.querySelector('#port').value = '`+closed+`';`+
-				`document.querySelector('#user').value = 'gtr';`+
+				`document.querySelector('#user').value = 'gts';`+
 				`document.querySelector('#password').value = 'not-used'`, nil),
 		whatTheInstallerSays("#test", &said),
 	); err != nil {

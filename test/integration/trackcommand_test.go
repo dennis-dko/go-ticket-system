@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // The terminal client was once the web binary's track command, and is gone. That

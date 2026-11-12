@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 const (
@@ -207,7 +207,7 @@ func (c *client) csrfToken() string {
 	}
 
 	for _, cookie := range c.http.Jar.Cookies(u) {
-		if cookie.Name == "gtr_csrf" {
+		if cookie.Name == "gts_csrf" {
 			return cookie.Value
 		}
 	}

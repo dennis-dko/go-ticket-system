@@ -4,7 +4,7 @@ Please report anything you believe is a security problem **privately**, through
 GitHub's [Report a vulnerability][advisory] button on the Security tab of this
 repository. That opens a draft advisory only you and the maintainers can read.
 
-[advisory]: https://github.com/dennis-dko/go-time-recording/security/advisories/new
+[advisory]: https://github.com/dennis-dko/go-ticket-system/security/advisories/new
 
 Please do not open a public issue for one. An issue is readable by everybody the
 moment it is filed, including by anyone who would rather use the problem than

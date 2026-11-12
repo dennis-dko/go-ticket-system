@@ -3,7 +3,7 @@ package rest
 import (
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/common"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/common"
 )
 
 // TimesheetResponse is the wire representation of a time entry.

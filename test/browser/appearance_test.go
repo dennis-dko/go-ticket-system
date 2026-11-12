@@ -28,7 +28,7 @@ func TestSigningOutForgetsTheAppearance(t *testing.T) {
 
 	p.evalJSON(`JSON.stringify({
 		preference: document.documentElement.dataset.themePreference,
-		stored: localStorage.getItem('gtr.theme') ?? '',
+		stored: localStorage.getItem('gts.theme') ?? '',
 	})`, &chosen)
 
 	if chosen.Preference != "dark" || chosen.Stored != "dark" {
@@ -46,7 +46,7 @@ func TestSigningOutForgetsTheAppearance(t *testing.T) {
 
 	p.evalJSON(`JSON.stringify({
 		preference: document.documentElement.dataset.themePreference,
-		stored: localStorage.getItem('gtr.theme') ?? '',
+		stored: localStorage.getItem('gts.theme') ?? '',
 		picker: document.querySelector('#theme-picker').value,
 	})`, &after)
 

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/imaging"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/support/imaging"
 )
 
 // manifestPath is where a browser reads what the installed app is called and
@@ -108,7 +108,7 @@ type manifestTarget struct {
 func (s *installable) serveManifest(w http.ResponseWriter, r *http.Request, branding Branding) {
 	name := strings.TrimSpace(branding.Title)
 	if name == "" {
-		name = "Time Recording"
+		name = "Ticket System"
 	}
 
 	lang := preferredLanguage(r.Header.Get("Accept-Language"))

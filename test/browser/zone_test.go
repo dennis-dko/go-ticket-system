@@ -33,7 +33,7 @@ func TestAFirstSignInAdoptsTheBrowsersZoneAndLanguage(t *testing.T) {
 	p.run("move the instance to another zone", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 			await fetch('/api/v1/settings/timezone', {
 				method: 'PUT', credentials: 'same-origin',
 				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
@@ -73,7 +73,7 @@ func TestAFirstSignInAdoptsTheBrowsersZoneAndLanguage(t *testing.T) {
 	p.run("follow the instance again", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 			await fetch('/api/v1/me/timezone', {
 				method: 'PUT', credentials: 'same-origin',
 				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
@@ -160,7 +160,7 @@ func TestFollowingTheInstanceZoneNamesTheInstanceZone(t *testing.T) {
 	p.run("set the instance zone", chromedp.Evaluate(fmt.Sprintf(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/settings/timezone', {
 				method: 'PUT',

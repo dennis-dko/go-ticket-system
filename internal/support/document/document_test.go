@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/document"
+	"github.com/dennis-dko/go-ticket-system/internal/support/document"
 )
 
 // What can be asserted about a PDF without a PDF reader.
@@ -83,7 +83,7 @@ func TestAnEvaluationBecomesAPDFWithItsChartInIt(t *testing.T) {
 			},
 		}},
 		Summary: []document.Line{{Label: "Gesamt", Value: "20,5"}},
-		Footer:  "Zeiterfassung",
+		Footer:  "Ticketsystem",
 		Written: aMoment(),
 	})
 	if err != nil {
@@ -120,7 +120,7 @@ func TestTheFontsTravelWithTheDocument(t *testing.T) {
 
 	out, err := document.Write(document.Document{
 		Title:   "Übersicht",
-		Footer:  "Zeiterfassung",
+		Footer:  "Ticketsystem",
 		Written: aMoment(),
 		Sections: []document.Section{{
 			Heading: "Projekte",

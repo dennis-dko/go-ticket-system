@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/migration"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/sqldb"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/migration"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/sqldb"
 )
 
 // released is every version this chain had shipped when this test was written.

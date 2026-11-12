@@ -12,7 +12,7 @@ import (
 	"gofr.dev/pkg/gofr/logging"
 	"gofr.dev/pkg/gofr/testutil"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/spreadsheet"
+	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
 // An upload that made the reader panic is refused as a file that cannot be read,

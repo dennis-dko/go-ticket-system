@@ -107,7 +107,7 @@ func TestThePlainPortAnswersOnlyThisMachine(t *testing.T) {
 			reached = false
 			rec := httptest.NewRecorder()
 
-			r := httptest.NewRequest(http.MethodGet, "http://gtr.example.com:8000/api/v1/me", nil)
+			r := httptest.NewRequest(http.MethodGet, "http://gts.example.com:8000/api/v1/me", nil)
 			r.RemoteAddr = peer
 
 			guarded.ServeHTTP(rec, r)
@@ -124,7 +124,7 @@ func TestThePlainPortAnswersOnlyThisMachine(t *testing.T) {
 		reached = false
 		rec := httptest.NewRecorder()
 
-		r := httptest.NewRequest(http.MethodPost, "http://gtr.example.com:8000/api/v1/auth/login", nil)
+		r := httptest.NewRequest(http.MethodPost, "http://gts.example.com:8000/api/v1/auth/login", nil)
 		r.RemoteAddr = "203.0.113.7:41234"
 		// The header that made this worth closing rather than documenting.
 		r.Header.Set("X-Forwarded-For", "198.51.100.1")
@@ -143,7 +143,7 @@ func TestThePlainPortAnswersOnlyThisMachine(t *testing.T) {
 				rec.Code, http.StatusPermanentRedirect)
 		}
 
-		if to := rec.Header().Get("Location"); to != "https://gtr.example.com/api/v1/auth/login" {
+		if to := rec.Header().Get("Location"); to != "https://gts.example.com/api/v1/auth/login" {
 			t.Errorf("redirected to %q, which is not the encrypted address of the "+
 				"same host", to)
 		}
@@ -159,7 +159,7 @@ func TestThePlainPortAnswersOnlyThisMachine(t *testing.T) {
 		down := KeepThePlainPortLocal(func() bool { return false }, 443)(http.HandlerFunc(
 			func(http.ResponseWriter, *http.Request) { reached = true }))
 
-		r := httptest.NewRequest(http.MethodGet, "http://gtr.example.com:8000/", nil)
+		r := httptest.NewRequest(http.MethodGet, "http://gts.example.com:8000/", nil)
 		r.RemoteAddr = "203.0.113.7:41234"
 
 		down.ServeHTTP(rec, r)
@@ -234,10 +234,10 @@ func selfSigned(t *testing.T, names ...string) (certFile, keyFile string) {
 
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
-		Subject:      pkix.Name{CommonName: "gtr.example.com"},
+		Subject:      pkix.Name{CommonName: "gts.example.com"},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().Add(time.Hour),
-		DNSNames:     []string{"gtr.example.com"},
+		DNSNames:     []string{"gts.example.com"},
 	}
 
 	if len(names) > 0 {
@@ -338,8 +338,8 @@ func TestNamesInFallsBackToTheCommonNameAndThenToNothing(t *testing.T) {
 		t.Errorf("a certificate that could not be read named %q", got)
 	}
 
-	old := &x509.Certificate{Subject: pkix.Name{CommonName: "gtr.example.com"}}
-	if got := namesIn(old); got != "gtr.example.com" {
+	old := &x509.Certificate{Subject: pkix.Name{CommonName: "gts.example.com"}}
+	if got := namesIn(old); got != "gts.example.com" {
 		t.Errorf("a certificate with only a common name named %q", got)
 	}
 }

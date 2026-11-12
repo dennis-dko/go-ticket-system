@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
 // racingSessions is a session store a change to the account lands in the middle

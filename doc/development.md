@@ -49,7 +49,7 @@ anywhere:
 task build
 cd bin
 rm -f configs/datasource.json          # if a previous run wrote one
-DB_DIALECT= DB_NAME= ./go-time-recording-web
+DB_DIALECT= DB_NAME= ./go-ticket-system-web
 ```
 
 Both variables have to be **empty rather than absent**: the process inherits your

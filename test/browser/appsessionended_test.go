@@ -26,7 +26,7 @@ func TestThePageTellsTheAppItsSessionEnded(t *testing.T) {
 	// The bridge the app registers, stood in for: it counts in the tab's storage,
 	// which outlives a document loaded afresh.
 	p.run("load the page as the app shows it", chromedp.ActionFunc(func(ctx context.Context) error {
-		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.GoTimeRecordingSession = {
+		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.GoTicketSystemSession = {
 			ended() { sessionStorage.setItem('ended', String(Number(sessionStorage.getItem('ended') || 0) + 1)); },
 		};`).Do(ctx)
 
@@ -36,7 +36,7 @@ func TestThePageTellsTheAppItsSessionEnded(t *testing.T) {
 
 	// The session gone from under the page, as taking its token back takes it: the
 	// next thing the page asks is refused.
-	p.run("end the session underneath the page", network.DeleteCookies("gtr_session").WithURL(p.app.BaseURL()))
+	p.run("end the session underneath the page", network.DeleteCookies("gts_session").WithURL(p.app.BaseURL()))
 	p.awaitJSON(`api('/me').then(() => 'answered', () => 'refused')`, nil)
 	p.waitEvaluates("what the app was told", `sessionStorage.getItem('ended') ?? '0'`, "1")
 

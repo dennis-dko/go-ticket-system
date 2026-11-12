@@ -12,10 +12,10 @@ import (
 
 // In the Android app the Reminders card asks the phone, not a browser, for
 // notifications. The app's WebView has no Notification of its own and registers
-// GoTimeRecordingNotifications instead, which this stands in for before the page
+// GoTicketSystemNotifications instead, which this stands in for before the page
 // loads, answering as the app does. The card is held to it: the app's button, a
 // press that goes to the app rather than to a browser, and the app's sentence
-// once the phone has answered - which the app says with gtr-notifications.
+// once the phone has answered - which the app says with gts-notifications.
 func TestTheRemindersCardAsksTheAppForItsNotifications(t *testing.T) {
 	t.Parallel()
 
@@ -26,7 +26,7 @@ func TestTheRemindersCardAsksTheAppForItsNotifications(t *testing.T) {
 		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`(() => {
 			window.askedTheApp = 0;
 			window.thePhoneSays = 'default';
-			window.GoTimeRecordingNotifications = {
+			window.GoTicketSystemNotifications = {
 				state: () => window.thePhoneSays,
 				request: () => { window.askedTheApp += 1; },
 			};
@@ -59,7 +59,7 @@ func TestTheRemindersCardAsksTheAppForItsNotifications(t *testing.T) {
 	}
 
 	p.run("the phone allows them", chromedp.Evaluate(
-		`window.thePhoneSays = 'granted'; window.dispatchEvent(new Event('gtr-notifications'))`, nil))
+		`window.thePhoneSays = 'granted'; window.dispatchEvent(new Event('gts-notifications'))`, nil))
 	p.waitGone("#notify-allow")
 
 	var said string

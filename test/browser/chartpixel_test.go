@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/chromedp/chromedp"
-	"github.com/dennis-dko/go-time-recording/internal/support/document"
+	"github.com/dennis-dko/go-ticket-system/internal/support/document"
 )
 
 // The picture of a chart stays inside the bound the server decodes it with.

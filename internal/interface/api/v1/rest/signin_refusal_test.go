@@ -3,7 +3,7 @@ package rest
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // A refused password sign-in is logged when it is the installation's to settle,

@@ -9,8 +9,8 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // OpenIDCallbackPath is where a provider sends the browser back to. Not an API
@@ -26,7 +26,7 @@ const OpenIDCallbackPath = "/sign-in/openid"
 // back with to somebody else would have that person's browser signed in as them -
 // and everything that person then booked would be booked in an account they do
 // not own.
-const openIDCookieName = "gtr_openid"
+const openIDCookieName = "gts_openid"
 
 // openIDCookiePath confines the cookie to the one request that reads it.
 const openIDCookiePath = "/api/v1/auth/openid"

@@ -31,7 +31,7 @@ private interface, firewall it, or switch it off under *Settings*.
 | --- | --- | --- | --- |
 | **A** Compose | `docker compose up -d` | PostgreSQL, in the stack | `127.0.0.1:8000` |
 | **B** Compose + TLS | `docker compose -f compose.yaml -f compose.tls.yaml up -d` | PostgreSQL, in the stack | `:80` and `:443` |
-| **C** Single binary | `./go-time-recording-web` | your choice, asked on first start | `:8000` |
+| **C** Single binary | `./go-ticket-system-web` | your choice, asked on first start | `:8000` |
 | **D** Bare container | `docker run …` | asked on first start | `:8000` |
 
 A is the normal answer. B if nothing else terminates TLS. C for a small
@@ -80,7 +80,7 @@ Pin the version rather than following `latest`, so a restart cannot become an
 unplanned upgrade:
 
 ```bash
-GTR_VERSION=v1.2.3
+GTS_VERSION=v1.2.3
 ```
 
 ## B · Compose with TLS
@@ -94,7 +94,7 @@ so it **refuses to start anything** while either is missing, and `.env.example`
 ships them commented out:
 
 ```bash
-TLS_DOMAINS=time.example.com     # comma separated for several
+TLS_DOMAINS=tickets.example.com     # comma separated for several
 TLS_EMAIL=ops@example.com
 ```
 
@@ -118,16 +118,16 @@ out. Two certificates for one name means one renewal that quietly stops working.
 
 ## C · Single binary
 
-Download `go-time-recording-web` for your platform from the release, check it
+Download `go-ticket-system-web` for your platform from the release, check it
 against `SHA256SUMS`, and run it.
 
 ```bash
-mkdir -p /opt/gtr/configs
-cd /opt/gtr
+mkdir -p /opt/gts/configs
+cd /opt/gts
 cp /path/to/.env.binary.example configs/.env
 $EDITOR configs/.env
 chmod 600 configs/.env
-./go-time-recording-web
+./go-ticket-system-web
 ```
 
 **The working directory matters.** It is what `configs/` is resolved against, so
@@ -142,8 +142,8 @@ download against `SHA256SUMS`, then either press through the dialog or clear the
 download mark first:
 
 ```powershell
-Get-FileHash .\go-time-recording-web_v1.2.3_windows_amd64.exe -Algorithm SHA256
-Unblock-File .\go-time-recording-web_v1.2.3_windows_amd64.exe
+Get-FileHash .\go-ticket-system-web_v1.2.3_windows_amd64.exe -Algorithm SHA256
+Unblock-File .\go-ticket-system-web_v1.2.3_windows_amd64.exe
 ```
 
 Rolling this out to more than a handful of machines is the point at which a
@@ -156,16 +156,16 @@ A systemd unit that gets that right:
 
 ```ini
 [Unit]
-Description=Time Recording
+Description=Ticket System
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=gtr
-Group=gtr
-WorkingDirectory=/opt/gtr
-ExecStart=/opt/gtr/go-time-recording-web
+User=gts
+Group=gts
+WorkingDirectory=/opt/gts
+ExecStart=/opt/gts/go-ticket-system-web
 Restart=on-failure
 RestartSec=5s
 
@@ -178,7 +178,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/gtr
+ReadWritePaths=/opt/gts
 
 # Only needed when this process terminates TLS itself. Without it an
 # unprivileged user cannot bind 443 or 80 - see below, because the way that
@@ -199,7 +199,7 @@ the certificate cache — all under its working directory and nowhere else.
 Two things to know before you switch `TLS_ENABLED=true` on a host.
 
 **Uncomment the two capability lines.** A container gets low ports for free; a
-host does not. As written, the unit runs as `gtr` with `NoNewPrivileges=true`, so
+host does not. As written, the unit runs as `gts` with `NoNewPrivileges=true`, so
 binding 443 and 80 fails with "permission denied".
 
 In the unit, and not with `setcap` on the binary. An update from the interface
@@ -232,8 +232,8 @@ still the tidier arrangement and nothing here argues against it.
 ## D · Bare container
 
 ```bash
-docker run -d -p 8000:8000 -v gtr-data:/data --stop-timeout 45 \
-  ghcr.io/dennis-dko/go-time-recording:v1.2.3
+docker run -d -p 8000:8000 -v gts-data:/data --stop-timeout 45 \
+  ghcr.io/dennis-dko/go-ticket-system:v1.2.3
 ```
 
 With no `DB_DIALECT` this serves its **installer** and waits — that is on
@@ -250,7 +250,7 @@ the two together.
 The image bakes in exactly one variable:
 
 ```ini
-DB_NAME=/data/go-time-recording
+DB_NAME=/data/go-ticket-system
 ```
 
 That is the path already filled in if you pick SQLite in the installer, which is
@@ -433,8 +433,8 @@ already have:
 
 ```bash
 TLS_ENABLED=true
-TLS_CERT_FILE=/etc/gtr/fullchain.pem
-TLS_KEY_FILE=/etc/gtr/privkey.pem
+TLS_CERT_FILE=/etc/gts/fullchain.pem
+TLS_KEY_FILE=/etc/gts/privkey.pem
 ```
 
 Nothing is requested from anybody: no domain, no challenge, no authority, so
@@ -604,19 +604,19 @@ holding it for the rest of its life to use it once.
 
 ```sql
 -- PostgreSQL
-CREATE DATABASE "go-time-recording";
-CREATE USER gtr WITH PASSWORD 'choose-something';
-GRANT ALL PRIVILEGES ON DATABASE "go-time-recording" TO gtr;
+CREATE DATABASE "go-ticket-system";
+CREATE USER gts WITH PASSWORD 'choose-something';
+GRANT ALL PRIVILEGES ON DATABASE "go-ticket-system" TO gts;
 -- PostgreSQL 15 and later also need the schema itself:
-\connect "go-time-recording"
-GRANT ALL ON SCHEMA public TO gtr;
+\connect "go-ticket-system"
+GRANT ALL ON SCHEMA public TO gts;
 ```
 
 ```sql
 -- MySQL / MariaDB
-CREATE DATABASE `go-time-recording` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'gtr'@'%' IDENTIFIED BY 'choose-something';
-GRANT ALL PRIVILEGES ON `go-time-recording`.* TO 'gtr'@'%';
+CREATE DATABASE `go-ticket-system` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'gts'@'%' IDENTIFIED BY 'choose-something';
+GRANT ALL PRIVILEGES ON `go-ticket-system`.* TO 'gts'@'%';
 ```
 
 `utf8mb4` matters on MySQL: names, project titles and the notice on the sign-in
@@ -723,7 +723,7 @@ the grounds that a changed host is a change to the same connection — which
 describes what the card *says* and answers the wrong question, because the
 connection is opened once while the application starts. Moving the database to
 another host is exactly as pending as moving it to another dialect, and it now
-reads as one line: `postgres app@db:5432/gtr` → `postgres app@db2:5432/gtr`. A default port and an omitted one are the same connection here as they
+reads as one line: `postgres app@db:5432/gts` → `postgres app@db2:5432/gts`. A default port and an omitted one are the same connection here as they
 are in fact, so spelling out `5432` is not reported as a change.
 
 A changed password appears as *Database password* with nothing beside it. The
@@ -796,7 +796,7 @@ Two caveats that decide whether your alerting is worth anything:
   `version` field — that is the application and nothing else.
 
 A metric is published only once it has a value. An installation that has had no
-refused sign-in publishes no `gtr_signin_failures_total` at all, rather than
+refused sign-in publishes no `gts_signin_failures_total` at all, rather than
 publishing zero. Treat an absent series as absent — `absent()` — not as a healthy
 zero.
 
@@ -853,7 +853,7 @@ plan that disk the way it plans the database's.
 
 Two deliberate omissions: the OTLP port is not published, so nothing outside the
 compose network can write spans; and Jaeger is **not** a startup dependency of
-the application, so a broken collector can never keep the time recording from
+the application, so a broken collector can never keep the ticket system from
 starting. The price of the second is that spans exported before Jaeger is ready
 are dropped.
 
@@ -901,7 +901,7 @@ Three things differ from the other overlays:
   `LDAP_BIND_PASSWORD` is the read-only account typed into the Settings card.
   They are hashed before they reach any file inside the container.
 - **It comes up empty.** A suffix, an `ou=people`, and the bind account —
-  no people. Invented ones would arrive in the time recording on the first
+  no people. Invented ones would arrive in the ticket system on the first
   synchronisation, named after nobody and awkward to remove once entries hang
   off them. The header has the `ldapadd` for a real one; a `mail` attribute is
   required, because that is what an account is keyed on.
@@ -956,7 +956,7 @@ What a ticket reaches:
 ### The service principal and the keytab
 
 A browser asks its KDC for a ticket to `HTTP/` and the name in the address bar,
-so the principal is named after the name people use — `HTTP/time.example.com`,
+so the principal is named after the name people use — `HTTP/tickets.example.com`,
 never an IP address. Give that name an A record rather than a CNAME, or
 register the principal for the name the CNAME points at as well: Chrome and
 Edge resolve a CNAME before asking, unless the `DisableAuthNegotiateCnameLookup`
@@ -968,16 +968,16 @@ Kerberos AES 256 bit encryption* ticked, or tickets arrive sealed with a key the
 keytab does not hold:
 
 ```powershell
-setspn -S HTTP/time.example.com EXAMPLE\svc-timerecording
-ktpass /princ HTTP/time.example.com@EXAMPLE.COM /mapuser EXAMPLE\svc-timerecording `
+setspn -S HTTP/tickets.example.com EXAMPLE\svc-ticketsystem
+ktpass /princ HTTP/tickets.example.com@EXAMPLE.COM /mapuser EXAMPLE\svc-ticketsystem `
   /crypto AES256-SHA1 /ptype KRB5_NT_PRINCIPAL /pass * /out http.keytab
 ```
 
 With MIT Kerberos or FreeIPA:
 
 ```bash
-kadmin -q "addprinc -randkey HTTP/time.example.com"
-kadmin -q "ktadd -k http.keytab HTTP/time.example.com"
+kadmin -q "addprinc -randkey HTTP/tickets.example.com"
+kadmin -q "ktadd -k http.keytab HTTP/tickets.example.com"
 ```
 
 **The keytab is the service's key.** Whoever has it can pose as this service to
@@ -1021,10 +1021,10 @@ a restart.
 - **C · single binary:** `KERBEROS_KEYTAB` in the environment file — the
   keytab's path, readable by the service's user.
 - **D · bare container:** mount it and name it:
-  `-v /etc/go-time-recording/http.keytab:/run/secrets/http.keytab:ro -e KERBEROS_KEYTAB=/run/secrets/http.keytab`.
+  `-v /etc/go-ticket-system/http.keytab:/run/secrets/http.keytab:ro -e KERBEROS_KEYTAB=/run/secrets/http.keytab`.
 
 `KERBEROS_SERVICE_PRINCIPAL` is only needed when the keytab holds keys for more
-than one service: it names the one to use, `HTTP/time.example.com`, with or
+than one service: it names the one to use, `HTTP/tickets.example.com`, with or
 without `@EXAMPLE.COM`.
 
 ### The browsers
@@ -1208,8 +1208,8 @@ recreate failed. Either way the restart announcement is taken back on every scre
 and the card says which it was - for a failure, in the updater's own words.
 
 **Nothing newer is what a pinned version finds.** The updater pulls the tag the
-compose file names. Where `GTR_VERSION` names a version that tag does not move, so
-every press finds the image already running: change `GTR_VERSION` and recreate by
+compose file names. Where `GTS_VERSION` names a version that tag does not move, so
+every press finds the image already running: change `GTS_VERSION` and recreate by
 hand instead, or leave it unset to follow `latest`.
 
 **Nothing is written into place unverified.** The download is hashed while it is
@@ -1268,14 +1268,14 @@ application not coming back.
 
 ### The file keeps its name
 
-A release is published as `go-time-recording-web_v1.2.3_windows_amd64.exe`, so
+A release is published as `go-ticket-system-web_v1.2.3_windows_amd64.exe`, so
 a manual download says which version it is in its own name. An update installed
 from the interface does not rename anything: the new version is written to the
 path the running one already occupies, whatever that path is called.
 
 A version from before the binary was called `-web` cannot update itself from
 the interface to one that is: it asks the release for
-`go-time-recording_v1.2.3_windows_amd64.exe`, and releases no longer carry that
+`go-ticket-system_v1.2.3_windows_amd64.exe`, and releases no longer carry that
 name. Replace it by hand once - stop it, put the new file where the old one
 was, under the name the old one had, start it - and from then on it updates
 itself again.
@@ -1288,7 +1288,7 @@ application offline and leaves no obvious reason why.
 Which version a file is stays answerable three ways:
 
 ```bash
-./go-time-recording-web --version
+./go-ticket-system-web --version
 ```
 
 On Windows, right-click → *Properties* → *Details*: the published binaries carry
@@ -1298,7 +1298,7 @@ being asked. And the footer of the interface names it beside the platform.
 ### Going back
 
 The version being replaced is kept, on both platforms, beside the binary as
-`go-time-recording-web.old`. It stays there until the *next* update, which removes it
+`go-ticket-system-web.old`. It stays there until the *next* update, which removes it
 as its first act - so there is always exactly one version to go back to, and
 never two.
 
@@ -1308,12 +1308,12 @@ taken, or a certificate it cannot read. At that point there is no interface to
 press anything in, which is why the way back is a flag rather than a button:
 
 ```bash
-./go-time-recording-web --rollback
+./go-ticket-system-web --rollback
 # the previous version is back in place; start it again
 ```
 
 It moves two files: the version that would not serve becomes
-`go-time-recording-web.failed`, kept so it can be looked at, and `.old` takes its
+`go-ticket-system-web.failed`, kept so it can be looked at, and `.old` takes its
 name back. No database, no configuration, nothing else touched. Start it as you
 normally would.
 
@@ -1377,17 +1377,17 @@ instance timezone, the directory configuration *including its bind password*,
 telemetry and the operational limits. A server-side dump is the backup.
 
 ```bash
-docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > gtr-$(date +%F).sql.gz
+docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > gts-$(date +%F).sql.gz
 ```
 
 **SQLite** — the file is `<DB_NAME>.db`, with a trailing `.db` in `DB_NAME`
-trimmed first. In the image that is `/data/go-time-recording.db` on the `/data`
+trimmed first. In the image that is `/data/go-ticket-system.db` on the `/data`
 volume; for a binary it is relative to the working directory. The application
 runs SQLite in write-ahead logging mode, so a copy taken while the process runs
 must include the `-wal` and `-shm` sidecars, or use SQLite's own backup:
 
 ```bash
-sqlite3 /data/go-time-recording.db ".backup '/backup/gtr-$(date +%F).db'"
+sqlite3 /data/go-ticket-system.db ".backup '/backup/gts-$(date +%F).db'"
 ```
 
 **Two paths matter whatever the dialect:**
@@ -1406,16 +1406,16 @@ only.
 
 ```bash
 # A · B
-GTR_VERSION=v1.3.0 docker compose up -d      # after a dump
+GTS_VERSION=v1.3.0 docker compose up -d      # after a dump
 
 # C
-systemctl stop gtr && cp go-time-recording-web_v1.3.0_linux_amd64 /opt/gtr/go-time-recording-web && systemctl start gtr
+systemctl stop gts && cp go-ticket-system-web_v1.3.0_linux_amd64 /opt/gts/go-ticket-system-web && systemctl start gts
 ```
 
 The schema migrates itself on the way up. There is no separate command, and
 nothing to run afterwards.
 
-Releases up to v0.4.2 carried a terminal client, `go-time-recording-client`,
+Releases up to v0.4.2 carried a terminal client, `go-ticket-system-client`,
 beside this binary. None does since: booking is the web interface's and the
 Android app's. An update neither replaces nor removes a client already handed
 out, and it knows only its own release's API, so take it out of use once the

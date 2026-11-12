@@ -10,7 +10,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/spreadsheet"
+	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
 // A booking pressed twice is booked once.

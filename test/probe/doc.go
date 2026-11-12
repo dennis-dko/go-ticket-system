@@ -8,6 +8,6 @@
 // that actually bites - that the directory hands out the stable identifier the
 // synchronisation matches accounts on.
 //
-//	go run ./test/probe --db postgres --dsn "postgres://gtr:...@localhost:55432/..."
+//	go run ./test/probe --db postgres --dsn "postgres://gts:...@localhost:55432/..."
 //	go run ./test/probe --ldap ldap://localhost:5389 --base-dn dc=example,dc=com
 package main

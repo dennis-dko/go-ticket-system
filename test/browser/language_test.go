@@ -351,7 +351,7 @@ func TestWhatSomebodyTypedSurvivesChoosingALanguage(t *testing.T) {
 	// are how the page knows somebody is part way through - which is the whole
 	// distinction being tested.
 	typed := map[string]string{
-		"host": "db.example.invalid", "name": "gtr_live", "user": "gtr_admin",
+		"host": "db.example.invalid", "name": "gts_live", "user": "gts_admin",
 	}
 
 	// Emptied first, the way a person empties a box - with the input event that
@@ -562,7 +562,7 @@ func TestALanguageAdoptionThatWasMissedIsTriedAgain(t *testing.T) {
 
 			try {
 				// Both of the conditions the old arrangement gave up on.
-				localStorage.setItem('gtr.adopted.' + me.user.id, '1');
+				localStorage.setItem('gts.adopted.' + me.user.id, '1');
 				me.user.language = '';
 
 				await adoptBrowserDefaults();

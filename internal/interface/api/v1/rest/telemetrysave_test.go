@@ -3,8 +3,8 @@ package rest
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // A save says a restart is needed exactly when the restart card says so.

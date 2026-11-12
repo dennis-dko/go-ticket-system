@@ -6,8 +6,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // StatementService works out what somebody's billable hours come to over a

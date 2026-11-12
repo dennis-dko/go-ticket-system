@@ -15,10 +15,10 @@
   "StringFileInfo": {
     "CompanyName": "Dennis Köhler",
     "FileDescription": "Project time tracking: REST API and web interface in one file",
-    "InternalName": "go-time-recording-web",
+    "InternalName": "go-ticket-system-web",
     "LegalCopyright": "Copyright (c) 2025-2026 Dennis Köhler. MIT licence.",
-    "OriginalFilename": "go-time-recording-web.exe",
-    "ProductName": "Time Recording",
+    "OriginalFilename": "go-ticket-system-web.exe",
+    "ProductName": "Ticket System",
     "FileVersion": "0.0.0.0",
     "ProductVersion": "0.0.0.0"
   },

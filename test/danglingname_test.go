@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 )
 
 // A comment that names something names something that exists.

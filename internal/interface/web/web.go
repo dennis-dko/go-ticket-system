@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/imaging"
+	"github.com/dennis-dko/go-ticket-system/internal/support/imaging"
 )
 
 // Branding is what an installation calls itself, as far as the served document
@@ -78,7 +78,7 @@ var apiPrefixes = []string{
 // so they live in the database, so the page cannot know either until it has asked
 // - and asking finishes after the document has been parsed and shown. Patching
 // them afterwards from script is what this used to do, and it leaves a reload
-// showing "Time Recording" and the shipped mark for as long as the request takes.
+// showing "Ticket System" and the shipped mark for as long as the request takes.
 // There is no arrangement of client-side code that fixes that, because the
 // problem is the order of two things and one of them is a round trip.
 func Handler(branding BrandingFunc) func(http.Handler) http.Handler {

@@ -98,12 +98,12 @@ func TestTOTPSecretsAreDistinct(t *testing.T) {
 }
 
 func TestTOTPURIIsScannable(t *testing.T) {
-	uri := TOTPURI("Time Recording", "admin@local", "ABCDEF")
+	uri := TOTPURI("Ticket System", "admin@local", "ABCDEF")
 
 	// The issuer is checked in its encoded form: a title with a space is
 	// ordinary, and an authenticator app reads the query the same way.
 	for _, want := range []string{
-		"otpauth://totp/", "secret=ABCDEF", "issuer=Time+Recording", "digits=6", "period=30",
+		"otpauth://totp/", "secret=ABCDEF", "issuer=Ticket+System", "digits=6", "period=30",
 	} {
 		if !strings.Contains(uri, want) {
 			t.Errorf("URI %q is missing %q", uri, want)
@@ -115,7 +115,7 @@ func TestTOTPURIIsScannable(t *testing.T) {
 		t.Fatalf("the URI must parse: %v", err)
 	}
 
-	if got := parsed.Query().Get("issuer"); got != "Time Recording" {
+	if got := parsed.Query().Get("issuer"); got != "Ticket System" {
 		t.Errorf("expected the issuer to decode back to the title, got %q", got)
 	}
 }

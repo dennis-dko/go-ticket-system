@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	domainservice "github.com/dennis-dko/go-time-recording/internal/domain/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
+	domainservice "github.com/dennis-dko/go-ticket-system/internal/domain/service"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // maxTemplatesPerUser bounds how many templates one person can keep. A picker

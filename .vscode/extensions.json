@@ -1,6 +1,6 @@
 {
   // ===========================================================================
-  // Go-Time-Recording - extension recommendations
+  // Go-Ticket-System - extension recommendations
   //
   // "unwantedRecommendations" does not uninstall anything. It stops VS Code
   // suggesting these and marks them as not recommended for this workspace; the
@@ -45,7 +45,7 @@
     "usernamehw.errorlens",
 
     // The API is the product's other half, and every state-changing request
-    // has to carry the double-submit CSRF token - the gtr_csrf cookie echoed
+    // has to carry the double-submit CSRF token - the gts_csrf cookie echoed
     // back in X-CSRF-Token. A .http file next to the OpenAPI document is a
     // faster way to try that than curl.
     "humao.rest-client",

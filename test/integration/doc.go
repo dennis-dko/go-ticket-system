@@ -13,8 +13,8 @@
 // is stubbed.
 //
 //	go test -tags integration ./test/integration
-//	GTR_TEST_DSN=postgres://... go test -tags integration ./test/integration
-//	GTR_TEST_DSN=mysql://...    go test -tags integration ./test/integration
+//	GTS_TEST_DSN=postgres://... go test -tags integration ./test/integration
+//	GTS_TEST_DSN=mysql://...    go test -tags integration ./test/integration
 //
 // The account in that DSN has to be allowed to CREATE DATABASE, because each
 // test gets its own. On PostgreSQL the owner already can; on MySQL an ordinary

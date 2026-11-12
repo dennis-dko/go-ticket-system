@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
 )
 
 // WorkScheduleRepository is an in-memory repository.WorkScheduleRepository.

@@ -52,7 +52,7 @@ func TestAMetricIsPublishedOnlyOnceItHasAValue(t *testing.T) {
 
 	a := start(t)
 
-	if scraped := scrape(t, a); declares(scraped, "gtr_signin_failures_total") {
+	if scraped := scrape(t, a); declares(scraped, "gts_signin_failures_total") {
 		t.Error("a counter with no value is published after all - which would be better, " +
 			"and means the comment in registerBusinessMetrics is now wrong")
 	}
@@ -63,7 +63,7 @@ func TestAMetricIsPublishedOnlyOnceItHasAValue(t *testing.T) {
 	})
 
 	if !eventually(func() bool {
-		return declares(scrape(t, a), "gtr_signin_failures_total")
+		return declares(scrape(t, a), "gts_signin_failures_total")
 	}) {
 		t.Error("the counter is still absent after the event it counts")
 	}
@@ -84,12 +84,12 @@ func TestBookingTimeIsCounted(t *testing.T) {
 	// The histogram's sum carries the hours and its count carries the entries,
 	// so both questions - how much was recorded, and in how many pieces - are
 	// answered by the one metric.
-	if !declares(scraped, "gtr_timesheet_hours_booked_sum") {
-		t.Fatalf("the hours histogram has no sum:\n%s", metricLines(scraped, "gtr_timesheet"))
+	if !declares(scraped, "gts_timesheet_hours_booked_sum") {
+		t.Fatalf("the hours histogram has no sum:\n%s", metricLines(scraped, "gts_timesheet"))
 	}
 
-	if !declares(scraped, "gtr_timesheet_hours_booked_count") {
-		t.Errorf("the hours histogram has no count:\n%s", metricLines(scraped, "gtr_timesheet"))
+	if !declares(scraped, "gts_timesheet_hours_booked_count") {
+		t.Errorf("the hours histogram has no count:\n%s", metricLines(scraped, "gts_timesheet"))
 	}
 
 }
@@ -113,7 +113,7 @@ func TestARefusedSignInIsCountedWithItsReason(t *testing.T) {
 		return strings.Contains(scrape(t, a), `reason="credentials"`)
 	}) {
 		t.Errorf("a refused sign-in was not counted under its reason:\n%s",
-			metricLines(scrape(t, a), "gtr_signin"))
+			metricLines(scrape(t, a), "gts_signin"))
 	}
 }
 

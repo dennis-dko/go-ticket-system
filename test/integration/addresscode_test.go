@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/go-ticket-system/internal/support/qrcode"
 )
 
 // The installation's address comes as a code as well, for opening it on a phone

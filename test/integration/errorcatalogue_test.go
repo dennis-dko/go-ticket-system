@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // Every refusal this API can give names itself.
@@ -174,9 +174,9 @@ func TestAFailureFromUnderneathIsGenericAndKeepsItsDetail(t *testing.T) {
 		"dialect":  "postgres",
 		"host":     "127.0.0.1",
 		"port":     "1",
-		"name":     "gtr",
-		"user":     "gtr",
-		"password": "gtr",
+		"name":     "gts",
+		"user":     "gts",
+		"password": "gts",
 	})
 
 	// A probe answers successfully with the reason inside it: a database that
@@ -561,7 +561,7 @@ func TestALogoMustBeARasterImage(t *testing.T) {
 	admin := a.signInAsAdmin("a-much-better-password")
 
 	refused := admin.api(http.MethodPut, "/settings/branding", map[string]any{
-		"title": "Zeiterfassung",
+		"title": "Ticketsystem",
 		"logo": "data:image/svg+xml;base64," +
 			base64.StdEncoding.EncodeToString([]byte(
 				`<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>`)),
@@ -582,7 +582,7 @@ func TestALogoMustBeARasterImage(t *testing.T) {
 		"a JPEG": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==",
 	} {
 		accepted := admin.api(http.MethodPut, "/settings/branding", map[string]any{
-			"title": "Zeiterfassung", "logo": logo,
+			"title": "Ticketsystem", "logo": logo,
 		})
 
 		if accepted.Status != http.StatusOK {
@@ -609,7 +609,7 @@ func TestSavingTheSameSettingsTwiceIsFine(t *testing.T) {
 	admin := a.signInAsAdmin("a-much-better-password")
 
 	body := map[string]any{
-		"title":       "Zeiterfassung",
+		"title":       "Ticketsystem",
 		"banner":      "",
 		"footerText":  "Gemacht in Osnabrück",
 		"legalNotice": "",
@@ -645,7 +645,7 @@ func TestTheChosenPartOfTheLogoIsStored(t *testing.T) {
 	admin := a.signInAsAdmin("a-much-better-password")
 
 	saved := admin.api(http.MethodPut, "/settings/branding", map[string]any{
-		"title": "Zeiterfassung",
+		"title": "Ticketsystem",
 		"logo":  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
 		"crops": map[string]any{
 			"icon": map[string]float64{"x": 0, "y": 0, "w": 0.2, "h": 1},

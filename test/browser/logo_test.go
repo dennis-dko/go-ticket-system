@@ -15,7 +15,7 @@ import (
 //
 // Branding is fetched before anything has authenticated precisely so that this
 // screen can carry the instance's own title and logo - somebody arriving at a
-// company's time recording should see the company's mark rather than a default.
+// company's ticket system should see the company's mark rather than a default.
 // Whether the image is actually on screen is a question only a browser answers:
 // the element is in the markup, hidden, and it is the script that fills it in and
 // unhides it, so nothing short of running the page can tell "wired up" from
@@ -43,13 +43,13 @@ func TestTheConfiguredLogoIsOnTheSignInScreen(t *testing.T) {
 	p.run("store a logo", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/settings/branding', {
 				method: 'PUT',
 				credentials: 'same-origin',
 				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-				body: JSON.stringify({ title: 'Zeiterfassung', logo: '`+logo+`' }),
+				body: JSON.stringify({ title: 'Ticketsystem', logo: '`+logo+`' }),
 			});
 
 			return String(r.status);
@@ -273,13 +273,13 @@ func (p *page) storeBranding(t *testing.T, logo string) {
 	p.run("store the branding", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/settings/branding', {
 				method: 'PUT',
 				credentials: 'same-origin',
 				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-				body: JSON.stringify({ title: 'Zeiterfassung', logo: '`+logo+`' }),
+				body: JSON.stringify({ title: 'Ticketsystem', logo: '`+logo+`' }),
 			});
 
 			return String(r.status);

@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // operationDescriptions reads every operation's description out of the API

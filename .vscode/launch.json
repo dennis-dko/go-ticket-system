@@ -1,6 +1,6 @@
 {
   // ===========================================================================
-  // Go-Time-Recording - debug configurations
+  // Go-Ticket-System - debug configurations
   //
   // Two things decide every configuration in this file, and both are easy to
   // get wrong in a way that looks like a different bug:
@@ -39,7 +39,7 @@
       "env": {
         "APP_ENV": "dev",
         "DB_DIALECT": "sqlite",
-        "DB_NAME": "go-time-recording"
+        "DB_NAME": "go-ticket-system"
       },
       // main.version is "dev" unless the linker sets it; this makes the
       // version the running instance reports match what is being debugged.
@@ -60,11 +60,11 @@
       "env": {
         "APP_ENV": "dev",
         "DB_DIALECT": "postgres",
-        "DB_NAME": "go-time-recording",
+        "DB_NAME": "go-ticket-system",
         "DB_HOST": "localhost",
         "DB_PORT": "55432",
-        "DB_USER": "gtr",
-        "DB_PASSWORD": "gtr-test-password",
+        "DB_USER": "gts",
+        "DB_PASSWORD": "gts-test-password",
         "DB_SSL_MODE": "disable"
       },
       "buildFlags": ["-ldflags=-X=main.version=vscode-debug"]
@@ -162,8 +162,8 @@
       // of several hit the breakpoint first.
       //
       // For PostgreSQL or MySQL, start the container with
-      // `task env:up PROFILE=postgres` and set GTR_TEST_DSN below to
-      // postgres://gtr:gtr-test-password@localhost:55432/go-time-recording?sslmode=disable
+      // `task env:up PROFILE=postgres` and set GTS_TEST_DSN below to
+      // postgres://gts:gts-test-password@localhost:55432/go-ticket-system?sslmode=disable
       "name": "Test (integration): one case, on SQLite",
       "type": "go",
       "request": "launch",
@@ -184,7 +184,7 @@
         "GOTMPDIR": "${workspaceFolder}/.gotmp",
         // Empty means SQLite, and the harness then gives the instance its own
         // file rather than sharing one.
-        "GTR_TEST_DSN": ""
+        "GTS_TEST_DSN": ""
       }
     },
     {
@@ -268,7 +268,7 @@
       "preLaunchTask": "dev: make the workspace's GOTMPDIR",
       "env": {
         "GOTMPDIR": "${workspaceFolder}/.gotmp",
-        "GTR_TEST_LDAP": "localhost:5389"
+        "GTS_TEST_LDAP": "localhost:5389"
       }
     },
 

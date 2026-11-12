@@ -38,7 +38,7 @@ func TestCarryingOnFromAViewThatNoLongerExistsLandsSomewhere(t *testing.T) {
 	// The screen this account was last on, as a release that no longer has it
 	// would have left it behind.
 	p.run("remember a view that is gone", chromedp.Evaluate(
-		`localStorage.setItem('gtr_view_' + me.user.id, 'reviews'); true`, nil))
+		`localStorage.setItem('gts_view_' + me.user.id, 'reviews'); true`, nil))
 
 	p.run("back to the greeting", p.click(`#app-title`),
 		chromedp.WaitVisible("#view-welcome", chromedp.ByID))

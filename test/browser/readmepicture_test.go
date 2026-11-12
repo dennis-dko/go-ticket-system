@@ -16,16 +16,16 @@ import (
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
-	"github.com/dennis-dko/go-time-recording/test/oidctest"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/oidctest"
 )
 
 // readmePictures names the directory the README's pictures are written to.
-const readmePictures = "GTR_README_PICTURES"
+const readmePictures = "GTS_README_PICTURES"
 
 // defaultName is what cmd/configs/.env calls an installation, in place of the
 // name the harness gives each instance to tell it from the others.
-const defaultName = "APP_NAME=Time Recording"
+const defaultName = "APP_NAME=Ticket System"
 
 // The README's pictures are taken from the application rather than drawn.
 //

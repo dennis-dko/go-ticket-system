@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/command"
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	domainservice "github.com/dennis-dko/go-time-recording/internal/domain/service"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/command"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	domainservice "github.com/dennis-dko/go-ticket-system/internal/domain/service"
 )
 
 // The activities the descriptions name are totalled beside the projects: an entry

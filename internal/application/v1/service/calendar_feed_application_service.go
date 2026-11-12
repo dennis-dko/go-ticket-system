@@ -8,20 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	domainservice "github.com/dennis-dko/go-time-recording/internal/domain/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/ical"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
+	domainservice "github.com/dennis-dko/go-ticket-system/internal/domain/service"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/support/ical"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
 // CalendarFeedKeyPrefix marks a key as a calendar feed's, so that it is
 // recognisable wherever it turns up - and so that the process log can hide what
 // follows it, because a subscription's address is written into the request log of
 // everything it passes through.
-const CalendarFeedKeyPrefix = "gtrcal_"
+const CalendarFeedKeyPrefix = "gtscal_"
 
 // calendarFeedYears is how far a feed reaches on each side of today: the year
 // behind, as far back as anybody looks for a day they forgot to book, and the year
@@ -166,7 +166,7 @@ func (s *CalendarFeedService) Read(ctx context.Context, key string) ([]byte, err
 	}
 
 	uid := func(day time.Time, what string) string {
-		return day.Format("20060102") + "-" + what + "-" + feed.Prefix + "@go-time-recording"
+		return day.Format("20060102") + "-" + what + "-" + feed.Prefix + "@go-ticket-system"
 	}
 
 	for _, day := range bookedDays(entries) {

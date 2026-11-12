@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/api/v1/rest"
+	"github.com/dennis-dko/go-ticket-system/internal/interface/api/v1/rest"
 )
 
 // The published API description and the routes that exist are the same list.

@@ -1,6 +1,6 @@
 package query
 
-import "github.com/dennis-dko/go-time-recording/internal/application/v1/common"
+import "github.com/dennis-dko/go-ticket-system/internal/application/v1/common"
 
 // ListProjectsQuery query to list all projects by filter
 type ListProjectsQuery struct {

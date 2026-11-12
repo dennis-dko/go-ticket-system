@@ -1,6 +1,6 @@
 {
   // ===========================================================================
-  // Go-Time-Recording - VS Code workspace settings
+  // Go-Ticket-System - VS Code workspace settings
   //
   // Written against what this repository actually is rather than against a
   // generic Go setup: three build-tagged test suites, web assets served byte
@@ -61,7 +61,7 @@
     // Without it goimports files a newly added internal import under third
     // party, and the next save leaves it there: a formatting diff in a file
     // the change never meant to touch, which section 2 rules out.
-    "formatting.local": "github.com/dennis-dko/go-time-recording",
+    "formatting.local": "github.com/dennis-dko/go-ticket-system",
 
     // gofmt and goimports are the arbiters here (CLAUDE.md section 2). gofumpt
     // is a stricter third opinion that would reformat code CI is happy with.

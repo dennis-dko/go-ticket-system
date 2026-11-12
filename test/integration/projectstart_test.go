@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/spreadsheet"
+	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
 // A project given no start date begins on the day it was created in its owner's

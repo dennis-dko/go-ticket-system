@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import java.time.Duration
 import java.time.Instant

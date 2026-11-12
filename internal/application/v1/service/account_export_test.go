@@ -9,8 +9,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
 )
 
 // partsOf stands in for the database: it answers with the parts it was given, for

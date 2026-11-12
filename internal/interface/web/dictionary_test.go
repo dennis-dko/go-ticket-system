@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/interface/web"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 )
 
 // A language's dictionary is handed to the page as the binary carries it, at an
@@ -52,7 +52,7 @@ func TestADictionaryIsHandedToThePageAsTheBinaryCarriesIt(t *testing.T) {
 // where the document is what the service worker kept.
 func TestTheDocumentNamesTheLanguagesItMaySpeak(t *testing.T) {
 	rec := httptest.NewRecorder()
-	brandedServer(web.Branding{Title: "Zeiterfassung"}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	brandedServer(web.Branding{Title: "Ticketsystem"}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 
 	tags := regexp.MustCompile(`<meta name="language" content="([^"]*)" data-name="([^"]*)">`).
 		FindAllStringSubmatch(rec.Body.String(), -1)

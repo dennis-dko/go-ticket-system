@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/go-ticket-system/test/tempdir"
 )
 
 // A download that could not be put in place does not stay beside the binary.
@@ -26,7 +26,7 @@ func TestAnInstallThatCannotSwapLeavesNoDownloadBehind(t *testing.T) {
 
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(sum[:]), body)
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 	running := []byte("the running version")
 
 	if err := os.WriteFile(self, running, 0o755); err != nil {

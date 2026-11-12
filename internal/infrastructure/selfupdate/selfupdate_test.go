@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/go-ticket-system/test/tempdir"
 )
 
 // Which of two versions is newer.
@@ -70,7 +70,7 @@ func TestReadingTheReleaseFeed(t *testing.T) {
 			"assets": []map[string]string{
 				{"name": binary, "browser_download_url": "https://example.invalid/bin"},
 				{"name": "SHA256SUMS", "browser_download_url": "https://example.invalid/sums"},
-				{"name": "go-time-recording-web_v9.9.9_plan9_386", "browser_download_url": "nope"},
+				{"name": "go-ticket-system-web_v9.9.9_plan9_386", "browser_download_url": "nope"},
 			},
 		})
 	}))
@@ -174,7 +174,7 @@ func stagedRelease(t *testing.T, version, sum string, body []byte) (*Source, Rel
 		if strings.HasSuffix(r.URL.Path, "/sums") {
 			if sum == "" {
 				// A file for some other platform only.
-				_, _ = fmt.Fprintf(w, "%s  go-time-recording-web_%s_plan9_386\n",
+				_, _ = fmt.Fprintf(w, "%s  go-ticket-system-web_%s_plan9_386\n",
 					strings.Repeat("0", 64), version)
 
 				return
@@ -237,7 +237,7 @@ func TestAnInstallReplacesTheFileItWasGiven(t *testing.T) {
 
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(sum[:]), newBinary)
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 
 	if err := os.WriteFile(self, []byte("the old version"), 0o755); err != nil {
 		t.Fatal(err)
@@ -290,7 +290,7 @@ func TestAFailedInstallLeavesTheOldBinaryInPlace(t *testing.T) {
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(wrong[:]),
 		workingProgram(t, "v9.9.9"))
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 	old := []byte("the old version")
 
 	if err := os.WriteFile(self, old, 0o755); err != nil {
@@ -441,7 +441,7 @@ func TestADownloadThatCannotRunIsNotInstalled(t *testing.T) {
 
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(sum[:]), broken)
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 	old := workingProgram(t, "the old version")
 
 	if err := os.WriteFile(self, old, 0o755); err != nil {
@@ -485,7 +485,7 @@ func TestADownloadThatIsAnotherVersionIsNotInstalled(t *testing.T) {
 
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(sum[:]), other)
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 	old := workingProgram(t, "v1.0.0")
 
 	if err := os.WriteFile(self, old, 0o755); err != nil {
@@ -528,7 +528,7 @@ func TestARollbackPutsThePreviousVersionBack(t *testing.T) {
 
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(sum[:]), newBinary)
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 	old := workingProgram(t, "the old version")
 
 	if err := os.WriteFile(self, old, 0o755); err != nil {
@@ -582,7 +582,7 @@ func TestAVersionAlreadyWaitingIsNotInstalledOverTheWayBack(t *testing.T) {
 
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(sum[:]), newBinary)
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 	old := workingProgram(t, "the old version")
 
 	if err := os.WriteFile(self, old, 0o755); err != nil {
@@ -610,7 +610,7 @@ func TestAVersionAlreadyWaitingIsNotInstalledOverTheWayBack(t *testing.T) {
 // With nothing to go back to, a rollback says so rather than removing the
 // working binary.
 func TestARollbackWithNothingToGoBackToIsRefused(t *testing.T) {
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 
 	if err := os.WriteFile(self, []byte("the only version"), 0o755); err != nil {
 		t.Fatal(err)
@@ -634,7 +634,7 @@ func TestARollbackWithNothingToGoBackToIsRefused(t *testing.T) {
 // binary somebody would have gone back to, in the same second it became the
 // thing they needed.
 func TestStartingTheNewVersionKeepsThePreviousOne(t *testing.T) {
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "go-ticket-system"+exeSuffix())
 
 	for name, body := range map[string]string{
 		"":         "the new version",
@@ -674,7 +674,7 @@ func TestStartingTheNewVersionKeepsThePreviousOne(t *testing.T) {
 // that was working a moment ago, rather than nothing at all.
 func TestTheSwapPutsTheWorkingBinaryBackIfTheInstallFails(t *testing.T) {
 	dir := t.TempDir()
-	self := filepath.Join(dir, "go-time-recording"+exeSuffix())
+	self := filepath.Join(dir, "go-ticket-system"+exeSuffix())
 
 	if err := os.WriteFile(self, []byte("the version that works"), 0o600); err != nil {
 		t.Fatal(err)
@@ -718,7 +718,7 @@ func TestTheSwapPutsTheWorkingBinaryBackIfTheInstallFails(t *testing.T) {
 // like a swap that had not run.
 func TestTheSwapKeepsThePreviousBinaryAndNotesTheVersion(t *testing.T) {
 	dir := t.TempDir()
-	self := filepath.Join(dir, "go-time-recording"+exeSuffix())
+	self := filepath.Join(dir, "go-ticket-system"+exeSuffix())
 	staged := filepath.Join(dir, "staged")
 
 	if err := os.WriteFile(self, []byte("the version that works"), 0o600); err != nil {
@@ -803,7 +803,7 @@ func TestARefusedFeedExplainsItself(t *testing.T) {
 				func(w http.ResponseWriter, r *http.Request) {
 					// Identified, which the feed asks of every caller and refuses
 					// some that do not.
-					if agent := r.Header.Get("User-Agent"); !strings.Contains(agent, "time-recording") {
+					if agent := r.Header.Get("User-Agent"); !strings.Contains(agent, "ticket-system") {
 						t.Errorf("the check identifies itself as %q", agent)
 					}
 

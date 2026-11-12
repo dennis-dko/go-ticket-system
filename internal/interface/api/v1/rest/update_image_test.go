@@ -14,9 +14,9 @@ import (
 	"gofr.dev/pkg/gofr/container"
 	"gofr.dev/pkg/gofr/logging"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/announce"
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/imageupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/announce"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/imageupdate"
 )
 
 // An image update that changed nothing takes back the restart it announced.
@@ -167,7 +167,7 @@ func imageUpdateUnderTest(t *testing.T) (*UpdateHandler, *announce.Hub, string) 
 
 	// A connection that answers, as the running one does: an update asks the
 	// next start's connection first, and nothing is stored where these run.
-	running := appconfig.Datasource{Dialect: "sqlite", Name: filepath.Join(dir, "gtr.db")}
+	running := appconfig.Datasource{Dialect: "sqlite", Name: filepath.Join(dir, "gts.db")}
 
 	return &UpdateHandler{hub: hub, images: imageupdate.New(dir), running: running}, hub, dir
 }

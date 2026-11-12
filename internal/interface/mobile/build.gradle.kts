@@ -28,10 +28,10 @@ fun versionCodeOf(version: String): Int {
 // key, so it is one key for every release, kept where the workflow can reach it
 // and nowhere in the repository. A build without it - every pull request's -
 // makes an unsigned release APK, which proves everything but the signature.
-val keystore: String? = providers.environmentVariable("GTR_ANDROID_KEYSTORE").orNull
+val keystore: String? = providers.environmentVariable("GTS_ANDROID_KEYSTORE").orNull
 
 android {
-    namespace = "io.github.dennisdko.gotimerecording"
+    namespace = "io.github.dennisdko.goticketsystem"
 
     // The androidx libraries are compiled against 37 and ask the app to be too.
     // It targets 36 on purpose: an app targeting 37 needs a runtime permission to
@@ -42,7 +42,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.dennisdko.gotimerecording"
+        applicationId = "io.github.dennisdko.goticketsystem"
         minSdk = 26
         targetSdk = 36
         versionCode = versionCodeOf(release)
@@ -53,9 +53,9 @@ android {
         if (keystore != null) {
             create("release") {
                 storeFile = file(keystore)
-                storePassword = providers.environmentVariable("GTR_ANDROID_KEYSTORE_PASSWORD").get()
-                keyAlias = providers.environmentVariable("GTR_ANDROID_KEY_ALIAS").get()
-                keyPassword = providers.environmentVariable("GTR_ANDROID_KEY_PASSWORD").get()
+                storePassword = providers.environmentVariable("GTS_ANDROID_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("GTS_ANDROID_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("GTS_ANDROID_KEY_PASSWORD").get()
             }
         }
     }

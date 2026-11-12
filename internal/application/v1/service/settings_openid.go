@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // What a provider's configuration may hold. The issuer is bounded by the column

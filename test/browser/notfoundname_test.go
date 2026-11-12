@@ -27,7 +27,7 @@ func TestANotFoundRefusalNamesWhatWasLookedForInTheReadersWords(t *testing.T) {
 
 	p.run("correct an entry that is not there", chromedp.Evaluate(`(async () => {
 		const token = document.cookie.split('; ')
-			.find((c) => c.startsWith('gtr_csrf=')).split('=')[1];
+			.find((c) => c.startsWith('gts_csrf=')).split('=')[1];
 		const res = await fetch('/api/v1/timesheets/999999', {
 			method: 'PUT',
 			credentials: 'same-origin',

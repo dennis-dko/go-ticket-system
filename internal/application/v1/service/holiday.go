@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // PlaceSource answers the installation's choice of public holidays: a place,

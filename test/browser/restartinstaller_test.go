@@ -39,7 +39,7 @@ func TestTheRestartWaitRecognisesTheInstaller(t *testing.T) {
 
 		const network = window.fetch;
 		window.fetch = (url, options) => String(url).endsWith('/install/state')
-			? Promise.resolve(new Response(JSON.stringify({ appName: 'Time Recording' }),
+			? Promise.resolve(new Response(JSON.stringify({ appName: 'Ticket System' }),
 				{ headers: { 'Content-Type': 'application/json' } }))
 			: network(url, options);
 

@@ -18,9 +18,9 @@ set -euo pipefail
 
 sdk=${ANDROID_SDK_ROOT:-$HOME/android/sdk}
 jdk=${JAVA_HOME:-$HOME/android/jdk}
-port=${GTR_CAMERA_PORT:-8091}
-package=io.github.dennisdko.gotimerecording
-apk=bin/mobile/outputs/apk/release/go-time-recording-mobile-release-unsigned.apk
+port=${GTS_CAMERA_PORT:-8091}
+package=io.github.dennisdko.goticketsystem
+apk=bin/mobile/outputs/apk/release/go-ticket-system-mobile-release-unsigned.apk
 into=doc/image
 
 export PATH="$jdk/bin:$sdk/platform-tools:$PATH"
@@ -41,7 +41,7 @@ fail() {
   exit 1
 }
 
-[ -f bin/linux/go-time-recording-web ] || fail "no bin/linux/go-time-recording-web: run task readme:pictures:app"
+[ -f bin/linux/go-ticket-system-web ] || fail "no bin/linux/go-ticket-system-web: run task readme:pictures:app"
 [ -f "$apk" ] || fail "no $apk: run task readme:pictures:app"
 adb get-state > /dev/null 2>&1 || fail "adb reaches no device: start an emulator first"
 
@@ -80,12 +80,12 @@ day() { TZ="$zone" date -d "$1" +%F; }
 # --------------------------------------------------------- the installation
 
 mkdir -p "$work/configs"
-cp bin/linux/go-time-recording-web "$work/"
-chmod +x "$work/go-time-recording-web"
+cp bin/linux/go-ticket-system-web "$work/"
+chmod +x "$work/go-ticket-system-web"
 tr -d '\r' < cmd/configs/.env > "$work/configs/.env"
 
-(cd "$work" && exec env APP_ENV= DB_DIALECT=sqlite DB_NAME="$work/gtr.db" HTTP_PORT="$port" \
-  METRICS_PORT=$((port + 1)) LOG_LEVEL=WARN ./go-time-recording-web > "$work/log" 2>&1) &
+(cd "$work" && exec env APP_ENV= DB_DIALECT=sqlite DB_NAME="$work/gts.db" HTTP_PORT="$port" \
+  METRICS_PORT=$((port + 1)) LOG_LEVEL=WARN ./go-ticket-system-web > "$work/log" 2>&1) &
 server=$!
 
 for _ in $(seq 1 60); do
@@ -110,7 +110,7 @@ session() {
 signed_in() {
   curl -fsS -b "$jar" -c "$jar" -X "$1" -H 'Content-Type: application/json' \
     -H "Origin: http://127.0.0.1:$port" \
-    -H "X-CSRF-Token: $(awk '$6 == "gtr_csrf" { print $7 }' "$jar" | tail -n 1)" \
+    -H "X-CSRF-Token: $(awk '$6 == "gts_csrf" { print $7 }' "$jar" | tail -n 1)" \
     "$base$2" ${3:+-d "$3"}
 }
 
@@ -255,7 +255,7 @@ tap 'Cancel'
 
 # The code's link, the way the phone's camera hands it over; the app offers it
 # and connects only once Connect is pressed.
-adb shell "am start -a android.intent.action.VIEW -d 'go-time-recording://connect?url=http%3A%2F%2F10.0.2.2%3A$port&token=$token'" > /dev/null
+adb shell "am start -a android.intent.action.VIEW -d 'go-ticket-system://connect?url=http%3A%2F%2F10.0.2.2%3A$port&token=$token'" > /dev/null
 tap 'Connect'
 tap 'Menu'
 tap 'Time entries'

@@ -17,14 +17,14 @@ func TestTheAddressACodeCarriesIsTheOneThePageShows(t *testing.T) {
 		headers map[string]string
 		want    string
 	}{
-		{"the page's own origin", "time.example.com", map[string]string{"Origin": "https://time.example.com"},
-			"https://time.example.com"},
-		{"an origin naming another host", "time.example.com", map[string]string{"Origin": "https://elsewhere.example"},
-			"http://time.example.com"},
-		{"an origin of null", "time.example.com", map[string]string{"Origin": "null"}, "http://time.example.com"},
-		{"no origin, behind a proxy that says https", "time.example.com",
-			map[string]string{"X-Forwarded-Proto": "https"}, "https://time.example.com"},
-		{"no origin, a port", "time.example.com:8000", nil, "http://time.example.com:8000"},
+		{"the page's own origin", "tickets.example.com", map[string]string{"Origin": "https://tickets.example.com"},
+			"https://tickets.example.com"},
+		{"an origin naming another host", "tickets.example.com", map[string]string{"Origin": "https://elsewhere.example"},
+			"http://tickets.example.com"},
+		{"an origin of null", "tickets.example.com", map[string]string{"Origin": "null"}, "http://tickets.example.com"},
+		{"no origin, behind a proxy that says https", "tickets.example.com",
+			map[string]string{"X-Forwarded-Proto": "https"}, "https://tickets.example.com"},
+		{"no origin, a port", "tickets.example.com:8000", nil, "http://tickets.example.com:8000"},
 	} {
 		request := httptest.NewRequest(http.MethodPost, "/api/v1/me/tokens", nil)
 		request.Host = tc.host

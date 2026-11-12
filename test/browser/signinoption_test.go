@@ -9,7 +9,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/oidctest"
+	"github.com/dennis-dko/go-ticket-system/test/oidctest"
 )
 
 // Every way to sign in keeps its words on one line where the card has room for

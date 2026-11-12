@@ -7,7 +7,7 @@ import (
 )
 
 // productID names what wrote the feed, which the format asks of every calendar.
-const productID = "-//Go-Time-Recording//Calendar feed//EN"
+const productID = "-//Go-Ticket-System//Calendar feed//EN"
 
 // refresh is how often a calendar program is asked to read the feed again: an
 // hour, so a day booked in the morning is beside the afternoon's appointments.

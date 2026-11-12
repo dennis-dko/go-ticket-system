@@ -7,7 +7,7 @@ import (
 	"image/png"
 	"os"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/imaging"
+	"github.com/dennis-dko/go-ticket-system/internal/support/imaging"
 )
 
 // icoSizes are the frames Windows asks for.

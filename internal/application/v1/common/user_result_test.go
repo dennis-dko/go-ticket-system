@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/common"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/common"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // The staff list is where an administrator decides who to edit or remove, so

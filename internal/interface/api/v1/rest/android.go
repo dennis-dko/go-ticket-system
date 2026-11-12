@@ -5,8 +5,8 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/support/qrcode"
 )
 
 // AndroidResponse is where the Android app that belongs to this installation is

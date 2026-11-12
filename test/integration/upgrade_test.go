@@ -10,9 +10,9 @@ import (
 
 	gofrmigration "gofr.dev/pkg/gofr/migration"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/migration"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/sqldb"
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/migration"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/sqldb"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // theFirstRelease is the last migration of the first version: its tables and

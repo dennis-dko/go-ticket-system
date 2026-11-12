@@ -24,7 +24,7 @@ func TestTheSettingsCardRefusesAConnectionTheDriverWouldReadOtherwise(t *testing
 
 	// Nothing listens on port 1, so a probe let through would fail at once.
 	connection := map[string]any{
-		"dialect": "postgres", "name": "gtr", "host": "127.0.0.1", "port": "1",
+		"dialect": "postgres", "name": "gts", "host": "127.0.0.1", "port": "1",
 		"user": "postgres", "password": "", "sslMode": "disable",
 	}
 

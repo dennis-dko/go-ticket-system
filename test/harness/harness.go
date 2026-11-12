@@ -22,7 +22,7 @@ import (
 	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/go-ticket-system/test/tempdir"
 )
 
 const (
@@ -37,17 +37,17 @@ const (
 	// DSNEnv points the whole suite at a database server instead of SQLite.
 	// The scheme picks the dialect:
 	//
-	//	postgres://gtr:secret@localhost:55432/go-time-recording?sslmode=disable
-	//	mysql://root:secret@localhost:53306/go-time-recording
+	//	postgres://gts:secret@localhost:55432/go-ticket-system?sslmode=disable
+	//	mysql://root:secret@localhost:53306/go-ticket-system
 	//
 	// The account has to be allowed to CREATE DATABASE, because each test gets
 	// its own. On PostgreSQL the owner already can; on MySQL an ordinary user
 	// cannot, so use root there - it is a throwaway server either way.
-	DSNEnv = "GTR_TEST_DSN"
+	DSNEnv = "GTS_TEST_DSN"
 
 	// RaceEnv asks for the application under test to be built with the race
 	// detector. See Build.
-	RaceEnv = "GTR_TEST_RACE"
+	RaceEnv = "GTS_TEST_RACE"
 )
 
 // App is a running instance.
@@ -159,12 +159,12 @@ var binaryPath atomic.Pointer[string]
 // Build compiles the application once, for the whole test binary to share.
 // Call it from TestMain.
 func Build() (cleanup func(), err error) {
-	dir, err := os.MkdirTemp("", "gtr-harness-*")
+	dir, err := os.MkdirTemp("", "gts-harness-*")
 	if err != nil {
 		return nil, fmt.Errorf("cannot create a temporary directory: %w", err)
 	}
 
-	path := filepath.Join(dir, "go-time-recording-web"+exeSuffix())
+	path := filepath.Join(dir, "go-ticket-system-web"+exeSuffix())
 
 	args := []string{"build", "-o", path}
 
@@ -525,7 +525,7 @@ func createTestDatabase(t *testing.T, dialect, adminDSN string) string {
 
 	// Lower case and no punctuation: an identifier that would need quoting
 	// everywhere it appears is a poor choice for a name generated in a test.
-	name := fmt.Sprintf("gtr_it_%d_%d", time.Now().UnixNano()%1e9, databaseCounter.Add(1))
+	name := fmt.Sprintf("gts_it_%d_%d", time.Now().UnixNano()%1e9, databaseCounter.Add(1))
 
 	if _, err := db.Exec("CREATE DATABASE " + name); err != nil {
 		t.Fatalf("cannot create the test database %s: %v", name, err)

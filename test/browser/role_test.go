@@ -9,7 +9,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // A shipped role is shown, not opened for changes.
@@ -398,13 +398,13 @@ func TestTheRightsTickedForAnUnsavedRoleSurvive(t *testing.T) {
 
 	// Under this form's own name, which is not what form.id answers with when a
 	// form holds a control called "id" - as this one and the time entry both do.
-	// Both wrote to "gtr.draft.[object HTMLInputElement]", one key for two forms,
+	// Both wrote to "gts.draft.[object HTMLInputElement]", one key for two forms,
 	// and they overwrote each other on the way out and restored each other's
 	// emptiness on the way back in.
 	var keys string
 
 	p.run("read the draft keys", chromedp.Evaluate(`
-		JSON.stringify(Object.keys(sessionStorage).filter((key) => key.startsWith('gtr.draft.')))`,
+		JSON.stringify(Object.keys(sessionStorage).filter((key) => key.startsWith('gts.draft.')))`,
 		&keys))
 
 	// The account is in the key too, because a draft belongs to whoever wrote it

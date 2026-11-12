@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unicode"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // The restart card compares the connection this process opened against the one
@@ -16,7 +16,7 @@ import (
 
 func TestAChangedHostIsADifferentConnection(t *testing.T) {
 	running := appconfig.Datasource{
-		Dialect: "postgres", Host: "db.internal", Port: "5432", Name: "gtr", User: "app",
+		Dialect: "postgres", Host: "db.internal", Port: "5432", Name: "gts", User: "app",
 	}
 
 	moved := running
@@ -33,7 +33,7 @@ func TestAChangedHostIsADifferentConnection(t *testing.T) {
 func TestEveryConnectionFieldIsVisibleInTheSummary(t *testing.T) {
 	base := appconfig.Datasource{
 		Dialect: "postgres", Host: "db.internal", Port: "5432",
-		Name: "gtr", User: "app", SSLMode: "require",
+		Name: "gts", User: "app", SSLMode: "require",
 	}
 
 	for _, change := range []struct {
@@ -63,7 +63,7 @@ func TestEveryConnectionFieldIsVisibleInTheSummary(t *testing.T) {
 func TestTheSummaryNeverCarriesThePassword(t *testing.T) {
 	ds := appconfig.Datasource{
 		Dialect: "postgres", Host: "db", Port: "5432",
-		Name: "gtr", User: "app", Password: "hunter2",
+		Name: "gts", User: "app", Password: "hunter2",
 	}
 
 	if strings.Contains(connectionSummary(ds), ds.Password) {
@@ -79,7 +79,7 @@ func TestTheSummaryNeverCarriesThePassword(t *testing.T) {
 func TestTheDefaultPortIsNotAChange(t *testing.T) {
 	for _, dialect := range []string{"postgres", "mysql"} {
 		t.Run(dialect, func(t *testing.T) {
-			unset := appconfig.Datasource{Dialect: dialect, Host: "db", Name: "gtr"}
+			unset := appconfig.Datasource{Dialect: dialect, Host: "db", Name: "gts"}
 
 			explicit := unset
 			explicit.Port = appconfig.DefaultPortFor(dialect, "")
@@ -93,11 +93,11 @@ func TestTheDefaultPortIsNotAChange(t *testing.T) {
 }
 
 // A file on disk has no host, port or user, and printing empty ones would put
-// "sqlite :/gtr" on the card.
+// "sqlite :/gts" on the card.
 func TestAFileIsDescribedByItsName(t *testing.T) {
-	summary := connectionSummary(appconfig.Datasource{Dialect: "sqlite", Name: "gtr"})
+	summary := connectionSummary(appconfig.Datasource{Dialect: "sqlite", Name: "gts"})
 
-	if summary != "sqlite gtr" {
+	if summary != "sqlite gts" {
 		t.Errorf("a file connection reads as %q", summary)
 	}
 }

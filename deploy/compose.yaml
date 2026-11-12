@@ -18,11 +18,11 @@
 # either of those arrangements. It sets nothing on the application: tracing is
 # switched on under Settings, not here.
 
-name: go-time-recording
+name: go-ticket-system
 
 services:
   app:
-    image: ${GTR_IMAGE:-ghcr.io/dennis-dko/go-time-recording}:${GTR_VERSION:-latest}
+    image: ${GTS_IMAGE:-ghcr.io/dennis-dko/go-ticket-system}:${GTS_VERSION:-latest}
     restart: unless-stopped
     # Longer than the application takes to stop: it waits for requests in flight
     # for SHUTDOWN_GRACE_PERIOD, 30s by default, and then up to ten seconds for
@@ -47,7 +47,7 @@ services:
       # between the two containers is not crossing anything hostile.
       DB_SSL_MODE: disable
 
-      APP_NAME: ${APP_NAME:-Time Recording}
+      APP_NAME: ${APP_NAME:-Ticket System}
 
       # Encrypts the second factors and the directory password in the database.
       # Empty stores them in the clear, as every installation did before this

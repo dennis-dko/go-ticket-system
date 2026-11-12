@@ -9,7 +9,7 @@ import (
 
 func sample() Calendar {
 	return Calendar{
-		Name:  "Zeiterfassung",
+		Name:  "Ticketsystem",
 		Stamp: time.Date(2026, time.October, 20, 9, 30, 0, 0, time.UTC),
 		Events: []Event{{
 			UID:         "20261019-booked@example",

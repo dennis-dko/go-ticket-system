@@ -16,7 +16,7 @@
    * account: someone who wants dark on a laptop at night wants it whoever is
    * signed in.
    */
-  var STORAGE_KEY = 'gtr.theme';
+  var STORAGE_KEY = 'gts.theme';
 
   /**
    * Dark from dusk to dawn, in local time - that is what "evening" means to the
@@ -63,7 +63,7 @@
    *
    * Both are configured, so both live in the database, so the page cannot know
    * either until it has asked - and asking is a request that finishes after the
-   * document has been parsed and shown. Until then the tab reads "Time Recording"
+   * document has been parsed and shown. Until then the tab reads "Ticket System"
    * and shows the shipped mark, whatever this installation calls itself. On a
    * reload that is a visible flicker back to a name nobody chose.
    *
@@ -79,7 +79,7 @@
     var stored;
 
     try {
-      stored = JSON.parse(localStorage.getItem('gtr.branding') || 'null');
+      stored = JSON.parse(localStorage.getItem('gts.branding') || 'null');
     } catch (e) {
       return;
     }
@@ -92,7 +92,7 @@
   }
 
   // Exposed so app.js reuses these rules rather than restating them.
-  window.gtrTheme = {
+  window.gtsTheme = {
     STORAGE_KEY: STORAGE_KEY,
     DARK_FROM_HOUR: DARK_FROM_HOUR,
     DARK_UNTIL_HOUR: DARK_UNTIL_HOUR,

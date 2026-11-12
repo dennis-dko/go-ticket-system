@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
 // SecretsService answers one question at start-up: is the configured key the key
@@ -32,7 +32,7 @@ func NewSecretsService(
 
 // theKeyIsRight is what the check value decrypts to. Its content does not matter;
 // that it decrypts at all is the whole test.
-const theKeyIsRight = "go-time-recording"
+const theKeyIsRight = "go-ticket-system"
 
 // Verify reports whether the configured key is the one this installation's data
 // was written with, and records it the first time.

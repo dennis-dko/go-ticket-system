@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -224,7 +224,7 @@ private class Files(private val onSave: (String, ByteArray) -> Unit) {
 }
 
 /** filesInterface is the name the page reaches [Files] by, which res/raw/keep_download.js calls. */
-private const val filesInterface = "GoTimeRecordingFiles"
+private const val filesInterface = "GoTicketSystemFiles"
 
 /**
  * Notifications is what the page's Reminders card reaches in the app: whether
@@ -245,7 +245,7 @@ private class Notifications(private val context: Context, private val ask: () ->
 }
 
 /** notificationsInterface is the name the page reaches [Notifications] by, which app.js asks for. */
-private const val notificationsInterface = "GoTimeRecordingNotifications"
+private const val notificationsInterface = "GoTicketSystemNotifications"
 
 /**
  * Session is how the page tells the app that its session ended without its
@@ -260,7 +260,7 @@ private class Session(private val ended: () -> Unit) {
 }
 
 /** sessionInterface is the name the page reaches [Session] by, which app.js tells when its session has ended. */
-private const val sessionInterface = "GoTimeRecordingSession"
+private const val sessionInterface = "GoTicketSystemSession"
 
 /** signsOut says whether a request is the web interface signing out of the installation the app shows. */
 fun signsOut(address: String, url: String): Boolean =

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/support/qrcode"
 )
 
 // Where the Android app that belongs to this installation is downloaded, and the

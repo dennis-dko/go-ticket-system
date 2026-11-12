@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 func TestMain(m *testing.M) {
@@ -257,7 +257,7 @@ func post(t *testing.T, b *browser, path, body string, method ...string) {
 
 	answer := b.evalString(fmt.Sprintf(`(async () => {
 		const csrf = document.cookie.split(';').map(c => c.trim())
-			.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+			.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 
 		const r = await fetch(%q, {
 			method: %q,

@@ -9,13 +9,13 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/announce"
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/imageupdate"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/restart"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/hosting"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/announce"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/imageupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/restart"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/support/hosting"
 )
 
 // UpdateHandler reports whether a newer release exists, and installs it where

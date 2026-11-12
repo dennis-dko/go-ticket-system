@@ -39,14 +39,14 @@ func TestTheDeploymentExampleFollowsTheCurrentRelease(t *testing.T) {
 	}
 
 	// The assignment, not the commented example beside it.
-	setting := regexp.MustCompile(`(?m)^GTR_VERSION=(.*)$`).FindStringSubmatch(string(raw))
+	setting := regexp.MustCompile(`(?m)^GTS_VERSION=(.*)$`).FindStringSubmatch(string(raw))
 	if setting == nil {
-		t.Fatal("deploy/.env.example no longer sets GTR_VERSION, so a fresh " +
+		t.Fatal("deploy/.env.example no longer sets GTS_VERSION, so a fresh " +
 			"installation gets whatever compose defaults to and this guard is blind")
 	}
 
 	if got := setting[1]; got != "latest" {
-		t.Errorf("deploy/.env.example pins GTR_VERSION=%s. A version written here "+
+		t.Errorf("deploy/.env.example pins GTS_VERSION=%s. A version written here "+
 			"ages with every release and nothing moves it: it reached fifty-three "+
 			"releases behind before anybody noticed. Leave it at \"latest\" and pin "+
 			"in a real .env instead", got)

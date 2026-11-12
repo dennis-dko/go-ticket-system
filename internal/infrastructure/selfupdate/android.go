@@ -4,7 +4,7 @@ import "fmt"
 
 // Releases is where this project's releases are shown, each carrying the
 // Android app built from the same commit.
-const Releases = "https://github.com/dennis-dko/go-time-recording/releases"
+const Releases = "https://github.com/dennis-dko/go-ticket-system/releases"
 
 // AndroidApp is where the Android app that belongs to version is downloaded:
 // the page of its release, and the APK that release carries. The app belongs to
@@ -22,7 +22,7 @@ func AndroidApp(version string) (page, download string) {
 
 // androidAssetName is what the Android app of version is called in its release.
 func androidAssetName(version string) string {
-	return "go-time-recording-mobile_" + version + ".apk"
+	return "go-ticket-system-mobile_" + version + ".apk"
 }
 
 // isRelease says whether version is the tag a release is named by and nothing

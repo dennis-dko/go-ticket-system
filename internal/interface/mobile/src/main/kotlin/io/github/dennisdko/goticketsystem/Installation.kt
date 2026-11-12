@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -48,7 +48,7 @@ class Installation(private val address: String, private val words: Language, pri
                 .filter { (name, _) -> name.equals("Set-Cookie", ignoreCase = true) }
                 .flatMap { it.value }
 
-            if (cookies.none { it.startsWith("gtr_session=") }) throw notThis()
+            if (cookies.none { it.startsWith("gts_session=") }) throw notThis()
 
             cookies
         } catch (e: IOException) {
@@ -85,7 +85,7 @@ class Installation(private val address: String, private val words: Language, pri
     suspend fun signOut(cookies: String) {
         // The installation asks every change a session makes for this token in a
         // header beside the cookie, and for where the request comes from.
-        val csrf = cookieValue(cookies, "gtr_csrf") ?: return
+        val csrf = cookieValue(cookies, "gts_csrf") ?: return
 
         withContext(Dispatchers.IO) {
             val connection = open("/api/v1/auth/logout")

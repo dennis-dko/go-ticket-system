@@ -9,7 +9,7 @@ import (
 
 	"rsc.io/qr"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/go-ticket-system/internal/support/qrcode"
 )
 
 // A QR code is only ever read by a machine, so the usual "does it look right" is
@@ -24,8 +24,8 @@ import (
 // modulePattern matches the "M<x> <y>h1v1h-1z" of one module.
 var modulePattern = regexp.MustCompile(`M(\d+) (\d+)h1v1h-1z`)
 
-const sampleURI = "otpauth://totp/Time%20Recording:hanne@example.com" +
-	"?secret=JBSWY3DPEHPK3PXP&issuer=Time+Recording&digits=6&period=30"
+const sampleURI = "otpauth://totp/Ticket%20System:hanne@example.com" +
+	"?secret=JBSWY3DPEHPK3PXP&issuer=Ticket+System&digits=6&period=30"
 
 // modules parses the drawn squares back out of the path.
 func modules(t *testing.T, svg string) map[[2]int]bool {

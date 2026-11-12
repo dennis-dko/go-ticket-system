@@ -38,7 +38,7 @@ func TestACalendarFeedIsReadAtItsAddressAlone(t *testing.T) {
 	worker.must(worker.api(http.MethodPost, "/me/calendar-feed", nil),
 		http.StatusCreated, http.StatusOK).Data(t, &made)
 
-	if !made.Active || !strings.HasPrefix(made.Path, "/api/v1/calendar-feed/gtrcal_") || !strings.HasSuffix(made.Path, ".ics") {
+	if !made.Active || !strings.HasPrefix(made.Path, "/api/v1/calendar-feed/gtscal_") || !strings.HasSuffix(made.Path, ".ics") {
 		t.Fatalf("a new feed reads %+v, want one with its address", made)
 	}
 
@@ -131,9 +131,9 @@ func TestTheProcessLogDoesNotCarryAFeedsKey(t *testing.T) {
 
 	readFeed(a, made.Path)
 
-	key := strings.TrimSuffix(strings.TrimPrefix(made.Path, "/api/v1/calendar-feed/gtrcal_"), ".ics")
+	key := strings.TrimSuffix(strings.TrimPrefix(made.Path, "/api/v1/calendar-feed/gtscal_"), ".ics")
 
-	if !a.logShows(20*time.Second, "/api/v1/calendar-feed/gtrcal_[hidden].ics") {
+	if !a.logShows(20*time.Second, "/api/v1/calendar-feed/gtscal_[hidden].ics") {
 		t.Fatalf("the console never said a feed was read:\n%s", a.log())
 	}
 
@@ -141,7 +141,7 @@ func TestTheProcessLogDoesNotCarryAFeedsKey(t *testing.T) {
 		t.Errorf("the console carries the feed's key")
 	}
 
-	page := admin.logsContaining(t, "?search=calendar-feed/gtrcal_&limit=500")
+	page := admin.logsContaining(t, "?search=calendar-feed/gtscal_&limit=500")
 	if len(page.Records) == 0 {
 		t.Fatalf("the viewer never said a feed was read")
 	}

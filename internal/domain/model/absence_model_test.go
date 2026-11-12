@@ -3,7 +3,7 @@ package model_test
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // What a day planned at eight hours asks with each kind of absence on it: leave,

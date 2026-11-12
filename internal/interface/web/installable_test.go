@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
+	"github.com/dennis-dko/go-ticket-system/internal/interface/web"
 )
 
 // The installed app: what a telephone's home screen or a desktop's start menu is
@@ -75,9 +75,9 @@ func readManifest(t *testing.T, server http.Handler, language string) manifest {
 // The installed app is called what the installation calls itself, opens on the
 // page, and stands on its own rather than inside a browser frame.
 func TestTheManifestNamesTheInstallation(t *testing.T) {
-	m := readManifest(t, brandedServer(web.Branding{Title: "Zeiterfassung"}), "en")
+	m := readManifest(t, brandedServer(web.Branding{Title: "Ticketsystem"}), "en")
 
-	if m.Name != "Zeiterfassung" || m.ShortName != "Zeiterfassung" {
+	if m.Name != "Ticketsystem" || m.ShortName != "Ticketsystem" {
 		t.Errorf("the app is called %q (%q), want the installation's own name", m.Name, m.ShortName)
 	}
 
@@ -115,8 +115,8 @@ func TestTheManifestNamesTheInstallation(t *testing.T) {
 
 // An installation without a name of its own is the application's name.
 func TestAnUnnamedInstallationIsTheApplicationsName(t *testing.T) {
-	if m := readManifest(t, brandedServer(web.Branding{}), "en"); m.Name != "Time Recording" {
-		t.Errorf("an unnamed installation is called %q, want Time Recording", m.Name)
+	if m := readManifest(t, brandedServer(web.Branding{}), "en"); m.Name != "Ticket System" {
+		t.Errorf("an unnamed installation is called %q, want Ticket System", m.Name)
 	}
 }
 

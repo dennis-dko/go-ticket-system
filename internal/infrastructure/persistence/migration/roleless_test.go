@@ -10,9 +10,9 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/migration"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/sqldb"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/migration"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/sqldb"
 )
 
 // Nobody comes out of an upgrade without a role.

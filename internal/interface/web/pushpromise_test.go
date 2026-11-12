@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 )
 
 // The Reminders card says what pushing to this browser does, and it promised the

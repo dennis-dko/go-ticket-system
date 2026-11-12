@@ -3,7 +3,7 @@ package model_test
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 func hours(h float64) *float64 { return &h }

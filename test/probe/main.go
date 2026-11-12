@@ -78,7 +78,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.ldapURL, "ldap", "", "directory URL, e.g. ldap://localhost:5389; empty skips the check")
 	flag.StringVar(&opts.baseDN, "base-dn", "dc=example,dc=com", "search base")
 	flag.StringVar(&opts.bindDN, "bind-dn", "cn=admin,dc=example,dc=com", "service account; empty binds anonymously")
-	flag.StringVar(&opts.bindPassword, "bind-password", "gtr-test-password", "service account password")
+	flag.StringVar(&opts.bindPassword, "bind-password", "gts-test-password", "service account password")
 	flag.StringVar(&opts.userFilter, "user-filter", "(|(uid=%s)(mail=%s)(sAMAccountName=%s))",
 		"login filter; %s is replaced by the login name")
 	flag.StringVar(&opts.idAttribute, "id-attribute", "entryUUID",

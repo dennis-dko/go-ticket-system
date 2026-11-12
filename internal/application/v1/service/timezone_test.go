@@ -7,8 +7,8 @@ import (
 
 	_ "time/tzdata"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // A zone is stored so the application can decide which calendar day hours

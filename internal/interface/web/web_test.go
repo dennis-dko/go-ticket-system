@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
+	"github.com/dennis-dko/go-ticket-system/internal/interface/web"
 )
 
 // nextMarker is what the stand-in for the API routes behind the UI middleware
@@ -50,7 +50,7 @@ func TestServesEmbeddedIndex(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 
-	if !strings.Contains(rec.Body.String(), "<title>Time Recording</title>") {
+	if !strings.Contains(rec.Body.String(), "<title>Ticket System</title>") {
 		t.Error("expected the embedded index.html")
 	}
 }
@@ -152,7 +152,7 @@ func TestUnknownUIPathFallsBackToIndex(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 
-	if !strings.Contains(rec.Body.String(), "<title>Time Recording</title>") {
+	if !strings.Contains(rec.Body.String(), "<title>Ticket System</title>") {
 		t.Error("expected the SPA fallback to serve index.html")
 	}
 }

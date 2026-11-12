@@ -5,7 +5,7 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	appservice "github.com/dennis-dko/go-time-recording/internal/application/v1/service"
+	appservice "github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
 )
 
 // synchroniser is as much of the directory synchronisation as its schedule uses.

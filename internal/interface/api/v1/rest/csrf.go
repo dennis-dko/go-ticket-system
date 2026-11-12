@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
 // CSRFCookieName carries the token the browser must echo back. Unlike the
 // session cookie this one is deliberately readable by JavaScript: the whole
 // point is that our own script can read it and another site's cannot.
-const CSRFCookieName = "gtr_csrf"
+const CSRFCookieName = "gts_csrf"
 
 // CSRFHeaderName is where the interface returns the token.
 //

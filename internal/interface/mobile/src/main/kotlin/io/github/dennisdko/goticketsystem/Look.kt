@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas

@@ -3,7 +3,7 @@ package service_test
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
 )
 
 // What a run removed is said the same way whoever started it.

@@ -43,7 +43,7 @@ func TestALongStopwatchIsShownThroughTheServiceWorker(t *testing.T) {
 	for deadline := time.Now().Add(waitPatience); time.Now().Before(deadline); time.Sleep(500 * time.Millisecond) {
 		p.awaitJSON(`(async () => {
 			const registration = await navigator.serviceWorker.ready;
-			const shown = await registration.getNotifications({ tag: 'gtr-stopwatch' });
+			const shown = await registration.getNotifications({ tag: 'gts-stopwatch' });
 			return shown.map((notification) => notification.title);
 		})()`, &titles)
 

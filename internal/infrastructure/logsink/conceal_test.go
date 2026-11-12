@@ -13,7 +13,7 @@ import (
 // in the viewer included. Concealed, the line still says a feed was read, and
 // which kind of key it was, without being the key.
 func TestAConcealedKeyReachesNeitherTheConsoleNorTheRing(t *testing.T) {
-	const key = "gtrcal_Q2FsZW5kYXIga2V5IGZvciB0ZXN0aW5nIG9ubHk-_x"
+	const key = "gtscal_Q2FsZW5kYXIga2V5IGZvciB0ZXN0aW5nIG9ubHk-_x"
 
 	line := fmt.Sprintf(`{"level":"INFO","time":"2026-10-20T10:11:12Z","message":`+
 		`{"trace_id":"t","method":"GET","uri":"/api/v1/calendar-feed/%s.ics","response":200,`+
@@ -21,7 +21,7 @@ func TestAConcealedKeyReachesNeitherTheConsoleNorTheRing(t *testing.T) {
 
 	for _, rendered := range []bool{false, true} {
 		s := New(16)
-		s.Conceal("gtrcal_")
+		s.Conceal("gtscal_")
 
 		if rendered {
 			s.SetPassthroughRenderer(func(r Record) string { return r.Message })
@@ -37,11 +37,11 @@ func TestAConcealedKeyReachesNeitherTheConsoleNorTheRing(t *testing.T) {
 		}
 
 		for where, written := range map[string]string{"console": console.String(), "ring": kept[0].Message} {
-			if strings.Contains(written, key[len("gtrcal_"):]) {
+			if strings.Contains(written, key[len("gtscal_"):]) {
 				t.Errorf("rendered %v, the %s has the key: %s", rendered, where, written)
 			}
 
-			if !strings.Contains(written, "/api/v1/calendar-feed/gtrcal_[hidden].ics") {
+			if !strings.Contains(written, "/api/v1/calendar-feed/gtscal_[hidden].ics") {
 				t.Errorf("rendered %v, the %s does not say a key was read: %s", rendered, where, written)
 			}
 		}
@@ -52,11 +52,11 @@ func TestAConcealedKeyReachesNeitherTheConsoleNorTheRing(t *testing.T) {
 // occurs, and a line without it is written as it came.
 func TestOnlyTheKeyIsConcealed(t *testing.T) {
 	s := New(4)
-	s.Conceal("gtrcal_")
+	s.Conceal("gtscal_")
 
 	for line, want := range map[string]string{
-		"two: gtrcal_abc/gtrcal_DEF-1_x and the rest": "two: gtrcal_[hidden]/gtrcal_[hidden] and the rest",
-		"a prefix with nothing after it: gtrcal_ ":    "a prefix with nothing after it: gtrcal_ ",
+		"two: gtscal_abc/gtscal_DEF-1_x and the rest": "two: gtscal_[hidden]/gtscal_[hidden] and the rest",
+		"a prefix with nothing after it: gtscal_ ":    "a prefix with nothing after it: gtscal_ ",
 		"nothing to hide here":                        "nothing to hide here",
 	} {
 		if got := s.concealed(line); got != want {

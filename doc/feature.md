@@ -18,7 +18,7 @@ What the application does, and the rules it keeps while doing it.
 | Managers | Switched on under *Settings*, off as shipped: a manager looks after the time and projects of the accounts an administrator assigned to them, choosing whose under *Whose time*. Whoever is looked after sees who under *My account* and the manager's name on every entry they booked or changed; a manager learns that a day was away, never why, and never sees anybody's working times |
 | Version | The running build in the footer of every page |
 | API access | Personal tokens, scoped by the owner's current role |
-| Android app | The installation's own web interface in an app, so everything the browser does in the same design, connected by scanning the code a new token is shown with, which signs it in; released with every version as `go-time-recording-mobile_<version>.apk`, signed with one key so each release installs over the last |
+| Android app | The installation's own web interface in an app, so everything the browser does in the same design, connected by scanning the code a new token is shown with, which signs it in; released with every version as `go-ticket-system-mobile_<version>.apk`, signed with one key so each release installs over the last |
 | Stopwatch | Start and stop the clock; the measured time becomes an entry, to the second. A start pressed late can be corrected, a clock left running is booked up to the time the work ended, and switching to the next project books the clock and carries on from the same second |
 | Reminders | A banner names the last working day with nothing booked on it and leads to the booking form on that day; another says when the stopwatch has run longer than its owner chose - ten hours unless they chose otherwise - with a notification as well where the browser allows one, and pushed to a closed browser where the installation pushes. The Android app shows both as notifications of its own, open or not. Both are chosen under *My account* |
 | Finding entries | The list narrows by project, by period and by text in the description, and the export follows the same filters |
@@ -262,7 +262,7 @@ address, and that decides the rest:
   to the calendar there as a subscribed one. The code is the key as much as the
   text is, and leaves the screen with it.
 - **It is hidden in the log.** Every reading is logged under its address, so the
-  process log writes `gtrcal_[hidden]` in place of the key - on the console as
+  process log writes `gtscal_[hidden]` in place of the key - on the console as
   well as in the log viewer - and whoever reads the log learns that a calendar
   was read, not how to read it. Traces and metrics name the route, never the
   address.
@@ -421,8 +421,8 @@ geometry whenever it changes.
 **The tab can be named separately from the header**, under *Browser tab* beside
 the title. The two are one name until the header's is too long to be a tab: a
 browser cuts a tab off after a couple of dozen characters, and somebody has six
-of them open — "Zeiterfassung der Beispiel GmbH & Co. KG" reads as
-"Zeiterfassung der B…" in every one. Left empty, the tab keeps the title, which
+of them open — "Ticketsystem der Beispiel GmbH & Co. KG" reads as
+"Ticketsystem der B…" in every one. Left empty, the tab keeps the title, which
 is what every installation configured before this existed goes on doing. It
 translates like the other texts.
 

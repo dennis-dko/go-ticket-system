@@ -1,6 +1,6 @@
 package command
 
-import "github.com/dennis-dko/go-time-recording/internal/application/v1/common"
+import "github.com/dennis-dko/go-ticket-system/internal/application/v1/common"
 
 // CreateUserCommand command to create new user
 type CreateUserCommand struct {

@@ -13,7 +13,7 @@ import (
 // A running version cannot be told a new name, so a release that published the
 // web binary under any other one would be offered on every installation and then
 // found to have no binary for its platform. The name has been changed once, to
-// go-time-recording-web, and the versions from before it ask for the old one,
+// go-ticket-system-web, and the versions from before it ask for the old one,
 // which releases no longer carry; that was decided rather than overlooked, and
 // this is what keeps it from happening a second time by accident.
 func TestTheReleasePublishesTheNameThisVersionUpdatesBy(t *testing.T) {

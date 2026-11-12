@@ -45,13 +45,13 @@ binary's driver can authenticate with these settings.
 # From the host
 go run ./test/probe \
   --db postgres \
-  --dsn "postgres://gtr:gtr-test-password@localhost:55432/go-time-recording?sslmode=disable"
+  --dsn "postgres://gts:gts-test-password@localhost:55432/go-ticket-system?sslmode=disable"
 
 go run ./test/probe \
   --ldap ldap://localhost:5389 \
   --base-dn dc=example,dc=com \
   --bind-dn cn=admin,dc=example,dc=com \
-  --bind-password gtr-test-password
+  --bind-password gts-test-password
 
 # From inside the network, where the service names resolve
 docker compose --profile probe run --rm probe
@@ -92,8 +92,8 @@ The settings, for running it some other way:
 
 ```bash
 DB_DIALECT=postgres DB_HOST=localhost DB_PORT=55432 \
-DB_NAME=go-time-recording DB_USER=gtr DB_PASSWORD=gtr-test-password \
-DB_SSL_MODE=disable ./go-time-recording-web
+DB_NAME=go-ticket-system DB_USER=gts DB_PASSWORD=gts-test-password \
+DB_SSL_MODE=disable ./go-ticket-system-web
 ```
 
 The directory is configured in the running application under **Settings → LDAP
@@ -104,7 +104,7 @@ connection**, not through the environment, so:
 | Host / Port | `localhost` / `5389` |
 | StartTLS / LDAPS | both off (this test server is plain) |
 | Bind DN | `cn=admin,dc=example,dc=com` |
-| Bind password | `gtr-test-password` |
+| Bind password | `gts-test-password` |
 | Base DN | `dc=example,dc=com` |
 | User filter | `(\|(uid=%s)(mail=%s))` |
 | Name / Mail attribute | `cn` / `mail` |
@@ -177,7 +177,7 @@ off, a collector address it cannot dial fails inside the exporter, and a
 sampler that records nothing looks exactly like a collector with nothing to
 show.
 
-Without `GTR_TEST_JAEGER` set the cases skip rather than fail, so
+Without `GTS_TEST_JAEGER` set the cases skip rather than fail, so
 `task test:integration` on its own is unaffected.
 
 ## Check that the directory really works
@@ -221,7 +221,7 @@ synchronisation has to get right:
 | `bob` | `bob-password` | the rename case (below) |
 | `carol` | `carol-password` | no mail address; must be skipped, not guessed at |
 | `dave` | `dave-password` | outside `ou=people`; appears or not depending on the base DN |
-| `service` | `gtr-test-password` | the bind account — not a person, holds no hours |
+| `service` | `gts-test-password` | the bind account — not a person, holds no hours |
 
 `service` is not in that file: the image seeds it, along with the suffix,
 `ou=people` and `ou=services`. It makes the same case `carol` does — an entry
@@ -236,7 +236,7 @@ once so the account exists locally, book an hour, then rename his mailbox:
 ```bash
 # -T matters: without it compose allocates a TTY and swallows the heredoc.
 docker compose --profile ldap exec -T openldap ldapmodify -x -H ldap://127.0.0.1 \
-  -D 'cn=admin,dc=example,dc=com' -w gtr-test-password <<'EOF'
+  -D 'cn=admin,dc=example,dc=com' -w gts-test-password <<'EOF'
 dn: uid=bob,ou=people,dc=example,dc=com
 changetype: modify
 replace: mail
@@ -254,7 +254,7 @@ preview again: he *should* be listed, because he really is gone.
 
 ```bash
 docker compose --profile ldap exec -T openldap ldapdelete -x -H ldap://127.0.0.1 \
-  -D 'cn=admin,dc=example,dc=com' -w gtr-test-password \
+  -D 'cn=admin,dc=example,dc=com' -w gts-test-password \
   'uid=dave,ou=contractors,dc=example,dc=com'
 ```
 
@@ -295,8 +295,8 @@ What differs is inputs, not the image:
 
 | | Here | A deployment |
 | --- | --- | --- |
-| Passwords | `gtr-test-password`, in the compose file | generated, from `.env`, hashed before they reach any file |
-| People | five, from `ldap/people.ldif` mounted into `/seed/extra` | none — invented ones would arrive in the time recording named after nobody |
+| Passwords | `gts-test-password`, in the compose file | generated, from `.env`, hashed before they reach any file |
+| People | five, from `ldap/people.ldif` mounted into `/seed/extra` | none — invented ones would arrive in the ticket system named after nobody |
 | Data | gone with the container | on the `ldap-data` volume |
 
 `/seed/extra` is not a hook that exists for these tests. Standing a directory up
@@ -311,5 +311,5 @@ that image as a deployment; most installations should not.
 ## Browsing the directory
 
 phpLDAPadmin runs on <http://localhost:5080> — log in as
-`cn=admin,dc=example,dc=com` with `gtr-test-password`. Worth reaching for when
+`cn=admin,dc=example,dc=com` with `gts-test-password`. Worth reaching for when
 a bind fails and the reason needs looking at rather than guessing at.

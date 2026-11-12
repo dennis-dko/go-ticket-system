@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // This is the logic that decides whether the binary serves its installer or the
@@ -19,11 +19,11 @@ import (
 func TestValidateAcceptsWhatEachDialectActuallyNeeds(t *testing.T) {
 	valid := []config.Datasource{
 		// SQLite is a file. There is no server, so there is nothing else to ask.
-		{Dialect: "sqlite", Name: "go-time-recording"},
-		{Dialect: "SQLite", Name: "go-time-recording"},
-		{Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr"},
-		{Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Port: "5432"},
-		{Dialect: "mysql", Name: "gtr", Host: "db", User: "root"},
+		{Dialect: "sqlite", Name: "go-ticket-system"},
+		{Dialect: "SQLite", Name: "go-ticket-system"},
+		{Dialect: "postgres", Name: "gts", Host: "db", User: "gts"},
+		{Dialect: "postgres", Name: "gts", Host: "db", User: "gts", Port: "5432"},
+		{Dialect: "mysql", Name: "gts", Host: "db", User: "root"},
 	}
 
 	for _, ds := range valid {
@@ -35,21 +35,21 @@ func TestValidateAcceptsWhatEachDialectActuallyNeeds(t *testing.T) {
 
 func TestValidateRefusesWhatCannotWork(t *testing.T) {
 	cases := map[string]config.Datasource{
-		"no dialect at all":      {Name: "gtr"},
-		"a dialect nobody has":   {Dialect: "oracle", Name: "gtr"},
+		"no dialect at all":      {Name: "gts"},
+		"a dialect nobody has":   {Dialect: "oracle", Name: "gts"},
 		"sqlite without a file":  {Dialect: "sqlite"},
 		"sqlite with only space": {Dialect: "sqlite", Name: "   "},
-		"postgres without host":  {Dialect: "postgres", Name: "gtr", User: "gtr"},
-		"postgres without user":  {Dialect: "postgres", Name: "gtr", Host: "db"},
-		"postgres without name":  {Dialect: "postgres", Host: "db", User: "gtr"},
-		"a port that is a word":  {Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Port: "prod"},
+		"postgres without host":  {Dialect: "postgres", Name: "gts", User: "gts"},
+		"postgres without user":  {Dialect: "postgres", Name: "gts", Host: "db"},
+		"postgres without name":  {Dialect: "postgres", Host: "db", User: "gts"},
+		"a port that is a word":  {Dialect: "postgres", Name: "gts", Host: "db", User: "gts", Port: "prod"},
 
 		// Numbers, and no ports: the directory's port was held to 1-65535 while
 		// this one took any number, so a typo was saved and failed on connecting.
-		"a port past the last": {Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Port: "70000"},
-		"a port of nought":     {Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Port: "0"},
-		"a port below nought":  {Dialect: "mysql", Name: "gtr", Host: "db", User: "gtr", Port: "-1"},
-		"mysql without user":   {Dialect: "mysql", Name: "gtr", Host: "db"},
+		"a port past the last": {Dialect: "postgres", Name: "gts", Host: "db", User: "gts", Port: "70000"},
+		"a port of nought":     {Dialect: "postgres", Name: "gts", Host: "db", User: "gts", Port: "0"},
+		"a port below nought":  {Dialect: "mysql", Name: "gts", Host: "db", User: "gts", Port: "-1"},
+		"mysql without user":   {Dialect: "mysql", Name: "gts", Host: "db"},
 	}
 
 	for name, ds := range cases {
@@ -65,8 +65,8 @@ func TestSavingSQLiteClearsTheServerFields(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "datasource.json")
 
 	err := config.SaveDatasource(path, config.Datasource{
-		Dialect: "sqlite", Name: "gtr",
-		Host: "db", Port: "5432", User: "gtr", Password: "secret", SSLMode: "require",
+		Dialect: "sqlite", Name: "gts",
+		Host: "db", Port: "5432", User: "gts", Password: "secret", SSLMode: "require",
 	})
 	if err != nil {
 		t.Fatalf("save: %v", err)
@@ -88,7 +88,7 @@ func TestSavingSQLiteClearsTheServerFields(t *testing.T) {
 		t.Fatal("the saved connection could not be read back")
 	}
 
-	if loaded.Dialect != "sqlite" || loaded.Name != "gtr" {
+	if loaded.Dialect != "sqlite" || loaded.Name != "gts" {
 		t.Errorf("read back %+v, want the SQLite connection", loaded)
 	}
 }
@@ -128,7 +128,7 @@ func TestLoadingReportsAbsenceRatherThanGuessing(t *testing.T) {
 	// Valid JSON with no dialect describes nothing, and must not be mistaken for
 	// a decision - that is what sends the binary to its installer.
 	empty := filepath.Join(dir, "empty.json")
-	if err := os.WriteFile(empty, []byte(`{"name":"gtr"}`), 0o600); err != nil {
+	if err := os.WriteFile(empty, []byte(`{"name":"gts"}`), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -151,9 +151,9 @@ func TestDatasourceFromEnvironmentFollowsTheEnvironment(t *testing.T) {
 	}
 
 	t.Setenv("DB_DIALECT", "postgres")
-	t.Setenv("DB_NAME", "gtr")
+	t.Setenv("DB_NAME", "gts")
 	t.Setenv("DB_HOST", "db.example")
-	t.Setenv("DB_USER", "gtr")
+	t.Setenv("DB_USER", "gts")
 	t.Setenv("DB_PASSWORD", "secret")
 
 	ds, ok := config.DatasourceFromEnvironment()
@@ -161,7 +161,7 @@ func TestDatasourceFromEnvironmentFollowsTheEnvironment(t *testing.T) {
 		t.Fatal("a configured environment yielded no connection")
 	}
 
-	if ds.Dialect != "postgres" || ds.Name != "gtr" || ds.Host != "db.example" {
+	if ds.Dialect != "postgres" || ds.Name != "gts" || ds.Host != "db.example" {
 		t.Errorf("read %+v, want the environment's connection", ds)
 	}
 
@@ -184,9 +184,9 @@ func TestDatasourceFromEnvironmentFollowsTheEnvironment(t *testing.T) {
 func TestASQLiteConnectionFromTheEnvironmentHoldsWhatSavingItKeeps(t *testing.T) {
 	t.Chdir(t.TempDir())
 	t.Setenv("DB_DIALECT", "sqlite")
-	t.Setenv("DB_NAME", "gtr")
+	t.Setenv("DB_NAME", "gts")
 	t.Setenv("DB_HOST", "db.example")
-	t.Setenv("DB_USER", "gtr")
+	t.Setenv("DB_USER", "gts")
 	t.Setenv("DB_PASSWORD", "left-over")
 
 	running, ok := config.DatasourceFromEnvironment()
@@ -248,7 +248,7 @@ func TestTheDefaultPortIsTheSameForTheProbeAndForGoFr(t *testing.T) {
 // And it actually reaches GoFr, which reads it out of the environment.
 func TestApplyDatasourceExportsAPortForAServerDialect(t *testing.T) {
 	ds := config.Datasource{
-		Dialect: "postgres", Name: "gtr", Host: "db.example", User: "gtr",
+		Dialect: "postgres", Name: "gts", Host: "db.example", User: "gts",
 	}
 
 	if err := config.ApplyDatasource(ds); err != nil {
@@ -285,7 +285,7 @@ func TestTheMySQLProbeCarriesTheTLSModeGoFrWouldUse(t *testing.T) {
 		{"  REQUIRE  ", "tls=skip-verify"},
 	} {
 		ds := config.Datasource{
-			Dialect: "mysql", Name: "gtr", Host: "db.example", User: "gtr", SSLMode: tc.mode,
+			Dialect: "mysql", Name: "gts", Host: "db.example", User: "gts", SSLMode: tc.mode,
 		}
 
 		dsn := config.ProbeDSNForTest(ds)
@@ -323,8 +323,8 @@ func TestTheDirectoryHoldingThePasswordIsNotOpenToOthers(t *testing.T) {
 	path := filepath.Join(dir, "datasource.json")
 
 	err := config.SaveDatasource(path, config.Datasource{
-		Dialect: "postgres", Name: "gtr",
-		Host: "db", Port: "5432", User: "gtr", Password: "secret", SSLMode: "require",
+		Dialect: "postgres", Name: "gts",
+		Host: "db", Port: "5432", User: "gts", Password: "secret", SSLMode: "require",
 	})
 	if err != nil {
 		t.Fatalf("save: %v", err)

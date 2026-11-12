@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
 // A passphrase that is too long is refused in this application's words.

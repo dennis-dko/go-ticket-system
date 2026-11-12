@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/memory"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/webpush"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/memory"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/support/webpush"
 )
 
 type pushPrincipals map[uint]*service.Principal
@@ -61,7 +61,7 @@ var aBrowser = webpush.Subscription{
 	Endpoint: "https://fcm.googleapis.com/fcm/send/abc",
 	P256dh:   "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4",
 	Auth:     "BTBZMqHH6r4Tts7J_aSIgg",
-	Origin:   "https://time.example.com",
+	Origin:   "https://tickets.example.com",
 }
 
 type pushFixture struct {
@@ -208,7 +208,7 @@ func TestAStopwatchIsPushedInTheMinuteItsHoursPass(t *testing.T) {
 	}
 
 	if len(f.pushed.sent) != 1 || f.pushed.sent[0].Title != "The stopwatch is still running" ||
-		f.pushed.sent[0].Tag != "gtr-stopwatch" || !strings.Contains(f.pushed.sent[0].Body, "2 h") {
+		f.pushed.sent[0].Tag != "gts-stopwatch" || !strings.Contains(f.pushed.sent[0].Body, "2 h") {
 		t.Errorf("in the minute the hours passed, pushed %+v", f.pushed.sent)
 	}
 }
@@ -239,7 +239,7 @@ func TestAnUnbookedDayIsPushedAtEightOnTheOwnersClock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(f.pushed.sent) != 1 || f.pushed.sent[0].Tag != "gtr-unbooked" {
+	if len(f.pushed.sent) != 1 || f.pushed.sent[0].Tag != "gts-unbooked" {
 		t.Errorf("at eight in Berlin, pushed %+v", f.pushed.sent)
 	}
 }
@@ -347,7 +347,7 @@ func TestThePushSaysThePagesWordsInItsEnglish(t *testing.T) {
 		{
 			Title: pageEnglish(t, "remind.title"),
 			Body:  i18n.Fill(pageEnglish(t, "remind.unbooked"), words.Day(day), pageEnglish(t, "nav.timesheets")),
-			Tag:   "gtr-unbooked",
+			Tag:   "gts-unbooked",
 			At:    "2026-11-10T07:00:00Z",
 			About: "2026-11-09",
 		},
@@ -355,7 +355,7 @@ func TestThePushSaysThePagesWordsInItsEnglish(t *testing.T) {
 			Title: pageEnglish(t, "timer.longTitle"),
 			Body: i18n.Fill(pageEnglish(t, "timer.longBody"), "2 "+pageEnglish(t, "unit.hours"),
 				words.Moment(started.In(berlin))),
-			Tag:   "gtr-stopwatch",
+			Tag:   "gts-stopwatch",
 			At:    "2026-11-10T09:00:00Z",
 			About: "2026-11-10T07:00:00Z",
 		},

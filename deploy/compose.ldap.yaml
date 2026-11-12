@@ -37,7 +37,7 @@
 #
 # The directory comes up empty. That is deliberate: it holds a suffix, an
 # ou=people to put staff in, and the account the application binds as. Invented
-# people would arrive in the time recording on the first synchronisation, named
+# people would arrive in the ticket system on the first synchronisation, named
 # after nobody.
 #
 # Add somebody, from the host, using the admin password from .env:
@@ -187,7 +187,7 @@ services:
 
 # No `depends_on` between the application and this, on purpose - and this one
 # matters more than it does for the collector. A directory that fails its
-# health check must not keep the time recording from starting: the built-in
+# health check must not keep the ticket system from starting: the built-in
 # administrator signs in with a local password, and it is the account that has
 # to be able to reach Settings and switch the directory off when the directory
 # is what is broken. Ordering the two would mean a directory outage is an

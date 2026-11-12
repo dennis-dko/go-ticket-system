@@ -3,7 +3,7 @@ package model_test
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // The tab is named separately where an installation says so, and by the title
@@ -19,18 +19,18 @@ func TestTheTabIsNamedSeparatelyOrByTheTitle(t *testing.T) {
 		want     string
 	}{
 		"nothing of its own": {
-			branding: model.Branding{Title: "Zeiterfassung der Beispiel GmbH"},
-			want:     "Zeiterfassung der Beispiel GmbH",
+			branding: model.Branding{Title: "Ticketsystem der Beispiel GmbH"},
+			want:     "Ticketsystem der Beispiel GmbH",
 		},
 		"its own name": {
-			branding: model.Branding{Title: "Zeiterfassung der Beispiel GmbH", TabTitle: "Zeiterfassung"},
-			want:     "Zeiterfassung",
+			branding: model.Branding{Title: "Ticketsystem der Beispiel GmbH", TabTitle: "Ticketsystem"},
+			want:     "Ticketsystem",
 		},
 		// Spaces are not a name. Somebody clearing the field leaves whatever the
 		// keyboard left behind, and a tab titled " " is a tab titled nothing.
 		"blank": {
-			branding: model.Branding{Title: "Zeiterfassung", TabTitle: "   "},
-			want:     "Zeiterfassung",
+			branding: model.Branding{Title: "Ticketsystem", TabTitle: "   "},
+			want:     "Ticketsystem",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

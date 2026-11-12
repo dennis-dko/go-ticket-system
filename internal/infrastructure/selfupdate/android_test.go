@@ -12,8 +12,8 @@ import (
 // newest one's page with no file named.
 func TestTheAndroidAppIsTheOneOfThisRelease(t *testing.T) {
 	for version, want := range map[string][2]string{
-		"v0.4.6": {Releases + "/tag/v0.4.6", Releases + "/download/v0.4.6/go-time-recording-mobile_v0.4.6.apk"},
-		"v1.0.0": {Releases + "/tag/v1.0.0", Releases + "/download/v1.0.0/go-time-recording-mobile_v1.0.0.apk"},
+		"v0.4.6": {Releases + "/tag/v0.4.6", Releases + "/download/v0.4.6/go-ticket-system-mobile_v0.4.6.apk"},
+		"v1.0.0": {Releases + "/tag/v1.0.0", Releases + "/download/v1.0.0/go-ticket-system-mobile_v1.0.0.apk"},
 
 		// What a build from a source tree says - how far past its last tag, a
 		// changed tree, no tag at all - and what a build says without a version.
@@ -48,7 +48,7 @@ func TestTheReleasePublishesTheAndroidAppUnderTheNameItIsAskedFor(t *testing.T) 
 		t.Errorf("the release copies no APK to dist/%s, the name this version asks for", asked)
 	}
 
-	if !regexp.MustCompile(`(?m)^\s+dist/go-time-recording-mobile_\*\s*$`).Match(raw) {
-		t.Error("the release publishes nothing called go-time-recording-mobile_...")
+	if !regexp.MustCompile(`(?m)^\s+dist/go-ticket-system-mobile_\*\s*$`).Match(raw) {
+		t.Error("the release publishes nothing called go-ticket-system-mobile_...")
 	}
 }

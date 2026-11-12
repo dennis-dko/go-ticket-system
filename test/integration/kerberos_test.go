@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
-	"github.com/dennis-dko/go-time-recording/test/kerberostest"
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/go-ticket-system/internal/support/security"
+	"github.com/dennis-dko/go-ticket-system/test/kerberostest"
+	"github.com/dennis-dko/go-ticket-system/test/tempdir"
 )
 
 // kerberosState mirrors the answer to whether a ticket sign-in is on offer.

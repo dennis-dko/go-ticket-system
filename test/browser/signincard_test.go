@@ -20,7 +20,7 @@ func TestTheSignInCardWelcomesByTheInstallationsName(t *testing.T) {
 	p := open(t)
 	p.readyAdmin()
 
-	// Titled "Zeiterfassung", with no logo, so the lettered mark stands in the
+	// Titled "Ticketsystem", with no logo, so the lettered mark stands in the
 	// band beside the words.
 	p.storeBranding(t, "")
 
@@ -31,7 +31,7 @@ func TestTheSignInCardWelcomesByTheInstallationsName(t *testing.T) {
 
 	p.waitEvaluates("the heading of the sign-in card",
 		`document.querySelector('#login-screen h2')?.textContent.trim() ?? ''`,
-		"Welcome to Zeiterfassung")
+		"Welcome to Ticketsystem")
 
 	// The mark stands before the words, in the same band.
 	var placed struct {

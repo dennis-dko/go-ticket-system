@@ -43,7 +43,7 @@ userPassword: alice-password
 
 # Rename this one's mail address to prove a rename is not a departure:
 #   ldapmodify -x -H ldap://localhost:5389 \
-#     -D 'cn=admin,dc=example,dc=com' -w gtr-test-password <<'EOF'
+#     -D 'cn=admin,dc=example,dc=com' -w gts-test-password <<'EOF'
 #   dn: uid=bob,ou=people,dc=example,dc=com
 #   changetype: modify
 #   replace: mail

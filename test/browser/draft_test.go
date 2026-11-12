@@ -36,7 +36,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 			chromedp.ByQuery))
 
 	typed := map[string]string{
-		"host": "db.example.invalid", "name": "gtr_live", "user": "gtr_admin",
+		"host": "db.example.invalid", "name": "gts_live", "user": "gts_admin",
 	}
 
 	// Emptied first, the way a person empties a box - with the input event that
@@ -90,7 +90,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 
 	p.run("read what was written down", chromedp.Evaluate(`
 		JSON.stringify(Object.keys(sessionStorage)
-			.filter((key) => key.startsWith('gtr.draft.'))
+			.filter((key) => key.startsWith('gts.draft.'))
 			.map((key) => sessionStorage.getItem(key)))`, &kept))
 
 	if strings.Contains(kept, secret) {
@@ -105,7 +105,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 	var after string
 
 	p.run("read them again", chromedp.Evaluate(`
-		JSON.stringify(Object.keys(sessionStorage).filter((key) => key.startsWith('gtr.draft.')))`,
+		JSON.stringify(Object.keys(sessionStorage).filter((key) => key.startsWith('gts.draft.')))`,
 		&after))
 
 	if after != "[]" {
@@ -149,7 +149,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 			// Under this account's own prefix: a draft belongs to whoever wrote
 			// it, and one filed under anybody else is not found at all - which
 			// would make this case pass without proving anything.
-			sessionStorage.setItem('gtr.draft.' + me.user.id + '.form-datasource',
+			sessionStorage.setItem('gts.draft.' + me.user.id + '.form-datasource',
 				JSON.stringify({
 				version: 'v0.0.1-before',
 				values: { dialect: '', name: '', host: '', port: '', user: '', sslMode: '' },
@@ -176,7 +176,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 	var left string
 
 	p.run("look for the draft", chromedp.Evaluate(
-		`String(sessionStorage.getItem('gtr.draft.' + me.user.id + '.form-datasource') ?? '')`,
+		`String(sessionStorage.getItem('gts.draft.' + me.user.id + '.form-datasource') ?? '')`,
 		&left))
 
 	if left != "" {
@@ -185,12 +185,12 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 
 	// What this version writes is stamped, or the next update repeats all of it.
 	p.run("type something", chromedp.SendKeys(
-		`#form-datasource [name="name"]`, "gtr_live", chromedp.ByQuery))
+		`#form-datasource [name="name"]`, "gts_live", chromedp.ByQuery))
 
 	var stamped string
 
 	p.run("read what was written down", chromedp.Evaluate(
-		`String(sessionStorage.getItem('gtr.draft.' + me.user.id + '.form-datasource') ?? '')`,
+		`String(sessionStorage.getItem('gts.draft.' + me.user.id + '.form-datasource') ?? '')`,
 		&stamped))
 
 	if !strings.Contains(stamped, `"version":"`) || strings.Contains(stamped, `"version":""`) {

@@ -39,11 +39,11 @@ func TestNothingStuttersAndTheLayeringHolds(t *testing.T) {
 		// longer be tested or reused without one.
 		forbidden := map[string][]string{
 			"internal/domain": {
-				"go-time-recording/internal/infrastructure",
-				"go-time-recording/internal/interface",
+				"go-ticket-system/internal/infrastructure",
+				"go-ticket-system/internal/interface",
 			},
 			"internal/application": {
-				"go-time-recording/internal/interface",
+				"go-ticket-system/internal/interface",
 			},
 		}
 

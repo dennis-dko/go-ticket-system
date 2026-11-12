@@ -5,7 +5,7 @@
 # Asked by a file appearing in a shared volume, and by nothing else. There is no
 # listener here, no argument to pass and no name to choose: the request is empty
 # and the answer to it is always the same sentence - pull the image the compose
-# file names, recreate the service named in GTR_UPDATE_SERVICE, remove the image
+# file names, recreate the service named in GTS_UPDATE_SERVICE, remove the image
 # that was replaced.
 #
 # That narrowness is the whole design. This container holds the Docker socket,
@@ -30,9 +30,9 @@
 
 set -eu
 
-REQUESTS="${GTR_UPDATE_REQUESTS:-/var/lib/gtr/update}"
-SERVICE="${GTR_UPDATE_SERVICE:-app}"
-POLL="${GTR_UPDATE_POLL:-3}"
+REQUESTS="${GTS_UPDATE_REQUESTS:-/var/lib/gts/update}"
+SERVICE="${GTS_UPDATE_SERVICE:-app}"
+POLL="${GTS_UPDATE_POLL:-3}"
 
 log() { echo "[updater] $*"; }
 
@@ -176,7 +176,7 @@ verify_paths() {
         log "every bind mount the application has would be computed against a path"
         log "the host does not have, and Docker would create it empty - an"
         log "application recreated that way comes up with nothing mounted."
-        log "set GTR_PROJECT_DIR to $there and start this again."
+        log "set GTS_PROJECT_DIR to $there and start this again."
         return 1
     fi
 
@@ -208,8 +208,8 @@ fi
 # start-up, so a container that came up before this ran finds the button a
 # moment later without being restarted.
 mkdir -p "$REQUESTS"
-chown "${GTR_UPDATE_OWNER:-10001}" "$REQUESTS" 2>/dev/null ||
-    log "could not give $REQUESTS to uid ${GTR_UPDATE_OWNER:-10001}; the application may not be able to ask"
+chown "${GTS_UPDATE_OWNER:-10001}" "$REQUESTS" 2>/dev/null ||
+    log "could not give $REQUESTS to uid ${GTS_UPDATE_OWNER:-10001}; the application may not be able to ask"
 
 log "watching $REQUESTS for $SERVICE, every ${POLL}s"
 

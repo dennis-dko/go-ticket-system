@@ -13,7 +13,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // Firefox takes the configured logo as the tab's icon, whatever shape it is in.
@@ -51,7 +51,7 @@ func TestFirefoxAdoptsTheLogoAsTheTabIcon(t *testing.T) {
 			signIn(t, b)
 
 			post(t, b, "/api/v1/settings/branding",
-				fmt.Sprintf(`{"title":"Zeiterfassung","logo":%q}`, logo), "PUT")
+				fmt.Sprintf(`{"title":"Ticketsystem","logo":%q}`, logo), "PUT")
 
 			b.goTo(app.BaseURL())
 

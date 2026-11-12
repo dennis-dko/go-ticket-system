@@ -100,7 +100,7 @@ func (p *page) bookAnHourOn(t *testing.T, name string) {
 	p.run("book an hour on "+name, chromedp.Evaluate(fmt.Sprintf(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 
 			const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
 

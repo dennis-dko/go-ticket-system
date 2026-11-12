@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // refused is as much of a refusal as these cases read.
@@ -43,7 +43,7 @@ func TestAFailedProbeIsNamedAndKeepsWhatTheDriverSaid(t *testing.T) {
 	}
 
 	// Nothing listens on port 1, so the refusal is immediate.
-	const nobody = `{"dialect":"postgres","name":"gtr","host":"127.0.0.1","port":"1","user":"gtr","password":"x"}`
+	const nobody = `{"dialect":"postgres","name":"gts","host":"127.0.0.1","port":"1","user":"gts","password":"x"}`
 
 	for path, handler := range map[string]http.HandlerFunc{
 		"/install/test": s.test, "/install/save": s.save,
@@ -129,7 +129,7 @@ func TestAConnectionThatCannotBeSavedIsNamed(t *testing.T) {
 // GoFr writes the connection string with the values as they are, and the probe
 // writes it the same way, so a probe that succeeds proves nothing about this.
 // Measured: with no password a PostgreSQL connection reads "password=
-// dbname=gtr", the driver takes "dbname=gtr" for the password, and the server
+// dbname=gts", the driver takes "dbname=gts" for the password, and the server
 // opens the database named after the account - against a server that asks for
 // no password, the installer saved it and the application created its tables in
 // "postgres" while its log said the database it had been given. A space in the
@@ -143,16 +143,16 @@ func TestAConnectionTheDriverWouldReadOtherwiseIsRefused(t *testing.T) {
 	// Nothing listens on port 1, so whatever is let through fails at once.
 	for _, c := range []struct{ what, body, code string }{
 		{"a PostgreSQL connection without a password",
-			`{"dialect":"postgres","name":"gtr","host":"127.0.0.1","port":"1","user":"postgres"}`,
+			`{"dialect":"postgres","name":"gts","host":"127.0.0.1","port":"1","user":"postgres"}`,
 			"passwordSwallowsName"},
 		{"a PostgreSQL password with a space",
-			`{"dialect":"postgres","name":"gtr","host":"127.0.0.1","port":"1","user":"gtr","password":"two words"}`,
+			`{"dialect":"postgres","name":"gts","host":"127.0.0.1","port":"1","user":"gts","password":"two words"}`,
 			"postgresMisread"},
 		{"a MySQL address without its brackets",
-			`{"dialect":"mysql","name":"gtr","host":"::1","port":"1","user":"gtr","password":"x"}`,
+			`{"dialect":"mysql","name":"gts","host":"::1","port":"1","user":"gts","password":"x"}`,
 			"mysqlMisread"},
 		{"a MySQL password the driver reads intact",
-			`{"dialect":"mysql","name":"gtr","host":"127.0.0.1","port":"1","user":"gtr","password":"p@ss:w/rd?"}`,
+			`{"dialect":"mysql","name":"gts","host":"127.0.0.1","port":"1","user":"gts","password":"p@ss:w/rd?"}`,
 			"probeFailed"},
 	} {
 		for path, handler := range map[string]http.HandlerFunc{

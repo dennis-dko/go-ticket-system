@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
 )
 
 // A figure in the configuration that is not a finite number falls back to the

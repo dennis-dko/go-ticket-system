@@ -65,7 +65,7 @@ func TestTheBackingServicesMatchWhatADeploymentRuns(t *testing.T) {
 // By text rather than by parsing the YAML: a parser would be a dependency and a
 // schema to keep up with, for a line that has looked the same since compose
 // files existed. Images whose tag is interpolated are skipped - the
-// application's own is ${GTR_VERSION}, which is a deployment's choice and not a
+// application's own is ${GTS_VERSION}, which is a deployment's choice and not a
 // version this repository pins.
 func imagesIn(t *testing.T, dir string) map[string]string {
 	t.Helper()

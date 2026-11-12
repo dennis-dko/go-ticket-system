@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 )
 
 // iconPath is where the browser tab's icon comes from.
@@ -46,7 +46,7 @@ type document struct {
 // because a change to index.html that misses this file should fail loudly here
 // rather than quietly serve a document with nothing substituted.
 const (
-	titleMarkup = "<title>Time Recording</title>"
+	titleMarkup = "<title>Ticket System</title>"
 	iconMarkup  = `<link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">`
 )
@@ -90,7 +90,7 @@ func (d document) serve(w http.ResponseWriter, r *http.Request, branding Brandin
 
 	title := strings.TrimSpace(branding.Title)
 	if title == "" {
-		title = "Time Recording"
+		title = "Ticket System"
 	}
 
 	// The icon's address carries a fingerprint of what it will answer with, so a

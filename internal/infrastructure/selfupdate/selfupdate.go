@@ -116,7 +116,7 @@ var ErrInstalling = errors.New("an update is already being installed")
 var ErrAlreadyInstalled = errors.New("this version is already in place and waits for a restart")
 
 // DefaultAPI is where the releases of this project live.
-const DefaultAPI = "https://api.github.com/repos/dennis-dko/go-time-recording/releases/latest"
+const DefaultAPI = "https://api.github.com/repos/dennis-dko/go-ticket-system/releases/latest"
 
 // New creates a source with sensible limits.
 func New(api, token string) *Source {
@@ -154,11 +154,11 @@ func New(api, token string) *Source {
 // The same shape the release workflow builds, and windows is the one that
 // differs - it carries the extension the operating system needs to run it at
 // all. Versions from before the web binary was called -web ask for
-// go-time-recording_..., which releases no longer carry - decided on
+// go-ticket-system_..., which releases no longer carry - decided on
 // 2026-10-29 - so those are replaced by hand once and update themselves again
 // from then on.
 func assetName(version string) string {
-	name := fmt.Sprintf("go-time-recording-web_%s_%s_%s", version, runtime.GOOS, runtime.GOARCH)
+	name := fmt.Sprintf("go-ticket-system-web_%s_%s_%s", version, runtime.GOOS, runtime.GOARCH)
 
 	if runtime.GOOS == "windows" {
 		name += ".exe"
@@ -179,7 +179,7 @@ func (s *Source) Latest(ctx context.Context) (Release, error) {
 	// GitHub asks every caller to identify itself and refuses some that do not.
 	// Go sends "Go-http-client/1.1" by default, which is a caller nobody can tell
 	// apart from any other Go program on the same address.
-	req.Header.Set("User-Agent", "go-time-recording")
+	req.Header.Set("User-Agent", "go-ticket-system")
 
 	// A token where the installation has one. Unauthenticated callers get sixty
 	// requests an hour *per address*, which is generous for one instance and not

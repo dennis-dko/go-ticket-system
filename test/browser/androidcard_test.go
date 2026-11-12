@@ -9,8 +9,8 @@ import (
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/go-ticket-system/internal/support/qrcode"
 )
 
 // The card on My account offers the Android app and nothing else: a code for a
@@ -57,7 +57,7 @@ func TestTheInstallCardIsNotInTheAndroidApp(t *testing.T) {
 	p.readyWorker()
 
 	p.run("load the page as the app shows it", chromedp.ActionFunc(func(ctx context.Context) error {
-		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.GoTimeRecordingFiles = {};`).Do(ctx)
+		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.GoTicketSystemFiles = {};`).Do(ctx)
 
 		return err
 	}), chromedp.Reload())

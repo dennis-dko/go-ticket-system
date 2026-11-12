@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "go-time-recording API",
+    "title": "go-ticket-system API",
     "version": "1.0.0",
     "description": "Project time tracking.\n\nAuthenticate either with the session cookie obtained from `POST /auth/login`, or with a personal API token sent as `Authorization: Bearer <token>` or `X-API-Token: <token>`.\n\nA token carries no rights of its own: every request is evaluated against the owner's **current** role, so changing or revoking a role takes effect on the very next call.\n\nAll responses are wrapped by the framework as `{\"data\": ...}` on success and `{\"error\": {\"message\": ...}}` on failure."
   },
@@ -568,7 +568,7 @@
         },
         "responses": {
           "201": {
-            "description": "The token, including its `secret`, and what an app connects with: `connectUri`, which is `go-time-recording://connect?token=<the secret>&url=<this installation>` - the address being the one the request reached the installation at - and `qr`, that address as a QR code in an SVG data URI. All three exist only in this response."
+            "description": "The token, including its `secret`, and what an app connects with: `connectUri`, which is `go-ticket-system://connect?token=<the secret>&url=<this installation>` - the address being the one the request reached the installation at - and `qr`, that address as a QR code in an SVG data URI. All three exist only in this response."
           },
           "409": {
             "description": "Token limit reached"
@@ -2245,7 +2245,7 @@
           "me"
         ],
         "summary": "This installation's address, and the same as a QR code",
-        "description": "Answers {\"address\": \"https://time.example.com\", \"qr\": \"data:image/svg+xml;base64,...\"}. `?origin=` names the address the asking page is at, its location.origin, and is taken where it names the host the request reached, with http or https; otherwise the address is this installation as the request reached it. The code is for opening the installation on a phone without typing its address. Needs nothing beyond being signed in.",
+        "description": "Answers {\"address\": \"https://tickets.example.com\", \"qr\": \"data:image/svg+xml;base64,...\"}. `?origin=` names the address the asking page is at, its location.origin, and is taken where it names the host the request reached, with http or https; otherwise the address is this installation as the request reached it. The code is for opening the installation on a phone without typing its address. Needs nothing beyond being signed in.",
         "responses": {
           "200": {
             "description": "OK"
@@ -2262,7 +2262,7 @@
           "me"
         ],
         "summary": "Where the Android app of this installation is downloaded, and the same as a QR code",
-        "description": "Answers {\"release\": \"https://github.com/dennis-dko/go-time-recording/releases/tag/v0.4.8\", \"download\": \"https://github.com/dennis-dko/go-time-recording/releases/download/v0.4.8/go-time-recording-mobile_v0.4.8.apk\", \"qr\": \"data:image/svg+xml;base64,...\"}. The app belongs to the release it was built with, so these are the release this installation runs; an installation that runs no release - a build from source - is given the newest release's page and no download. The code is of the download, or of the page where there is none, for a phone's camera. Needs nothing beyond being signed in.",
+        "description": "Answers {\"release\": \"https://github.com/dennis-dko/go-ticket-system/releases/tag/v0.4.8\", \"download\": \"https://github.com/dennis-dko/go-ticket-system/releases/download/v0.4.8/go-ticket-system-mobile_v0.4.8.apk\", \"qr\": \"data:image/svg+xml;base64,...\"}. The app belongs to the release it was built with, so these are the release this installation runs; an installation that runs no release - a build from source - is given the newest release's page and no download. The code is of the download, or of the page where there is none, for a phone's camera. Needs nothing beyond being signed in.",
         "responses": {
           "200": {
             "description": "OK"
@@ -2279,7 +2279,7 @@
           "me"
         ],
         "summary": "Your calendar feed, without its key",
-        "description": "Answers {\"active\": true, \"prefix\": \"gtrcal_AbC123\", \"createdAt\": \"2026-10-20T09:30:00Z\", \"lastReadAt\": \"2026-10-20T10:00:00Z\"}, or {\"active\": false} without one. prefix is the start of the key, to recognise which address your calendar was given; lastReadAt says whether anything is reading it. Needs the right to read your own entries, which is what the feed hands out.",
+        "description": "Answers {\"active\": true, \"prefix\": \"gtscal_AbC123\", \"createdAt\": \"2026-10-20T09:30:00Z\", \"lastReadAt\": \"2026-10-20T10:00:00Z\"}, or {\"active\": false} without one. prefix is the start of the key, to recognise which address your calendar was given; lastReadAt says whether anything is reading it. Needs the right to read your own entries, which is what the feed hands out.",
         "responses": {
           "200": {
             "description": "OK"
@@ -3398,14 +3398,14 @@
       "sessionCookie": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "gtr_session",
-        "description": "A browser session. State-changing calls made with this must also echo the gtr_csrf cookie in the X-CSRF-Token header and come from this origin; calls authenticated by a personal API token are exempt. A call carrying `X-Background-Request: 1` is held to the session's lifetime and idle timeout like any other but is not counted as the session being used - the interface sends it on the checks it makes by itself, so that a screen left open is signed out by the idle timeout. Opening the event stream counts the same way."
+        "name": "gts_session",
+        "description": "A browser session. State-changing calls made with this must also echo the gts_csrf cookie in the X-CSRF-Token header and come from this origin; calls authenticated by a personal API token are exempt. A call carrying `X-Background-Request: 1` is held to the session's lifetime and idle timeout like any other but is not counted as the session being used - the interface sends it on the checks it makes by itself, so that a screen left open is signed out by the idle timeout. Opening the event stream counts the same way."
       },
       "csrfToken": {
         "type": "apiKey",
         "in": "header",
         "name": "X-CSRF-Token",
-        "description": "The value of the gtr_csrf cookie, echoed back. Required alongside sessionCookie on POST, PUT, PATCH and DELETE."
+        "description": "The value of the gts_csrf cookie, echoed back. Required alongside sessionCookie on POST, PUT, PATCH and DELETE."
       }
     },
     "schemas": {

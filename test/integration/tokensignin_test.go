@@ -59,7 +59,7 @@ func signedInAs(t *testing.T, answer response) string {
 // sessionCookieOf is the session cookie an answer set, empty where it set none.
 func sessionCookieOf(answer response) string {
 	for _, cookie := range (&http.Response{Header: answer.Header}).Cookies() {
-		if cookie.Name == "gtr_session" && cookie.Value != "" {
+		if cookie.Name == "gts_session" && cookie.Value != "" {
 			return cookie.Value
 		}
 	}
@@ -72,7 +72,7 @@ func sessionExpiryOf(t *testing.T, answer response) time.Time {
 	t.Helper()
 
 	for _, cookie := range (&http.Response{Header: answer.Header}).Cookies() {
-		if cookie.Name == "gtr_session" && cookie.Value != "" {
+		if cookie.Name == "gts_session" && cookie.Value != "" {
 			return cookie.Expires
 		}
 	}
@@ -106,7 +106,7 @@ func readingMe(t *testing.T, baseURL, session string) int {
 		t.Fatal(err)
 	}
 
-	req.AddCookie(&http.Cookie{Name: "gtr_session", Value: session})
+	req.AddCookie(&http.Cookie{Name: "gts_session", Value: session})
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -218,7 +218,7 @@ func TestATokensSignInIsTheTokensOwnerWhateverCookieComesWithIt(t *testing.T) {
 	var adminSession string
 
 	for _, cookie := range admin.http.Jar.Cookies(base) {
-		if cookie.Name == "gtr_session" {
+		if cookie.Name == "gts_session" {
 			adminSession = cookie.Value
 		}
 	}
@@ -254,7 +254,7 @@ func TestWhatIsNoUsableTokenOpensNoSession(t *testing.T) {
 		status      int
 	}{
 		{"no token at all", "", http.StatusForbidden},
-		{"a token nobody made", "gtr_" + "0123456789abcdef0123456789abcdef", http.StatusUnauthorized},
+		{"a token nobody made", "gts_" + "0123456789abcdef0123456789abcdef", http.StatusUnauthorized},
 	} {
 		answer := tokenSignIn(t, a.BaseURL(), tc.token)
 		if answer.Status != tc.status || sessionCookieOf(answer) != "" {

@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
 )
 
 // SetupService reports what a fresh installation still has to settle.

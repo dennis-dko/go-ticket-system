@@ -1,6 +1,6 @@
 # Getting started
 
-Installing Go-Time-Recording, what its first start looks like, and what the
+Installing Go-Ticket-System, what its first start looks like, and what the
 first sign-in asks for. Running it on a server is the subject of
 [`deploy/OPERATION.md`](../deploy/OPERATION.md).
 
@@ -32,7 +32,7 @@ itself would look like one that crashed.
 It asks for a token, printed to the log when the process starts:
 
 ```text
-no database is configured, so Time Recording is serving its installer instead
+no database is configured, so Ticket System is serving its installer instead
 open http://localhost:8000 to choose one - the application will not start until you do
 setup token: 782106f2d715eaebba8e1c4b93f0a2d1
 ```
@@ -172,14 +172,14 @@ the mark off the file first — Windows attaches it to anything downloaded from 
 internet:
 
 ```powershell
-Unblock-File .\go-time-recording-web_v1.2.3_windows_amd64.exe
+Unblock-File .\go-ticket-system-web_v1.2.3_windows_amd64.exe
 ```
 
 Check the download against the release's `SHA256SUMS` before doing either. That
 is the part that actually tells you the file is the one that was published:
 
 ```powershell
-Get-FileHash .\go-time-recording-web_v1.2.3_windows_amd64.exe -Algorithm SHA256
+Get-FileHash .\go-ticket-system-web_v1.2.3_windows_amd64.exe -Algorithm SHA256
 ```
 
 **Properly, for everybody.** A code signing certificate, which costs money every

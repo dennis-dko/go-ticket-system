@@ -112,7 +112,7 @@ func TestUnassigningAProjectActuallyUnassignsIt(t *testing.T) {
 	// about the booking form.
 	p.run("create a project", chromedp.Evaluate(`(async () => {
 		const token = document.cookie.split('; ')
-			.find((c) => c.startsWith('gtr_csrf=')).split('=')[1];
+			.find((c) => c.startsWith('gts_csrf=')).split('=')[1];
 		const res = await fetch('/api/v1/projects', {
 			method: 'POST',
 			credentials: 'same-origin',

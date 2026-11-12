@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	appconfig "github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // A password left out of the form stands for the one belonging to the connection
@@ -38,16 +38,16 @@ func TestTheKeptPasswordGoesOnlyToItsOwnServer(t *testing.T) {
 
 	connection := func(user, password string) map[string]any {
 		return map[string]any{
-			"dialect": "postgres", "name": "gtr", "host": "127.0.0.1", "port": port,
+			"dialect": "postgres", "name": "gts", "host": "127.0.0.1", "port": port,
 			"user": user, "password": password, "sslMode": "disable",
 		}
 	}
 
 	admin.must(admin.api(http.MethodPut, "/settings/datasource",
-		connection("gtr", "the-stored-secret")), http.StatusOK)
+		connection("gts", "the-stored-secret")), http.StatusOK)
 
 	// Its own server and user: the kept password is what an untouched field means.
-	admin.must(admin.api(http.MethodPost, "/settings/datasource/test", connection("gtr", "")),
+	admin.must(admin.api(http.MethodPost, "/settings/datasource/test", connection("gts", "")),
 		http.StatusOK, http.StatusCreated)
 
 	if got := caught(t, passwords); got != "the-stored-secret" {
@@ -93,7 +93,7 @@ func TestTheKeptPasswordGoesOnlyToItsOwnServer(t *testing.T) {
 // takes precedence over the environment at the next start, and that start could
 // no longer sign in to its own database.
 //
-// Only a server has a password, so this runs where GTR_TEST_DSN names one - the
+// Only a server has a password, so this runs where GTS_TEST_DSN names one - the
 // PostgreSQL and MySQL legs.
 func TestAnUntouchedPasswordKeepsTheOneTheEnvironmentGave(t *testing.T) {
 	t.Parallel()

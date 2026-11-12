@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -70,7 +70,7 @@ class LanguageTest {
 
     @Test
     fun aSentenceADictionaryLacksIsSaidInEnglish() {
-        assertEquals("Reading time.example.com …", german.text("mobile.reading", "Reading {0} …", "time.example.com"))
+        assertEquals("Reading tickets.example.com …", german.text("mobile.reading", "Reading {0} …", "tickets.example.com"))
         assertEquals("Std.", german.text("unit.hours", "h"))
     }
 }

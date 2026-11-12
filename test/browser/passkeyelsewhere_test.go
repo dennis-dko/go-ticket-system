@@ -21,7 +21,7 @@ func TestAPasskeyCardKeptBackSaysWhy(t *testing.T) {
 	t.Parallel()
 
 	for _, place := range []struct{ name, script, says string }{
-		{"the Android app", `window.GoTimeRecordingFiles = {};`, "The app signs in with the token"},
+		{"the Android app", `window.GoTicketSystemFiles = {};`, "The app signs in with the token"},
 		{"a browser without passkeys", `delete window.PublicKeyCredential;`, "This browser cannot use passkeys here"},
 	} {
 		t.Run(place.name, func(t *testing.T) {

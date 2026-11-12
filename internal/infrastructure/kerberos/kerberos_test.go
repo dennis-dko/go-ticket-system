@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/test/kerberostest"
+	"github.com/dennis-dko/go-ticket-system/test/kerberostest"
 )
 
 // served sends header to the acceptor and says what it answered and whom next

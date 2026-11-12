@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // A description names its activities where a word starts with #: once each,

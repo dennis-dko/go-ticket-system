@@ -9,10 +9,10 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
+	"github.com/dennis-dko/go-ticket-system/internal/support/qrcode"
 )
 
 // APITokenHeader is the alternative to "Authorization: Bearer <token>", for
@@ -109,7 +109,7 @@ type APITokenResponse struct {
 	Secret  *string `json:"secret,omitempty"`
 
 	// ConnectURI is what an app reaches this installation with as the token's
-	// owner: go-time-recording://connect?url=...&token=..., carrying the
+	// owner: go-ticket-system://connect?url=...&token=..., carrying the
 	// installation's address and the token. QR is the same address as a code
 	// to scan, an SVG data URI. Both carry the secret, so both exist where it
 	// does - in the answer that created the token - and nowhere else.
@@ -119,7 +119,7 @@ type APITokenResponse struct {
 
 // connectScheme is the scheme of a connection address, which an app registers
 // so that scanning the code with the camera opens it.
-const connectScheme = "go-time-recording"
+const connectScheme = "go-ticket-system"
 
 // connectURI is the connection address of an installation reached at address,
 // as the owner of token.

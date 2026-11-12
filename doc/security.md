@@ -11,7 +11,7 @@ Implemented, and verified against a running instance:
   of its own steps.
 - **CSRF protection** on every request that changes something. Two independent
   checks have to pass: the `Origin` (or, failing that, the `Referer`) must name
-  this host, and the `X-CSRF-Token` header must equal the `gtr_csrf` cookie.
+  this host, and the `X-CSRF-Token` header must equal the `gts_csrf` cookie.
   That cookie is deliberately readable by JavaScript — the point is that our own
   script can read it and another site's cannot. The token is replaced on
   sign-in, so one handed to an anonymous visitor never carries into a session.

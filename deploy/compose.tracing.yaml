@@ -40,7 +40,7 @@
 # which on the server is usually nobody - and the symptom is a password prompt
 # for an account you never set up.
 #
-# To reach it by name from the network instead, see GTR_TRACES_BIND below.
+# To reach it by name from the network instead, see GTS_TRACES_BIND below.
 
 services:
   jaeger:
@@ -92,11 +92,11 @@ services:
       # can say so, and is deciding that everything which can reach the host may
       # read the traces:
       #
-      #   GTR_TRACES_BIND=0.0.0.0    in .env, then http://<host>:16686
+      #   GTS_TRACES_BIND=0.0.0.0    in .env, then http://<host>:16686
       #
       # Left as a variable rather than documented as an edit, so it survives
       # pulling a new copy of this file.
-      - "${GTR_TRACES_BIND:-127.0.0.1}:16686:16686"
+      - "${GTS_TRACES_BIND:-127.0.0.1}:16686:16686"
       # Deliberately no 4317. The application reaches the receiver as
       # jaeger:4317 inside this network, and nothing outside needs to: a
       # published receiver lets anyone who can reach the host write spans into
@@ -122,7 +122,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
 # No `depends_on` on the application on purpose. Ordering the two would mean a
-# collector that fails its health check keeps the time recording from starting,
+# collector that fails its health check keeps the ticket system from starting,
 # and a debugging aid must never be able to do that. The cost is that spans
 # exported in the seconds before Jaeger is ready are lost, which nobody is
 # reading anyway.

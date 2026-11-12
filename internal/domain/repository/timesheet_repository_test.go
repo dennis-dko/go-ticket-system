@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
 )
 
 // A range is a range of days, whatever zone its ends were built in.

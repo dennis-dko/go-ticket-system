@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/go-ticket-system/test/tempdir"
 )
 
 // A slow connection is not a broken one, and the download must not treat it as

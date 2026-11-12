@@ -28,19 +28,19 @@ const (
 	// MetricHoursBooked is a histogram, so it carries the total and the shape:
 	// a day recorded as one eight-hour entry and one recorded as sixteen
 	// half-hour entries are different installations to support.
-	MetricHoursBooked = "gtr_timesheet_hours_booked"
+	MetricHoursBooked = "gts_timesheet_hours_booked"
 
 	// MetricSignInFailures counts refused sign-ins, labelled "reason" with a
 	// fixed handful of values.
-	MetricSignInFailures = "gtr_signin_failures_total"
+	MetricSignInFailures = "gts_signin_failures_total"
 
 	// MetricDirectoryAccounts counts what a synchronisation did, labelled
 	// "action" with "created" or "deleted".
-	MetricDirectoryAccounts = "gtr_directory_accounts_total"
+	MetricDirectoryAccounts = "gts_directory_accounts_total"
 
 	// MetricDirectoryRuns counts what each scheduled synchronisation came to,
 	// labelled "outcome" with one of the DirectoryRun values.
-	MetricDirectoryRuns = "gtr_directory_scheduled_runs_total"
+	MetricDirectoryRuns = "gts_directory_scheduled_runs_total"
 )
 
 // What a scheduled synchronisation came to. A closed set, because it is a label.

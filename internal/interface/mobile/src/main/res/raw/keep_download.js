@@ -6,8 +6,8 @@
 // when its link is made, and a click on such a link hands it to the app, which
 // asks where to save it.
 (function () {
-  if (window.goTimeRecordingKeepsDownloads) return;
-  window.goTimeRecordingKeepsDownloads = true;
+  if (window.goTicketSystemKeepsDownloads) return;
+  window.goTicketSystemKeepsDownloads = true;
 
   const blobs = new Map();
   const create = URL.createObjectURL;
@@ -30,7 +30,7 @@
     const name = this.download;
     const reader = new FileReader();
 
-    reader.onload = () => GoTimeRecordingFiles.save(String(reader.result).split(',')[1] || '', name);
+    reader.onload = () => GoTicketSystemFiles.save(String(reader.result).split(',')[1] || '', name);
     reader.readAsDataURL(blob);
   };
 })();

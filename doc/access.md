@@ -274,9 +274,9 @@ Three things hold whatever an installation configures:
 Every user can issue their own tokens under **My account**:
 
 ```bash
-curl -H "Authorization: Bearer gtr_xxxxx" https://your-host/api/v1/timesheets
+curl -H "Authorization: Bearer gts_xxxxx" https://your-host/api/v1/timesheets
 # or
-curl -H "X-API-Token: gtr_xxxxx" https://your-host/api/v1/timesheets
+curl -H "X-API-Token: gts_xxxxx" https://your-host/api/v1/timesheets
 ```
 
 A token carries **no rights of its own**. Every request is evaluated against

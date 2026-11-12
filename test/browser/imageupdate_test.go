@@ -44,7 +44,7 @@ func TestTheUpdateCardSaysWhatTheLastImageUpdateCameTo(t *testing.T) {
 		t.Fatalf("cannot leave the updater's sign of life: %v", err)
 	}
 
-	p := openWith(t, "UPDATE_FEED="+feed.URL, "GTR_UPDATE_REQUESTS="+dir)
+	p := openWith(t, "UPDATE_FEED="+feed.URL, "GTS_UPDATE_REQUESTS="+dir)
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),

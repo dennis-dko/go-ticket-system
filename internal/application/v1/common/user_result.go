@@ -3,7 +3,7 @@ package common
 import (
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // UserResult result model. It deliberately carries no password material, so a

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Time Recording">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Ticket System">
   <!-- An hourglass on its own tile, drawn rather than typed.
        Drawn: the tab icon used to be the ⏱ character in an inline data URI,
        which is a font glyph - it renders as a different picture on every
@@ -12,7 +12,7 @@
        The tile is part of the mark rather than a background: it carries the
        colour, so this reads the same on a white tab strip, a dark one, and
        whatever colour somebody has made their taskbar. -->
-  <title>Time Recording</title>
+  <title>Ticket System</title>
   <rect x="3" y="3" width="26" height="26" rx="7.6" fill="#2f6feb"/>
   <!-- The two halves, meeting in the middle. The lower one is dimmer: it is the
        sand that has already fallen, which is what makes this a measure of time

@@ -70,7 +70,7 @@ func TestAnInstallationWithNoLogoStillHasAMark(t *testing.T) {
 	p.run("configure a logo", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map((c) => c.trim())
-				.find((c) => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find((c) => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 
 			const res = await fetch('/api/v1/settings/branding', {
 				method: 'PUT',

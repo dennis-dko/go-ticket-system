@@ -12,7 +12,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // A configured text may carry a date that stays current and a link that works.
@@ -126,13 +126,13 @@ func (p *page) setBrandingText(t *testing.T, field, value string) {
 	p.run("store "+field, chromedp.Evaluate(fmt.Sprintf(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/settings/branding', {
 				method: 'PUT',
 				credentials: 'same-origin',
 				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-				body: JSON.stringify({ title: 'Zeiterfassung', %s: %q }),
+				body: JSON.stringify({ title: 'Ticketsystem', %s: %q }),
 			});
 
 			return String(r.status);
@@ -270,32 +270,32 @@ func TestTheWizardTakesTheTitleInBothLanguages(t *testing.T) {
 	}
 
 	p.run("name it twice",
-		chromedp.SetValue(`#setup-step-fields input[name="title.en"]`, "Time Recording GmbH",
+		chromedp.SetValue(`#setup-step-fields input[name="title.en"]`, "Ticket System GmbH",
 			chromedp.ByQuery),
-		chromedp.SetValue(`#setup-step-fields input[name="title.de"]`, "Zeiterfassung GmbH",
+		chromedp.SetValue(`#setup-step-fields input[name="title.de"]`, "Ticketsystem GmbH",
 			chromedp.ByQuery),
 		p.click("#setup-next"))
 
 	// Stored, and told apart by language: the reader is on English here.
-	p.waitForText("#app-title", "Time Recording GmbH")
+	p.waitForText("#app-title", "Ticket System GmbH")
 
 	p.chooseLanguage("de")
 
-	p.waitForText("#app-title", "Zeiterfassung GmbH")
+	p.waitForText("#app-title", "Ticketsystem GmbH")
 }
 
 // The tab can be named separately from the header.
 //
 // They were one field, which holds until the header's name is too long to be a
 // tab: a browser gives a tab a couple of dozen characters and somebody has six
-// of them open, so "Zeiterfassung der Beispiel GmbH & Co. KG" reads as
-// "Zeiterfassung der B…" in every one of them.
+// of them open, so "Ticketsystem der Beispiel GmbH & Co. KG" reads as
+// "Ticketsystem der B…" in every one of them.
 func TestTheBrowserTabCanBeNamedSeparately(t *testing.T) {
 	t.Parallel()
 
 	const (
-		header = "Zeiterfassung der Beispiel GmbH"
-		tab    = "Zeiterfassung"
+		header = "Ticketsystem der Beispiel GmbH"
+		tab    = "Ticketsystem"
 	)
 
 	p := open(t)

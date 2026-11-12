@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-ticket-system/test/harness"
 )
 
 // Everything else about tracing can be checked without a collector: that the
@@ -25,7 +25,7 @@ import (
 // So this one exports to a real Jaeger and reads the trace back out of it.
 //
 //	docker compose --profile traces up -d --wait      (from test/)
-//	GTR_TEST_JAEGER=localhost:54317 go test -tags integration ./test/integration
+//	GTS_TEST_JAEGER=localhost:54317 go test -tags integration ./test/integration
 //
 // Or `task test:traces`, which does both.
 
@@ -33,11 +33,11 @@ const (
 	// jaegerEnv holds the collector as host:port - what the application dials.
 	// Empty skips, like the database DSN: a collector is not something every
 	// checkout has running.
-	jaegerEnv = "GTR_TEST_JAEGER"
+	jaegerEnv = "GTS_TEST_JAEGER"
 
 	// jaegerQueryEnv overrides where the trace is read back from. It has a
 	// default because test/docker-compose.yml fixes the port.
-	jaegerQueryEnv     = "GTR_TEST_JAEGER_QUERY"
+	jaegerQueryEnv     = "GTS_TEST_JAEGER_QUERY"
 	defaultJaegerQuery = "http://localhost:51686"
 )
 
@@ -131,7 +131,7 @@ func exportsSpansConfiguredAs(t *testing.T, tracerURL, collector string) {
 
 	// A name of this test's own, so the trace read back cannot be one left in
 	// the collector by an earlier run or by the staging profile.
-	service := fmt.Sprintf("gtr-integration-%d", time.Now().UnixNano())
+	service := fmt.Sprintf("gts-integration-%d", time.Now().UnixNano())
 
 	first := start(t, "DB_NAME="+shared, "APP_NAME="+service)
 	admin := first.signInAsAdmin("a-much-better-password")
@@ -182,7 +182,7 @@ func TestSwitchingTracingOffStopsSpansReachingTheCollector(t *testing.T) {
 	}
 
 	shared := harness.SharedDatabase(t)
-	service := fmt.Sprintf("gtr-off-%d", time.Now().UnixNano())
+	service := fmt.Sprintf("gts-off-%d", time.Now().UnixNano())
 
 	// This instance traces because its environment says so, the way a deployment
 	// configured in a file would.

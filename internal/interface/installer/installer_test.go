@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/config"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 )
 
 // The page is handed out with its sentences in every language but English
@@ -209,7 +209,7 @@ func TestTheInstallerFollowsTheBrowserLanguage(t *testing.T) {
 
 	// English stays in the markup as the fallback, so a key nobody translated
 	// still renders something.
-	if !strings.Contains(markup, ">Set up Time Recording</h1>") {
+	if !strings.Contains(markup, ">Set up Ticket System</h1>") {
 		t.Error("the English original is gone from the markup, so there is no fallback")
 	}
 }
@@ -340,8 +340,8 @@ func TestTheConnectionHandedOverIsTheOneTheNextStartReads(t *testing.T) {
 		done: make(chan config.Datasource, 1),
 	}
 
-	body := fmt.Sprintf(`{"dialect":"sqlite","name":%q,"host":"db","port":"5432","user":"gtr",`+
-		`"password":"left-over","sslMode":"disable"}`, filepath.ToSlash(filepath.Join(dir, "gtr")))
+	body := fmt.Sprintf(`{"dialect":"sqlite","name":%q,"host":"db","port":"5432","user":"gts",`+
+		`"password":"left-over","sslMode":"disable"}`, filepath.ToSlash(filepath.Join(dir, "gts")))
 	req := httptest.NewRequest(http.MethodPost, "/install/save", strings.NewReader(body))
 	req.Header.Set("X-Setup-Token", "the-token")
 

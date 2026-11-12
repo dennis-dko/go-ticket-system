@@ -51,14 +51,14 @@ var configDocs = []string{
 // so their absence from this code is correct rather than a gap.
 //
 // GOFR_TELEMETRY and SHUTDOWN_GRACE_PERIOD are GoFr's own and are consumed inside
-// the framework; GTR_VERSION is read by compose to choose the image tag and never
+// the framework; GTS_VERSION is read by compose to choose the image tag and never
 // reaches the process. Each is named here rather than matched by prefix, so the
 // next one is a decision somebody writes down. SHUTDOWN_GRACE_PERIOD was read by
 // main as well while GoFr's Run returned before its shutdown had finished; Run
 // waits for it since v1.62.0, which left main's own wait nothing to wait for.
 var notOurs = map[string]bool{
 	"GOFR_TELEMETRY":        true,
-	"GTR_VERSION":           true,
+	"GTS_VERSION":           true,
 	"SHUTDOWN_GRACE_PERIOD": true,
 }
 

@@ -19,8 +19,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/go-ticket-system/internal/interface/web"
+	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 )
 
 // sources are the app's Kotlin files, tests aside, by their path.

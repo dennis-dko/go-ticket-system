@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.goticketsystem
 
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -8,7 +8,7 @@ import org.junit.Test
 
 class ScannerTest {
 
-    private val link = "go-time-recording://connect?url=https%3A%2F%2Ftime.example.com&token=gtr_abc123"
+    private val link = "go-ticket-system://connect?url=https%3A%2F%2Ftickets.example.com&token=gts_abc123"
 
     /**
      * frame is [text] as a QR code in a camera's first plane: 300 pixels square,
@@ -40,7 +40,7 @@ class ScannerTest {
         val read = codeIn(bytes, 300, 300, stride)
 
         assertEquals(link, read)
-        assertEquals(Connection("https://time.example.com", "gtr_abc123"), connectionIn(read!!))
+        assertEquals(Connection("https://tickets.example.com", "gts_abc123"), connectionIn(read!!))
     }
 
     @Test

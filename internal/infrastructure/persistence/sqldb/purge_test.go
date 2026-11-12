@@ -10,9 +10,9 @@ import (
 
 	gofrmigration "gofr.dev/pkg/gofr/migration"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/migration"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/sqldb"
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/migration"
+	"github.com/dennis-dko/go-ticket-system/internal/infrastructure/persistence/sqldb"
 
 	_ "modernc.org/sqlite"
 )
@@ -112,7 +112,7 @@ func TestPurgeUserRemovesEveryReference(t *testing.T) {
 	}
 
 	if _, err := tokens.Save(ctx, &model.APIToken{
-		UserID: leaving.ID, Name: "ci", TokenHash: "hash", Prefix: "gtr_x", CreatedAt: time.Now(),
+		UserID: leaving.ID, Name: "ci", TokenHash: "hash", Prefix: "gts_x", CreatedAt: time.Now(),
 	}); err != nil {
 		t.Fatalf("create token: %v", err)
 	}

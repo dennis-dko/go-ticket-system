@@ -14,4 +14,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "go-time-recording-mobile"
+rootProject.name = "go-ticket-system-mobile"

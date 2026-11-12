@@ -40,7 +40,7 @@ type Sealer struct {
 // encryption on has rows written before it did, and a reader that had to guess
 // would either refuse them or, worse, hand back ciphertext as though it were a
 // secret.
-const sealedPrefix = "gtr.v1:"
+const sealedPrefix = "gts.v1:"
 
 // KeyBytes is the key length, in bytes: AES-256.
 const KeyBytes = 32

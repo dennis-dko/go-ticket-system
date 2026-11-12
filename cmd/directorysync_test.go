@@ -12,7 +12,7 @@ import (
 	"gofr.dev/pkg/gofr/logging"
 	"gofr.dev/pkg/gofr/testutil"
 
-	appservice "github.com/dennis-dko/go-time-recording/internal/application/v1/service"
+	appservice "github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
 )
 
 // slowRun has removed one account and works on until it is told to stop, which

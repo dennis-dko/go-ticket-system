@@ -138,7 +138,7 @@ func TestARefusalNamesAStatusTheWayTheScreenDoes(t *testing.T) {
 
 	p.run("make a project", chromedp.Evaluate(`(async () => {
 		const token = document.cookie.split('; ')
-			.find((c) => c.startsWith('gtr_csrf=')).split('=')[1];
+			.find((c) => c.startsWith('gts_csrf=')).split('=')[1];
 		const res = await fetch('/api/v1/projects', {
 			method: 'POST',
 			credentials: 'same-origin',
@@ -167,7 +167,7 @@ func TestARefusalNamesAStatusTheWayTheScreenDoes(t *testing.T) {
 
 	p.run("complete it elsewhere", chromedp.Evaluate(`(async () => {
 		const token = document.cookie.split('; ')
-			.find((c) => c.startsWith('gtr_csrf=')).split('=')[1];
+			.find((c) => c.startsWith('gts_csrf=')).split('=')[1];
 		const res = await fetch('/api/v1/projects/`+strconv.Itoa(int(id))+`', {
 			method: 'PUT',
 			credentials: 'same-origin',

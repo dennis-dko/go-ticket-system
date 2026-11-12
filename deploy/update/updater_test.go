@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/go-ticket-system/test/tempdir"
 )
 
 // stub writes a fake docker command that answers the way Docker does, and
@@ -139,12 +139,12 @@ func start(t *testing.T, stubDir, requests string) {
 
 	cmd.Env = append(os.Environ(),
 		"PATH="+stubDir+string(os.PathListSeparator)+os.Getenv("PATH"),
-		"GTR_UPDATE_REQUESTS="+requests,
-		"GTR_UPDATE_SERVICE=app",
+		"GTS_UPDATE_REQUESTS="+requests,
+		"GTS_UPDATE_SERVICE=app",
 		// What the daemon knows this container as.
 		"HOSTNAME=container-id",
 		// The loop sleeps between looks, and this test is waiting on it.
-		"GTR_UPDATE_POLL=1",
+		"GTS_UPDATE_POLL=1",
 	)
 
 	if err := cmd.Start(); err != nil {

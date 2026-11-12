@@ -161,7 +161,7 @@ const (
 	HoursPerDay = 24
 
 	// MinBookableHours is the shortest entry worth storing, and deliberately not
-	// a quarter of an hour: time recording records the time that was worked, so
+	// a quarter of an hour: ticket system records the time that was worked, so
 	// nothing here rounds to a grid. It exists only to separate a short booking
 	// from a mistyped one - below half a minute, nobody meant it.
 	//
