@@ -18,7 +18,7 @@ What is below was raised and is not recorded as decided anywhere.
 
 ## Decisions waiting on the maintainer
 
-None today: the last were decided on 2026-10-09. The table stays for the next.
+None today: the last was decided on 2026-11-12. The table stays for the next.
 
 | | Question |
 | --- | --- |

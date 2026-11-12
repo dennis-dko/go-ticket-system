@@ -3453,6 +3453,18 @@ function wireValidityMessages() {
   }, true);
 }
 
+/**
+ * What each pattern a field is held to asks for, in words. The browser can only
+ * call a pattern "the requested format", which says nothing about what to type,
+ * and says it in its own language rather than the screen's - so every pattern
+ * the markup uses is named here, and TestEveryPatternSaysWhatItAsksFor fails on
+ * one that is not.
+ */
+const PATTERN_MESSAGES = {
+  '[0-9]{6}': () => t('valid.code', 'Please enter the six digits your authenticator app shows.'),
+  '[A-Za-z]{3}': () => t('valid.currency', 'Please enter the three letters of a currency, such as EUR.'),
+};
+
 /** What a field's rule says about its value, or nothing where it has no objection. */
 function validityMessage(field) {
   const { validity } = field;
@@ -3462,13 +3474,28 @@ function validityMessage(field) {
   if (validity.badInput) return t('valid.number', 'Please enter a number.');
   if (validity.typeMismatch && field.type === 'email') return t('valid.email', 'Please enter an email address.');
   if (validity.typeMismatch && field.type === 'url') return t('valid.url', 'Please enter a web address.');
+
+  // Before the lengths: a pattern says the whole of what the field takes, and
+  // "at least 6 characters" is true of a code and less use than what the six are.
+  if (validity.patternMismatch && PATTERN_MESSAGES[field.getAttribute('pattern')]) {
+    return PATTERN_MESSAGES[field.getAttribute('pattern')]();
+  }
+
   if (validity.rangeUnderflow) return fillIn(t('valid.min', 'At least {0}.'), [limit(field.min)]);
   if (validity.rangeOverflow) return fillIn(t('valid.max', 'At most {0}.'), [limit(field.max)]);
   if (validity.tooLong) return fillIn(t('valid.maxLength', 'At most {0} characters.'), [field.maxLength]);
   if (validity.tooShort) return fillIn(t('valid.minLength', 'At least {0} characters.'), [field.minLength]);
 
-  // A pattern, a step, or whatever a later browser checks: its own words are
-  // better than a wrong sentence of ours.
+  // The steps that are left are the server's: whole numbers, and a rate in the
+  // hundredths it is kept in.
+  if (validity.stepMismatch) {
+    return Number(field.step) === 1
+      ? t('valid.wholeNumber', 'Please enter a whole number.')
+      : fillIn(t('valid.step', 'In steps of {0}.'), [Number(field.step)]);
+  }
+
+  // Whatever a later browser checks: its own words are better than a wrong
+  // sentence of ours.
   return '';
 }
 
@@ -8401,21 +8428,6 @@ function drawBranding(branding) {
       ? t('footer.versionTitle', 'Running version of this installation')
       : '';
   }
-
-  const appLink = $('#install-android-link');
-  if (appLink) appLink.href = releaseOfTheApp(branding.version);
-}
-
-/**
- * The release the Android app is downloaded from: the one this installation
- * runs, because the app belongs to the release it was built with. A build that
- * is no release - "dev", or how far a source tree is from its last tag - has no
- * release of its own, and is sent to the newest one.
- */
-function releaseOfTheApp(version) {
-  const releases = 'https://github.com/dennis-dko/go-time-recording/releases';
-
-  return /^v\d+\.\d+\.\d+$/.test(version ?? '') ? `${releases}/tag/${version}` : `${releases}/latest`;
 }
 
 /**
@@ -9945,7 +9957,7 @@ async function submitLogin(e) {
   // The password was right but the account has a second factor: ask for the
   // code instead of reporting a failed sign-in.
   if (result.totpRequired) {
-    $('#login-totp-field').hidden = false;
+    showCodeField($('#login-totp-field'), true);
     $('#login-error').textContent = t('login.totpNeeded', 'Please enter the code from your authenticator app.');
     $('#login-error').hidden = false;
     form.elements.totp.focus();
@@ -10128,7 +10140,7 @@ function askForTheCodeAfterATicket() {
     form.elements[name].closest('label').hidden = true;
   }
 
-  $('#login-totp-field').hidden = false;
+  showCodeField($('#login-totp-field'), true);
   $('#login-kerberos').hidden = true;
   $('#login-passkey').hidden = true;
   $('#login-kerberos-leave').hidden = false;
@@ -10157,7 +10169,7 @@ function backToThePasswordForm() {
   }
 
   form.elements.totp.value = '';
-  $('#login-totp-field').hidden = true;
+  showCodeField($('#login-totp-field'), false);
   $('#login-kerberos').hidden = !ticketsOffered;
   $('#login-passkey').hidden = !passkeysAvailable;
   $('#login-kerberos-leave').hidden = true;
@@ -10315,7 +10327,7 @@ function forgetTheLastAccount() {
   forgetTheCalendarFeed();
 
   // And the installation's address as a code, so that no code outlives a session.
-  forgetTheAddressCode();
+  forgetTheAndroidCode();
 
   // And what the provider card said about the account's link.
   forgetTheOpenIDLink();
@@ -10587,7 +10599,7 @@ function handBackTheScreen(message) {
   // sign-out otherwise, which on a shared machine hands the next person the
   // last one's name.
   $('#form-login').reset();
-  $('#login-totp-field').hidden = true;
+  showCodeField($('#login-totp-field'), false);
 
   // Asked again rather than kept from when the page opened: a provider an
   // administrator configured since is otherwise missing from the form until
@@ -10598,6 +10610,19 @@ function handBackTheScreen(message) {
 }
 
 // ------------------------------------------------------------- two-factor
+
+/**
+ * Shows a field for a second factor's code or puts it away, and with it whether
+ * its form asks for one: a field that is hidden and still required stops its
+ * form without a word, and one that is shown and not required lets an empty
+ * code through to be called wrong by the server.
+ */
+function showCodeField(label, shown) {
+  label.hidden = !shown;
+
+  const field = label.querySelector('input');
+  if (field) field.required = shown;
+}
 
 function renderTOTPState() {
   const enabled = me.user?.totpEnabled ?? false;
@@ -10619,7 +10644,7 @@ function renderTOTPState() {
   $('#totp-secret').textContent = '';
   $('#totp-uri').textContent = '';
   // Disabling also needs a current code, so the field stays visible for it.
-  $('#totp-code-field').hidden = !enabled;
+  showCodeField($('#totp-code-field'), enabled);
 }
 
 function wireTOTP() {
@@ -10639,13 +10664,27 @@ function wireTOTP() {
     $('#totp-manual').open = !setup.qr;
 
     $('#totp-setup').hidden = false;
-    $('#totp-code-field').hidden = false;
+    showCodeField($('#totp-code-field'), true);
     $('#totp-confirm').hidden = false;
     $('#totp-begin').hidden = true;
   }, null, null));
 
-  $('#totp-confirm').addEventListener('click', () => {
+  // Reached only once the browser has held the code to its rule. Which of the two
+  // is meant is the account's to say rather than the button's: Enter in the field
+  // presses the form's first button, and that is Confirm, hidden or not.
+  $('#form-totp').addEventListener('submit', (event) => {
+    event.preventDefault();
+
     const code = $('#totp-code').value.trim();
+
+    if (me.user?.totpEnabled) {
+      mutate(() => api(`/me/totp?code=${encodeURIComponent(code)}`, { method: 'DELETE' }),
+        t('totp.disabled', 'Two-factor authentication disabled'),
+        async () => { $('#totp-code').value = ''; await refreshAll(); });
+
+      return;
+    }
+
     mutate(() => api('/me/totp', { method: 'PUT', body: JSON.stringify({ code }) }),
       t('totp.enabled', 'Two-factor authentication enabled'),
       async () => {
@@ -10655,13 +10694,6 @@ function wireTOTP() {
         // Finished, so drawn from the account now - which the reload left alone.
         renderTOTPState();
       });
-  });
-
-  $('#totp-disable').addEventListener('click', () => {
-    const code = $('#totp-code').value.trim();
-    mutate(() => api(`/me/totp?code=${encodeURIComponent(code)}`, { method: 'DELETE' }),
-      t('totp.disabled', 'Two-factor authentication disabled'),
-      async () => { $('#totp-code').value = ''; await refreshAll(); });
   });
 }
 
@@ -10962,11 +10994,10 @@ const TOUR_STEPS = [
   {
     target: '#install-card',
     view: 'settings',
-    title: () => t('tour.install.title', 'An app of its own'),
+    title: () => t('tour.install.title', 'The Android app'),
     text: () => t('tour.install.text',
-      'Installed, the time recording opens from the home screen or the start menu like an '
-      + 'app of its own, without the browser around it. For Android the card also leads to '
-      + 'the Android app.'),
+      'Scan this code with an Android phone to download the app of the release this '
+      + 'installation runs. It shows this interface and reminds you with notifications.'),
   },
   {
     target: '#form-my-timezone',
@@ -15882,92 +15913,45 @@ function wireTimer() {
 
 // ------------------------------------------------------------- installing
 
-/**
- * The browser's offer to install the page as an app, kept until it is used.
- *
- * Chromium makes the offer as an event, once per page, and only the page can act
- * on it - so it is held here for the button on My account. Firefox and Safari make
- * no such offer; there the card's sentence says where their menus keep it, and the
- * button never appears.
- */
-let installOffer = null;
-
 function wireInstall() {
-  // Running as the installed app already: there is nothing to offer, and a card
-  // offering it would read as though the installation had not worked. Inside the
-  // Android app as well, which is an app of its own and has no browser around it:
-  // the card sent somebody there to a browser's menu that is not on the screen.
-  // The app is known by the bridge it registers for saving files, which its
-  // WebView puts on the window before any script of the page runs.
-  if (window.matchMedia?.('(display-mode: standalone)').matches || 'GoTimeRecordingFiles' in window) {
+  // Inside the Android app there is nothing left to offer: it is the app the card
+  // is about. The app is known by the bridge it registers for saving files, which
+  // its WebView puts on the window before any script of the page runs.
+  if ('GoTimeRecordingFiles' in window) {
     const card = $('#install-card');
     if (card) card.hidden = true;
-
-    return;
   }
 
-  window.addEventListener('beforeinstallprompt', (event) => {
-    // Held rather than shown at once: a page that asks before anybody has done
-    // anything is asking at the wrong moment.
-    event.preventDefault();
-    installOffer = event;
-    showInstallOffer();
-  });
-
-  // Installed - from here or from the browser's own menu - and nothing is left
-  // to offer.
-  window.addEventListener('appinstalled', () => {
-    installOffer = null;
-    showInstallOffer();
-  });
-
-  $('#install-now')?.addEventListener('click', async () => {
-    if (!installOffer) return;
-
-    // The offer can be made once; whatever the answer, it is spent.
-    const offer = installOffer;
-    installOffer = null;
-    showInstallOffer();
-
-    await offer.prompt();
-  });
-}
-
-/** Shows the button where the browser made an offer, and the sentence where not. */
-function showInstallOffer() {
-  const button = $('#install-now');
-  if (button) button.hidden = !installOffer;
-
-  const manual = $('#install-manual');
-  if (manual) manual.hidden = Boolean(installOffer);
+  // The browser's own offer to install the page is left to its menu rather than
+  // made over the page: the card offers the Android app, and two offers of an app
+  // at once read as two apps.
+  window.addEventListener('beforeinstallprompt', (event) => event.preventDefault());
 }
 
 /**
- * Shows this installation's address as a code on the card, for opening it on a
- * phone without typing the address - once a session, because the address does
- * not change while the page is open, and not at all where the card is hidden,
- * which is in the installed app.
+ * Shows the code that downloads the Android app on the card, and names the
+ * release it comes from - once a session, because neither changes while the page
+ * is open, and not at all where the card is hidden, which is inside the app.
  *
- * The server draws it from the address this page names as its own, so the code
- * is of the page the reader is looking at. Only a convenience: without one the
- * card simply has none, and nothing else waits on it.
+ * The server draws the code and names the release, the one this installation
+ * runs; without its answer the card keeps its link to the newest release, and
+ * nothing else waits on it.
  */
-async function loadAddressCode() {
+async function loadAndroidCode() {
   const qr = $('#install-qr');
   if (!qr || $('#install-card')?.hidden || qr.getAttribute('src')) return;
 
   try {
-    const answer = await api(`/me/address?origin=${encodeURIComponent(location.origin)}`);
+    const answer = await api('/me/android');
+
+    if (answer?.release) $('#install-android-link').href = answer.release;
     if (!answer?.qr) return;
 
     qr.src = answer.qr;
-    qr.alt = t('install.qrAlt', 'QR code with the address of this installation');
+    qr.alt = t('install.qrAlt', 'QR code that downloads the Android app');
     qr.hidden = false;
-    $('#install-address').textContent = answer.address;
-    $('#install-address').hidden = false;
-    $('#install-phone').hidden = false;
   } catch {
-    // The card offers installing in this browser either way.
+    // The card leads to the newest release either way.
   }
 }
 
@@ -15976,15 +15960,12 @@ async function loadAddressCode() {
  * on the page outlives the session it was drawn in, so none has to be asked
  * about separately.
  */
-function forgetTheAddressCode() {
+function forgetTheAndroidCode() {
   const qr = $('#install-qr');
   if (!qr) return;
 
   qr.hidden = true;
   qr.removeAttribute('src');
-  $('#install-address').textContent = '';
-  $('#install-address').hidden = true;
-  $('#install-phone').hidden = true;
 }
 
 // ------------------------------------------------------- metrics and tracing
@@ -17815,7 +17796,7 @@ async function refreshAll() {
   await loadAdmin();
   await loadTokens();
   await loadCalendarFeed();
-  await loadAddressCode();
+  await loadAndroidCode();
   await loadPasskeys();
   await loadOpenIDLink();
   await loadSchedules();

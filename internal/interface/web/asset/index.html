@@ -538,7 +538,7 @@
         </label>
         <label data-i18n="login.password">Password<input type="password" name="password" autocomplete="off" required>
         </label>
-        <label id="login-totp-field" hidden data-i18n="login.totp">Code from your authenticator app<input type="text" name="totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+        <label id="login-totp-field" hidden data-i18n="login.totp">Code from your authenticator app<input type="text" name="totp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
         </label>
         <p class="login-error" id="login-error" hidden></p>
         <div class="login-actions">
@@ -984,7 +984,7 @@
         <p class="muted" id="vacation-detail"></p>
         <form method="post" id="form-vacation" class="form" data-perm="settings:write:own">
           <div class="grid">
-            <label data-i18n="vacation.days">Days of leave a year<input type="number" name="days" min="0" max="366" step="0.5" required></label>
+            <label data-i18n="vacation.days">Days of leave a year<input type="number" name="days" min="0" max="366" step="any" required></label>
             <label data-i18n="vacation.fromYear">From the year<input type="number" name="fromYear" min="1900" max="9999" step="1" required></label>
           </div>
           <button type="submit" data-i18n="action.save">Save</button>
@@ -1430,9 +1430,9 @@
         <h2 data-i18n="settings.workingTimes">My working hours</h2>
         <p class="muted" data-i18n="settings.workingTimesHint">The daily target is the basis for overtime, from Monday to Friday unless a weekly plan below says otherwise. The daily maximum limits how much may be booked on a single day.</p>
         <div class="grid">
-          <label data-i18n="settings.targetHours">Target hours per day<input type="number" name="dailyTargetHours" step="0.5" min="0" max="24" placeholder="8">
+          <label data-i18n="settings.targetHours">Target hours per day<input type="number" name="dailyTargetHours" step="any" min="0" max="24" placeholder="8">
           </label>
-          <label data-i18n="settings.maxHours">Maximum hours per day<input type="number" name="maxDailyHours" step="0.5" min="0" max="24" data-i18n-placeholder="field.default" placeholder="default">
+          <label data-i18n="settings.maxHours">Maximum hours per day<input type="number" name="maxDailyHours" step="any" min="0" max="24" data-i18n-placeholder="field.default" placeholder="default">
           </label>
           <label data-i18n="settings.everyDayCountsFrom">Every working day counts from<input type="date" name="everyDayCountsFrom">
           </label>
@@ -1448,9 +1448,9 @@
         <h2 data-i18n="bounds.title">Bounds of my balance</h2>
         <p class="muted" data-i18n="bounds.hint">Keep your running balance between two figures, as a flexitime account does. While it lies outside them, a banner says so on every screen until it is back inside. Empty means no bound.</p>
         <div class="grid">
-          <label data-i18n="field.upperBound">Upper bound of the balance<input type="number" name="upperBound" step="0.5" min="0" max="10000" placeholder="40">
+          <label data-i18n="field.upperBound">Upper bound of the balance<input type="number" name="upperBound" step="any" min="0" max="10000" placeholder="40">
           </label>
-          <label data-i18n="field.lowerBound">Lower bound of the balance<input type="number" name="lowerBound" step="0.5" min="-10000" max="0" placeholder="-20">
+          <label data-i18n="field.lowerBound">Lower bound of the balance<input type="number" name="lowerBound" step="any" min="-10000" max="0" placeholder="-20">
           </label>
         </div>
         <p class="muted" id="balance-now"></p>
@@ -1576,24 +1576,17 @@
         <button type="button" class="secondary" id="tour-restart" data-i18n="tour.card.start">Show the tour</button>
       </div>
 
-      <!-- The page as an app of its own, on a telephone's home screen or in a
-           desktop's start menu. The button is the browser's own offer, so it
-           appears only where the browser makes one; elsewhere the sentence says
-           where its menu keeps it. Taken away entirely once the page is running
-           as the installed app, where there is nothing left to offer. -->
+      <!-- The Android app, which every release carries: a code for a phone's
+           camera that downloads the one of the release this installation runs,
+           and that release's page. The server draws the code and names the
+           release, because the page has no QR encoder; until it answers, the link
+           names the newest release. Not shown inside the app, which is what the
+           card offers. -->
       <div class="card" id="install-card">
-        <h2 data-i18n="install.title">Install as an app</h2>
-        <p class="muted" data-i18n="install.text">Installed, the time recording opens from the home screen or the start menu like an app of its own, without the browser around it. A long press on its icon leads straight to the time entries, the calendar or the overtime.</p>
-        <p class="muted" id="install-manual" data-i18n="install.manual">Where no button appears here, the browser keeps the offer in its menu, as "Install app" or "Add to Home screen".</p>
-        <button type="button" class="secondary" id="install-now" hidden data-i18n="install.now">Install</button>
-        <p class="muted" id="install-phone" data-i18n="install.phone" hidden>To open it on a phone, type this address into the phone's browser or scan the code with the phone's camera; it can be installed from that browser.</p>
-        <pre class="value" id="install-address" hidden></pre>
+        <h2 data-i18n="install.title">Install the Android app</h2>
+        <p class="muted" data-i18n="install.text">On an Android phone the time recording is also an app of its own: it shows this interface and reminds you with notifications. Scan the code with the phone's camera to download it, open the file, and allow the installation the one time Android asks.</p>
         <img id="install-qr" class="qr" alt="" hidden>
-        <!-- On Android the app is downloaded rather than offered by a browser. The
-             link names the newest release until the page knows its version, and
-             then the release this installation runs, because the app belongs to
-             the release it was built with. -->
-        <p class="muted" id="install-android" data-i18n="install.android">On Android the time recording is also an app of its own. It shows this interface, connects by scanning the code a new token shows under API tokens, and reminds you with notifications.</p>
+        <p class="muted" data-i18n="install.connect">Once installed, the app connects by scanning the code a new token shows under API tokens.</p>
         <div class="row">
           <a id="install-android-link" class="tab" href="https://github.com/dennis-dko/go-time-recording/releases/latest"
              target="_blank" rel="noopener noreferrer" data-i18n="install.androidLink">The Android app on GitHub ↗</a>
@@ -1642,15 +1635,22 @@
             <pre class="secret" id="totp-uri"></pre>
           </details>
         </div>
-        <div class="grid">
-          <label id="totp-code-field" hidden data-i18n="totp.code">Code<input type="text" id="totp-code" inputmode="numeric" maxlength="6">
-          </label>
-        </div>
-        <div class="row">
-          <button type="button" id="totp-begin" data-i18n="totp.enable">Enable</button>
-          <button type="button" id="totp-confirm" hidden data-i18n="totp.confirm">Confirm</button>
-          <button type="button" id="totp-disable" class="secondary" hidden data-i18n="totp.disable">Disable</button>
-        </div>
+        <!-- A form, so that a code is held to its rule before it is sent: it had
+             none, and five digits went to the server to be called wrong. Confirm
+             and Disable both submit it, and the account's state says which is
+             meant - Enter in the field presses the first of them, shown or not.
+             No draft: a code is good for half a minute. -->
+        <form method="post" id="form-totp" data-no-draft>
+          <div class="grid">
+            <label id="totp-code-field" hidden data-i18n="totp.code">Code<input type="text" id="totp-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
+            </label>
+          </div>
+          <div class="row">
+            <button type="button" id="totp-begin" data-i18n="totp.enable">Enable</button>
+            <button type="submit" id="totp-confirm" hidden data-i18n="totp.confirm">Confirm</button>
+            <button type="submit" id="totp-disable" class="secondary" hidden data-i18n="totp.disable">Disable</button>
+          </div>
+        </form>
       </div>
 
       <!-- The address a calendar program reads this person's recorded days from.
@@ -1921,7 +1921,7 @@
         <p class="muted" data-i18n="ops.hint">Leave a field empty to keep the value from the configuration file. Changes take effect within a few seconds, without a restart - except the session lifetime, which applies from the next sign-in.</p>
         <div class="grid">
           <label data-i18n="ops.sessionLifetime">Session lifetime (hours)
-            <input type="number" name="sessionLifetimeHours" step="0.25" min="0.25" max="336">
+            <input type="number" name="sessionLifetimeHours" step="any" min="0.25" max="336">
           </label>
           <!-- Zero, not empty, is how this one is switched off: empty means "follow
                the configuration file" like every other field here, and the file's
@@ -1929,10 +1929,10 @@
                of five is there so nobody sets a timeout that signs people out
                while they read. -->
           <label data-i18n="ops.sessionIdle">Sign out after inactivity (minutes, 0 = never)
-            <input type="number" name="sessionIdleMinutes" step="5" min="0" max="1440">
+            <input type="number" name="sessionIdleMinutes" step="1" min="0" max="1440">
           </label>
           <label data-i18n="ops.maxDailyHours">Maximum hours per day (instance-wide)
-            <input type="number" name="maxDailyHours" step="0.5" min="0.5" max="24">
+            <input type="number" name="maxDailyHours" step="any" min="0.01" max="24">
           </label>
           <label data-i18n="ops.rateLimit">Rate limit (requests)
             <input type="number" name="rateLimit" step="1" min="5">
@@ -1941,7 +1941,7 @@
             <input type="number" name="rateLimitWindowSeconds" step="1" min="1" max="3600">
           </label>
           <label data-i18n="ops.deleteRatio">Directory sync: deletion limit (0–1, 0 = no limit)
-            <input type="number" name="ldapSyncMaxDeleteRatio" step="0.05" min="0" max="1">
+            <input type="number" name="ldapSyncMaxDeleteRatio" step="any" min="0" max="1">
           </label>
         </div>
         <p class="muted" data-i18n="ops.deleteRatioSmall">The deletion limit is a share of the directory accounts already here. With one or two of them, a single departure is all or half of them, so a limit below that refuses it: raise it for that run if the departure is real.</p>
@@ -2005,7 +2005,7 @@
           <div id="ds-server-fields" class="grid-passthrough">
             <label data-i18n="admin.dbHost">Host<input type="text" name="host">
             </label>
-            <label data-i18n="admin.dbPort">Port<input type="text" name="port" inputmode="numeric">
+            <label data-i18n="admin.dbPort">Port<input type="number" name="port" min="1" max="65535">
             </label>
             <label data-i18n="admin.dbUser">User<input type="text" name="user">
             </label>
@@ -2057,7 +2057,7 @@
             <input type="text" name="tracerUrl" placeholder="jaeger:4317">
           </label>
           <label data-i18n="tel.ratio">Share of traces recorded (0–1)
-            <input type="number" name="tracerRatio" step="0.05" min="0" max="1">
+            <input type="number" name="tracerRatio" step="any" min="0" max="1">
           </label>
         </div>
         <!-- Named rather than filled in. The collector this repository ships an
@@ -2123,7 +2123,7 @@
         <form method="post" id="form-sync-schedule" class="form">
           <div class="grid">
             <label class="wide" data-i18n="sync.schedule">Run automatically (cron, five fields — empty means only by hand)
-              <input type="text" name="syncSchedule" maxlength="120" placeholder="0 4 * * *" spellcheck="false">
+              <input type="text" name="syncSchedule" maxlength="255" placeholder="0 4 * * *" spellcheck="false">
             </label>
           </div>
           <p class="muted" data-i18n="sync.scheduleHint">Empty by default, and worth leaving empty until a preview has been read: an automatic run deletes without anybody looking. Applied at the next start — the scheduler is built while the application starts. It runs on the server's clock, which is UTC in the container this application ships, and not in the instance timezone.</p>

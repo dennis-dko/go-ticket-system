@@ -70,6 +70,11 @@ const (
 
 	// MaxCompanyNameLength bounds the name beside the footer's link.
 	MaxCompanyNameLength = 120
+
+	// MaxScheduleLength bounds the directory synchronisation's schedule: far more
+	// than any expression somebody means, a list of every minute of an hour
+	// included, which a bound of 120 refused.
+	MaxScheduleLength = 255
 )
 
 // TooLong reports whether a value exceeds a column, counting the way a database

@@ -43,7 +43,13 @@ func TestValidateRefusesWhatCannotWork(t *testing.T) {
 		"postgres without user":  {Dialect: "postgres", Name: "gtr", Host: "db"},
 		"postgres without name":  {Dialect: "postgres", Host: "db", User: "gtr"},
 		"a port that is a word":  {Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Port: "prod"},
-		"mysql without user":     {Dialect: "mysql", Name: "gtr", Host: "db"},
+
+		// Numbers, and no ports: the directory's port was held to 1-65535 while
+		// this one took any number, so a typo was saved and failed on connecting.
+		"a port past the last": {Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Port: "70000"},
+		"a port of nought":     {Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Port: "0"},
+		"a port below nought":  {Dialect: "mysql", Name: "gtr", Host: "db", User: "gtr", Port: "-1"},
+		"mysql without user":   {Dialect: "mysql", Name: "gtr", Host: "db"},
 	}
 
 	for name, ds := range cases {
