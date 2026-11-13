@@ -18,6 +18,7 @@ import (
 	"github.com/chromedp/chromedp"
 
 	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/go-time-recording/test/tempdir"
 )
 
 // interactionTimeout bounds one test. Generous, because a cold browser start
@@ -71,17 +72,30 @@ func TestMain(m *testing.M) {
 // waits on nothing the application does, so no case can pass by it being long.
 const browserStart = time.Minute
 
-// launch is what every browser in this suite is started with: no window, the
-// language the case reads in, and whatever the case adds.
+// launch is what every browser in this suite is started with: no window, a
+// profile that goes with the case, the language the case reads in, and whatever
+// the case adds.
 //
 // One list, because there were three and they had to agree about the things
 // that are not about any one case - the sandbox the CI containers cannot have,
 // the browser CHROME_PATH names, how long it may take to start. A fourth
 // launcher written beside them would have had to remember all three.
-func launch(language string, more ...chromedp.ExecAllocatorOption) []chromedp.ExecAllocatorOption {
+func launch(t *testing.T, language string, more ...chromedp.ExecAllocatorOption) []chromedp.ExecAllocatorOption {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
 		chromedp.Flag("lang", language),
+
+		// The suite's profile rather than chromedp's. chromedp removes the one it
+		// makes once, ten milliseconds after the browser's own process has gone,
+		// and nothing here learns whether that worked; on Windows a helper process
+		// of Chrome's is often still writing then. One green run of the suite left
+		// seventeen profiles behind that way, and 17,745 had piled up in the
+		// temporary directory of the machine where it was noticed. tempdir keeps
+		// trying for as long as Windows holds on - and is registered here, before
+		// the allocator exists, so it runs after whatever closes the browser,
+		// whether the case closes it with defer or with t.Cleanup.
+		// TestABrowserLeavesNoProfileBehind holds the order.
+		chromedp.UserDataDir(tempdir.New(t)),
 
 		// The container images CI uses run as root, where Chrome refuses to
 		// start without this.
@@ -146,7 +160,7 @@ func openWith(t *testing.T, env ...string) *page {
 	// here makes that a decision, and the one case that is *about* following
 	// the browser compares against that browser's own Intl rather than against
 	// a format written down here, so it holds whatever this is set to.
-	opts := launch("en-US",
+	opts := launch(t, "en-US",
 		chromedp.Flag("disable-gpu", true),
 
 		// A window somebody might actually use.

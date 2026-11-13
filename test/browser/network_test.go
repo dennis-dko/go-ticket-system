@@ -42,7 +42,7 @@ func TestTheBrowserAsksAboutNoNameButLocalhost(t *testing.T) {
 	app := harness.Start(t)
 	netLog := filepath.Join(tempdir.New(t), "netlog.json")
 
-	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch("en-US",
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch(t, "en-US",
 		chromedp.Flag("log-net-log", netLog),
 		chromedp.Flag("net-log-capture-mode", "Default"),
 	)...)
