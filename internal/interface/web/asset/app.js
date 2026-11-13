@@ -2814,7 +2814,8 @@ function draftableFields(form) {
  *
  * A form exposes its controls as named properties of itself, and those come
  * first: a form holding <input name="id"> answers form.id with that input. Two
- * forms here did - a time entry's and the role's - so both wrote their draft under
+ * forms did - the role's, and a time entry's in the time recording this was cloned
+ * from - so both wrote their draft under
  * the key "gts.draft.[object HTMLInputElement]", which is one key for two forms.
  * They overwrote each other, and on the way back in the first of them restored
  * whatever the other had left, then wrote its own emptiness over the top.

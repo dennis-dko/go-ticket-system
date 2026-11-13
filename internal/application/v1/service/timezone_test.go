@@ -125,8 +125,8 @@ func TestSignInKeepsThePersonalTimezone(t *testing.T) {
 }
 
 // The reason any of this exists, stated as a test: at one instant, two people
-// are on different days, and their bookings must land accordingly.
-func TestBookingDayDependsOnTheZone(t *testing.T) {
+// are on different days, and what each of them does is dated accordingly.
+func TestTheDayDependsOnTheZone(t *testing.T) {
 	instant := time.Date(2026, 8, 1, 22, 30, 0, 0, time.UTC)
 
 	cases := map[string]string{

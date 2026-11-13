@@ -100,7 +100,7 @@ func TestDateTimeScanReadsAFixedOffsetAsSQLiteWroteIt(t *testing.T) {
 // that is not the application's choice: lib/pq in the PostgreSQL server's
 // session zone, and GoFr's MySQL connection in the process's own (loc=Local).
 // West of UTC that is the evening before - and a day read in its own zone is
-// the evening's day, so every entry showed on the day before it was booked.
+// the evening's day, so every record showed on the day before its own.
 func TestDateTimeScanReturnsADriversTimeInUTC(t *testing.T) {
 	newYork := time.FixedZone("EDT", -4*60*60)
 	stored := time.Date(2026, 7, 3, 0, 0, 0, 0, time.UTC)

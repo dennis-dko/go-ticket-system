@@ -19,11 +19,11 @@ func TestSearchingForATraceFindsTheLinesOfThatRequest(t *testing.T) {
 	// through the request's own logger beside it, and a statement carries none.
 	for _, line := range []string{
 		`{"level":"DEBUG","time":"2026-08-03T10:11:12Z","message":` +
-			`{"type":"INSERT","query":"INSERT INTO timesheets (hours) VALUES (?)","duration":90,"args":[8]}}`,
+			`{"type":"INSERT","query":"INSERT INTO roles (name) VALUES (?)","duration":90,"args":["helper"]}}`,
 		`{"level":"ERROR","time":"2026-08-03T10:11:12Z",` +
 			`"message":"saving the entry: database is locked","trace_id":"` + failed + `"}`,
 		`{"level":"INFO","time":"2026-08-03T10:11:12Z","message":` +
-			`{"trace_id":"` + failed + `","method":"POST","uri":"/api/v1/timesheets","response":500,"response_time":1500}}`,
+			`{"trace_id":"` + failed + `","method":"POST","uri":"/api/v1/roles","response":500,"response_time":1500}}`,
 		`{"level":"INFO","time":"2026-08-03T10:11:13Z","message":` +
 			`{"trace_id":"` + other + `","method":"GET","uri":"/api/v1/me","response":200,"response_time":300}}`,
 	} {

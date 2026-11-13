@@ -28,7 +28,7 @@ func TestTheViewersOwnPollsStayOutOfTheRing(t *testing.T) {
 
 	s.drain(strings.NewReader(strings.Join([]string{
 		request("INFO", "/api/v1/admin/logs?since=4&epoch=x", 200),
-		request("INFO", "/api/v1/timesheets", 200),
+		request("INFO", "/api/v1/users", 200),
 		request("ERROR", "/api/v1/admin/logs?since=5", 500),
 	}, "\n")+"\n"), &console)
 
@@ -41,7 +41,7 @@ func TestTheViewersOwnPollsStayOutOfTheRing(t *testing.T) {
 		kept = append(kept, record.Message)
 	}
 
-	if len(kept) != 2 || !strings.Contains(kept[0], "/api/v1/timesheets") ||
+	if len(kept) != 2 || !strings.Contains(kept[0], "/api/v1/users") ||
 		!strings.Contains(kept[1], "/api/v1/admin/logs?since=5 500") {
 		t.Errorf("the ring kept %q, want the other request and the poll that failed", kept)
 	}

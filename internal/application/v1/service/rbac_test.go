@@ -100,7 +100,7 @@ func TestCreateRoleRejectsUnknownPermission(t *testing.T) {
 	f := newFixture(t)
 
 	_, err := f.roles.CreateRole(context.Background(), "auditor", "",
-		[]string{model.PermUserRead, "timesheets:invent"})
+		[]string{model.PermUserRead, "tickets:invent"})
 	requireKind(t, err, apperror.KindInvalid)
 }
 

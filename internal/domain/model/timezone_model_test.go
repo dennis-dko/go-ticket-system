@@ -9,9 +9,9 @@ import (
 	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
-// The zone decides which calendar day a booking lands on, so a wrong answer
-// here does not merely look odd - it moves recorded hours between days, and
-// the totals people are paid against with them.
+// The zone decides which calendar day a moment falls on, so a wrong answer here
+// does not merely look odd - it moves a ticket to another day, and the service
+// hours measured against that day with it.
 
 func TestUserTimezoneWinsOverTheInstance(t *testing.T) {
 	user := &model.User{Timezone: "Pacific/Auckland"}

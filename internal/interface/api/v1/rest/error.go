@@ -27,8 +27,8 @@ func toHTTPError(err error) error {
 	switch detail.Kind {
 	case apperror.KindNotFound:
 		// A local type rather than GoFr's ErrorEntityNotFound, for the reason that
-		// keeps coming up: that one carries prose and nothing else, so "timesheet
-		// with id 42 not found" was the whole answer and a German reader got it
+		// keeps coming up: that one carries prose and nothing else, so "role with
+		// id 42 not found" was the whole answer and a German reader got it
 		// exactly like that. The two parts travel as values now, and the sentence
 		// is assembled in whichever language is reading it.
 		return notFoundError{

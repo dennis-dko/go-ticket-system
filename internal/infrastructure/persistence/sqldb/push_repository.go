@@ -24,8 +24,7 @@ func NewPushSubscriptionRepository(db DB, dialect string) *PushSubscriptionRepos
 var _ repository.PushSubscriptionRepository = (*PushSubscriptionRepository)(nil)
 
 // Save keeps the subscription over any with its endpoint - one statement in each
-// engine's own words, as a calendar feed is replaced - and hands it to whoever
-// subscribed it last.
+// engine's own words - and hands it to whoever subscribed it last.
 func (r *PushSubscriptionRepository) Save(ctx context.Context, sub *model.PushSubscription) error {
 	query := `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, origin, created_at) VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh,

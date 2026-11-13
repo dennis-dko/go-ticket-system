@@ -47,7 +47,7 @@ func tokenFor(t *testing.T) string {
 
 // post builds a state-changing request the way the interface makes one.
 func post(token, origin string, sendHeader bool) *http.Request {
-	r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/timesheets", nil)
+	r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/users", nil)
 
 	if origin != "" {
 		r.Header.Set("Origin", origin)
@@ -159,7 +159,7 @@ func TestPostWithoutTheHeaderIsRefused(t *testing.T) {
 
 // A guessed token must not work.
 func TestPostWithAMismatchedTokenIsRefused(t *testing.T) {
-	r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/timesheets", nil)
+	r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/users", nil)
 	r.Header.Set("Origin", "http://gts.example.com")
 	r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: tokenFor(t)})
 	r.Header.Set(rest.CSRFHeaderName, "not-the-right-token")
@@ -177,7 +177,7 @@ func TestAPITokenRequestsAreExempt(t *testing.T) {
 		{"Authorization", "Bearer gts_something"},
 	} {
 		t.Run(header.name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/timesheets", nil)
+			r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/users", nil)
 			r.Header.Set(header.name, header.value)
 
 			rec := send(r)
@@ -195,7 +195,7 @@ func TestAllStateChangingMethodsAreChecked(t *testing.T) {
 		http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete,
 	} {
 		t.Run(method, func(t *testing.T) {
-			r := httptest.NewRequest(method, "http://gts.example.com/api/v1/timesheets", nil)
+			r := httptest.NewRequest(method, "http://gts.example.com/api/v1/users", nil)
 			r.Header.Set("Origin", "http://evil.example.net")
 			r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: tokenFor(t)})
 
@@ -211,7 +211,7 @@ func TestAllStateChangingMethodsAreChecked(t *testing.T) {
 func TestForwardedHostIsHonoured(t *testing.T) {
 	token := tokenFor(t)
 
-	r := httptest.NewRequest(http.MethodPost, "http://internal-backend:8000/api/v1/timesheets", nil)
+	r := httptest.NewRequest(http.MethodPost, "http://internal-backend:8000/api/v1/users", nil)
 	r.Header.Set("X-Forwarded-Host", "gts.example.com")
 	r.Header.Set("Origin", "https://gts.example.com")
 	r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: token})
@@ -227,7 +227,7 @@ func TestForwardedHostIsHonoured(t *testing.T) {
 func TestRefererIsAcceptedWhenOriginIsAbsent(t *testing.T) {
 	token := tokenFor(t)
 
-	r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/timesheets", nil)
+	r := httptest.NewRequest(http.MethodPost, "http://gts.example.com/api/v1/users", nil)
 	r.Header.Set("Referer", "http://gts.example.com/some/page")
 	r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: token})
 	r.Header.Set(rest.CSRFHeaderName, token)

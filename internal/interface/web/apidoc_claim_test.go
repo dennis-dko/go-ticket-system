@@ -46,23 +46,6 @@ func operationDescriptions(t *testing.T) map[string]string {
 	return descriptions
 }
 
-// The API document describes no state a time entry could be in.
-//
-// An entry has no status and no approval path, and the domain rules say why - but
-// the statistics description went on promising totals "per workflow state" and
-// leaving out "rejected entries" long after the review step was taken out, because
-// nothing read it against the code. A description advertising a state is how
-// somebody comes to build one back.
-func TestNoDescriptionGivesAnEntryAState(t *testing.T) {
-	state := regexp.MustCompile(`(?i)workflow|approv|(rejected|approved|submitted) entr`)
-
-	for operation, description := range operationDescriptions(t) {
-		if found := state.FindString(description); found != "" {
-			t.Errorf("%s says %q, and a time entry has no state", operation, found)
-		}
-	}
-}
-
 // Every right a description says an operation needs is one that exists.
 //
 // The statistics description sent its reader to "reports:read" for the project

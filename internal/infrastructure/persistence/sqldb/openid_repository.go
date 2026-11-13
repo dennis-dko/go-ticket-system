@@ -50,7 +50,7 @@ func (r *OpenIDIdentityRepository) BySubject(ctx context.Context, issuer, subjec
 }
 
 // Link stores the identity over the one its account had - one statement in each
-// engine's own words, as a calendar feed is replaced.
+// engine's own words.
 //
 // The subject being linked to another account already is the caller's to have
 // refused before this: the unique constraint on the pair is the backstop, and on

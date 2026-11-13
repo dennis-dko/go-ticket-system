@@ -159,7 +159,7 @@ func TestATokenThatCannotBeLookedUpIsNotCalledInvalid(t *testing.T) {
 				}
 			}))
 
-			r := httptest.NewRequest(http.MethodGet, "/api/v1/timesheets", nil)
+			r := httptest.NewRequest(http.MethodGet, "/api/v1/users", nil)
 			r.Header.Set(APITokenHeader, service.APITokenPrefix+"something")
 
 			handler.ServeHTTP(httptest.NewRecorder(), r)

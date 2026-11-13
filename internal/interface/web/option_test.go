@@ -11,7 +11,7 @@ import (
 )
 
 // Some of the dropdowns in this interface are filled by the server - the roles,
-// the users, the projects - and cannot drift, because there is one list and the
+// the users - and cannot drift, because there is one list and the
 // markup holds none of it.
 //
 // Two are not. The database dialects and the trace exporters are closed sets the

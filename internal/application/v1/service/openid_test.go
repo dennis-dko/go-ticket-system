@@ -54,7 +54,7 @@ func (p *fakeProvider) Check(context.Context, string) error { return nil }
 // codeFor is the code the fake provider sends a round back with.
 func codeFor(state string) string { return "code-for-" + state }
 
-// openIDFixture is the booking fixture with a provider to sign in through.
+// openIDFixture is the service fixture with a provider to sign in through.
 type openIDFixture struct {
 	*fixture
 
