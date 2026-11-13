@@ -349,8 +349,9 @@ func (s *SettingsService) SaveTimezone(ctx context.Context, name string) error {
 	name = strings.TrimSpace(name)
 
 	// Rejected rather than quietly corrected: a name that does not resolve
-	// would move everyone's bookings to a different day than the administrator
-	// intended, and they would have no way to tell from the screen.
+	// would move every moment shown, and the day each ticket's number is taken
+	// from, to another zone than the administrator intended, and they would have
+	// no way to tell from the screen.
 	if !model.IsSupportedTimezone(name) {
 		return apperror.InvalidFields("timezone")
 	}
@@ -358,12 +359,12 @@ func (s *SettingsService) SaveTimezone(ctx context.Context, name string) error {
 	return s.settings.Set(ctx, model.SettingTimezone, name)
 }
 
-// HolidayPlace returns the installation's choice of public holidays, which
-// everybody keeps who has not made their own: a place, model.NoHolidays, or
-// empty where nobody has chosen - and both of those keep none.
+// HolidayPlace returns the installation's choice of public holidays, which its
+// service hours leave out: a place, model.NoHolidays, or empty where nobody has
+// chosen - and both of those keep none.
 //
 // A stored value this build does not know reads as nobody having chosen rather
-// than failing, for the reason Timezone gives: it is read under every balance.
+// than failing, for the reason Timezone gives: it is read under every deadline.
 func (s *SettingsService) HolidayPlace(ctx context.Context) (string, error) {
 	stored, err := s.settings.Get(ctx, model.SettingHolidayPlace)
 	if err != nil {
@@ -416,7 +417,7 @@ func (s *SettingsService) LDAP(ctx context.Context) (model.LDAPConfig, error) {
 	// those installations come right without anybody knowing there was anything
 	// to repair.
 	if strings.TrimSpace(config.DefaultRole) == "" {
-		config.DefaultRole = model.RoleUser
+		config.DefaultRole = model.RoleAgent
 	}
 
 	password, err := s.secrets.Open(config.BindPassword)
@@ -451,7 +452,7 @@ func (s *SettingsService) SaveLDAP(ctx context.Context, config model.LDAPConfig)
 	// checked after it has already been stored wrong.
 	config.DefaultRole = strings.TrimSpace(config.DefaultRole)
 	if config.DefaultRole == "" {
-		config.DefaultRole = model.RoleUser
+		config.DefaultRole = model.RoleAgent
 	}
 
 	// An unknown default role could be given to nobody: the accounts would start
@@ -513,7 +514,7 @@ func (s *SettingsService) SaveLDAP(ctx context.Context, config model.LDAPConfig)
 	// The identifiers already recorded were read from the attribute stored now,
 	// and another attribute gives the same people other values - an entryUUID is
 	// not an objectGUID. Kept, every account read to a run as somebody who had
-	// left, and was proposed for deletion with their hours. Forgotten, each is
+	// left, and was proposed for deletion. Forgotten, each is
 	// matched by its address until its owner signs in again.
 	//
 	// Any change of the name counts, case included, because the directory client

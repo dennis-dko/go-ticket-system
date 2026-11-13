@@ -11,52 +11,39 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-// The directory synchronisation is not offered to an administrator who may not
-// perform one.
+// The directory synchronisation is offered to whoever administers the installation.
 //
-// Running it deletes every account the directory no longer holds along with
-// everything those people recorded, so it belongs to the built-in administrator
-// alone - but the Settings tab is opened by anybody holding settings:manage, and
-// the card sat in the middle of it with two buttons the server refuses. A
-// data-perm cannot express this: it names a permission, and this is about which
-// account it is, so only a browser can answer whether the card is there.
-func TestAGrantedAdministratorIsNotOfferedTheDirectoryRun(t *testing.T) {
+// It was the built-in administrator's alone for a while, and the card was taken
+// off the screen for anybody else holding settings:manage. A run is the
+// installation's like the rest of the Settings screen, and the server lets every
+// administrator perform one - so the card is on the screen for an account given
+// the administration as well, which only a browser can show.
+func TestAGrantedAdministratorIsOfferedTheDirectoryRun(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
 	p.readyAdmin()
-	p.createAccount(t, "bothe@example.com", "both-jobs-password-1", "user-admin")
+	p.createAccount(t, "gerd@example.com", "granted-admin-password-1", "admin")
 
 	p.run("sign out", chromedp.Click("#logout", chromedp.ByID),
 		chromedp.WaitVisible("#form-login", chromedp.ByID))
 
-	p.signIn("bothe@example.com", "both-jobs-password-1")
+	p.signIn("gerd@example.com", "granted-admin-password-1")
 	p.waitGone("#login-screen")
 	p.settleWelcome()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
 		chromedp.WaitVisible("#form-ldap", chromedp.ByID))
 
-	// Waited for the screen to be filled, not for it to exist. Every card here is
+	// Waited for the screen to be filled, not for it to exist: every card here is
 	// in index.html, so the wait above returns before a single request has
-	// answered - and the card this case is about starts on screen and is taken
-	// away once the directory settings arrive. Reading before that finds it
-	// present and reports a right that was never granted.
-	//
-	// This line is the last thing the screen writes, and it is never empty: it
-	// says either when the synchronisation is scheduled or that it runs only when
-	// the button is pressed.
+	// answered. This line is the last thing the screen writes, and it is never
+	// empty.
 	p.waitForFilled("#sync-schedule-active")
 
-	if p.visible("#sync-card") {
-		t.Error("an administrator who may not synchronise the directory is offered " +
-			"the buttons that do it")
-	}
-
-	// The connection card above it is theirs to edit, so this is the one card
-	// missing rather than the screen having failed to load.
-	if !p.visible("#form-ldap") {
-		t.Error("the directory connection is missing too, so the screen did not load")
+	if !p.visible("#sync-card") {
+		t.Error("an account given the administration is not offered the directory run, " +
+			"which the server would let it perform")
 	}
 }
 
@@ -452,14 +439,14 @@ func TestTheDirectoryRolePickerIsNeverEmptyAndDefaultsToTheOrdinaryRole(t *testi
 			"empty box on screen actually is")
 	}
 
-	if value != "user" {
-		t.Errorf("a directory nobody has configured should provision ordinary users, "+
+	if value != "agent" {
+		t.Errorf("a directory nobody has configured should provision agents, "+
 			"the picker starts on %q", value)
 	}
 
 	// And the selected option says something a person can read, rather than a
 	// bare identifier.
-	if label := strings.TrimSpace(p.text("#form-ldap select[name=defaultRole] option[value=user]")); label == "" {
+	if label := strings.TrimSpace(p.text("#form-ldap select[name=defaultRole] option[value=agent]")); label == "" {
 		t.Error("the chosen role has no label, so the box looks empty even when it is not")
 	}
 }
@@ -468,9 +455,9 @@ func TestTheDirectoryRolePickerIsNeverEmptyAndDefaultsToTheOrdinaryRole(t *testi
 //
 // The server refuses to store one as the directory's default - every entry
 // anybody writes to the directory would arrive holding the installation - so a
-// picker offering the administrator and the combined role offered two refusals.
-// The ordinary role is still there, and so is anything else that does not hold
-// settings:manage or roles:write.
+// picker offering the administrator offered a refusal. The agent is still there,
+// and so is anything else that does not hold settings:manage, roles:write or
+// users:write.
 func TestTheDirectoryRolePickerOffersNoRoleThatAdministers(t *testing.T) {
 	t.Parallel()
 
@@ -480,15 +467,13 @@ func TestTheDirectoryRolePickerOffersNoRoleThatAdministers(t *testing.T) {
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
 		chromedp.WaitVisible("#form-ldap", chromedp.ByID))
 
-	for _, role := range []string{"admin", "user-admin"} {
-		if n := p.count(`#form-ldap select[name=defaultRole] option[value="` + role + `"]`); n != 0 {
-			t.Errorf("the picker offers %q, which the server refuses as the directory's "+
-				"default role", role)
-		}
+	if n := p.count(`#form-ldap select[name=defaultRole] option[value="admin"]`); n != 0 {
+		t.Error("the picker offers the administrator, which the server refuses as the " +
+			"directory's default role")
 	}
 
-	if n := p.count(`#form-ldap select[name=defaultRole] option[value="user"]`); n != 1 {
-		t.Errorf("the ordinary role is offered %d time(s), want once", n)
+	if n := p.count(`#form-ldap select[name=defaultRole] option[value="agent"]`); n != 1 {
+		t.Errorf("the agent is offered %d time(s), want once", n)
 	}
 }
 
@@ -513,7 +498,7 @@ func TestAnAdminCorrectsALocalAccountFromTheTable(t *testing.T) {
 		chromedp.SendKeys(`#form-user input[name="name"]`, "Wilma", chromedp.ByQuery),
 		chromedp.SendKeys(`#form-user input[name="email"]`, "wilma@example.com",
 			chromedp.ByQuery),
-		p.chooseOption(`#form-user select[name="role"]`, "user"),
+		p.chooseOption(`#form-user select[name="role"]`, "agent"),
 		chromedp.SendKeys(`#form-user input[name="password"]`, "wilma-password-1",
 			chromedp.ByQuery),
 		p.click(`#form-user button[type="submit"]`))
@@ -598,9 +583,8 @@ func TestADirectoryAccountIsNotOfferedForCorrection(t *testing.T) {
 			const server = api;
 			api = (path, options) => path === '/users'
 				? Promise.resolve({ items: [{
-					id: 4711, name: 'Sven', email: 'sven@example.com', role: 'user',
+					id: 4711, name: 'Sven', email: 'sven@example.com', role: 'agent',
 					isSystem: false, isExternal: true,
-					dailyTargetHours: 0, maxDailyHours: 0,
 				}] })
 				: server(path, options);
 
@@ -639,7 +623,7 @@ func TestAnAdministratorResetsAPasswordFromTheTable(t *testing.T) {
 		chromedp.SendKeys(`#form-user input[name="name"]`, "Wilma", chromedp.ByQuery),
 		chromedp.SendKeys(`#form-user input[name="email"]`, "wilma@example.com",
 			chromedp.ByQuery),
-		p.chooseOption(`#form-user select[name="role"]`, "user"),
+		p.chooseOption(`#form-user select[name="role"]`, "agent"),
 		chromedp.SendKeys(`#form-user input[name="password"]`, "wilma-password-1",
 			chromedp.ByQuery),
 		p.click(`#form-user button[type="submit"]`))

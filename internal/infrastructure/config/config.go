@@ -139,17 +139,14 @@ type Config struct {
 	// LDAPSyncSchedule runs the directory reconciliation. Empty disables the
 	// scheduled run; the administrator can still trigger one by hand.
 	//
-	// A run deletes accounts the directory no longer holds, together with
-	// their recorded hours, so it is off by default.
+	// A run deletes accounts the directory no longer holds and leaves their
+	// tickets without an owner, so it is off by default.
 	LDAPSyncSchedule string
 
 	// LDAPSyncMaxDeleteRatio refuses a run that would remove more than this
 	// share of the directory-backed accounts. It is the guard against a
 	// truncated or misfiltered directory answer reading as a mass departure.
 	LDAPSyncMaxDeleteRatio float64
-
-	// MaxDailyHours caps the total hours a user may book on a single day.
-	MaxDailyHours float64
 
 	// Telemetry is what GoFr read for the metrics endpoint and the trace
 	// exporter, and therefore what this process is serving and exporting.
@@ -258,7 +255,6 @@ func traceRatio(raw string) float64 {
 
 const (
 	defaultDialect         = "sqlite"
-	defaultMaxDailyHours   = 24
 	defaultSessionLifetime = 12 * time.Hour
 
 	defaultTLSCacheDir      = "configs/certs"
@@ -346,11 +342,10 @@ func Load(p Provider) Config {
 		RateLimitWindow: v.duration("RATE_LIMIT_WINDOW", defaultRateLimitWindow),
 		TrustedProxies:  splitList(p.Get("TRUSTED_PROXIES")),
 
-		// Empty by default: a scheduled run deletes people and their hours,
-		// which must be a deliberate choice.
+		// Empty by default: a scheduled run deletes people, which must be a
+		// deliberate choice.
 		LDAPSyncSchedule:       p.Get("LDAP_SYNC_SCHEDULE"),
 		LDAPSyncMaxDeleteRatio: v.share("LDAP_SYNC_MAX_DELETE_RATIO", defaultSyncMaxDeleteRatio),
-		MaxDailyHours:          v.dailyHours("MAX_DAILY_HOURS", defaultMaxDailyHours),
 
 		Telemetry: Telemetry{
 			LogLevel:      logLevel(p.Get("LOG_LEVEL")),
@@ -443,22 +438,11 @@ func (v *values) durationOrOff(key string, fallback time.Duration) time.Duration
 	return v.duration(key, fallback)
 }
 
-// share and dailyHours compare what was written with what is used, which also
-// catches NaN: it is never equal to anything, the default included.
+// share compares what was written with what is used, which also catches NaN:
+// it is never equal to anything, the default included.
 func (v *values) share(key string, fallback float64) float64 {
 	raw := v.set(key)
 	used := ratioOr(raw, fallback)
-
-	if parsed, err := strconv.ParseFloat(raw, 64); raw != "" && (err != nil || parsed != used) {
-		v.note(key, raw, used)
-	}
-
-	return used
-}
-
-func (v *values) dailyHours(key string, fallback float64) float64 {
-	raw := v.set(key)
-	used := dailyHoursOr(raw, fallback)
 
 	if parsed, err := strconv.ParseFloat(raw, 64); raw != "" && (err != nil || parsed != used) {
 		v.note(key, raw, used)
@@ -484,24 +468,6 @@ func durationOr(raw string, fallback time.Duration) time.Duration {
 func intOr(raw string, fallback int) int {
 	v, err := strconv.Atoi(strings.TrimSpace(raw))
 	if err != nil || v <= 0 {
-		return fallback
-	}
-
-	return v
-}
-
-// dailyHoursOr reads the daily cap, or falls back.
-//
-// Inside the range the settings screen accepts for the same figure: above zero
-// and no more than a day holds. A figure above model.HoursPerDay let a person
-// record more hours on one day than it has, and the overtime balance counted
-// them. Written as "inside the range" so NaN, which ParseFloat reads and which
-// compares false against every bound, falls back too - NaN or infinity as the
-// cap switches it off, and neither can be written into the settings response
-// that shows it.
-func dailyHoursOr(raw string, fallback float64) float64 {
-	v, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
-	if err != nil || !(v > 0 && v <= model.HoursPerDay) {
 		return fallback
 	}
 

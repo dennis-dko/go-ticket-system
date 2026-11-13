@@ -1,9 +1,7 @@
 package rest
 
 import (
-	"context"
 	"net/http"
-	"strconv"
 
 	"gofr.dev/pkg/gofr"
 
@@ -15,46 +13,18 @@ import (
 // Authorizer resolves the caller behind a request and checks their rights.
 //
 // Authorization is enforced per handler rather than by a route table, because
-// several rules depend on the resource: reading "my" time entries and reading
-// everyone's are different permissions on the same route.
+// several rules depend on the resource: whether a ticket may be read is decided
+// by the queue it is in, which is not known until the ticket has been read.
 type Authorizer struct {
 	// open disables enforcement. It exists for running the instance without
 	// authentication at all, where there is no caller to check.
 	open bool
-
-	// team answers whether a manager may act for an account; nil reaches nobody,
-	// which is what a handler built for a test without managers needs.
-	team *service.TeamService
 }
 
 // NewAuthorizer creates an authorizer. When enforce is false every request is
 // allowed and the caller is reported as anonymous.
 func NewAuthorizer(enforce bool) *Authorizer {
 	return &Authorizer{open: !enforce}
-}
-
-// WithTeam lets the authorizer answer for managers.
-func (a *Authorizer) WithTeam(team *service.TeamService) *Authorizer {
-	a.team = team
-
-	return a
-}
-
-// reaches says whether the caller may act for somebody else's account with a team
-// right - only while the installation has managers, and only for an account an
-// administrator assigned to the caller; see service.TeamService.
-func (a *Authorizer) reaches(ctx context.Context, principal *service.Principal, userID uint,
-	permission string) (bool, error) {
-	if a.team == nil {
-		return false, nil
-	}
-
-	reached, err := a.team.Reaches(ctx, principal, userID, permission)
-	if err != nil {
-		return false, toHTTPError(err)
-	}
-
-	return reached, nil
 }
 
 // Enabled reports whether authorization is being enforced.
@@ -96,12 +66,14 @@ func (e forbiddenError) Response() map[string]any {
 // Principal returns the authenticated caller.
 //
 // With enforcement off there is no caller, so a synthetic principal holding
-// every permission is returned; that keeps handlers free of special cases.
+// every permission of the staff is returned; that keeps handlers free of special
+// cases. Not the customer's: without anybody signed in there is no contact the
+// portal could show the tickets of.
 func (a *Authorizer) Principal(c *gofr.Context) (*service.Principal, error) {
 	if a.open {
 		return &service.Principal{
 			User:        &model.User{Name: "anonymous"},
-			Permissions: model.AllPermissions(),
+			Permissions: model.AdminPermissions(),
 		}, nil
 	}
 
@@ -141,22 +113,18 @@ func (unauthorizedError) Response() map[string]any {
 // installation: the built-in administrator, or somebody holding
 // model.PermSettingsManage.
 //
-// This used to be the built-in account and nothing else, on purpose, and the
-// argument for that is worth keeping because it is still true: everything behind
-// here - the database connection, the directory bind, the process log - describes
-// the installation rather than the work recorded in it, and a role that can be
-// edited into holding it is a way to grant yourself the installation.
+// Everything behind here - the database connection, the directory bind, the
+// mailboxes, the process log - describes the installation rather than the work
+// done in it, and a role that can be edited into holding the right is a way to
+// grant yourself the installation: roles:write is the installation as well,
+// because whoever holds it can tick settings:manage on a role and assign it.
+// Nothing here prevents that, and pretending otherwise would be worse than
+// saying it - so it is said here, where the next reader meets it.
 //
-// That is now the arrangement, and the cost is exactly what the old comment
-// predicted: roles:write is the installation as well, because whoever holds it can
-// tick settings:manage on a role and assign it. Nothing here prevents that, and
-// pretending otherwise would be worse than saying it - so it is said here, where
-// the next reader meets it.
-//
-// What made it worth paying: an account that administers the accounts but cannot
-// reach the database screen is half an administrator, and the way people worked
-// around it was to sign in as the built-in account, which is the one account whose
-// actions are hardest to attribute to a person.
+// What makes it worth paying: an account that administers the accounts but
+// cannot reach the database screen is half an administrator, and the way people
+// work around that is to sign in as the built-in account, which is the one
+// account whose actions are hardest to attribute to a person.
 func (a *Authorizer) RequireInstallationAdmin(c *gofr.Context) (*service.Principal, error) {
 	principal, err := a.Principal(c)
 	if err != nil {
@@ -168,41 +136,6 @@ func (a *Authorizer) RequireInstallationAdmin(c *gofr.Context) (*service.Princip
 	}
 
 	return nil, missingPermission(model.PermSettingsManage)
-}
-
-// AdministersOnly reports whether this account administers the installation and
-// has no working day of its own.
-//
-// A handful of things belong to that kind of account rather than to anybody who
-// can reach the Settings screen: running or scheduling a directory
-// synchronisation, and the setup wizard. They used to ask whether the caller was
-// the *built-in* administrator, which is a different question with almost the
-// same answer - and the difference is the whole point. An installation that gives
-// somebody the admin role has decided that person administers it; making them
-// sign in as the built-in account for two of those things is how the one account
-// nobody can attribute to a person ends up being the one everybody uses.
-//
-// Asked as "administers and does not work here" rather than by the role's name.
-// The name is a string an installation may have changed, and the property that
-// actually matters is the shape: the admin role holds the administration and none
-// of the working day, which is exactly what makes its holder equivalent to the
-// built-in account. The combined role is deliberately not equivalent - somebody
-// who also books time keeps their own screens, their tour and their working
-// times, and giving them the directory purge as well was never the intent.
-//
-// The built-in account is still named, because it is guaranteed to be this even
-// if an installation edits its way into an odd state.
-func (a *Authorizer) AdministersOnly(principal *service.Principal) bool {
-	if a.open {
-		return true
-	}
-
-	if principal == nil || principal.User == nil {
-		return false
-	}
-
-	return principal.User.IsSystem ||
-		(principal.Can(model.PermSettingsManage) && !principal.Can(model.PermTimesheetWriteOwn))
 }
 
 // missingPermission is the one refusal shape, so every 403 the interface meets
@@ -264,252 +197,6 @@ func (a *Authorizer) RequireSelfOr(
 	}
 
 	return nil, missingPermission(permission)
-}
-
-// RequireSelf checks an action nobody may take on anybody else's account, and that
-// still takes a right of its own on your own.
-//
-// Distinct from RequireSelfOr, which has a wider permission that reaches other
-// people: there is no such permission here on purpose. A daily target and a daily
-// ceiling are time figures, everything to do with time is the person's own, and the
-// one account that administers this installation cannot see what those numbers do -
-// not the entries, not the balance, not the figures. Setting a number whose effect is
-// invisible to you is not administration.
-//
-// The right is still checked for your own, because the role editor offers it and a
-// box that does nothing when ticked is worse than no box.
-func (a *Authorizer) RequireSelf(
-	c *gofr.Context,
-	targetUserID uint,
-	permission string,
-) (*service.Principal, error) {
-	principal, err := a.permittedPrincipal(c)
-	if err != nil {
-		return nil, err
-	}
-
-	if a.open {
-		return principal, nil
-	}
-
-	if principal.User != nil && principal.User.ID == targetUserID &&
-		principal.Can(permission) {
-		return principal, nil
-	}
-
-	return nil, forbiddenError{msg: "you may only change your own working times"}.
-		WithCode("onlyOwnWorkingTimes")
-}
-
-// scopeUserID narrows a requested user filter to what the caller may see, which is
-// themselves - or an account they look after as a manager.
-//
-// The filter still exists as a parameter because an installation without
-// authentication uses it, and because asking about yourself by id is a reasonable
-// thing for a client to do. Asking about anybody else is refused rather than
-// quietly answered with your own rows: a list that does not match what was asked
-// for is worse than a plain no.
-func (a *Authorizer) scopeUserID(ctx context.Context, principal *service.Principal, requested uint) (uint, error) {
-	if a.open {
-		return requested, nil
-	}
-
-	if !principal.Can(model.PermTimesheetReadOwn) {
-		return 0, missingPermission(model.PermTimesheetReadOwn)
-	}
-
-	account, err := a.accountFor(ctx, principal, requested, somebodyElsesEntries(), model.PermTimesheetReadTeam)
-	if err != nil {
-		return 0, err
-	}
-
-	return account.ID, nil
-}
-
-// accountFor is whose time a request is about, once the route has required its own
-// right: the caller's where requested names nobody else, and otherwise an account
-// the caller looks after with one of the team rights named - refused with refusal
-// where it is neither.
-//
-// A team right carries further what the matching own right already does, and never
-// stands in for it. So a route is gated on the same right whoever it is for, and a
-// role made of team rights alone reaches nobody - one rule for every route, rather
-// than a second set of gates that only managers pass through.
-func (a *Authorizer) accountFor(ctx context.Context, principal *service.Principal, requested uint,
-	refusal forbiddenError, rights ...string) (*model.User, error) {
-	if requested == 0 || requested == principal.User.ID {
-		return principal.User, nil
-	}
-
-	// Without authentication there is nobody to check, and the id is only a filter.
-	if a.open {
-		return &model.User{ID: requested}, nil
-	}
-
-	if a.team == nil {
-		return nil, refusal
-	}
-
-	member, err := a.team.Member(ctx, principal, requested, rights...)
-	if err != nil {
-		return nil, toHTTPError(err)
-	}
-
-	if member == nil {
-		return nil, refusal
-	}
-
-	return member, nil
-}
-
-// projectActor is whose name a request about a project is made in: the caller's,
-// or the project's owner where the caller looks after them with one of the team
-// rights named - see service.TeamService.ProjectActor. Zero where authentication is
-// off, which the project services read as no narrowing.
-func (a *Authorizer) projectActor(ctx context.Context, principal *service.Principal, projectID uint,
-	rights ...string) (uint, error) {
-	viewer := a.viewerID(principal)
-	if viewer == 0 || a.team == nil {
-		return viewer, nil
-	}
-
-	actor, err := a.team.ProjectActor(ctx, principal, projectID, rights...)
-	if err != nil {
-		return 0, toHTTPError(err)
-	}
-
-	return actor, nil
-}
-
-// somebodyElsesProjects is how a request about projects that are not the caller's
-// is refused, where naming the account says nothing a refusal could leak.
-func somebodyElsesProjects() forbiddenError {
-	return forbiddenError{msg: "you may only keep your own projects"}.WithCode("onlyOwnProjects")
-}
-
-// somebodyElsesEntries is how a read of time that is not the caller's is refused.
-func somebodyElsesEntries() forbiddenError {
-	return forbiddenError{msg: "you may only read your own time entries"}.WithCode("onlyOwnEntriesRead")
-}
-
-// requireOwner checks a write against a specific user's data: the caller's own,
-// or an account they may book for as a manager.
-func (a *Authorizer) requireOwner(ctx context.Context, principal *service.Principal, ownerID uint) error {
-	if a.open {
-		return nil
-	}
-
-	if principal.Can(model.PermTimesheetWriteOwn) && principal.User.ID == ownerID {
-		return nil
-	}
-
-	reached, err := a.reaches(ctx, principal, ownerID, model.PermTimesheetWriteTeam)
-	if err != nil {
-		return err
-	}
-
-	if reached {
-		return nil
-	}
-
-	return forbiddenError{msg: "you may only change your own time entries"}.
-		WithCode("onlyOwnEntriesWrite")
-}
-
-// viewerID is whose eyes a read is made through, or 0 when authorization is
-// switched off entirely - which the services read as "no narrowing", and which
-// is what a local trial with AUTH_ENABLED=false is.
-//
-// One question asked on nearly every read, so it lives with the rest of the
-// answers about the caller. It used to be a method on three handlers, identical
-// in name and signature and not quite identical in body: one guarded the
-// principal and two dereferenced it. Nothing had gone wrong, because every call
-// site follows a successful Require - but that was a property of the callers
-// rather than of the copies, and the copies were what a fourth handler would
-// have been written from.
-//
-// The guarded reading is the one that survived. It costs a comparison and
-// removes the question.
-func (a *Authorizer) viewerID(principal *service.Principal) uint {
-	if a.open || principal == nil || principal.User == nil {
-		return 0
-	}
-
-	return principal.User.ID
-}
-
-// reportScope is whose hours a total covers: the caller's own.
-//
-// Zero means "no narrowing", which is what an installation without authentication
-// gets. Everybody else gets their own id, so a total can never add up hours that
-// are not theirs.
-//
-// Deliberately not viewerID above, which today computes the same number. The
-// two are the same only for as long as a project belongs to exactly one person,
-// and folding them together would quietly make that an assumption nobody
-// records rather than a coincidence two locks happen to share.
-//
-// The second of two locks, and today the redundant one. A project belongs to one
-// person and nobody else may even see it, so a report the caller can open is a report
-// over their own project, whose entries are their own by construction - which is why
-// removing this narrowing does not make any test fail. It stays because it is the lock
-// that states the rule: the first one is about which project is visible, and would go
-// on holding while quietly ceasing to be about whose hours are counted the moment two
-// people could book on one project again.
-func (a *Authorizer) reportScope(principal *service.Principal) uint {
-	if a.open {
-		return 0
-	}
-
-	if principal.User == nil {
-		return 0
-	}
-
-	return principal.User.ID
-}
-
-// requireOwnEntry answers an entry that is not the caller's exactly as the
-// repository answers an id nobody holds: not found.
-//
-// A refusal was a way to ask which ids are real. Walking the numbers told a
-// caller where the entries are and how many there are without ever being
-// allowed to read one, and it made no difference which method did the walking:
-// reading answered "not found" long before changing, deleting and transferring
-// did, so the same map was drawn with PUT, DELETE or a transfer instead, one
-// refused request at a time. "Not there" is true from where the caller stands,
-// and it is the answer a private project gives for the same reason.
-//
-// It asks only whose entry it is, never whether the caller may act at all -
-// each route has already required its own permission. That is why it is not
-// requireOwner, which insists on timesheets:write:own as well: transferring is
-// gated on timesheets:transfer, so a role holding that and not the write right
-// must still be able to transfer its own entries. requireOwner stays the check
-// for whose an entry would *become*, where the account named is the caller's
-// own choice and a refusal reveals nothing.
-//
-// A manager's entry to somebody else's is the team right that would be needed to
-// do with it what the route does - reading it, or changing it - and without that
-// right the entry is not there for them either.
-func (a *Authorizer) requireOwnEntry(ctx context.Context, principal *service.Principal, id, ownerID uint,
-	teamRight string) error {
-	if a.open {
-		return nil
-	}
-
-	if principal.User != nil && principal.User.ID == ownerID {
-		return nil
-	}
-
-	reached, err := a.reaches(ctx, principal, ownerID, teamRight)
-	if err != nil {
-		return err
-	}
-
-	if reached {
-		return nil
-	}
-
-	return toHTTPError(apperror.NotFound("timesheet", strconv.FormatUint(uint64(id), 10)))
 }
 
 // mustChangePassword blocks everything except the password change itself

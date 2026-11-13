@@ -21,7 +21,7 @@ type slowRun struct{}
 
 func (slowRun) Sync(ctx context.Context) (*appservice.SyncReport, error) {
 	report := &appservice.SyncReport{Deleted: []appservice.SyncCandidate{
-		{Email: "left@example.com", Timesheets: 3},
+		{Email: "left@example.com", Tickets: 3},
 	}}
 
 	<-ctx.Done()
@@ -84,8 +84,6 @@ func (c *runCounter) IncrementCounter(_ context.Context, name string, labels ...
 		c.outcomes = append(c.outcomes, strings.Join(labels, "="))
 	}
 }
-
-func (*runCounter) RecordHistogram(context.Context, string, float64, ...string) {}
 
 // A scheduled run says what it came to where something other than the log can
 // see it.

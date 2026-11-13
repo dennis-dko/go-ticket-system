@@ -5,66 +5,36 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
 	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
-	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 	"github.com/dennis-dko/go-ticket-system/internal/support/webpush"
 )
 
-// PushService pushes the reminders to the browsers people subscribe - a
-// stopwatch run past the hours its owner chose, and the last working day with
-// nothing booked on it - where the installation allows it at all.
+// PushService pushes what somebody is told about their tickets to the browsers
+// they subscribed, where the installation allows it at all.
 //
-// The installation's switch ships off, decided by the maintainer on 2026-11-10:
-// every push leaves through the push service of the browser's maker - Google's
-// for Chrome, Mozilla's, Apple's - and whether this installation talks to them
-// is its administrator's to decide. Each person then subscribes their own
-// browsers from the Reminders card.
+// The installation's switch ships off: every push leaves through the push
+// service of the browser's maker - Google's for Chrome, Mozilla's, Apple's - and
+// whether this installation talks to them is its administrator's to decide.
+// Each person then subscribes their own browsers under My account.
 //
-// The reminders are worked out as the page's banners are, from the same answers,
-// in the minute they fall due. Nothing is remembered about what was pushed: each
-// is pushed by the run for the minute it falls in, so a minute nobody ran - a
-// restart - is a reminder not pushed rather than one pushed twice.
+// What is pushed is decided elsewhere, by whatever has news for an account; this
+// carries it. Nothing is remembered here about what was pushed.
 type PushService struct {
-	settings   repository.SettingsRepository
-	subs       repository.PushSubscriptionRepository
-	principals principalReader
-	timers     timerReader
-	notices    noticeReader
-	secrets    *security.Sealer
-	send       pushSender
-}
-
-// principalReader is who an account is and what it may do, asked afresh on
-// every run: a role changed since a browser was subscribed decides.
-type principalReader interface {
-	PrincipalByID(ctx context.Context, id uint) (*Principal, error)
-}
-
-// timerReader is somebody's running stopwatch, or nil.
-type timerReader interface {
-	Running(ctx context.Context, userID uint) (*model.RunningTimer, error)
-}
-
-// noticeReader is what about somebody's own time deserves a banner.
-type noticeReader interface {
-	Notices(ctx context.Context, userID uint) (*Notices, error)
+	settings repository.SettingsRepository
+	subs     repository.PushSubscriptionRepository
+	secrets  *security.Sealer
+	send     pushSender
 }
 
 // pushSender posts one message to one subscription.
 type pushSender func(ctx context.Context, keys webpush.Keys, sub webpush.Subscription, message webpush.Message) error
 
-// pushMorning is the hour on somebody's own clock at which an unbooked day is
-// pushed: the installation names yesterday from midnight on, and nobody is to be
-// woken for it.
-const pushMorning = 8
-
-// pushTTL is how long a push service may hold a reminder for a browser that is
+// pushTTL is how long a push service may hold a message for a browser that is
 // not online. Later than that it is about a moment that has passed.
 const pushTTL = time.Hour
 
@@ -76,15 +46,12 @@ const pushEndpointLength = 700
 func NewPushService(
 	settings repository.SettingsRepository,
 	subs repository.PushSubscriptionRepository,
-	principals principalReader,
-	timers timerReader,
-	notices noticeReader,
 ) *PushService {
 	empty, _ := security.NewSealer("")
 	client := &http.Client{Timeout: 15 * time.Second}
 
 	return &PushService{
-		settings: settings, subs: subs, principals: principals, timers: timers, notices: notices, secrets: empty,
+		settings: settings, subs: subs, secrets: empty,
 		send: func(ctx context.Context, keys webpush.Keys, sub webpush.Subscription, message webpush.Message) error {
 			return keys.Send(ctx, client, sub, message, pushTTL)
 		},
@@ -109,7 +76,7 @@ func (s *PushService) WithSender(send func(ctx context.Context, keys webpush.Key
 	return s
 }
 
-// Enabled says whether the installation pushes reminders.
+// Enabled says whether the installation pushes notifications.
 func (s *PushService) Enabled(ctx context.Context) (bool, error) {
 	value, err := s.settings.Get(ctx, model.SettingWebPush)
 
@@ -165,7 +132,7 @@ func (s *PushService) Endpoints(ctx context.Context, userID uint) ([]string, err
 	return endpoints, nil
 }
 
-// Subscribe keeps a browser to push somebody's reminders to. It refuses where
+// Subscribe keeps a browser to push somebody's notifications to. It refuses where
 // the installation does not push, an address that is not a push service a browser
 // subscribes through, and keys no message could be encrypted for.
 func (s *PushService) Subscribe(ctx context.Context, userID uint, sub webpush.Subscription) error {
@@ -175,7 +142,7 @@ func (s *PushService) Subscribe(ctx context.Context, userID uint, sub webpush.Su
 	}
 
 	if !on {
-		return apperror.Conflictf("this installation does not push reminders").WithCode("pushOff")
+		return apperror.Conflictf("this installation does not push notifications").WithCode("pushOff")
 	}
 
 	if len(sub.Endpoint) > pushEndpointLength || !webpush.KnownService(sub.Endpoint) {
@@ -184,7 +151,7 @@ func (s *PushService) Subscribe(ctx context.Context, userID uint, sub webpush.Su
 	}
 
 	// Tried rather than measured: keys a message cannot be encrypted for would
-	// only be found out at the first reminder, when there is nobody to tell.
+	// only be found out at the first push, when there is nobody to tell.
 	if _, err := webpush.Encrypt(nil, sub); err != nil || len(sub.P256dh) > 100 || len(sub.Auth) > 50 || len(sub.Origin) > 255 {
 		return apperror.Invalidf("these are not the keys of a browser's push channel").WithCode("pushSubscriptionInvalid")
 	}
@@ -203,12 +170,15 @@ func (s *PushService) Unsubscribe(ctx context.Context, userID uint, endpoint str
 	return err
 }
 
-// PushDue pushes what falls due in the minute that ends at end - which it is
-// truncated to - to every subscribed browser of the people it falls due for: a
-// stopwatch whose hours pass in that minute, and an unbooked day for whoever's
-// own clock reads eight in the morning at its end. A browser its push service no
-// longer knows is forgotten.
-func (s *PushService) PushDue(ctx context.Context, end time.Time) error {
+// Push sends messages to every browser an account subscribed. Where the
+// installation does not push, or the account subscribed none, nothing is sent
+// and that is no failure: a push is a courtesy beside what the screen already
+// says. A browser its push service no longer knows is forgotten.
+func (s *PushService) Push(ctx context.Context, userID uint, messages ...webpush.Message) error {
+	if len(messages) == 0 {
+		return nil
+	}
+
 	on, err := s.Enabled(ctx)
 	if err != nil || !on {
 		return err
@@ -219,36 +189,7 @@ func (s *PushService) PushDue(ctx context.Context, end time.Time) error {
 		return err
 	}
 
-	zone, err := s.settings.Get(ctx, model.SettingTimezone)
-	if err != nil {
-		return err
-	}
-
-	users, err := s.subs.Subscribed(ctx)
-	if err != nil {
-		return err
-	}
-
-	end = end.Truncate(time.Minute)
-
-	var failed []error
-
-	for _, id := range users {
-		messages, err := s.dueFor(ctx, id, end, zone)
-		if err != nil {
-			failed = append(failed, fmt.Errorf("working out the reminders of account %d: %w", id, err))
-
-			continue
-		}
-
-		if len(messages) == 0 {
-			continue
-		}
-
-		failed = append(failed, s.pushTo(ctx, keys, id, messages)...)
-	}
-
-	return errors.Join(failed...)
+	return errors.Join(s.pushTo(ctx, keys, userID, messages)...)
 }
 
 // pushTo sends messages to every browser account id subscribed, forgetting one
@@ -283,69 +224,6 @@ func (s *PushService) pushTo(ctx context.Context, keys webpush.Keys, id uint, me
 	}
 
 	return failed
-}
-
-// dueFor is what falls due for one account in the minute ending at end, in its
-// own language: nothing for an account whose role no longer reads its own time,
-// as the page's banners are not shown to one.
-func (s *PushService) dueFor(ctx context.Context, userID uint, end time.Time, instanceZone string) ([]webpush.Message, error) {
-	principal, err := s.principals.PrincipalByID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	if principal == nil || principal.User == nil || !principal.Can(model.PermTimesheetReadOwn) {
-		return nil, nil
-	}
-
-	user := principal.User
-	words := i18n.For(user.EffectiveLanguage())
-	zone := model.EffectiveTimezone(user.Timezone, instanceZone)
-
-	var due []webpush.Message
-
-	if hours := user.EffectiveTimerAlertHours(); hours > 0 && principal.Can(model.PermTimesheetWriteOwn) {
-		timer, err := s.timers.Running(ctx, userID)
-		if err != nil {
-			return nil, err
-		}
-
-		if timer != nil {
-			at := timer.StartedAt.Add(time.Duration(hours) * time.Hour)
-
-			if at.After(end.Add(-time.Minute)) && !at.After(end) {
-				due = append(due, webpush.Message{
-					Title: words.Text("timer.longTitle", "The stopwatch is still running"),
-					Body: words.Text("timer.longBody", "Since {1}, longer than the {0} you chose.",
-						strconv.Itoa(hours)+" "+words.Text("unit.hours", "h"), words.Moment(timer.StartedAt.In(zone))),
-					Tag:   "gts-stopwatch",
-					At:    at.UTC().Format(time.RFC3339),
-					About: timer.StartedAt.UTC().Format(time.RFC3339),
-				})
-			}
-		}
-	}
-
-	if local := end.In(zone); local.Hour() == pushMorning && local.Minute() == 0 {
-		notices, err := s.notices.Notices(ctx, userID)
-		if err != nil {
-			return nil, err
-		}
-
-		if notices != nil && notices.UnbookedDay != nil {
-			due = append(due, webpush.Message{
-				Title: words.Text("remind.title", "Reminders"),
-				Body: words.Text("remind.unbooked",
-					"Nothing is booked on {0}, a working day by your plan. It can be added under {1}.",
-					words.Day(*notices.UnbookedDay), words.Text("nav.timesheets", "Time entries")),
-				Tag:   "gts-unbooked",
-				At:    end.UTC().Format(time.RFC3339),
-				About: notices.UnbookedDay.Format(time.DateOnly),
-			})
-		}
-	}
-
-	return due, nil
 }
 
 // keys is the installation's key pair - made and kept sealed the first time it is

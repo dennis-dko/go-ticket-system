@@ -308,7 +308,7 @@ const theInstallation = `(async () => {
 	await put('/settings/holidays', {place: 'DE-BY'});
 	await put('/settings/openid', {enabled: true, issuer: %s, clientId: %s, clientSecret: %s, label: ''});
 	await api('/users', {method: 'POST', body: JSON.stringify({
-		name: 'Robin Keller', email: 'robin@example.com', role: 'user', password: 'robin-password-1'})});
+		name: 'Robin Keller', email: 'robin@example.com', role: 'agent', password: 'robin-password-1'})});
 	return true;
 })()`
 

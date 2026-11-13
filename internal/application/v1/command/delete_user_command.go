@@ -4,12 +4,13 @@ package command
 type DeleteUserCommand struct {
 	ID uint
 
-	// Purge confirms that the account's recorded time is to be destroyed with
-	// it.
+	// Confirmed says that whoever asked knows what the account leaves behind:
+	// the tickets it owns stay, and are left without an owner.
 	//
-	// Without it an account that has booked hours is refused rather than
-	// emptied. The hours are the only thing here that cannot be recreated - an
-	// account can be added again in a minute - so removing them is a decision
-	// somebody has to make on purpose rather than a side effect of a click.
-	Purge bool
+	// Without it an account that owns tickets still being worked on is refused
+	// rather than removed. Nothing is lost either way - a ticket outlives its
+	// owner - but a ticket nobody owns is one nobody is answering, so leaving a
+	// number of them like that is a decision somebody has to make on purpose
+	// rather than a side effect of a click.
+	Confirmed bool
 }

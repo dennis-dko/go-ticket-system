@@ -12,11 +12,10 @@ import (
 
 // Table describes one kind of sheet: what it is called and what its columns are.
 //
-// Extracted when projects and users grew exports of their own. The three sheets
-// differ only in their columns and how a row is turned into cells; the freeze
-// pane, the bold heading, the temporary file the library keeps and the business
-// of picking a sheet to read are the same for all of them, and were worth having
-// once rather than three times.
+// The sheets differ only in their columns and how a row is turned into cells; the
+// freeze pane, the bold heading, the temporary file the library keeps and the
+// business of picking a sheet to read are the same for all of them, and are worth
+// having once rather than once per sheet.
 type Table struct {
 	// Key is what the sheet is called in English, and the key its name is
 	// translated under.
@@ -35,19 +34,16 @@ type Table struct {
 
 // Cell is one value in a row.
 //
-// Text or number, because the distinction is visible in the result: a column of
-// numbers can be summed in Excel, which is most of the reason to want a
-// spreadsheet rather than a list. A number written as text cannot.
+// Text only, because nothing the accounts and roles sheets hold is a figure
+// anybody sums. A sheet that does carry one writes it as a number, so that Excel
+// can total the column, which is most of the reason to want a spreadsheet rather
+// than a list.
 type Cell struct {
-	Text   string
-	Number *float64
+	Text string
 }
 
 // Text makes a text cell.
 func Text(s string) Cell { return Cell{Text: s} }
-
-// Number makes a numeric cell.
-func Number(v float64) Cell { return Cell{Number: &v} }
 
 // write builds a workbook of one sheet.
 func write(table Table, language string, rows [][]Cell) ([]byte, error) {
@@ -144,14 +140,6 @@ func writeRow(book *excelize.File, sheet string, number int, cells []Cell) error
 			return fmt.Errorf("naming a cell in row %d: %w", number, err)
 		}
 
-		if value.Number != nil {
-			if err := book.SetCellFloat(sheet, name, *value.Number, 2, 64); err != nil {
-				return fmt.Errorf("writing row %d: %w", number, err)
-			}
-
-			continue
-		}
-
 		if err := book.SetCellStr(sheet, name, value.Text); err != nil {
 			return fmt.Errorf("writing row %d: %w", number, err)
 		}
@@ -186,21 +174,20 @@ func (p *Panic) Error() string { return fmt.Sprintf("the workbook reader panicke
 
 // ErrWrongSheet is a workbook of the right shape and the wrong kind.
 //
-// Each tab has its own import, so handing the people importer a sheet of time
-// entries is now an easy mistake to make - two clicks apart, and the files look
-// alike in a folder. Without this it half worked: the reader fell back to the
-// first sheet, and a column of dates was read as a column of names. Refusing it
-// by name is possible because this application wrote the file and named the
-// sheet.
+// Each screen has its own import, so handing the people importer a sheet of roles
+// is an easy mistake to make - two clicks apart, and the files look alike in a
+// folder. Without this it half worked: the reader fell back to the first sheet,
+// and a column of one kind was read as a column of another. Refusing it by name is
+// possible because this application wrote the file and named the sheet.
 var ErrWrongSheet = errors.New("this workbook holds something else")
 
 // tables are every sheet this package knows, which is what lets it recognise a
 // workbook of the wrong kind rather than reading one column out of step.
-func tables() []Table { return []Table{timesheets, projects, users, roles} }
+func tables() []Table { return []Table{users, roles} }
 
 // RowError is one row that could not be understood.
 //
-// Kept per row rather than failing the file, so somebody who typed one date
+// Kept per row rather than failing the file, so somebody who typed one address
 // wrong in eighty rows is told which one rather than being told no.
 type RowError struct {
 	Number int
@@ -243,9 +230,9 @@ func problemf(code, format string, values ...any) error {
 
 // Problemf is problemf for the service layer.
 //
-// Some complaints about a row cannot be made here: whether a project may be
-// archived, or whether an account exists, is not something a reader of
-// spreadsheets knows. They are still complaints about a row and they end up in
+// Some complaints about a row cannot be made here: whether an account exists, or
+// whether a role may be changed, is not something a reader of spreadsheets
+// knows. They are still complaints about a row and they end up in
 // the same preview column, so they are built the same way rather than through a
 // second arrangement that would have to be kept level with this one.
 func Problemf(code, format string, values ...any) error {
@@ -295,15 +282,14 @@ func readWithHeading(r io.Reader, table Table) ([]string, [][]string, error) {
 	return raw[0], raw[1:], nil
 }
 
-// readRows is what all three readers do: read the sheet, parse every row, and
-// keep the rows that failed beside the rows that did not - an import that stops
-// at the first bad line tells somebody with a hundred rows about one of them.
+// readRows is what a reader of a sheet with fixed columns does: read the sheet,
+// parse every row, and keep the rows that failed beside the rows that did not -
+// an import that stops at the first bad line tells somebody with a hundred rows
+// about one of them.
 //
-// It was these twenty lines three times over, differing in the row type, the
-// table and the parser, which is exactly the list of parameters below. The
-// blank-row rule in the middle is the reason that mattered: it is a decision
-// about what an empty line in a spreadsheet means, and it was written down in
-// three places.
+// The blank-row rule in the middle is the reason it is one function: it is a
+// decision about what an empty line in a spreadsheet means, and it was once
+// written down in three places.
 func readRows[T any](r io.Reader, table Table,
 	parse func(int, []string) (T, error)) ([]T, []RowError, error) {
 

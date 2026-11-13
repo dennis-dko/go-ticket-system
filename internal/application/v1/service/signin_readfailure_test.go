@@ -50,7 +50,7 @@ func TestADirectoryEntryCannotClaimAnAdministratorWhoseRoleCannotBeRead(t *testi
 		f.auth, time.Hour).
 		WithExternalAuth(&fakeAuthenticator{user: &service.ExternalUser{
 			ID: "uuid-intruder", Email: "chief@example.com", Name: "Not Them",
-		}}, model.RoleUser)
+		}}, model.RoleAgent)
 
 	if _, err := sessions.Login(context.Background(), "chief@example.com", "anything", ""); err == nil {
 		t.Error("the directory signed in as a local administrator while the role could not be read")
@@ -82,7 +82,7 @@ func TestADirectorySignInDoesNotCreateASecondAccountWhenTheLookupFails(t *testin
 		newStubSessions(), f.auth, time.Hour).
 		WithExternalAuth(&fakeAuthenticator{user: &service.ExternalUser{
 			ID: "uuid-1", Email: "married.name@example.com", Name: "Sam Taylor",
-		}}, model.RoleUser)
+		}}, model.RoleAgent)
 
 	if _, err := sessions.Login(context.Background(), "married.name@example.com", "anything", ""); err == nil {
 		t.Error("the sign-in went on without being able to read who this is")
@@ -115,8 +115,6 @@ type counterSpy struct {
 func (c *counterSpy) IncrementCounter(_ context.Context, name string, labels ...string) {
 	c.counted[name] = append(c.counted[name], strings.Join(labels, "="))
 }
-
-func (*counterSpy) RecordHistogram(context.Context, string, float64, ...string) {}
 
 // A password sign-in that cannot read the account it is for is a database that
 // failed, not a wrong password - in what it answers and in what it counts.
@@ -153,7 +151,7 @@ func TestATicketSignInTheDatabaseCannotAnswerIsCountedAsTheDatabase(t *testing.T
 		newStubSessions(), f.auth, time.Hour).
 		WithExternalAuth(&lookupDirectory{entries: map[string]*service.ExternalUser{
 			"jdoe": {ID: "uuid-jdoe", Email: "jdoe@example.com"},
-		}}, model.RoleUser).
+		}}, model.RoleAgent).
 		WithMetrics(spy)
 
 	if _, err := sessions.KerberosLogin(context.Background(), "jdoe", "EXAMPLE.COM", ""); err == nil {
@@ -181,7 +179,7 @@ func TestASignInTheDirectoryCannotAnswerIsCountedAsTheDirectory(t *testing.T) {
 	spy := &counterSpy{counted: map[string][]string{}}
 
 	sessions := service.NewSessionService(f.userRepo, f.roleRepo, newStubSessions(), f.auth, time.Hour).
-		WithExternalAuth(unansweringDirectory{}, model.RoleUser).
+		WithExternalAuth(unansweringDirectory{}, model.RoleAgent).
 		WithMetrics(spy)
 
 	_, err := sessions.Login(context.Background(), "someone@example.com", "a-password", "")

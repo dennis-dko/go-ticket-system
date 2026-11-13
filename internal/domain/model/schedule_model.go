@@ -34,7 +34,7 @@ var scheduleBounds = [ScheduleFields][2]int{
 //
 // An empty expression is valid and means "do not schedule it", which is the
 // default and the safe one: a run deletes accounts the directory no longer
-// holds, together with the hours recorded against them.
+// holds, and leaves the tickets they owned without an owner.
 func ValidSchedule(expression string) bool {
 	expression = strings.TrimSpace(expression)
 	if expression == "" {

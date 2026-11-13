@@ -56,11 +56,11 @@ var standInForThePushService = chromedp.ActionFunc(func(ctx context.Context) err
 	return err
 })
 
-// Where the installation pushes, the Reminders card subscribes the browser it is
+// Where the installation pushes, the notification card subscribes the browser it is
 // open in and takes it back again, and says which it is; and signing out of the
 // browser takes it out of the pushes, so whoever uses it next is not pushed the
-// reminders of whoever left.
-func TestTheRemindersCardSubscribesThisBrowserAndSigningOutTakesItBack(t *testing.T) {
+// notifications of whoever left.
+func TestTheNotificationCardSubscribesThisBrowserAndSigningOutTakesItBack(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)

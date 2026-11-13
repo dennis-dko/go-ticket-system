@@ -80,27 +80,3 @@ func TestCheckingForUpdatesGivesTheFocusBack(t *testing.T) {
 			"pressed", focused)
 	}
 }
-
-func TestExportingADocumentGivesTheFocusBack(t *testing.T) {
-	t.Parallel()
-
-	p := open(t)
-	p.readyWorker()
-
-	// The result, and the button under it, appear once a balance is worked out.
-	p.run("work out the balance", p.click(`.tab[data-view="overtime"]`),
-		chromedp.WaitVisible("#form-overtime", chromedp.ByID),
-		p.click(`#form-overtime button[type="submit"]`),
-		chromedp.WaitVisible("#overtime-pdf", chromedp.ByID))
-
-	p.run("download slowly", chromedp.Evaluate(`
-		(() => {
-			downloadDocument = () => new Promise((resolve) => setTimeout(resolve, 300));
-			return 1;
-		})()`, nil))
-
-	if focused := p.focusAfterPressing("#overtime-pdf"); focused != "#overtime-pdf" {
-		t.Errorf("after the export the focus is on %q rather than on the button that was "+
-			"pressed", focused)
-	}
-}

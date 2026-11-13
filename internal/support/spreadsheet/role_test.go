@@ -17,10 +17,10 @@ import (
 func TestRolesRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	permissions := []string{"users:read", "users:write", "projects:read", "settings:manage"}
+	permissions := []string{"users:read", "users:write", "tickets:read", "settings:manage"}
 
 	written, err := spreadsheet.WriteRoles("de", permissions, []spreadsheet.RoleRow{
-		{Name: "user", Description: "everyday", Granted: []string{"projects:read"}},
+		{Name: "agent", Description: "everyday", Granted: []string{"tickets:read"}},
 		{Name: "admin", Description: "the installation", System: true,
 			Granted: []string{"users:read", "users:write", "settings:manage"}},
 	})
@@ -45,7 +45,7 @@ func TestRolesRoundTrip(t *testing.T) {
 		name    string
 		granted []string
 	}{
-		{"user", []string{"projects:read"}},
+		{"agent", []string{"tickets:read"}},
 		{"admin", []string{"users:read", "users:write", "settings:manage"}},
 	} {
 		index := slices.IndexFunc(rows, func(r spreadsheet.RoleRow) bool { return r.Name == want.name })
@@ -74,17 +74,17 @@ func TestRolesRoundTrip(t *testing.T) {
 func TestRolesReadByHeadingNotByPosition(t *testing.T) {
 	t.Parallel()
 
-	older := []string{"users:read", "projects:read"}
+	older := []string{"users:read", "tickets:read"}
 
 	written, err := spreadsheet.WriteRoles("", older, []spreadsheet.RoleRow{
-		{Name: "reader", Granted: []string{"projects:read"}},
+		{Name: "reader", Granted: []string{"tickets:read"}},
 	})
 	if err != nil {
 		t.Fatalf("writing: %v", err)
 	}
 
 	// The application has gained a right since, and it sits between the two.
-	current := []string{"users:read", "users:write", "projects:read"}
+	current := []string{"users:read", "users:write", "tickets:read"}
 
 	rows, problems, err := spreadsheet.ReadRoles(bytes.NewReader(written), current)
 	if err != nil {
@@ -95,8 +95,8 @@ func TestRolesReadByHeadingNotByPosition(t *testing.T) {
 		t.Fatalf("read %d row(s) with problems %v", len(rows), problems)
 	}
 
-	if got := strings.Join(rows[0].Granted, ","); got != "projects:read" {
-		t.Errorf("the older export came back granting %q, want projects:read", got)
+	if got := strings.Join(rows[0].Granted, ","); got != "tickets:read" {
+		t.Errorf("the older export came back granting %q, want tickets:read", got)
 	}
 }
 

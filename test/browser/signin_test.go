@@ -281,7 +281,7 @@ func (p *page) readyWorker() {
 // already signed in as the administrator.
 //
 // Its own step, because a case sometimes needs both in order: something set on the
-// administration screen, and then the working day it applies to.
+// administration screen, and then the account it applies to.
 func (p *page) becomeWorker() {
 	p.t.Helper()
 

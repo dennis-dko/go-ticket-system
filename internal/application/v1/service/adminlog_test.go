@@ -19,20 +19,20 @@ func TestTheAdministrationLogNamesPeopleAsTheyAreNow(t *testing.T) {
 	log := service.NewAdminLogService(memory.NewAdminEventRepository(), f.userRepo, f.roleRepo)
 
 	admin, err := f.users.CreateUser(context.Background(), command.CreateUserCommand{
-		Name: "Ada", Email: "ada@example.com", Role: model.RoleUserAdmin,
+		Name: "Ada", Email: "ada@example.com", Role: model.RoleAdmin,
 	})
 	if err != nil {
 		t.Fatalf("seed the administrator: %v", err)
 	}
 
 	gone, err := f.users.CreateUser(context.Background(), command.CreateUserCommand{
-		Name: "Gunter", Email: "gunter@example.com", Role: model.RoleUser,
+		Name: "Gunter", Email: "gunter@example.com", Role: model.RoleAgent,
 	})
 	if err != nil {
 		t.Fatalf("seed the account to erase: %v", err)
 	}
 
-	role, err := f.roleRepo.GetByName(context.Background(), model.RoleUser)
+	role, err := f.roleRepo.GetByName(context.Background(), model.RoleAgent)
 	if err != nil {
 		t.Fatalf("read the ordinary role: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestTheAdministrationLogNamesPeopleAsTheyAreNow(t *testing.T) {
 	}{
 		{"user.created", gone.Result.ID, ""},
 		{"role.updated", role.ID, ""},
-		{"user.role", f.userID, model.RoleUserAdmin},
+		{"user.role", f.userID, model.RoleAdmin},
 		{"settings.branding", 0, ""},
 	} {
 		if err := log.Record(ctx, admin.Result.ID, change.action, change.target, change.detail); err != nil {
@@ -71,11 +71,11 @@ func TestTheAdministrationLogNamesPeopleAsTheyAreNow(t *testing.T) {
 		t.Errorf("the newest entry reads %+v, want Ada changing the branding", first)
 	}
 
-	if assigned := newest[1]; assigned.TargetName != "Dennis" || assigned.Detail != model.RoleUserAdmin {
-		t.Errorf("the role assignment reads %+v, want Dennis given %s", assigned, model.RoleUserAdmin)
+	if assigned := newest[1]; assigned.TargetName != "Dennis" || assigned.Detail != model.RoleAdmin {
+		t.Errorf("the role assignment reads %+v, want Dennis given %s", assigned, model.RoleAdmin)
 	}
 
-	if changed := newest[2]; changed.TargetName != model.RoleUser {
+	if changed := newest[2]; changed.TargetName != model.RoleAgent {
 		t.Errorf("the role change reads %+v, want the role named", changed)
 	}
 

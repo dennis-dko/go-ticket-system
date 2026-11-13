@@ -15,8 +15,8 @@ import (
 // by geometry, which a telephone does not keep. Firefox for Android moves what
 // is fixed to the bottom of the window with its toolbar and leaves what is fixed
 // at both ends where it was, and the strip that opened between the sign-in
-// screen and the footer showed the bottom of the time entries screen that had
-// just been signed out of.
+// screen and the footer showed the bottom of the screen that had just been
+// signed out of.
 //
 // Chrome keeps the two edges together, so the strip is opened here by hand -
 // the footer's reservation made taller than the footer - and stands in for the
@@ -29,8 +29,8 @@ func TestSigningOutOnAPhoneLeavesNothingOfTheApplicationOnScreen(t *testing.T) {
 	p := open(t)
 	p.readyWorker()
 
-	p.run("open the time entries", p.click(`.tab[data-view="timesheets"]`))
-	p.waitShown("#workbook-card")
+	p.run("open My account", p.click(`.tab[data-view="settings"]`))
+	p.waitShown("#form-password")
 
 	p.run("a telephone", chromedp.EmulateViewport(390, 760))
 

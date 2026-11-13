@@ -1,7 +1,7 @@
 /*
- * What lets the installed application open without a network, shows a reminder
- * pushed while no page is open, and is where a notification leads back to -
- * nothing else.
+ * What lets the installed application open without a network, shows a
+ * notification pushed while no page is open, and is where a notification leads
+ * back to - nothing else.
  *
  * It keeps the shell - the document, the script, the stylesheet, the pictures -
  * as last fetched, and hands it out when the installation cannot be reached.
@@ -10,9 +10,8 @@
  * cannot.
  *
  * Nothing the API answers is kept or handed out from here, ever. Who somebody is,
- * what they booked, what a balance says: all of it is asked fresh or not shown,
- * because a figure from an hour ago shown as if it were now is worse than none.
- * Bookings made meanwhile wait in the page itself - see keepForLater in app.js.
+ * what a ticket says, where it stands: all of it is asked fresh or not shown,
+ * because a state from an hour ago shown as if it were now is worse than none.
  */
 const SHELL = 'gts-shell-v1';
 
@@ -33,17 +32,16 @@ self.addEventListener('activate', (event) => {
     .then(() => self.clients.claim()));
 });
 
-// A reminder pushed by the installation - a stopwatch past its hours, an unbooked
-// day - shown as its notification, whether or not a page is open. The tag is the
-// page's own for the same reminder, so one the page showed itself is replaced
-// rather than shown twice.
+// A notification pushed by the installation, shown whether or not a page is
+// open. The tag is the page's own for the same news, so one the page showed
+// itself is replaced rather than shown twice.
 //
 // One that arrives late was held by the push service for a browser that was
 // closed - for up to the hour it is sent to live - and what it says may have
-// stopped being true meanwhile: a stopwatch stopped on another device, a day
-// booked since. So it is asked about again first, as the page and the app ask
-// about what they show, and one that no longer holds takes the notification shown
-// for it before away with it.
+// stopped being true meanwhile. So it is asked about again first, as the page
+// asks about what it shows, and one that no longer holds - or that nothing here
+// knows how to ask about - takes the notification shown for it before away with
+// it.
 self.addEventListener('push', (event) => {
   const message = event.data ? event.data.json() : {};
   if (!message.title) return;
@@ -60,22 +58,18 @@ self.addEventListener('push', (event) => {
   }));
 });
 
-/** How late a pushed reminder may arrive and still be shown unasked: the installation confirmed it as it sent it. */
+/** How late a pushed notification may arrive and still be shown unasked: the installation confirmed it as it sent it. */
 const PUSHED_FRESH = 5 * 60 * 1000;
 
 /**
- * What the installation is asked about each kind of reminder, and whether its
- * answer bears out what the reminder is about: the moment the stopwatch started -
- * as a moment rather than as text, because the answer may write it with another
- * zone's offset than the push does - and the day with nothing booked.
+ * What the installation is asked about each kind of notification, by its tag:
+ * the address to ask, and whether the answer bears out what the notification is
+ * about. A kind not named here is shown while it is fresh and not at all once it
+ * is late, because nothing can confirm it still holds.
  */
-const ASKED_AGAIN = {
-  'gts-stopwatch': ['/api/v1/me/timer', (answer, about) => Boolean(answer?.running)
-    && Date.parse(answer.startedAt) === Date.parse(about)],
-  'gts-unbooked': ['/api/v1/me/notices', (answer, about) => answer?.unbookedDay === about],
-};
+const ASKED_AGAIN = {};
 
-/** Whether a pushed reminder still holds: at once where it is fresh, and otherwise as the installation answers now. */
+/** Whether a pushed notification still holds: at once where it is fresh, and otherwise as the installation answers now. */
 async function stillHolds(message) {
   const at = Date.parse(message.at);
   if (!Number.isFinite(at) || Date.now() - at <= PUSHED_FRESH) return true;
@@ -95,8 +89,8 @@ async function stillHolds(message) {
   }
 }
 
-// A notification - a stopwatch run past the hours its owner chose - leads back
-// to the page: the window already open where there is one, a new one otherwise.
+// A notification leads back to the page: the window already open where there is
+// one, a new one otherwise.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 

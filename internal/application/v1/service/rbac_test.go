@@ -2,7 +2,6 @@ package service_test
 
 import (
 	"context"
-	"slices"
 	"strings"
 	"testing"
 
@@ -25,7 +24,7 @@ func TestDefaultRolesAreSeeded(t *testing.T) {
 		byName[role.Name] = role
 	}
 
-	for _, expected := range []string{model.RoleAdmin, model.RoleUser} {
+	for _, expected := range []string{model.RoleAdmin, model.RoleAgent, model.RoleCustomer} {
 		if _, ok := byName[expected]; !ok {
 			t.Fatalf("expected default role %q to exist", expected)
 		}
@@ -37,45 +36,25 @@ func TestDefaultRolesAreSeeded(t *testing.T) {
 		t.Error("the admin role must hold roles:write")
 	}
 
-	// No right answers "may this person see somebody else's time", because the
-	// answer is no and it is not a choice.
-	//
-	// This used to check that no seeded role held those rights, which was the weaker
-	// statement: the rights still existed, so an administrator could tick one in the
-	// role editor. That granted a capability with no screen behind it - every
-	// question about every colleague answered by the API, and nothing anywhere to
-	// show it had been granted.
-	//
-	// Named as literals rather than constants, because the point is that the
-	// constants are gone. A guard written against a constant disappears with it, and
-	// disappears silently.
-	for _, gone := range []string{
-		"timesheets:read:all",
-		"timesheets:write:all",
-		// A total rather than a list, asked of somebody else's hours. Same question,
-		// second answer - which is how two answers come to disagree.
-		"reports:read",
-		// Reviewing somebody's hours, from when there was a reviewer.
-		"timesheets:approve",
-	} {
-		if slices.Contains(model.AllPermissions(), gone) {
-			t.Errorf("%q is back in AllPermissions(); it lets one account read or write "+
-				"another's time, and this application has no such account", gone)
-		}
-
-		for name, role := range byName {
-			if role.Has(gone) {
-				t.Errorf("the seeded role %q holds %q", name, gone)
-			}
+	// Somebody who works on tickets does not administer: an agent that could
+	// change roles or accounts could make itself whatever it liked.
+	for _, administering := range model.AdministeringPermissions() {
+		if byName[model.RoleAgent].Has(administering) {
+			t.Errorf("the agent role holds %q, which administers the installation", administering)
 		}
 	}
 
-	// And it does keep its own projects, which is what replaced the manager.
-	for _, own := range []string{
-		model.PermProjectWrite, model.PermProjectArchive, model.PermProjectDelete,
-	} {
-		if !byName[model.RoleUser].Has(own) {
-			t.Errorf("an ordinary account must hold %q to keep its own projects", own)
+	// A customer reaches the portal and nothing on the staff side, and nobody on
+	// the staff side is a customer: the portal shows an account its own contact's
+	// tickets, and a staff account has no contact.
+	customer := byName[model.RoleCustomer]
+	if len(customer.Permissions) != 1 || !customer.Has(model.PermPortalUse) {
+		t.Errorf("the customer role holds %v, want the portal and nothing else", customer.Permissions)
+	}
+
+	for _, staff := range []string{model.RoleAdmin, model.RoleAgent} {
+		if byName[staff].Has(model.PermPortalUse) {
+			t.Errorf("the %s role holds %q, which is the customer's side", staff, model.PermPortalUse)
 		}
 	}
 }
@@ -228,7 +207,7 @@ func TestSystemUserIsProtected(t *testing.T) {
 
 	// Nor may it be demoted to a role that cannot administer.
 	_, err = f.userDomain.AssignRoleToUser(context.Background(),
-		principal.User.ID, model.RoleUser)
+		principal.User.ID, model.RoleAgent)
 	requireKind(t, err, apperror.KindConflict)
 }
 
@@ -294,7 +273,7 @@ func TestPrincipalPermissionsComeFromRole(t *testing.T) {
 	f := newFixture(t)
 
 	if _, err := f.users.CreateUser(context.Background(), command.CreateUserCommand{
-		Name: "Worker", Email: "worker@example.com", Role: model.RoleUser,
+		Name: "Worker", Email: "worker@example.com", Role: model.RoleAgent,
 		Password: "worker-password",
 	}); err != nil {
 		t.Fatalf("create user: %v", err)
@@ -302,8 +281,8 @@ func TestPrincipalPermissionsComeFromRole(t *testing.T) {
 
 	principal := signIn(t, f, "worker@example.com", "worker-password")
 
-	if !principal.Can(model.PermTimesheetWriteOwn) {
-		t.Error("a user must be able to book their own time")
+	if !principal.Can(model.PermTicketWrite) {
+		t.Error("an agent must be able to work on tickets")
 	}
 
 	if principal.Can(model.PermUserDelete) {

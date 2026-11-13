@@ -22,8 +22,9 @@ import (
 //     408:1 on the shape a worksheet actually has, so that is about 13 GB.
 //   - A logo is capped at 256 KB. A flat PNG compresses about 1250:1, so 8000
 //     square arrives inside the cap and decodes to 244 MB - three times per save.
-//   - A chart is capped at 1 MB. A canvas produces RGBA, whose alpha has to be
+//   - A chart was capped at 1 MB. A canvas produces RGBA, whose alpha has to be
 //     split from the colour, which means inflating it all: 260 KB in, 782 MB out.
+//     The charts went with the time recording, and the decoder with them.
 //
 // None of the three was visible to a linter, a race detector or any suite: there
 // is nothing wrong with the line, and every test that runs fast enough to keep
@@ -39,10 +40,6 @@ func TestEveryDecoderOfCompressedInputIsBounded(t *testing.T) {
 		"internal/support/spreadsheet/book.go": "excelize.Options{UnzipSizeLimit: maxUnzippedBytes}, 128 MB",
 
 		"internal/support/imaging/imaging.go": "refuseTooManyPixels and PixelsIn, against MaxPixels (16 MP)",
-
-		"internal/support/document/document.go": "MaxChartPixels (16 MP), checked on the DecodeConfig already there",
-
-		"internal/interface/api/v1/rest/document_handler.go": "document.MaxChartPixels, so the refusal is coded and translated",
 	}
 
 	found := map[string][]int{}

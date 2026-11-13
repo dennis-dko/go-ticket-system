@@ -24,29 +24,19 @@ func TestAFirstSignInIsWalkedThroughTheApplication(t *testing.T) {
 	p := open(t)
 	p.readyAdmin()
 
-	// An ordinary user, because the built-in administrator is deliberately not
-	// walked through: it arrives at the setup wizard, and a walk through booking
-	// time would be a walk through somebody else's job.
+	// An agent, whose first sign-in is still ahead of it: readyAdmin has already
+	// put the administrator's walk aside.
 	p.run("create a user",
 		chromedp.Click(`.tab[data-view="users"]`, chromedp.ByQuery),
 		chromedp.WaitVisible("#form-user", chromedp.ByID),
 		chromedp.SendKeys(`#form-user input[name="name"]`, "Rieke", chromedp.ByQuery),
 		chromedp.SendKeys(`#form-user input[name="email"]`, "rieke@example.com", chromedp.ByQuery),
-		p.chooseOption(`#form-user select[name="role"]`, "user"),
+		p.chooseOption(`#form-user select[name="role"]`, "agent"),
 		chromedp.SendKeys(`#form-user input[name="password"]`, "rieke-password-1", chromedp.ByQuery),
 		p.click(`#form-user button[type="submit"]`),
 	)
 
-	// Slept through rather than waited for, and this is the one shape where that
-	// is right: what follows asserts that something did *not* appear. There is no
-	// condition to wait for - the answer is only trustworthy after giving it a
-	// chance to be wrong.
-	time.Sleep(500 * time.Millisecond)
-
-	// The administrator was not, which is half the requirement.
-	if p.visible("#tour-bubble") {
-		t.Error("the built-in administrator was walked through the application")
-	}
+	p.waitForText("#table-users tbody", "rieke@example.com")
 
 	p.run("sign out", p.click("#logout"), chromedp.WaitVisible("#form-login", chromedp.ByID))
 
@@ -71,9 +61,10 @@ func TestAFirstSignInIsWalkedThroughTheApplication(t *testing.T) {
 	// Long enough to be the tour of an application rather than of one screen. Every
 	// step outside the screen it started on used to be dropped - the reachability
 	// check asked for offsetParent, which is null for everything inside a hidden
-	// view - so a walk begun on the time entries was four steps long and looked
-	// complete.
-	if total := tourTotal(p); total < 12 {
+	// view - so a walk begun on one screen was four steps long and looked complete.
+	// An agent's walk begins on the greeting, with My account hidden, and dropped
+	// that way it would be the three steps on the bar.
+	if total := tourTotal(p); total < 8 {
 		t.Errorf("the walk is %d steps, which is one screen's worth rather than the "+
 			"whole application", total)
 	}

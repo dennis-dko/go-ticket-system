@@ -1,12 +1,9 @@
 package io.github.dennisdko.goticketsystem
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -43,8 +40,7 @@ import java.net.URI
  * WebScreen is the installation's web interface, shown whole: every view, card
  * and form the browser has, in its design, saved through its API into the same
  * database. What the app adds is only what a page cannot do inside an app by
- * itself - choose a file, save one, open a link that is not the installation's,
- * ask the phone for the notifications its reminders are shown as -
+ * itself - choose a file, save one, open a link that is not the installation's -
  * and the two things it is told of: signing out, which it watches the page's
  * requests for and which disconnects the app as well, so that a phone handed on
  * does not sign its next holder back in; and a session that ended without that,
@@ -164,30 +160,6 @@ fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> U
         }
     }
 
-    // The phone's answer to the Reminders card's question, handed back to the page.
-    val answered = remember {
-        resources.openRawResource(R.raw.notification_answered).bufferedReader(Charsets.UTF_8).use { it.readText() }
-    }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        askedForNotifications(context)
-        view.evaluateJavascript(answered, null)
-    }
-
-    // Registered here rather than with the other bridge, because asking the phone
-    // takes the launcher above, which needs the page. This effect runs before the
-    // one below that loads the page, so the page has it from its start. Below
-    // Android 13 there is nothing to ask: notifications are on unless switched off.
-    DisposableEffect(view) {
-        view.addJavascriptInterface(
-            Notifications(context) {
-                if (Build.VERSION.SDK_INT >= 33) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
-            },
-            notificationsInterface,
-        )
-
-        onDispose { }
-    }
-
     LaunchedEffect(shown) {
         view.loadUrl(address.trimEnd('/') + "/")
     }
@@ -225,27 +197,6 @@ private class Files(private val onSave: (String, ByteArray) -> Unit) {
 
 /** filesInterface is the name the page reaches [Files] by, which res/raw/keep_download.js calls. */
 private const val filesInterface = "GoTicketSystemFiles"
-
-/**
- * Notifications is what the page's Reminders card reaches in the app: whether
- * the phone shows the app's notifications, which ReminderWorker shows the
- * reminders as, and the question that asks the phone. A WebView has no
- * Notification of its own, so without this the card could only say that this
- * browser shows none.
- */
-private class Notifications(private val context: Context, private val ask: () -> Unit) {
-
-    @JavascriptInterface
-    fun state(): String = notificationState(context)
-
-    @JavascriptInterface
-    fun request() {
-        Handler(Looper.getMainLooper()).post(ask)
-    }
-}
-
-/** notificationsInterface is the name the page reaches [Notifications] by, which app.js asks for. */
-private const val notificationsInterface = "GoTicketSystemNotifications"
 
 /**
  * Session is how the page tells the app that its session ended without its

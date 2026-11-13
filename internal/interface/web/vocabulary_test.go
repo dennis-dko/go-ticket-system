@@ -248,17 +248,17 @@ func serverErrorCodes(t *testing.T) map[string]struct{} {
 // A field the server can reject is named the way the screen names it.
 //
 // Rejections travel as a list of field names, which are column names:
-// "dailyTargetHours" is not what the label above the box says, in any language.
+// "sessionIdleMinutes" is not what the label above the box says, in any language.
 // The interface looks each one up as t(`field.${name}`), so nothing in the source
 // mentions the key and the coverage tests cannot see it - which is how a field
 // could be rejected by name and shown as an identifier for good.
 //
 // In English too, which is the language this used to forget. English has no
 // dictionary on purpose, so the English is whatever the lookup falls back to - and the
-// fallback was the name itself: a refused import row said "Invalid field(s):
-// durationHours" about a box labelled Hours, while the German beside it said
-// Stunden. FIELD_NAMES holds the English, the way PERMISSION_TITLES does for the
-// rights.
+// fallback was the name itself: a refusal said "Invalid field(s):
+// sessionIdleMinutes" about a box labelled Sign out after inactivity, while the
+// German beside it said what the box says. FIELD_NAMES holds the English, the
+// way PERMISSION_TITLES does for the rights.
 func TestEveryRejectedFieldIsNamed(t *testing.T) {
 	fields := rejectedFields(t)
 	if len(fields) == 0 {
@@ -494,16 +494,16 @@ func restartRefusalCodes(t *testing.T) map[string]struct{} {
 	return codes
 }
 
-// Every state a project can be in has a German word for it.
+// Every state a ticket can be in has a German word for it.
 //
 // The badge is rendered as t(`status.${status}`) from whatever the server sent, so
 // no literal key appears in the source and the coverage tests cannot see these.
 // Without a word they render as the raw value, which is how "active" sat in the
 // middle of an otherwise German table.
-func TestEveryProjectStateIsNamed(t *testing.T) {
-	states := projectStates(t)
+func TestEveryTicketStateIsNamed(t *testing.T) {
+	states := ticketStates(t)
 	if len(states) == 0 {
-		t.Fatal("no project states found; this test is no longer reading the source")
+		t.Fatal("no ticket states found; this test is no longer reading the source")
 	}
 
 	dict, ok := dictionaries(t)["de"]
@@ -522,23 +522,23 @@ func TestEveryProjectStateIsNamed(t *testing.T) {
 	sort.Strings(unnamed)
 
 	if len(unnamed) > 0 {
-		t.Errorf("%d project state(s) have no German word, so the badge shows the raw "+
+		t.Errorf("%d ticket state(s) have no German word, so the badge shows the raw "+
 			"value: %v", len(unnamed), unnamed)
 	}
 }
 
-// projectStates reads what a project's status can be, out of the model.
-func projectStates(t *testing.T) map[string]struct{} {
+// ticketStates reads what a ticket's state can be, out of the model.
+func ticketStates(t *testing.T) map[string]struct{} {
 	t.Helper()
 
 	source, err := os.ReadFile(filepath.Join("..", "..", "..",
-		"internal", "domain", "model", "project_model.go"))
+		"internal", "domain", "model", "ticket_state.go"))
 	if err != nil {
-		t.Fatalf("reading the project model: %v", err)
+		t.Fatalf("reading the ticket states: %v", err)
 	}
 
 	states := map[string]struct{}{}
-	pattern := regexp.MustCompile(`ProjectStatus\w+\s*=\s*"([a-z]+)"`)
+	pattern := regexp.MustCompile(`State\w+\s+TicketState\s*=\s*"([a-z_]+)"`)
 
 	for _, match := range pattern.FindAllSubmatch(source, -1) {
 		states[string(match[1])] = struct{}{}

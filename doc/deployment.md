@@ -231,7 +231,7 @@ docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > backup
 `.env` carries only what a deployment must decide: the database password, the
 image version, the instance name, the TLS settings, and — only with the
 directory overlay — the two passwords that directory comes up on. Everything
-operational — session lifetime, rate limits, the daily booking cap, the
+operational — session lifetime, rate limits, the
 directory *connection*, the timezone — is administered in the running
 application under *Settings*, and takes effect without a restart. See
 [Configuration](configuration.md) for which settings live where and why.

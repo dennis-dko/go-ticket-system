@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+
 	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
@@ -16,10 +17,9 @@ import (
 //
 // The preview is drawn through redrawable, so a language change re-renders it
 // without sending the file again - and stopRedrawing is how a card says the
-// answer it held is gone. resetWorkbookCard calls it and says why: "The preview
-// it described is gone, so there is nothing to draw again." Choosing a different
-// file makes exactly the same thing true - the change handler hides the preview
-// and empties the summary - and does not call it.
+// answer it held is gone. The card's reset calls it. Choosing a different file
+// makes exactly the same thing true - the change handler hides the preview and
+// empties the summary - and once did not call it.
 //
 // So the draw stayed registered against the old result, and the next language
 // change put it back on screen: the verdict for a file nobody has chosen any
@@ -27,20 +27,16 @@ import (
 // Import button comes back with it, and it would upload the newly chosen file,
 // whose rows have never been looked at. The card exists to show what a file
 // would do before it does it.
-//
-// The same two lines are missing from the three cards buildSheetCard makes, and
-// this drives the one in the markup because it is the one that can be reached
-// without an administrator.
 func TestChoosingAnotherFileDoesNotBringTheOldVerdictBack(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	write := func(name string, rows []spreadsheet.Row) string {
+	write := func(name string, rows []spreadsheet.UserRow) string {
 		t.Helper()
 
-		book, err := spreadsheet.Write(rows)
+		book, err := spreadsheet.WriteUsers("en", rows)
 		if err != nil {
 			t.Fatalf("building %s: %v", name, err)
 		}
@@ -53,28 +49,27 @@ func TestChoosingAnotherFileDoesNotBringTheOldVerdictBack(t *testing.T) {
 		return path
 	}
 
-	first := write("first.xlsx", []spreadsheet.Row{
-		{Date: time.Now(), Hours: 2, Description: "The file that was checked"},
+	first := write("first.xlsx", []spreadsheet.UserRow{
+		{Name: "The file that was checked", Email: "checked@example.com", Role: "agent"},
 	})
 
-	second := write("second.xlsx", []spreadsheet.Row{
-		{Date: time.Now().AddDate(0, 0, 1), Hours: 3, Description: "The file that was not"},
+	second := write("second.xlsx", []spreadsheet.UserRow{
+		{Name: "The file that was not", Email: "unchecked@example.com", Role: "agent"},
 	})
 
-	p.run("check the first file",
-		chromedp.Click(`.tab[data-view="timesheets"]`, chromedp.ByQuery),
-		chromedp.WaitVisible("#workbook-card", chromedp.ByID),
-		chromedp.SetUploadFiles("#wb-file", []string{first}, chromedp.ByQuery))
+	const card = `#view-users .card:has(input[type="file"])`
 
-	p.waitShown("#wb-preview")
+	p.run("check the first file", p.click(`.tab[data-view="users"]`),
+		chromedp.WaitVisible(card, chromedp.ByQuery),
+		chromedp.SetUploadFiles(card+` input[type="file"]`, []string{first}, chromedp.ByQuery),
+		p.click(card+` button[data-i18n="wb.preview"]`))
 
-	p.run("look at what it would do", p.click("#wb-preview"),
-		chromedp.WaitVisible("#wb-preview-wrap", chromedp.ByID))
+	p.waitShown(card + " .table-wrap")
 
 	p.run("choose a different file",
-		chromedp.SetUploadFiles("#wb-file", []string{second}, chromedp.ByQuery))
+		chromedp.SetUploadFiles(card+` input[type="file"]`, []string{second}, chromedp.ByQuery))
 
-	p.waitGone("#wb-preview-wrap")
+	p.waitGone(card + " .table-wrap")
 
 	// The real trigger: a language change redraws every card that registered one.
 	p.run("read the page in German", chromedp.Evaluate(`(() => {
@@ -88,15 +83,9 @@ func TestChoosingAnotherFileDoesNotBringTheOldVerdictBack(t *testing.T) {
 	// Long enough for the redraw to have happened if it was going to.
 	time.Sleep(2 * time.Second)
 
-	if p.visible("#wb-preview-wrap") {
-		var shown string
-
-		p.run("what came back", chromedp.Evaluate(
-			`document.querySelector('#wb-summary').textContent.trim()`, &shown))
-
-		t.Errorf("a language change put the previous file's verdict back on screen "+
-			"(%q) while a different, unchecked file is chosen. The change handler "+
-			"hides the preview without calling stopRedrawing, which is the line "+
-			"resetWorkbookCard has and says the reason for", shown)
+	if p.visible(card + " .table-wrap") {
+		t.Errorf("a language change put the previous file's verdict back on screen " +
+			"while a different, unchecked file is chosen. The change handler hides the " +
+			"preview without calling stopRedrawing, which the card's reset has")
 	}
 }

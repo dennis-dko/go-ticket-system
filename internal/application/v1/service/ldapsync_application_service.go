@@ -28,9 +28,10 @@ type SyncCandidate struct {
 	Name   string
 	Email  string
 
-	// Timesheets is how many recorded entries would be destroyed with the
-	// account. It is reported so nobody deletes a year of work unaware.
-	Timesheets int
+	// Tickets is how many unfinished tickets the account owns, which its
+	// removal leaves without an owner. It is reported so nobody strands a
+	// colleague's open work unaware.
+	Tickets int
 }
 
 // SyncReport is the outcome of a synchronisation run, or of a preview.
@@ -64,14 +65,13 @@ type SyncReport struct {
 }
 
 // Removals are the lines a caller writes for what a run deleted: one for each
-// account, naming it and how much went with it.
+// account, naming it and how many tickets it left without an owner.
 //
 // Worded here because a caller's log is the only record of a deletion that
-// cannot be undone, and there are two callers. Each made the sentence for
-// itself - "(3 time entries)" from the schedule, "and its 3 time entry/entries"
-// from the button - for the same event, in the one place somebody searches to
-// find out what a run did. Empty for a run that never had a report, so a
-// caller that logs first and reads the error afterwards need not ask.
+// cannot be undone, and there are two callers - the schedule and the button -
+// writing about the same event, in the one place somebody searches to find out
+// what a run did. Empty for a run that never had a report, so a caller that
+// logs first and reads the error afterwards need not ask.
 func (r *SyncReport) Removals() []string {
 	if r == nil {
 		return nil
@@ -80,13 +80,13 @@ func (r *SyncReport) Removals() []string {
 	lines := make([]string, 0, len(r.Deleted))
 
 	for _, removed := range r.Deleted {
-		entries := "time entries"
-		if removed.Timesheets == 1 {
-			entries = "time entry"
+		tickets := "tickets"
+		if removed.Tickets == 1 {
+			tickets = "ticket"
 		}
 
-		lines = append(lines, fmt.Sprintf("directory sync removed %q with %d %s",
-			removed.Email, removed.Timesheets, entries))
+		lines = append(lines, fmt.Sprintf("directory sync removed %q, leaving %d unfinished %s without an owner",
+			removed.Email, removed.Tickets, tickets))
 	}
 
 	return lines
@@ -97,11 +97,11 @@ func (r *SyncReport) Removals() []string {
 // The directory is only ever read. Everything this service changes happens in
 // the application's own database.
 type LDAPSyncService struct {
-	directory  DirectoryLister
-	users      repository.UserRepository
-	roles      repository.RoleRepository
-	timesheets repository.TimesheetRepository
-	purger     UserPurger
+	directory DirectoryLister
+	users     repository.UserRepository
+	roles     repository.RoleRepository
+	owned     OwnedTickets
+	purger    UserPurger
 
 	// runs keeps what each run changed, and nothing about whom; see
 	// model.DirectoryRun. Nil keeps nothing, which only a test wants.
@@ -156,21 +156,21 @@ func NewLDAPSyncService(
 	directory DirectoryLister,
 	users repository.UserRepository,
 	roles repository.RoleRepository,
-	timesheets repository.TimesheetRepository,
+	owned OwnedTickets,
 	purger UserPurger,
 	runs repository.DirectoryRunRepository,
 	maxDeleteRatio float64,
 	defaultRole string,
 ) *LDAPSyncService {
 	if defaultRole == "" {
-		defaultRole = model.RoleUser
+		defaultRole = model.RoleAgent
 	}
 
 	return &LDAPSyncService{
 		directory:      directory,
 		users:          users,
 		roles:          roles,
-		timesheets:     timesheets,
+		owned:          owned,
 		purger:         purger,
 		runs:           runs,
 		maxDeleteRatio: maxDeleteRatio,
@@ -185,9 +185,9 @@ func (s *LDAPSyncService) Preview(ctx context.Context) (*SyncReport, error) {
 
 // Sync reconciles the local accounts with the directory.
 //
-// Accounts the directory no longer holds are removed together with their time
-// entries, private projects, tokens and sessions. Accounts the directory has
-// and this installation does not are created.
+// Accounts the directory no longer holds are removed together with their
+// tokens and sessions, and the tickets they owned are left without an owner.
+// Accounts the directory has and this installation does not are created.
 func (s *LDAPSyncService) Sync(ctx context.Context) (*SyncReport, error) {
 	report, err := s.run(ctx, false, nil)
 
@@ -234,7 +234,8 @@ func (s *LDAPSyncService) SyncAsConfirmed(ctx context.Context, confirmed []uint)
 }
 
 // record keeps what a run changed - when, whether somebody confirmed it, how
-// many accounts and entries it removed or added - and nothing about whom; see
+// many accounts it removed or added and how many tickets that left without an
+// owner - and nothing about whom; see
 // model.DirectoryRun. A run that changed nothing leaves nothing, and neither does
 // a preview, which never comes here.
 //
@@ -257,7 +258,7 @@ func (s *LDAPSyncService) record(ctx context.Context, confirmed bool, report *Sy
 	}
 
 	for _, deleted := range report.Deleted {
-		run.EntriesDeleted += deleted.Timesheets
+		run.TicketsReleased += deleted.Tickets
 	}
 
 	if recordErr := s.runs.Record(context.WithoutCancel(ctx), run); recordErr != nil {
@@ -359,13 +360,13 @@ func (s *LDAPSyncService) run(
 			continue
 		}
 
-		count, countErr := s.countTimesheets(ctx, user.ID)
+		count, countErr := s.owned.CountUnfinishedOwnedBy(ctx, user.ID)
 		if countErr != nil {
 			return nil, countErr
 		}
 
 		report.Candidates = append(report.Candidates, SyncCandidate{
-			UserID: user.ID, Name: user.Name, Email: user.Email, Timesheets: count,
+			UserID: user.ID, Name: user.Name, Email: user.Email, Tickets: count,
 		})
 	}
 
@@ -421,7 +422,7 @@ func (s *LDAPSyncService) run(
 			// irreversible deletion is the line a caller writes from
 			// report.Deleted. Returning nil here left a run that removed three
 			// accounts and then lost the database saying "directory sync failed"
-			// and nothing else: three people's hours gone, and nothing naming
+			// and nothing else: three people's accounts gone, and nothing naming
 			// them.
 			return report, stoppedPartWay(report, err)
 		}
@@ -429,9 +430,8 @@ func (s *LDAPSyncService) run(
 		report.Deleted = append(report.Deleted, candidate)
 
 		// Counted one at a time, and only after the deletion actually happened.
-		// This is the one operation here that removes people together with the
-		// hours they recorded, so the number that matters is what was done, not
-		// what was planned.
+		// This is the one operation here that removes people, so the number that
+		// matters is what was done, not what was planned.
 		s.count(ctx, MetricDirectoryAccounts, "action", "deleted")
 	}
 
@@ -460,7 +460,7 @@ func stoppedPartWay(report *SyncReport, cause error) error {
 //
 // The stable identifier decides whenever the account has one: a renamed
 // mailbox then keeps matching, instead of looking like a departure that would
-// take the person's recorded hours with it. Only an account with no identifier
+// take the person's account with it. Only an account with no identifier
 // yet - one created before identifiers were recorded - falls back to the mail
 // address.
 //
@@ -601,13 +601,6 @@ func (s *LDAPSyncService) createMissing(
 			name = email
 		}
 
-		// No working times. Zero is how "follow the default" is stored, which is what
-		// an account created through the form gets - and this wrote a fixed eight
-		// instead. That is the same hours today, and not the same account: the list
-		// showed a figure where every other row showed "default", the owner's form
-		// held a value they had never chosen, and a change to the default would pass
-		// it by. The ceiling was already left at zero here, so the same account had
-		// one figure pinned and one following.
 		_, err := s.users.Save(ctx, &model.User{
 			Name:       name,
 			Email:      email,
@@ -644,24 +637,4 @@ func (s *LDAPSyncService) WithLimits(limits *LimitsProvider) *LDAPSyncService {
 	s.limits = limits
 
 	return s
-}
-
-// countTimesheets is how many entries a departure would destroy.
-//
-// Through CountByFilter, which exists for this and says so: "Reading every row to
-// count them is the cost this exists to avoid." It read them, and took len() of
-// the slice.
-//
-// The preview is what makes that worth avoiding rather than the run. It is the
-// screen somebody opens to decide, it happens before anything is deleted, and it
-// pays this once per candidate - so an installation where a few long-serving
-// people have left reads years of entries into memory to print a handful of
-// numbers, on a machine that may be a Raspberry Pi.
-func (s *LDAPSyncService) countTimesheets(ctx context.Context, userID uint) (int, error) {
-	total, err := s.timesheets.CountByFilter(ctx, repository.TimesheetFilter{UserID: userID})
-	if err != nil {
-		return 0, err
-	}
-
-	return int(total), nil
 }

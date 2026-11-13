@@ -113,11 +113,6 @@ dependencies {
     implementation("androidx.camera:camera-view:1.6.2")
     implementation("com.google.zxing:core:3.5.4")
 
-    // The reminders, asked for every quarter of an hour and at the moment the
-    // stopwatch is due, whether the app is open or not - without a push service,
-    // and so without Google Play services.
-    implementation("androidx.work:work-runtime-ktx:2.12.0")
-
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20260814")
 }

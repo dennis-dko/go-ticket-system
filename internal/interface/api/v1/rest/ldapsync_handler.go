@@ -12,8 +12,8 @@ import (
 
 // LDAPSyncHandler serves the directory synchronisation.
 //
-// Restricted to the built-in administrator: a run can delete accounts and the
-// hours booked against them.
+// Restricted to whoever administers the installation: a run can delete accounts
+// and leave their tickets without an owner.
 type LDAPSyncHandler struct {
 	sync  *service.LDAPSyncService
 	authz *Authorizer
@@ -30,8 +30,9 @@ type SyncCandidateResponse struct {
 	Name   string `json:"name"`
 	Email  string `json:"email"`
 
-	// Timesheets counts the entries that would be destroyed with the account.
-	Timesheets int `json:"timesheets"`
+	// Tickets counts the unfinished tickets the account owns, which its removal
+	// leaves without an owner.
+	Tickets int `json:"tickets"`
 }
 
 // SyncReportResponse reports what a run did, or would do.
@@ -54,10 +55,11 @@ type SyncReportResponse struct {
 
 // Preview handles POST /api/v1/settings/ldap/sync/preview.
 //
-// It changes nothing, so an administrator can see exactly which accounts and
-// how many recorded entries a run would remove before committing to it.
+// It changes nothing, so an administrator can see exactly which accounts a run
+// would remove, and how many tickets that leaves without an owner, before
+// committing to it.
 func (h *LDAPSyncHandler) Preview(c *gofr.Context) (any, error) {
-	if err := h.requireSystemAdmin(c); err != nil {
+	if err := h.requireAdmin(c); err != nil {
 		return nil, err
 	}
 
@@ -71,7 +73,7 @@ func (h *LDAPSyncHandler) Preview(c *gofr.Context) (any, error) {
 
 // Run handles POST /api/v1/settings/ldap/sync.
 func (h *LDAPSyncHandler) Run(c *gofr.Context) (any, error) {
-	if err := h.requireSystemAdmin(c); err != nil {
+	if err := h.requireAdmin(c); err != nil {
 		return nil, err
 	}
 
@@ -137,26 +139,13 @@ func confirmedAccounts(c *gofr.Context) ([]uint, bool, error) {
 	return ids, true, nil
 }
 
-// requireSystemAdmin restricts the run to an account that administers this
-// installation and has no working day of its own.
-//
-// The built-in one, and anybody holding the admin role - see
-// Authorizer.AdministersOnly for why those are the same thing and why the
-// combined role is not. It asked for the built-in account alone, which meant an
-// installation that had handed its administration to a person still had to sign
-// in as the account nobody can attribute to one.
-func (h *LDAPSyncHandler) requireSystemAdmin(c *gofr.Context) error {
-	principal, err := h.authz.Principal(c)
-	if err != nil {
-		return err
-	}
+// requireAdmin restricts the run to whoever may configure the installation; see
+// Authorizer.RequireInstallationAdmin. A run removes accounts and is the
+// directory's settings put to work, so it takes the right both of those do.
+func (h *LDAPSyncHandler) requireAdmin(c *gofr.Context) error {
+	_, err := h.authz.RequireInstallationAdmin(c)
 
-	if h.authz.AdministersOnly(principal) {
-		return nil
-	}
-
-	return forbiddenError{msg: "only an administrator of this installation may " +
-		"synchronise the directory"}.WithCode("onlyBuiltInAdminSyncs")
+	return err
 }
 
 func newSyncReportResponse(r *service.SyncReport) SyncReportResponse {
@@ -183,7 +172,7 @@ func candidates(in []service.SyncCandidate) []SyncCandidateResponse {
 	out := make([]SyncCandidateResponse, 0, len(in))
 	for _, c := range in {
 		out = append(out, SyncCandidateResponse{
-			UserID: c.UserID, Name: c.Name, Email: c.Email, Timesheets: c.Timesheets,
+			UserID: c.UserID, Name: c.Name, Email: c.Email, Tickets: c.Tickets,
 		})
 	}
 
@@ -195,21 +184,21 @@ const directoryRunsShown = 20
 
 // DirectoryRunResponse is what one run changed, and nothing about whom.
 type DirectoryRunResponse struct {
-	RanAt          time.Time `json:"ranAt"`
-	Confirmed      bool      `json:"confirmed"`
-	Deleted        int       `json:"deleted"`
-	EntriesDeleted int       `json:"entriesDeleted"`
-	Created        int       `json:"created"`
+	RanAt           time.Time `json:"ranAt"`
+	Confirmed       bool      `json:"confirmed"`
+	Deleted         int       `json:"deleted"`
+	TicketsReleased int       `json:"ticketsReleased"`
+	Created         int       `json:"created"`
 }
 
 // Runs handles GET /api/v1/settings/ldap/sync/runs: the latest runs that changed
 // something, newest first.
 //
-// The built-in administrator's, as running one is. The answer names nobody, so
-// it would harm nobody to show it wider; it stays with the run because it says
-// what the run did.
+// An administrator's, as running one is. The answer names nobody, so it would
+// harm nobody to show it wider; it stays with the run because it says what the
+// run did.
 func (h *LDAPSyncHandler) Runs(c *gofr.Context) (any, error) {
-	if err := h.requireSystemAdmin(c); err != nil {
+	if err := h.requireAdmin(c); err != nil {
 		return nil, err
 	}
 
@@ -222,11 +211,11 @@ func (h *LDAPSyncHandler) Runs(c *gofr.Context) (any, error) {
 
 	for _, run := range runs {
 		items = append(items, DirectoryRunResponse{
-			RanAt:          run.RanAt.UTC(),
-			Confirmed:      run.Confirmed,
-			Deleted:        run.Deleted,
-			EntriesDeleted: run.EntriesDeleted,
-			Created:        run.Created,
+			RanAt:           run.RanAt.UTC(),
+			Confirmed:       run.Confirmed,
+			Deleted:         run.Deleted,
+			TicketsReleased: run.TicketsReleased,
+			Created:         run.Created,
 		})
 	}
 

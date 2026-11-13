@@ -195,7 +195,7 @@ func TestNothingIsWiderThanTheScreen(t *testing.T) {
 	p.evalJSON(`JSON.stringify([...document.querySelectorAll('.tab[data-view]')]
 		.map((tab) => tab.dataset.view))`, &views)
 
-	if len(views) < 6 {
+	if len(views) < 4 {
 		t.Fatalf("the administrator is offered %d screens; the tabs are being read wrongly", len(views))
 	}
 
@@ -204,7 +204,7 @@ func TestNothingIsWiderThanTheScreen(t *testing.T) {
 	p.everyScreenFits(t, "the administrator, in German", views)
 
 	p.becomeWorker()
-	p.everyScreenFits(t, "an ordinary account", []string{"welcome", "timesheets", "calendar", "settings"})
+	p.everyScreenFits(t, "an ordinary account", []string{"welcome", "settings"})
 }
 
 // everyScreenFits opens each screen at every width from a desktop down to the
@@ -292,9 +292,8 @@ func TestTheNavigationFoldsAwayOnASmallScreen(t *testing.T) {
 		};
 	})())`, &shown)
 
-	// However many this account may see - an administrator has four, somebody who
-	// books time has more. The claim is about how they are laid out, not how many
-	// there are.
+	// However many this account may see - an administrator has four, an agent
+	// fewer. The claim is about how they are laid out, not how many there are.
 	if shown.Count < 3 {
 		t.Fatalf("the menu holds %d points", shown.Count)
 	}
@@ -495,9 +494,8 @@ func TestTheSignInScreenIsUsableOnAShortWindow(t *testing.T) {
 // Switching tabs has to switch what is on screen. A tab that highlights but
 // changes nothing is a broken application with a healthy API.
 //
-// The built-in administrator's own tabs, which are the four it has: it does not record
-// time, so the calendar, the entries and the projects are not on its screen at all.
-// Deliberately still the plain sign-in rather than readyWorker - what this checks is
+// The built-in administrator's own tabs, the four this interface has. Deliberately
+// still the plain sign-in rather than readyWorker - what this checks is
 // that clicking a tab shows its panel, and it should stay the cheapest case in the
 // suite rather than growing a password change and a second account.
 func TestTabsSwitchTheVisiblePanel(t *testing.T) {
@@ -562,8 +560,8 @@ func TestOnAShortWindowTheBarScrollsAwayWithThePage(t *testing.T) {
 	p := open(t)
 	p.readyWorker()
 
-	p.run("open a long screen", p.click(`.tab[data-view="timesheets"]`),
-		chromedp.WaitVisible("#form-timesheet", chromedp.ByID))
+	p.run("open a long screen", p.click(`.tab[data-view="settings"]`),
+		chromedp.WaitVisible("#form-password", chromedp.ByID))
 
 	for _, window := range []struct {
 		w, h  int64

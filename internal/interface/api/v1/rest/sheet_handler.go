@@ -4,7 +4,6 @@ import (
 	"errors"
 	"mime/multipart"
 	"strings"
-	"time"
 
 	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/http/response"
@@ -15,37 +14,39 @@ import (
 	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
-// SheetHandler serves the export and import of projects and people.
+// SheetHandler serves the export and import of accounts and roles.
 //
-// Separate from WorkbookHandler, which serves time entries and predates the idea
-// that every table has its own. Both answers carry their own column headings, and
-// projects and people answer in exactly the same shape, so one preview in the
-// interface renders either of them.
+// Each answer carries its own column headings, and both answer in exactly the
+// same shape, so one preview in the interface renders either of them.
 type SheetHandler struct {
-	projects *service.ProjectWorkbookService
-	users    *service.UserWorkbookService
-	roles    *service.RoleWorkbookService
-	authz    *Authorizer
-	timezone InstanceTimezoneFunc
+	users *service.UserWorkbookService
+	roles *service.RoleWorkbookService
+	authz *Authorizer
 }
 
 // NewSheetHandler creates the handler.
 func NewSheetHandler(
-	projects *service.ProjectWorkbookService,
 	users *service.UserWorkbookService,
 	roles *service.RoleWorkbookService,
 	authz *Authorizer,
 ) *SheetHandler {
-	return &SheetHandler{projects: projects, users: users, roles: roles, authz: authz}
+	return &SheetHandler{users: users, roles: roles, authz: authz}
 }
 
-// WithTimezone attaches the instance-wide zone, which decides the day an imported
-// project with an empty start begins on for anybody who has not chosen a zone of
-// their own.
-func (h *SheetHandler) WithTimezone(zone InstanceTimezoneFunc) *SheetHandler {
-	h.timezone = zone
+// xlsxContentType is what a browser needs to be told before it will hand the file
+// to a spreadsheet application rather than trying to display it.
+const xlsxContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-	return h
+// ImportRequest is the upload.
+//
+// dryRun is what makes the preview possible: the same request, parsed and planned
+// the same way, and told not to write. The file is sent twice - once to look, once
+// to do - rather than the server keeping a half-finished import between requests.
+// A plan held server-side would need an owner, a lifetime and a way to expire, and
+// re-reading a spreadsheet costs almost nothing.
+type ImportRequest struct {
+	File   multipart.FileHeader `file:"file"`
+	DryRun bool                 `form:"dryRun"`
 }
 
 // SheetImportRow is one row of a file, as it would be written or the reason it
@@ -100,75 +101,11 @@ type SheetImportResponse struct {
 // English inside the spreadsheet package, so nothing has to be validated here.
 func language(c *gofr.Context) string { return strings.TrimSpace(c.Param("lang")) }
 
-// ExportProjects handles GET /api/v1/projects/export.
-//
-// Scoped to what the caller may see, by going through the same list the screen
-// uses: an export that showed more than the screen would be a way around the
-// screen.
+// ExportUsers handles GET /api/v1/users/export.
 //
 // No filename is set here. GoFr's responder owns the headers and keeps its writer
 // private, so Content-Disposition is not reachable from a handler; the interface
 // names the file when it saves it.
-func (h *SheetHandler) ExportProjects(c *gofr.Context) (any, error) {
-	principal, err := h.authz.Require(c, model.PermProjectRead)
-	if err != nil {
-		return nil, err
-	}
-
-	book, err := h.projects.Export(c, language(c), h.authz.viewerID(principal))
-	if err != nil {
-		return nil, toHTTPError(err)
-	}
-
-	return response.File{Content: book, ContentType: xlsxContentType}, nil
-}
-
-// ImportProjects handles POST /api/v1/projects/import.
-//
-// Every row becomes a project of the importer's own, because that is the only kind
-// there is. There used to be two, and a row asking for the shared kind was refused by
-// name in the preview when the caller could only keep private ones - a distinction
-// with nothing left on either side of it.
-func (h *SheetHandler) ImportProjects(c *gofr.Context) (any, error) {
-	principal, err := h.authz.Require(c, model.PermProjectWrite)
-	if err != nil {
-		return nil, err
-	}
-
-	sent, err := uploadedFile(c)
-	if err != nil {
-		return nil, err
-	}
-
-	defer sent.close()
-
-	rows, problems, err := spreadsheet.ReadProjects(sent.file)
-	if err != nil {
-		return nil, unreadableWorkbook(c, err)
-	}
-
-	plan, err := h.projects.PlanProjects(c, language(c), rows, problems, principal.User)
-	if err != nil {
-		return nil, toHTTPError(err)
-	}
-
-	out := sheetResponse(sent.dryRun, &plan.SheetPlan)
-	if sent.dryRun {
-		return out, nil
-	}
-
-	imported, err := h.projects.ApplyProjects(c, plan, principal.User,
-		time.Now().In(principal.User.TimezoneOf(h.timezone.resolve(c))))
-	if err != nil {
-		return nil, toHTTPError(err)
-	}
-
-	out.Imported = imported
-
-	return out, nil
-}
-
-// ExportUsers handles GET /api/v1/users/export.
 func (h *SheetHandler) ExportUsers(c *gofr.Context) (any, error) {
 	if _, err := h.authz.Require(c, model.PermUserRead); err != nil {
 		return nil, err
@@ -226,8 +163,8 @@ func (h *SheetHandler) ImportUsers(c *gofr.Context) (any, error) {
 // ExportRoles handles GET /api/v1/roles/export.
 //
 // A column per permission, which is the reason this pair exists at all: reviewing
-// what four roles may do means reading a grid, and the role editor shows one role
-// at a time.
+// what several roles may do means reading a grid, and the role editor shows one
+// role at a time.
 func (h *SheetHandler) ExportRoles(c *gofr.Context) (any, error) {
 	if _, err := h.authz.Require(c, model.PermRoleRead); err != nil {
 		return nil, err

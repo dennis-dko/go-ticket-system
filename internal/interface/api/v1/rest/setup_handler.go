@@ -42,12 +42,12 @@ func (h *SetupHandler) FromInstaller(token string, sessions *service.SessionServ
 
 // State handles GET /api/v1/setup.
 //
-// Restricted to the built-in administrator, and not because the answer is
-// sensitive on its own: it is a list of what has not been configured yet, which
-// is a useful thing for an attacker to read - "no directory, still on the
-// initial password" is a plan.
+// Restricted to whoever administers the installation, and not because the
+// answer is sensitive on its own: it is a list of what has not been configured
+// yet, which is a useful thing for an attacker to read - "no directory, still on
+// the initial password" is a plan.
 func (h *SetupHandler) State(c *gofr.Context) (any, error) {
-	if err := h.requireSystemAdmin(c); err != nil {
+	if err := h.requireAdmin(c); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +66,7 @@ func (h *SetupHandler) State(c *gofr.Context) (any, error) {
 // required is outstanding - so refusing here would only be a second, ruder way
 // of saying the same thing.
 func (h *SetupHandler) Complete(c *gofr.Context) (any, error) {
-	if err := h.requireSystemAdmin(c); err != nil {
+	if err := h.requireAdmin(c); err != nil {
 		return nil, err
 	}
 
@@ -107,7 +107,7 @@ func (h *SetupHandler) Complete(c *gofr.Context) (any, error) {
 // documented password already turns on, so this grants nothing that was not
 // already reachable - and it stops granting it at the same moment.
 //
-// Not behind requireSystemAdmin, unlike everything else on this handler: there
+// Not behind requireAdmin, unlike everything else on this handler: there
 // is nobody signed in yet, which is the entire point.
 func (h *SetupHandler) Claim(c *gofr.Context) (any, error) {
 	if h.installerToken == "" || h.sessions == nil {
@@ -148,18 +148,11 @@ func (h *SetupHandler) Claim(c *gofr.Context) (any, error) {
 // to the same process - only after it has become the application.
 const SetupTokenHeader = "X-Setup-Token"
 
-// requireSystemAdmin restricts the wizard to the built-in administrator, which
-// is the account that can reach every screen it points at.
-func (h *SetupHandler) requireSystemAdmin(c *gofr.Context) error {
-	principal, err := h.authz.Principal(c)
-	if err != nil {
-		return err
-	}
+// requireAdmin restricts the wizard to whoever may configure the installation,
+// which is the account that can reach every screen it points at; see
+// Authorizer.RequireInstallationAdmin.
+func (h *SetupHandler) requireAdmin(c *gofr.Context) error {
+	_, err := h.authz.RequireInstallationAdmin(c)
 
-	if h.authz.AdministersOnly(principal) {
-		return nil
-	}
-
-	return forbiddenError{msg: "only an administrator of this installation may run " +
-		"the setup wizard"}.WithCode("onlyBuiltInAdminSetsUp")
+	return err
 }

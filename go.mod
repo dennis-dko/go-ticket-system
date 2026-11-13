@@ -3,7 +3,6 @@ module github.com/dennis-dko/go-ticket-system
 go 1.27.4
 
 require (
-	codeberg.org/go-pdf/fpdf v0.12.0
 	github.com/chromedp/cdproto v0.0.0-20260804232424-e85f50dbfd32
 	github.com/chromedp/chromedp v0.16.0
 	github.com/coreos/go-oidc/v3 v3.21.0

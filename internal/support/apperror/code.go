@@ -5,7 +5,7 @@ package apperror
 // Two kinds of code live in this application and they are worth telling apart.
 // Most refusals name themselves where the rule is enforced, with WithCode, and
 // that is right: the rule knows why it refused, and a name written next to it can
-// be as specific as the rule is - projectHasEntries, overDailyLimit,
+// be as specific as the rule is - deletionNeedsConfirming, cannotDeleteSelf,
 // passkeyKnown. Those are declared at the point of use because that is the only
 // place that knows they exist.
 //

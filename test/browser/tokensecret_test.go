@@ -88,8 +88,8 @@ func TestATokenValueDoesNotOutliveTheScreen(t *testing.T) {
 	}
 
 	// The half the comment claims.
-	p.run("go somewhere else", p.click(`.tab[data-view="timesheets"]`),
-		chromedp.WaitVisible("#form-timesheet", chromedp.ByID))
+	p.run("go somewhere else", p.click("#app-title"),
+		chromedp.WaitVisible("#view-welcome", chromedp.ByID))
 
 	awayValue, awayShown, awayCode := read("after navigating away")
 

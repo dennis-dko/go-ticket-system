@@ -225,7 +225,7 @@ func TestTheConnectionCardKeepsSayingWhatIsRunningWhileBeingEdited(t *testing.T)
 	// And something reloads the screen, which happens for reasons having nothing
 	// to do with them. Choosing a language is the one that was reported.
 	p.chooseLanguage("de")
-	p.waitForText(`.tab[data-view="timesheets"]`, "Zeiteinträge")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	// Waited for rather than read, and before anything else is asked. The labels
 	// change the moment the language does, but the card is reloaded after that,

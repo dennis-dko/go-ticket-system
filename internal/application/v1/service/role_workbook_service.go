@@ -77,7 +77,8 @@ type RolePlan struct {
 
 // PlanRoles works out what a file of roles would do, without writing.
 //
-// Matched on the name, the way the projects import is: a role is its name
+// Matched on the name, the way the people import is matched on the address: a
+// role is its name
 // everywhere else in this application - accounts point at one, the directory
 // configuration names one - so the name is the only thing a person filling in a
 // spreadsheet can be expected to match on.

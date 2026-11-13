@@ -25,7 +25,7 @@ func TestAnAccountCreatedHereIsTheDirectorysOnceItsOwnerSignsInThroughIt(t *test
 	configureLDAP(t, admin, host, port, ldapBaseDN)
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
-		"name": "Bob", "email": "bob@example.com", "role": "user",
+		"name": "Bob", "email": "bob@example.com", "role": "agent",
 	}), http.StatusCreated, http.StatusOK)
 
 	signedIn := a.newClient().signIn("bob", "bob-password")

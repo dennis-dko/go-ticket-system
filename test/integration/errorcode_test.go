@@ -15,8 +15,7 @@ import (
 //
 // The server writes its messages where the rule is enforced, which is right for
 // the log and wrong for the person who tripped over it: the interface showed them
-// "an approved timesheet can no longer be edited" whatever language they had
-// chosen. The reason now travels as a code with the values the sentence
+// the rule's English whatever language they had chosen. The reason now travels as a code with the values the sentence
 // interpolated, and the interface looks the sentence up in the reader's language.
 //
 // Proved on the wire rather than in the browser, because the wire is the contract:
@@ -48,43 +47,33 @@ func refusalOf(t *testing.T, r response) refusal {
 func TestAConflictCarriesItsReasonAndValues(t *testing.T) {
 	t.Parallel()
 
-	_, _, worker := startWithWorker(t)
+	_, admin, _ := startWithWorker(t)
 
-	// A project with an entry on it cannot be deleted, and the refusal says how
-	// many entries are in the way - the number the German sentence needs.
-	var project projectResponse
-	worker.must(worker.api(http.MethodPost, "/projects", map[string]any{
-		"name": "Busy", "startDate": "2026-08-01",
-	}), http.StatusCreated, http.StatusOK).Data(t, &project)
+	// A role's name is taken once, and the refusal names the name that is taken -
+	// the value the German sentence needs.
+	role := map[string]any{"name": "twice", "description": "made twice", "permissions": []string{"tickets:read"}}
 
-	worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-03", "durationHours": 2, "projectId": project.ID,
-	}), http.StatusCreated, http.StatusOK)
+	admin.must(admin.api(http.MethodPost, "/roles", role), http.StatusCreated, http.StatusOK)
 
-	refused := worker.api(http.MethodDelete, path("/projects/", project.ID), nil)
+	refused := admin.api(http.MethodPost, "/roles", role)
 	if refused.Status != http.StatusConflict {
-		t.Fatalf("deleting a project with entries answered %d, want 409: %s",
+		t.Fatalf("a second role of the same name answered %d, want 409: %s",
 			refused.Status, refused.Body)
 	}
 
 	reason := refusalOf(t, refused)
 
-	if reason.Code != "projectHasEntries" {
-		t.Errorf("the refusal is coded %q, want projectHasEntries", reason.Code)
+	if reason.Code != "roleNameTaken" {
+		t.Errorf("the refusal is coded %q, want roleNameTaken", reason.Code)
 	}
 
-	// One value, the count. JSON has one number type, so 1 arrives as 1.0.
-	if len(reason.Values) != 1 {
-		t.Fatalf("the refusal carries %d value(s), want 1: %v", len(reason.Values), reason.Values)
-	}
-
-	if count, ok := reason.Values[0].(float64); !ok || count != 1 {
-		t.Errorf("the refusal counts %v entries, want 1", reason.Values[0])
+	if len(reason.Values) != 1 || reason.Values[0] != "twice" {
+		t.Fatalf("the refusal carries %v, want the name that is taken", reason.Values)
 	}
 
 	// The English message stays: it is what the log records, and what a client
 	// without the sentence falls back to.
-	if !strings.Contains(reason.Message, "still has 1 time entries") {
+	if !strings.Contains(reason.Message, "already exists") {
 		t.Errorf("the message no longer explains itself: %q", reason.Message)
 	}
 }
@@ -94,42 +83,30 @@ func TestAConflictCarriesItsReasonAndValues(t *testing.T) {
 func TestInvalidInputCarriesItsReasonAndValues(t *testing.T) {
 	t.Parallel()
 
-	// Somebody who works here, because the two figures are a time figure each and
-	// belong to the person they are about. The administrator is refused this route
-	// before the request is even read, so it could never reach the rule under test.
-	_, _, worker := startWithWorker(t)
+	_, admin, _ := startWithWorker(t)
 
-	var me struct {
-		User userResponse `json:"user"`
-	}
-
-	worker.must(worker.api(http.MethodGet, "/me", nil), http.StatusOK).Data(t, &me)
-
-	// A daily target above the daily maximum, which is refused with both figures.
-	refused := worker.api(http.MethodPut, path("/users/", me.User.ID, "/working-times"),
-		map[string]any{"dailyTargetHours": 9, "maxDailyHours": 8})
+	// A password shorter than the rule, which is refused with the length it asks for.
+	refused := admin.api(http.MethodPost, "/users", map[string]any{
+		"name": "Kurt", "email": "kurt@example.com", "role": "agent", "password": "short",
+	})
 
 	if refused.Status != http.StatusBadRequest {
-		t.Fatalf("a target above the maximum answered %d, want 400: %s",
-			refused.Status, refused.Body)
+		t.Fatalf("a short password answered %d, want 400: %s", refused.Status, refused.Body)
 	}
 
 	reason := refusalOf(t, refused)
 
-	if reason.Code != "targetOverMaximum" {
-		t.Errorf("the refusal is coded %q, want targetOverMaximum", reason.Code)
+	if reason.Code != "passwordTooShort" {
+		t.Errorf("the refusal is coded %q, want passwordTooShort", reason.Code)
 	}
 
-	if len(reason.Values) != 2 {
-		t.Fatalf("the refusal carries %d value(s), want the target and the maximum: %v",
-			len(reason.Values), reason.Values)
+	// One value, the length. JSON has one number type, so 12 arrives as 12.0.
+	if len(reason.Values) != 1 {
+		t.Fatalf("the refusal carries %d value(s), want the length: %v", len(reason.Values), reason.Values)
 	}
 
-	target, _ := reason.Values[0].(float64)
-	maximum, _ := reason.Values[1].(float64)
-
-	if target != 9 || maximum != 8 {
-		t.Errorf("the refusal carries %v and %v, want 9 and 8", target, maximum)
+	if length, ok := reason.Values[0].(float64); !ok || length < 1 {
+		t.Errorf("the refusal asks for %v characters", reason.Values[0])
 	}
 
 	// The sentence itself, no longer behind a wrapper that counted parameters.
@@ -137,7 +114,7 @@ func TestInvalidInputCarriesItsReasonAndValues(t *testing.T) {
 		t.Errorf("the reason is still wrapped in a parameter count: %q", reason.Message)
 	}
 
-	if !strings.Contains(reason.Message, "cannot exceed") {
+	if !strings.Contains(reason.Message, "at least") {
 		t.Errorf("the message no longer explains itself: %q", reason.Message)
 	}
 }
@@ -156,14 +133,14 @@ func TestInvalidInputCarriesItsReasonAndValues(t *testing.T) {
 func TestAFieldRejectionIsNamedAndSaysWhichField(t *testing.T) {
 	t.Parallel()
 
-	_, _, worker := startWithWorker(t)
+	_, admin, _ := startWithWorker(t)
 
-	refused := worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-03", "durationHours": -1,
+	refused := admin.api(http.MethodPost, "/users", map[string]any{
+		"name": "", "email": "nameless@example.com", "role": "agent", "password": "a-password-long-enough",
 	})
 
 	if refused.Status != http.StatusBadRequest {
-		t.Fatalf("negative hours answered %d, want 400: %s", refused.Status, refused.Body)
+		t.Fatalf("an account without a name answered %d, want 400: %s", refused.Status, refused.Body)
 	}
 
 	if reason := refusalOf(t, refused); reason.Code != apperror.CodeInvalidFields {

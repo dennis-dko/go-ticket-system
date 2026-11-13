@@ -27,11 +27,11 @@ func TestAFirstLoadThatFailsAfterTheSessionKeepsTheReaderSignedIn(t *testing.T) 
 	p := open(t)
 	p.readyWorker()
 
-	failTheProjects := chromedp.ActionFunc(func(ctx context.Context) error {
+	failTheTokens := chromedp.ActionFunc(func(ctx context.Context) error {
 		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`(() => {
 			const real = window.fetch;
 			window.fetch = (url, options) =>
-				/\/api\/v1\/projects(\?|$)/.test(String(url)) && (options?.method ?? 'GET') === 'GET'
+				/\/api\/v1\/me\/tokens(\?|$)/.test(String(url)) && (options?.method ?? 'GET') === 'GET'
 					? Promise.resolve(new Response(
 						JSON.stringify({ error: { message: 'the database refused one query' } }),
 						{ status: 500, headers: { 'Content-Type': 'application/json' } }))
@@ -41,7 +41,7 @@ func TestAFirstLoadThatFailsAfterTheSessionKeepsTheReaderSignedIn(t *testing.T) 
 		return err
 	})
 
-	p.run("load the page again with the projects failing", failTheProjects, chromedp.Reload())
+	p.run("load the page again with the tokens failing", failTheTokens, chromedp.Reload())
 
 	// Done once the first load has concluded one way or the other: the sign-in
 	// form out of its checking state, or a failure said in the corner.

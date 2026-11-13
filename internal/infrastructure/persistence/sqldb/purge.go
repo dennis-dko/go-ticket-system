@@ -5,37 +5,47 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 	"github.com/dennis-dko/go-ticket-system/internal/support/apperror"
 )
 
-// PurgeUser removes a user and everything that references them.
+// PurgeUser removes an account and everything that is the account's own, and
+// takes its name off what is not.
 //
-// The order follows the foreign keys: time entries first, then the projects the
-// user privately owned, then credentials, then the account itself.
+// The two are different on purpose. What somebody signs in with, what they asked
+// to be told about and which browsers they are pushed to are theirs, and go with
+// them. A ticket is the organisation's record: the one an agent owned stays, and
+// is left without an owner and free for somebody else to take, and what the
+// agent wrote in it stays too - signed by an id that names nobody once the
+// account is gone. A customer's contact stays as well, without the account they
+// reached the portal with.
 //
-// This is irreversible and takes the person's recorded hours with it. It is used
-// by directory synchronisation, where an account that disappeared upstream must
-// not linger here, and by an administrator deleting an account deliberately -
-// which asks for confirmation first, because this is the operation that destroys
-// the hours.
+// This is irreversible. It is used by directory synchronisation, where an
+// account that disappeared upstream must not linger here, and by an
+// administrator deleting an account deliberately.
 //
 // # Why it is a transaction
 //
-// It did not used to be, on the grounds that every step is idempotent and the
-// synchronisation would repeat a failed purge on its next run. That reasoning
-// does not survive the failure it was meant to cover.
-//
 // The final DELETE is the one that can be refused: a database that enforces the
-// foreign keys rejects it while anything still points at the account. By then the
-// time entries are already gone. So the account remains, its recorded hours do
-// not, and repeating the purge cannot bring them back. If the reason is permanent
-// - a table this list forgot, which is exactly what happened with passkeys - the
-// state is permanent too.
+// foreign keys rejects it while anything still points at the account. Without a
+// transaction everything before it has already happened by then, so the account
+// remains with its sessions, tokens and tickets gone from it, and repeating the
+// purge cannot bring them back. If the reason is permanent - a table this list
+// forgot - the state is permanent too.
 //
-// Inside a transaction the same failure leaves the account and its hours intact,
-// and the error says what stopped it.
+// Inside a transaction the same failure leaves the account as it was, and the
+// error says what stopped it.
 func (r *UserRepository) PurgeUser(ctx context.Context, userID uint) error {
 	return r.withTx(ctx, func(tx base) error {
+		// A ticket somebody else can take is one that is not locked, so the lock
+		// goes with the owner; one statement for the three columns, because a
+		// locked ticket with no owner is a ticket nobody may work on.
+		if _, err := tx.exec(ctx,
+			"UPDATE tickets SET owner_id = NULL, locked = ?, locked_at = NULL WHERE owner_id = ?",
+			false, userID); err != nil {
+			return apperror.Internal(fmt.Errorf("releasing the tickets of user %d: %w", userID, err))
+		}
+
 		// Every table with a foreign key to users has to appear here. One that is
 		// missing does not fail quietly: on PostgreSQL it makes the final delete
 		// impossible, and on SQLite and MySQL - neither of which enforces the keys
@@ -45,31 +55,16 @@ func (r *UserRepository) PurgeUser(ctx context.Context, userID uint) error {
 			what  string
 			query string
 		}{
-			// Before the account itself, and before the projects: a running clock
-			// references both, and it is not recorded time - nobody is losing
-			// anything they booked by having it go with the account.
-			{"running timers", "DELETE FROM running_timers WHERE user_id = ?"},
-			// Before the entries, which the history points at.
-			{"entry revisions", "DELETE FROM timesheet_revisions WHERE user_id = ?"},
-			{"time entries", "DELETE FROM timesheets WHERE user_id = ?"},
-			// Only private projects go. A shared project has no owner and belongs
-			// to the installation, not to the person who happened to create it.
-			{"private projects", "DELETE FROM projects WHERE owner_id = ?"},
+			{"responsibility for tickets", "UPDATE tickets SET responsible_id = NULL WHERE responsible_id = ?"},
+			{"link to a contact", "UPDATE contacts SET user_id = NULL WHERE user_id = ?"},
+			{"watched tickets", "DELETE FROM ticket_watchers WHERE user_id = ?"},
+			{"notifications", "DELETE FROM notifications WHERE user_id = ?"},
+			{"queues to be told about", "DELETE FROM user_queues WHERE user_id = ?"},
 			{"api tokens", "DELETE FROM api_tokens WHERE user_id = ?"},
 			{"passkeys", "DELETE FROM passkeys WHERE user_id = ?"},
 			{"sessions", "DELETE FROM sessions WHERE user_id = ?"},
-			{"planned weeks", "DELETE FROM work_schedules WHERE user_id = ?"},
-			{"entry templates", "DELETE FROM entry_templates WHERE user_id = ?"},
-			{"absences", "DELETE FROM absences WHERE user_id = ?"},
-			{"vacation entitlements", "DELETE FROM vacation_entitlements WHERE user_id = ?"},
-			{"calendar feeds", "DELETE FROM calendar_feeds WHERE user_id = ?"},
 			{"push subscriptions", "DELETE FROM push_subscriptions WHERE user_id = ?"},
 			{"openid identities", "DELETE FROM openid_identities WHERE user_id = ?"},
-			{"working days", "DELETE FROM work_days WHERE user_id = ?"},
-			// Both ends of an assignment: the accounts a manager looked after, and the
-			// managers who looked after this one.
-			{"assignments as a manager", "DELETE FROM managed_accounts WHERE manager_id = ?"},
-			{"assignments to managers", "DELETE FROM managed_accounts WHERE user_id = ?"},
 		}
 
 		for _, step := range steps {
@@ -89,4 +84,30 @@ func (r *UserRepository) PurgeUser(ctx context.Context, userID uint) error {
 
 		return nil
 	})
+}
+
+// CountUnfinishedOwnedBy is how many tickets an account owns that somebody still
+// has to answer: the ones PurgeUser would leave without an owner and that
+// anybody would miss. A finished ticket loses its owner's name the same way,
+// and is not counted, because nobody is waiting on it.
+func (r *UserRepository) CountUnfinishedOwnedBy(ctx context.Context, userID uint) (int, error) {
+	finished := model.FinishedStates()
+
+	args := make([]any, 0, len(finished)+1)
+	args = append(args, userID)
+
+	for _, state := range finished {
+		args = append(args, string(state))
+	}
+
+	var count int
+
+	err := r.db.QueryRowContext(ctx, r.rebind(
+		"SELECT COUNT(*) FROM tickets WHERE owner_id = ? AND state NOT IN "+marks(len(finished))),
+		args...).Scan(&count)
+	if err != nil {
+		return 0, apperror.Internal(err)
+	}
+
+	return count, nil
 }

@@ -24,7 +24,7 @@ var roles = Table{
 //
 // A column per permission holding yes or no, rather than one cell listing them.
 // A list in a cell reads well and imports badly: a typo in it is a right silently
-// dropped, and nothing about "roles:read, projects:wrote" looks wrong until
+// dropped, and nothing about "roles:read, tickets:wrote" looks wrong until
 // somebody cannot open a screen. A column is a question with two answers, and an
 // unrecognised heading can be reported by name.
 type RoleRow struct {
@@ -47,7 +47,7 @@ type RoleRow struct {
 //
 // The permission columns are not translated, and that is deliberate: a permission
 // is an identifier that the role editor shows verbatim, and a heading that read
-// "Projekte lesen" in one export and "projects:read" in another would be two names
+// "Tickets sehen" in one export and "tickets:read" in another would be two names
 // for one column - with only one of them matching what is on screen.
 func RoleColumns(language string, permissions []string) []string {
 	return append(headingsIn(language, roles), permissions...)

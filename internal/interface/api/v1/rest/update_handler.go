@@ -24,8 +24,8 @@ import (
 // Guarded like the rest of the Settings screen: whoever may configure this
 // installation may also update it.
 //
-// It was narrower - the built-in administrator, or somebody who administers and
-// records no time - on the argument that this changes what the application *is*
+// It was narrower - the built-in administrator, or somebody who administered and
+// did nothing else - on the argument that this changes what the application *is*
 // rather than what it does, and that is a different kind of decision from
 // changing a setting. The argument is sound and it lost to a plainer one: the
 // screen is reached by holding settings:manage, everything else on it is

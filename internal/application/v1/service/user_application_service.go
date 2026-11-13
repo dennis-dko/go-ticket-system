@@ -13,15 +13,24 @@ import (
 	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
-// UserService administers accounts. Deleting one deletes the hours recorded
-// against it as well.
+// UserService administers accounts. Deleting one leaves the tickets it owned
+// without an owner.
 type UserService interface {
 	CreateUser(ctx context.Context, cmd command.CreateUserCommand) (*command.CreateUserCommandResult, error)
 	GetUser(ctx context.Context, q query.GetUserQuery) (*query.GetUserQueryResult, error)
 	ListUsers(ctx context.Context, q query.ListUsersQuery) (*query.ListUsersQueryResult, error)
 	UpdateUser(ctx context.Context, cmd command.UpdateUserCommand) (*command.UpdateUserCommandResult, error)
 	DeleteUser(ctx context.Context, cmd command.DeleteUserCommand) error
-	UpdateWorkingTimes(ctx context.Context, cmd command.UpdateWorkingTimesCommand) (*common.UserResult, error)
+}
+
+// OwnedTickets answers what an account would leave behind: how many tickets it
+// owns that somebody still has to answer.
+//
+// Asked before an account is removed, by an administrator's deletion and by the
+// directory synchronisation alike, so both say the same number about the same
+// account.
+type OwnedTickets interface {
+	CountUnfinishedOwnedBy(ctx context.Context, userID uint) (int, error)
 }
 
 // UserApplicationService is the UserService the application runs with. An
@@ -31,33 +40,33 @@ type UserApplicationService struct {
 	userRepository repository.UserRepository
 	roleRepository repository.RoleRepository
 
-	// timesheetRepository answers how much recorded time an account has, which
-	// is what a deletion has to warn about.
-	timesheetRepository repository.TimesheetRepository
+	// owned answers how many unfinished tickets an account owns, which is what
+	// a deletion has to warn about.
+	owned OwnedTickets
 
-	// purger removes an account together with everything referencing it.
+	// purger removes an account together with everything that is its own.
 	//
 	// Deleting only the account row is not an option: the schema declares
 	// foreign keys, so PostgreSQL refuses it outright, and SQLite and MySQL -
-	// neither of which enforces them - accept it and leave the hours behind
-	// pointing at nobody. Same request, two different wrong answers, depending
-	// on a choice made in the installer.
+	// neither of which enforces them - accept it and leave tickets, sessions and
+	// tokens behind pointing at nobody. Same request, two different wrong
+	// answers, depending on a choice made in the installer.
 	purger UserPurger
 }
 
-// NewUserApplicationService needs the time entries to say what deleting an
-// account would take with it, and the purger to take it all in one go.
+// NewUserApplicationService needs the tickets an account owns to say what
+// deleting it would leave behind, and the purger to remove it in one go.
 func NewUserApplicationService(
 	userRepo repository.UserRepository,
 	roleRepo repository.RoleRepository,
-	timesheetRepo repository.TimesheetRepository,
+	owned OwnedTickets,
 	purger UserPurger,
 ) *UserApplicationService {
 	return &UserApplicationService{
-		userRepository:      userRepo,
-		roleRepository:      roleRepo,
-		timesheetRepository: timesheetRepo,
-		purger:              purger,
+		userRepository: userRepo,
+		roleRepository: roleRepo,
+		owned:          owned,
+		purger:         purger,
 	}
 }
 
@@ -71,11 +80,6 @@ func (s *UserApplicationService) CreateUser(
 	if err := validateUser(cmd.Name, cmd.Email); err != nil {
 		return nil, err
 	}
-
-	// The same bounds the working-times screen enforces. Without this an account
-	// could be created with a negative daily target that no later edit was
-	// required to fix, and every overtime balance computed from it would be
-	// wrong in a direction nobody would think to question.
 
 	role, err := s.resolveRole(ctx, cmd.Role)
 	if err != nil {
@@ -103,11 +107,6 @@ func (s *UserApplicationService) CreateUser(
 		RoleID:             role.ID,
 		PasswordHash:       hash,
 		MustChangePassword: mustChange,
-		// Zero, which the reader resolves to the default: the built-in target, and
-		// the installation's ceiling. Its owner changes either afterwards, and
-		// nobody else can.
-		DailyTargetHours: 0,
-		MaxDailyHours:    0,
 	})
 	if err != nil {
 		return nil, err
@@ -221,12 +220,6 @@ func (s *UserApplicationService) UpdateUser(
 		existingUser.RoleID = role.ID
 	}
 
-	// The daily target and the ceiling are deliberately not here. They are time
-	// figures and belong to whoever they are about, who sets them through
-	// UpdateWorkingTimes - the one path that asks whose account it is.
-	//
-	// They used to be writable here too, on users:write alone, which made the right
-	// that was supposed to guard them one lock on a door with three ways in.
 	if err := validateUser(existingUser.Name, existingUser.Email); err != nil {
 		return nil, err
 	}
@@ -239,54 +232,6 @@ func (s *UserApplicationService) UpdateUser(
 	return &command.UpdateUserCommandResult{
 		Result: common.NewUserResultFromModel(updatedUser)[0],
 	}, nil
-}
-
-// UpdateWorkingTimes sets the daily target and cap for a user. It is separate
-// from UpdateUser so a user may adjust their own working times without also
-// holding the right to edit accounts.
-func (s *UserApplicationService) UpdateWorkingTimes(
-	ctx context.Context,
-	cmd command.UpdateWorkingTimesCommand,
-) (*common.UserResult, error) {
-	if cmd.ID == 0 {
-		return nil, apperror.InvalidFields("id")
-	}
-
-	user, err := s.userRepository.GetByID(ctx, cmd.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if cmd.DailyTargetHours != nil {
-		user.DailyTargetHours = *cmd.DailyTargetHours
-	}
-
-	if cmd.MaxDailyHours != nil {
-		user.MaxDailyHours = *cmd.MaxDailyHours
-	}
-
-	switch {
-	case cmd.ClearEveryDayCountsFrom:
-		user.EveryDayCountsFrom = nil
-	case cmd.EveryDayCountsFrom != nil:
-		if !model.OnTheCalendar(*cmd.EveryDayCountsFrom) {
-			return nil, apperror.InvalidFields("everyDayCountsFrom")
-		}
-
-		day := model.CalendarDay(*cmd.EveryDayCountsFrom)
-		user.EveryDayCountsFrom = &day
-	}
-
-	if err := validateWorkingTimes(user.DailyTargetHours, user.MaxDailyHours); err != nil {
-		return nil, err
-	}
-
-	updated, err := s.userRepository.Update(ctx, user)
-	if err != nil {
-		return nil, err
-	}
-
-	return common.NewUserResultFromModel(updated)[0], nil
 }
 
 // DeleteUser processes the command to delete a user
@@ -309,11 +254,11 @@ func (s *UserApplicationService) DeleteUser(ctx context.Context, cmd command.Del
 
 	// An account the directory owns is removed by removing the entry there.
 	//
-	// Deleting it here removes a person and, with --purge, everything they
-	// recorded - and the next synchronisation creates the account again from the
-	// entry that is still in the directory. So the hours are gone, the account is
-	// back, and nothing about the directory has changed. Whoever meant to remove
-	// this person did not mean that.
+	// Deleting it here removes a person, and the next synchronisation creates the
+	// account again from the entry that is still in the directory - as a new
+	// account, which owns none of the tickets the old one did. So the tickets
+	// have lost their owner, the person is back, and nothing about the directory
+	// has changed. Whoever meant to remove this person did not mean that.
 	if user.IsExternal {
 		return apperror.Conflictf(
 			"%q comes from the directory; remove the entry there and the next "+
@@ -321,32 +266,30 @@ func (s *UserApplicationService) DeleteUser(ctx context.Context, cmd command.Del
 			WithCode("directoryAccountUndeletable", user.Email)
 	}
 
-	// How much of the person's work is about to go with the account. Counted
-	// rather than loaded: this is everything they ever recorded, and the refusal
-	// needs the number and nothing else.
-	entries, err := s.timesheetRepository.CountByFilter(ctx,
-		repository.TimesheetFilter{UserID: cmd.ID})
+	// How many tickets are about to be left without an owner. Counted rather
+	// than loaded: the refusal needs the number and nothing else.
+	unfinished, err := s.owned.CountUnfinishedOwnedBy(ctx, cmd.ID)
 	if err != nil {
 		return err
 	}
 
-	if entries > 0 && !cmd.Purge {
+	if unfinished > 0 && !cmd.Confirmed {
 		return apperror.Conflictf(
-			"%q has %d recorded time entries, which would be deleted with the account "+
-				"and cannot be recovered; confirm to proceed",
-			user.Email, entries).
-			WithCode("deletionNeedsConfirming", user.Email, entries)
+			"%q owns %d tickets that are not finished, which would be left without an "+
+				"owner; confirm to proceed",
+			user.Email, unfinished).
+			WithCode("deletionNeedsConfirming", user.Email, unfinished)
 	}
 
 	return s.purger.PurgeUser(ctx, cmd.ID)
 }
 
-// resolveRole accepts a role name, defaulting to the least privileged role
-// when none is given.
+// resolveRole accepts a role name, defaulting to the least privileged role of
+// the staff when none is given.
 func (s *UserApplicationService) resolveRole(ctx context.Context, name string) (*model.Role, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		name = model.RoleUser
+		name = model.RoleAgent
 	}
 
 	role, err := s.roleRepository.GetByName(ctx, name)
@@ -370,32 +313,6 @@ func validateUser(name, email string) error {
 
 	if !validEmail(email) || model.TooLong(email, model.MaxEmailLength) {
 		invalid = append(invalid, "email")
-	}
-
-	if len(invalid) > 0 {
-		return apperror.InvalidFields(invalid...)
-	}
-
-	return nil
-}
-
-// validateWorkingTimes keeps the pair coherent: 0 means "use the default", and
-// a target above the cap could never be reached.
-func validateWorkingTimes(target, maxDaily float64) error {
-	var invalid []string
-
-	if target < 0 || target > 24 {
-		invalid = append(invalid, "dailyTargetHours")
-	}
-
-	if maxDaily < 0 || maxDaily > 24 {
-		invalid = append(invalid, "maxDailyHours")
-	}
-
-	if len(invalid) == 0 && target > 0 && maxDaily > 0 && target > maxDaily {
-		return apperror.Invalidf("the daily target (%.2fh) cannot exceed the daily maximum (%.2fh)",
-			target, maxDaily).
-			WithCode("targetOverMaximum", target, maxDaily)
 	}
 
 	if len(invalid) > 0 {

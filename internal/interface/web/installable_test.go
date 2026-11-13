@@ -138,11 +138,11 @@ func TestTheManifestSpeaksTheDevicesLanguage(t *testing.T) {
 		return strings.Join(all, ", ")
 	}
 
-	if !strings.Contains(names(german), "Zeiteinträge") || german.Lang != "de" {
+	if !strings.Contains(names(german), "Mein Konto") || german.Lang != "de" {
 		t.Errorf("a German device is offered %q (lang %q)", names(german), german.Lang)
 	}
 
-	if !strings.Contains(names(english), "Time entries") || english.Lang != "en" {
+	if !strings.Contains(names(english), "My account") || english.Lang != "en" {
 		t.Errorf("an English device is offered %q (lang %q)", names(english), english.Lang)
 	}
 

@@ -222,12 +222,12 @@ func (s *Sink) quiet(r Record) bool {
 // Conceal keeps the key that follows prefix out of every line, the console's and
 // the ring's alike.
 //
-// For a calendar feed's key, which is the whole of the address a calendar program
-// asks for. The framework writes the address of every request into the log, so
-// each reading of a feed put the key to somebody's recorded days in front of
-// whoever reads the log - the administrator in the viewer among them, who may not
-// see anybody's hours. The prefix stays and the key is replaced, so the line
-// still says that a feed was read without being the way to read it.
+// For a key that is the whole of an address, which a calendar feed's was. The
+// framework writes the address of every request into the log, so each reading of
+// such an address put the key in front of whoever reads the log - the
+// administrator in the viewer among them. The prefix stays and the key is
+// replaced, so the line still says that the address was read without being the
+// way to read it. Nothing names a prefix since the calendar feed went.
 func (s *Sink) Conceal(prefix string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

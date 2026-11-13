@@ -51,17 +51,6 @@ type UserRepository interface {
 	// either of those.
 	SetTOTP(ctx context.Context, id uint, secret string, enabled bool) error
 
-	// SetBalanceLimits writes the two bounds of somebody's running balance, nil
-	// for none, and nothing else - one statement for the pair, for the reason
-	// SetPreference writes one column: a read-modify-write of the whole row loses
-	// whatever changed in between.
-	SetBalanceLimits(ctx context.Context, id uint, upper, lower *float64) error
-
-	// SetReminders writes both of somebody's reminder choices, and nothing else,
-	// for the same reason: whether the last working day is mentioned, and after how
-	// many hours a running stopwatch is - nil for the default.
-	SetReminders(ctx context.Context, id uint, skipUnbooked bool, timerAlertHours *int) error
-
 	Delete(ctx context.Context, id uint) error
 }
 
@@ -78,16 +67,12 @@ const (
 	// PreferenceLanguage is the language the interface is shown in.
 	PreferenceLanguage
 
-	// PreferenceTimezone is the zone this person's days are counted in, empty
-	// meaning they follow the instance.
+	// PreferenceTimezone is the zone a moment is written in for this person,
+	// empty meaning they follow the instance.
 	PreferenceTimezone
 
 	// PreferenceTheme is light or dark, empty meaning the time of day decides.
 	PreferenceTheme
-
-	// PreferenceHolidayPlace is where this person keeps public holidays, empty
-	// meaning they follow the installation.
-	PreferenceHolidayPlace
 )
 
 // ExportedPart is one part of an account's export: what it is called and its rows,

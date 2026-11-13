@@ -9,33 +9,33 @@ import (
 )
 
 // A step the browser refuses is said in the screen's words, as every other
-// refusal is, and the steps that are left are the server's: whole hours for the
-// stopwatch's reminder, while a daily target of 7.75 hours - a 38.75-hour week,
-// which the form refused in steps of a half - is taken as the server takes it.
+// refusal is, and the steps that are left are the server's: whole minutes for the
+// idle time, while a session lifetime of 7.75 hours is taken as the server takes
+// it.
 func TestAStepIsTheServersAndSaidInTheScreensWords(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
-	p.showView("settings")
-	p.waitShown("#form-reminders")
+	p.readyAdmin()
+	p.showView("admin")
+	p.waitShown("#form-operational")
 
-	p.run("ask for the stopwatch after two and a half hours",
-		chromedp.SetValue(`#form-reminders input[name="timerAlertHours"]`, "2.5", chromedp.ByQuery),
-		p.click(`#form-reminders button[type="submit"]`))
+	p.run("ask for a sign-out after two and a half minutes",
+		chromedp.SetValue(`#form-operational input[name="sessionIdleMinutes"]`, "2.5", chromedp.ByQuery),
+		p.click(`#form-operational button[type="submit"]`))
 	p.waitEvaluates("what the field says",
-		`document.querySelector('#form-reminders input[name="timerAlertHours"]').validationMessage`,
+		`document.querySelector('#form-operational input[name="sessionIdleMinutes"]').validationMessage`,
 		"Please enter a whole number.")
 
 	var taken bool
 
-	p.run("type a daily target of 7.75 hours", chromedp.Evaluate(`(() => {
-		const field = document.querySelector('#form-working-times input[name="dailyTargetHours"]');
+	p.run("type a session lifetime of 7.75 hours", chromedp.Evaluate(`(() => {
+		const field = document.querySelector('#form-operational input[name="sessionLifetimeHours"]');
 		field.value = '7.75';
 		return field.validity.valid;
 	})()`, &taken))
 
 	if !taken {
-		t.Error("the form refuses a daily target of 7.75 hours, which the server takes")
+		t.Error("the form refuses a session lifetime of 7.75 hours, which the server takes")
 	}
 }

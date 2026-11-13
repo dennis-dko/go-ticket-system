@@ -27,7 +27,7 @@ func TestMaintenanceTurnsAnOrdinaryAccountAwayAtTheDoor(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Worker", "email": "worker@example.com",
-		"role": "user", "password": "worker-password-1",
+		"role": "agent", "password": "worker-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	// Before: an ordinary sign-in works, which is what makes the refusal below

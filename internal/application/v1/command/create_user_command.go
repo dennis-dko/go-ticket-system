@@ -13,8 +13,6 @@ type CreateUserCommand struct {
 	// Password may be empty, in which case the account is created with the
 	// initial password and must change it on first use.
 	Password string
-
-	// Working times; zero means "use the instance default".
 }
 
 // CreateUserCommandResult command to get create result of new user

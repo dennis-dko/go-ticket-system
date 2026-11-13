@@ -290,7 +290,7 @@ func TestSetupWizardIsAdministratorOnly(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Erika", "email": "erika@example.com",
-		"role": "user", "password": "erika-password-1",
+		"role": "agent", "password": "erika-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	user := a.newClient()
@@ -298,139 +298,6 @@ func TestSetupWizardIsAdministratorOnly(t *testing.T) {
 
 	if r := user.api(http.MethodGet, "/setup", nil); r.Status != http.StatusForbidden {
 		t.Errorf("a user must not read the setup state, got %d", r.Status)
-	}
-}
-
-// --------------------------------------------------------------- timesheets
-
-// Through somebody who works here, because the built-in administrator does not.
-//
-// The name said "submitting and approving", from when an entry travelled through a
-// review that no longer exists - and it never did either of those things, even then.
-// What it checks is that a booking is recorded, read back, corrected and removed.
-func TestBookingCorrectingAndRemovingAnEntry(t *testing.T) {
-	t.Parallel()
-
-	a, admin, _ := startWithWorker(t)
-	other := a.signInAsUser(admin, "Meike", "meike@example.com")
-
-	today := time.Now().Format("2006-01-02")
-
-	var booked timesheetResponse
-	other.must(other.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": today, "durationHours": 6.5, "description": "Integration work",
-	}), http.StatusCreated, http.StatusOK).Data(t, &booked)
-
-	if booked.DurationHours != 6.5 {
-		t.Errorf("expected 6.5 hours, got %v", booked.DurationHours)
-	}
-
-	var list listOf[timesheetResponse]
-	other.must(other.api(http.MethodGet, "/timesheets", nil), http.StatusOK).Data(t, &list)
-
-	if list.TotalCount != 1 {
-		t.Errorf("expected one entry, got %d", list.TotalCount)
-	}
-}
-
-// The cap takes two accounts, because it is two different jobs meeting.
-//
-// The ceiling is the installation's, so the administrator sets it from Settings. The
-// day it stops belongs to somebody who works here, and the administrator no longer
-// has one - so the bookings go through Wera.
-func TestBookingIsRefusedOverTheDailyCap(t *testing.T) {
-	t.Parallel()
-
-	_, admin, worker := startWithWorker(t)
-
-	// Administered from the Settings screen, and in force immediately.
-	admin.must(admin.api(http.MethodPut, "/settings/operational",
-		map[string]any{"maxDailyHours": 8}), http.StatusOK)
-
-	today := time.Now().Format("2006-01-02")
-
-	worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": today, "durationHours": 6,
-	}), http.StatusCreated, http.StatusOK)
-
-	// 6 + 4 is over 8: the cap counts the day, not the single booking.
-	over := worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": today, "durationHours": 4,
-	})
-
-	if over.Status != http.StatusConflict {
-		t.Fatalf("expected the booking to be refused, got %d: %s", over.Status, over.Body)
-	}
-
-	if !strings.Contains(over.Message(), "daily limit") {
-		t.Errorf("the refusal should say why: %q", over.Message())
-	}
-
-	// And the limit is a limit, not a wall: 2 more hours still fit.
-	worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": today, "durationHours": 2,
-	}), http.StatusCreated, http.StatusOK)
-}
-
-// Entirely one person's own time: the target, the booking and the balance it produces
-// are all Wera's, and the administrator appears only to open the account. It has no
-// daily target of its own to compare against and no entries to total.
-func TestOvertimeCountsOnlyDaysWithBookings(t *testing.T) {
-	t.Parallel()
-
-	_, _, worker := startWithWorker(t)
-
-	me := worker.must(worker.api(http.MethodGet, "/me", nil), http.StatusOK)
-
-	var meResult struct {
-		User userResponse `json:"user"`
-	}
-
-	me.Data(t, &meResult)
-
-	// An 8 hour target, one day of 10: two hours over, and the untouched days
-	// in between must not accumulate as a deficit.
-	worker.must(worker.api(http.MethodPut, path("/users/", meResult.User.ID, "/working-times"),
-		map[string]any{"dailyTargetHours": 8}), http.StatusOK)
-
-	// A Tuesday rather than today. Without a plan of their own somebody's week
-	// asks nothing of a Saturday or a Sunday, so on a weekend this case would
-	// have measured ten hours against no target at all.
-	day := "2026-08-04"
-	worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": day, "durationHours": 10,
-	}), http.StatusCreated, http.StatusOK)
-
-	var balance struct {
-		TotalBooked  float64 `json:"totalBooked"`
-		TotalTarget  float64 `json:"totalTarget"`
-		TotalBalance float64 `json:"totalBalance"`
-	}
-
-	// The period is stated rather than left to default to "this month".
-	//
-	// Defaulting made this test fail once an hour either side of midnight: the
-	// booking is dated in the test machine's zone, while the server works out
-	// "now" in the instance's - UTC unless configured. Just after midnight in
-	// Berlin it is still yesterday in UTC, so the window ended before the day
-	// the hours were booked on. The application is right to do that; what was
-	// wrong was a test that asked a question whose answer depends on the clock.
-	// Which zone applies is covered by its own tests.
-	window := path("?from=", day, "&to=", day)
-
-	worker.must(worker.api(http.MethodGet, path("/users/", meResult.User.ID, "/overtime", window), nil),
-		http.StatusOK).Data(t, &balance)
-
-	if balance.TotalBooked != 10 {
-		t.Errorf("expected 10 booked hours, got %v", balance.TotalBooked)
-	}
-
-	if balance.TotalTarget != 8 {
-		t.Errorf("only the day with a booking counts, so the target is 8, got %v", balance.TotalTarget)
-	}
-
-	if balance.TotalBalance != 2 {
-		t.Errorf("expected a balance of +2, got %v", balance.TotalBalance)
 	}
 }
 
@@ -487,12 +354,9 @@ func TestChangingTheAdministratorPasswordCannotBeSkipped(t *testing.T) {
 	for _, call := range []struct{ method, path string }{
 		{http.MethodGet, "/roles"},
 		{http.MethodGet, "/users"},
-		{http.MethodPost, "/timesheets"},
 		{http.MethodPost, "/me/tokens"},
 	} {
-		r := c.api(call.method, call.path, map[string]any{
-			"date": "2026-08-03", "durationHours": 8, "name": "x", "expiresInDays": 0,
-		})
+		r := c.api(call.method, call.path, map[string]any{"name": "x", "expiresInDays": 0})
 
 		if r.Status != http.StatusConflict {
 			t.Errorf("%s %s should be refused while the initial password stands, got %d",
@@ -536,7 +400,7 @@ func TestChangingAPasswordEndsTheOtherSessionsAndKeepsThisOne(t *testing.T) {
 	a := start(t)
 	admin := a.signInAsAdmin("a-much-better-password")
 
-	worker := a.signInAsUser(admin, "Wera", "wera@example.com")
+	worker := a.signInAsAgent(admin, "Wera", "wera@example.com")
 
 	// The same account, signed in twice - a second device.
 	elsewhere := a.newClient()

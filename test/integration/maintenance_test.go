@@ -35,18 +35,19 @@ func TestMaintenanceModeTurnsOrdinaryWorkAway(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Worker", "email": "worker@example.com",
-		"role": "user", "password": "worker-password-1",
+		"role": "agent", "password": "worker-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	user := a.newClient()
 	user.signIn("worker@example.com", "worker-password-1")
 
-	// Working before.
-	user.must(user.api(http.MethodGet, "/timesheets", nil), http.StatusOK)
+	// Working before. A personal token is the ordinary work here: every account
+	// reads and makes its own, and nothing about it is exempt.
+	user.must(user.api(http.MethodGet, "/me/tokens", nil), http.StatusOK)
 
 	setMaintenance(t, admin, true, "Back at 14:00")
 
-	response := user.api(http.MethodGet, "/timesheets", nil)
+	response := user.api(http.MethodGet, "/me/tokens", nil)
 	if response.Status != http.StatusServiceUnavailable {
 		t.Fatalf("got %d, want 503: %s", response.Status, response.Body)
 	}
@@ -56,18 +57,18 @@ func TestMaintenanceModeTurnsOrdinaryWorkAway(t *testing.T) {
 		t.Errorf("the response does not carry the message: %s", response.Body)
 	}
 
-	// Booking time is the thing this is meant to prevent.
-	if got := user.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-01", "durationHours": 2,
+	// A write is the thing this is meant to prevent.
+	if got := user.api(http.MethodPost, "/me/tokens", map[string]any{
+		"name": "during maintenance",
 	}).Status; got != http.StatusServiceUnavailable {
-		t.Errorf("booking during maintenance answered %d, want 503", got)
+		t.Errorf("a write during maintenance answered %d, want 503", got)
 	}
 
 	setMaintenance(t, admin, false, "")
 
 	// The cache is short-lived, so this may need a moment.
 	if !eventually(func() bool {
-		return user.api(http.MethodGet, "/timesheets", nil).Status == http.StatusOK
+		return user.api(http.MethodGet, "/me/tokens", nil).Status == http.StatusOK
 	}) {
 		t.Error("work is still refused after maintenance mode was turned off")
 	}
@@ -176,12 +177,12 @@ func TestWhoeverMayAdministerGetsPastMaintenanceMode(t *testing.T) {
 	a := start(t)
 	admin := a.signInAsAdmin("a-much-better-password")
 
-	// Somebody who works here and administers as well, and somebody who only
-	// works here.
-	other := a.signInAsWorkingAdmin(admin, "Second admin", "admin2@example.com")
-	worker := a.signInAsUser(admin, "Wera", "wera@example.com")
+	// Somebody given the administration, and somebody who works here and
+	// administers nothing.
+	other := a.signInAsGrantedAdministrator(admin, "Second admin", "admin2@example.com")
+	worker := a.signInAsAgent(admin, "Wera", "wera@example.com")
 
-	worker.must(worker.api(http.MethodGet, "/timesheets", nil), http.StatusOK)
+	worker.must(worker.api(http.MethodGet, "/me/tokens", nil), http.StatusOK)
 
 	setMaintenance(t, admin, true, "maintenance")
 
@@ -196,13 +197,13 @@ func TestWhoeverMayAdministerGetsPastMaintenanceMode(t *testing.T) {
 		t.Errorf("an account holding the administration got %d during maintenance, want 200", got)
 	}
 
-	// And their own ordinary work, which is the half of that account maintenance
-	// mode has no reason to stop once the person is let through at all.
-	if got := other.api(http.MethodGet, "/timesheets", nil).Status; got != http.StatusOK {
-		t.Errorf("an administrator's own timesheet answered %d during maintenance, want 200", got)
+	// And their own ordinary work, which maintenance mode has no reason to stop
+	// once the person is let through at all.
+	if got := other.api(http.MethodGet, "/me/tokens", nil).Status; got != http.StatusOK {
+		t.Errorf("an administrator's own tokens answered %d during maintenance, want 200", got)
 	}
 
-	if got := worker.api(http.MethodGet, "/timesheets", nil).Status; got != http.StatusServiceUnavailable {
+	if got := worker.api(http.MethodGet, "/me/tokens", nil).Status; got != http.StatusServiceUnavailable {
 		t.Errorf("an ordinary account got %d during maintenance, want 503", got)
 	}
 }
@@ -219,7 +220,7 @@ func TestMaintenanceModeStillRefusesARequestWithoutASession(t *testing.T) {
 
 	anonymous := a.newClient()
 
-	if got := anonymous.api(http.MethodGet, "/timesheets", nil).Status; got != http.StatusServiceUnavailable {
+	if got := anonymous.api(http.MethodGet, "/me/tokens", nil).Status; got != http.StatusServiceUnavailable {
 		t.Errorf("a request with no session got %d during maintenance, want 503", got)
 	}
 }
@@ -234,7 +235,7 @@ func TestAnEmptyMessageFallsBackToSomethingReadable(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Reader", "email": "reader@example.com",
-		"role": "user", "password": "reader-password-1",
+		"role": "agent", "password": "reader-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	user := a.newClient()
@@ -242,7 +243,7 @@ func TestAnEmptyMessageFallsBackToSomethingReadable(t *testing.T) {
 
 	setMaintenance(t, admin, true, "")
 
-	response := user.api(http.MethodGet, "/timesheets", nil)
+	response := user.api(http.MethodGet, "/me/tokens", nil)
 	if response.Status != http.StatusServiceUnavailable {
 		t.Fatalf("got %d, want 503", response.Status)
 	}
@@ -293,7 +294,7 @@ func TestWithAuthenticationOffMaintenanceLetsTheOnlyPersonThrough(t *testing.T) 
 
 	setMaintenance(t, anybody, true, "Back at 14:00")
 
-	if got := anybody.api(http.MethodGet, "/timesheets", nil).Status; got != http.StatusOK {
-		t.Errorf("with authentication off and maintenance on, reading the entries answered %d", got)
+	if got := anybody.api(http.MethodGet, "/roles", nil).Status; got != http.StatusOK {
+		t.Errorf("with authentication off and maintenance on, reading the roles answered %d", got)
 	}
 }

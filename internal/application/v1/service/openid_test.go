@@ -183,7 +183,7 @@ func TestARoundIsFinishedOnceByWhoBeganIt(t *testing.T) {
 	refusedWith(t, err, "attemptExpired")
 
 	colleague, err := f.users.CreateUser(ctx, command.CreateUserCommand{
-		Name: "Colleague", Email: "colleague@example.com", Role: model.RoleUser,
+		Name: "Colleague", Email: "colleague@example.com", Role: model.RoleAgent,
 	})
 	if err != nil {
 		t.Fatalf("create a colleague: %v", err)
@@ -270,7 +270,7 @@ func TestAnIdentityLinkedToSomebodyIsNotLinkedAgain(t *testing.T) {
 	}
 
 	colleague, err := f.users.CreateUser(ctx, command.CreateUserCommand{
-		Name: "Colleague", Email: "colleague@example.com", Role: model.RoleUser,
+		Name: "Colleague", Email: "colleague@example.com", Role: model.RoleAgent,
 	})
 	if err != nil {
 		t.Fatalf("create a colleague: %v", err)

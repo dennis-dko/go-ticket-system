@@ -22,9 +22,7 @@ func TestTheDirectorySynchronisationIsTheCardUnderTheLDAPConnection(t *testing.T
 		t.Fatal("there is no LDAP card in the markup")
 	}
 
-	// The note standing in for the card, for an account the run is not offered
-	// to, comes first and is hidden for everybody else.
-	want := []string{"sync-elsewhere", "sync-card"}
+	want := []string{"sync-card"}
 
 	if got := cards[at+1 : min(at+1+len(want), len(cards))]; !slices.Equal(got, want) {
 		t.Errorf("under the LDAP card come %q, want %q", got, want)

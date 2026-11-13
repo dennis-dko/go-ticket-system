@@ -108,7 +108,7 @@ func NewSessionService(
 		sessions:    sessions,
 		auth:        auth,
 		lifetime:    lifetime,
-		defaultRole: model.RoleUser,
+		defaultRole: model.RoleAgent,
 		spent:       map[uint]int64{},
 	}
 }
@@ -253,8 +253,7 @@ func (s *SessionService) secondFactor(ctx context.Context, user *model.User, cod
 //
 // Whoever answered the installer proved more than a password does. The setup
 // token is printed to this process's log, so they can already read the process,
-// and what they decided with it is where every account, project and hour will be
-// kept. Sending them on to find the documented initial password and type it into
+// and what they decided with it is where every account and ticket will be kept. Sending them on to find the documented initial password and type it into
 // a sign-in form establishes nothing that has not just been established - and it
 // is the step that puts "changeme123" in front of a person as something to
 // remember.

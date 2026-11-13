@@ -262,7 +262,7 @@ func TestTheConnectionTypeFollowsWhatIsRunningUntilSomebodyPicks(t *testing.T) {
 	// Something reloads the screen, which happens for reasons having nothing to
 	// do with the person in front of it.
 	p.chooseLanguage("de")
-	p.waitForText(`.tab[data-view="timesheets"]`, "Zeiteinträge")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	// Waited for rather than read once. What the language switch starts is a
 	// screenful of requests, and the one that refills this card is not the one
@@ -290,7 +290,7 @@ func TestTheConnectionTypeFollowsWhatIsRunningUntilSomebodyPicks(t *testing.T) {
 	}
 
 	p.chooseLanguage("en")
-	p.waitForText(`.tab[data-view="timesheets"]`, "Time entries")
+	p.waitForText(`.tab[data-view="settings"]`, "My account")
 
 	if got := p.value(`#form-datasource [name="dialect"]`); got != picked {
 		t.Errorf("the type somebody picked (%q) was taken back to %q", picked, got)

@@ -1,10 +1,6 @@
 package common
 
-import (
-	"time"
-
-	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
-)
+import "github.com/dennis-dko/go-ticket-system/internal/domain/model"
 
 // UserResult result model. It deliberately carries no password material, so a
 // hash cannot leak by being passed outwards.
@@ -41,23 +37,6 @@ type UserResult struct {
 	// Theme is the appearance this account reads in; empty follows the clock.
 	Theme    string
 	TourSeen bool
-
-	// Working times as this account has them, which is zero for one that has not
-	// chosen: zero means "follow the instance default", and the interface shows it as
-	// "default" rather than as no hours at all.
-	//
-	// Deliberately not resolved here, though the comment used to claim it was. A
-	// resolved value cannot be told apart from a deliberate one, so somebody who set
-	// eight hours and somebody who set nothing would look identical - and the screen
-	// would offer to clear a figure that was never there. What reads them resolves
-	// them: the overtime balance through EffectiveDailyTarget, the daily ceiling
-	// through the stricter of this and the installation's.
-	DailyTargetHours float64
-	MaxDailyHours    float64
-
-	// EveryDayCountsFrom is the day from which every working day counts, nil
-	// while only the days booked on do.
-	EveryDayCountsFrom *time.Time
 }
 
 func NewUserResultFromModel(userModels ...*model.User) []*UserResult {
@@ -83,9 +62,6 @@ func NewUserResultFromModel(userModels ...*model.User) []*UserResult {
 			Timezone:           userModel.Timezone,
 			Theme:              userModel.Theme,
 			TourSeen:           userModel.TourSeen,
-			DailyTargetHours:   userModel.DailyTargetHours,
-			MaxDailyHours:      userModel.MaxDailyHours,
-			EveryDayCountsFrom: userModel.EveryDayCountsFrom,
 		})
 	}
 

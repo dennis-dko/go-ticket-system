@@ -168,7 +168,7 @@ func messageText(raw json.RawMessage) (text, traceID string, asked requestLine) 
 // choosing DEBUG, which the Settings screen offers, sent every value every
 // statement carried to the console: a second factor's secret as it was
 // enrolled, the directory's bind password as it was saved, both in clear text
-// without SECRET_KEY, and everybody's hours and notes. The console is the
+// without SECRET_KEY, and everything written in a ticket. The console is the
 // container's log or the journal, read by whoever runs the machine.
 //
 // Each value is replaced by its kind, so the line still says what ran and with

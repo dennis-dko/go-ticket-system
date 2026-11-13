@@ -9,17 +9,18 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+
 	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
 // A session that has ended takes the screen with it, uploads included.
 //
 // api() states the rule and enforces it for every request that carries JSON:
-// "A session that is no longer accepted takes the screen with it." Three
-// requests do not go through api() - the download and the two imports - because
-// each has a reason of its own: a blob to save, a multipart boundary only the
-// browser knows. Each was then written out by hand, and each of the three copies
-// stops at the message. None of them notices a 401, a maintenance 503 or the
+// "A session that is no longer accepted takes the screen with it." Some
+// requests do not go through api() - the download and the imports - because each
+// has a reason of its own: a blob to save, a multipart boundary only the browser
+// knows. Each was then written out by hand, and each of the copies stopped at the
+// message. None of them notices a 401, a maintenance 503 or the
 // permission revision that travels on every answer.
 //
 // The upload is the worst place to lose that. It is the longest-running thing
@@ -31,17 +32,17 @@ func TestAnEndedSessionDuringAnUploadHandsBackTheScreen(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
 	// A perfectly good file: this case is about the answer, not the contents.
-	book, err := spreadsheet.Write([]spreadsheet.Row{
-		{Date: time.Now(), Hours: 2, Description: "Fine either way"},
+	book, err := spreadsheet.WriteUsers("en", []spreadsheet.UserRow{
+		{Name: "Fine either way", Email: "fine@example.com", Role: "agent"},
 	})
 	if err != nil {
 		t.Fatalf("building the workbook: %v", err)
 	}
 
-	path := filepath.Join(t.TempDir(), "entries.xlsx")
+	path := filepath.Join(t.TempDir(), "people.xlsx")
 	if err := os.WriteFile(path, book, 0o600); err != nil {
 		t.Fatalf("writing the workbook: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestAnEndedSessionDuringAnUploadHandsBackTheScreen(t *testing.T) {
 		window.fetch = async (input, init) => {
 			const url = typeof input === 'string' ? input : input.url;
 
-			if (url.includes('/timesheets/import')) {
+			if (url.includes('/users/import')) {
 				return new Response(JSON.stringify({ error: {
 					code: 'sessionExpired',
 					message: 'The session has ended. Please sign in again.',
@@ -67,13 +68,14 @@ func TestAnEndedSessionDuringAnUploadHandsBackTheScreen(t *testing.T) {
 		return true;
 	})()`, nil))
 
-	p.run("choose the file",
-		chromedp.Click(`.tab[data-view="timesheets"]`, chromedp.ByQuery),
-		chromedp.WaitVisible("#workbook-card", chromedp.ByID),
-		chromedp.SetUploadFiles("#wb-file", []string{path}, chromedp.ByQuery))
+	const card = `#view-users .card:has(input[type="file"])`
 
-	p.waitShown("#wb-preview")
-	p.run("check the file", p.click("#wb-preview"))
+	p.run("choose the file", p.click(`.tab[data-view="users"]`),
+		chromedp.WaitVisible(card, chromedp.ByQuery),
+		chromedp.SetUploadFiles(card+` input[type="file"]`, []string{path}, chromedp.ByQuery))
+
+	p.waitShown(card + ` button[data-i18n="wb.preview"]`)
+	p.run("check the file", p.click(card+` button[data-i18n="wb.preview"]`))
 
 	// Given time to hand the screen back, rather than asserted on immediately.
 	deadline := time.Now().Add(waitPatience)

@@ -23,9 +23,9 @@ var _ repository.DirectoryRunRepository = (*DirectoryRunRepository)(nil)
 // Record keeps one run.
 func (r *DirectoryRunRepository) Record(ctx context.Context, run *model.DirectoryRun) error {
 	id, err := r.insert(ctx,
-		"INSERT INTO directory_runs (ran_at, confirmed, deleted, entries_deleted, created) "+
+		"INSERT INTO directory_runs (ran_at, confirmed, deleted, tickets_released, created) "+
 			"VALUES (?, ?, ?, ?, ?)",
-		run.RanAt, run.Confirmed, run.Deleted, run.EntriesDeleted, run.Created)
+		run.RanAt, run.Confirmed, run.Deleted, run.TicketsReleased, run.Created)
 	if err != nil {
 		return apperror.Internal(err)
 	}
@@ -38,7 +38,7 @@ func (r *DirectoryRunRepository) Record(ctx context.Context, run *model.Director
 // Latest returns the most recent runs, newest first.
 func (r *DirectoryRunRepository) Latest(ctx context.Context, limit int) ([]*model.DirectoryRun, error) {
 	rows, err := r.db.QueryContext(ctx, r.rebind(
-		"SELECT id, ran_at, confirmed, deleted, entries_deleted, created "+
+		"SELECT id, ran_at, confirmed, deleted, tickets_released, created "+
 			"FROM directory_runs ORDER BY ran_at DESC, id DESC LIMIT ?"), limit)
 	if err != nil {
 		return nil, apperror.Internal(err)
@@ -54,7 +54,7 @@ func (r *DirectoryRunRepository) Latest(ctx context.Context, limit int) ([]*mode
 			ranAt dateTime
 		)
 
-		if err := rows.Scan(&run.ID, &ranAt, &run.Confirmed, &run.Deleted, &run.EntriesDeleted,
+		if err := rows.Scan(&run.ID, &ranAt, &run.Confirmed, &run.Deleted, &run.TicketsReleased,
 			&run.Created); err != nil {
 			return nil, apperror.Internal(err)
 		}

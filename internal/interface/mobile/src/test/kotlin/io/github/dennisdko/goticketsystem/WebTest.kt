@@ -15,8 +15,8 @@ class WebTest {
 
         assertTrue(belongsTo(home, "https://tickets.example.com/"))
         assertTrue(belongsTo(home, "https://tickets.example.com:443/api-docs"))
-        assertTrue(belongsTo("http://192.168.1.20:8000", "http://192.168.1.20:8000/#week"))
-        assertTrue(belongsTo(home, "https://TIME.example.com/"))
+        assertTrue(belongsTo("http://192.168.1.20:8000", "http://192.168.1.20:8000/#settings"))
+        assertTrue(belongsTo(home, "https://TICKETS.example.com/"))
 
         assertFalse(belongsTo(home, "https://github.com/dennis-dko/go-ticket-system"))
         assertFalse(belongsTo(home, "http://tickets.example.com/"))
@@ -51,7 +51,7 @@ class WebTest {
     // names a folder.
     @Test
     fun aFileIsSavedUnderTheNameThePageGaveIt() {
-        assertEquals("time-entries-2026-11-03.xlsx", downloadName("time-entries-2026-11-03.xlsx"))
+        assertEquals("accounts-2026-11-03.xlsx", downloadName("accounts-2026-11-03.xlsx"))
         assertEquals("report.pdf", downloadName("../../report.pdf"))
         assertEquals("report.pdf", downloadName("..\\report.pdf"))
         assertEquals("download", downloadName("  "))

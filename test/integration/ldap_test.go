@@ -91,7 +91,7 @@ func ldapSettings(host string, port int, baseDN string) map[string]any {
 		"nameAttribute":  "cn",
 		"emailAttribute": "mail",
 		"idAttribute":    "entryUUID",
-		"defaultRole":    "user",
+		"defaultRole":    "agent",
 	}
 }
 
@@ -293,7 +293,7 @@ func TestADirectorySignInIsRefusedTheAccountOfAnotherEntry(t *testing.T) {
 
 	created := admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Who Had The Address", "email": "alice@example.com",
-		"role": "user", "password": "a-predecessors-password",
+		"role": "agent", "password": "a-predecessors-password",
 	})
 
 	var made struct {

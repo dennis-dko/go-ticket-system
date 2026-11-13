@@ -148,7 +148,7 @@ that make the synchronisation's edge cases reproducible.
 Every language but English is one file - German is
 [`internal/support/i18n/locale/de.json`](../internal/support/i18n/locale/de.json) -
 and everything that says something reads it: the page, the installer, the
-Android app, the workbooks, the calendar feed and the foot of a PDF. English has
+Android app and the workbooks. English has
 no file. It is written where it is said, in the markup and beside every lookup,
 so a sentence a dictionary lacks is said in English rather than not at all.
 
@@ -213,6 +213,10 @@ Windows, with the SDK and a JDK under `~/android` unless `ANDROID_SDK_ROOT` and
 camera switches it to English with root; the camera puts back the size it draws
 at, and leaves it in English.
 
+Both cameras still drive the time recording this repository was cloned from, and
+the pictures in `doc/image` still show it: neither runs against the ticket system
+until its screens exist, and both are rewritten with the pictures then.
+
 ## Verify
 
 ```bash
@@ -230,9 +234,8 @@ compiled binary and talk to it over HTTP, the way a browser and a script do.
 Nothing is stubbed, so the middleware order, the CSRF check, the session
 cookie, the migrations and the embedded assets are all in the path — which is
 where every bug found by *running* this application rather than testing it has
-lived. They cover sign-in, the setup wizard, booking, the daily cap, overtime,
-projects belonging to one person, RBAC, API tokens, timezones, deleting several rows
-at once and the guided tour.
+lived. They cover sign-in, the setup wizard, RBAC, API tokens, timezones, the
+directory, deleting several rows at once and the guided tour.
 
 ```bash
 task test:integration              # against SQLite, one file per test

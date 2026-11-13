@@ -17,8 +17,8 @@ import (
 // JSON file a part and a note on what it is.
 //
 // What it reads is decided where the tables are: the database's export reads a
-// statement for every table the erasure deletes from, and leaves out the secrets.
-// This only packs it.
+// statement for every table the erasure deletes from or takes the account's
+// name off, and leaves out the secrets. This only packs it.
 type AccountExportService struct {
 	exporter repository.AccountExporter
 	now      func() time.Time
@@ -29,13 +29,15 @@ func NewAccountExportService(exporter repository.AccountExporter) *AccountExport
 	return &AccountExportService{exporter: exporter, now: time.Now}
 }
 
-// exportLeftOut is what the note says the export does not hold, and why: each is
-// a way into the account, and an export ends up in a downloads folder.
+// exportLeftOut is what the note says the export does not hold. The first four
+// are each a way into the account, and an export ends up in a downloads folder;
+// the last is somebody else's words as much as the account's own.
 var exportLeftOut = []string{
 	"the password's hash",
 	"the second factor's seed",
-	"the hashes of personal tokens, sessions and the calendar address",
+	"the hashes of personal tokens and sessions",
 	"a passkey's key material",
+	"the text of what the account wrote in tickets, which quotes the customers it answers",
 }
 
 // exportNote is the archive's own description, written as about.json.

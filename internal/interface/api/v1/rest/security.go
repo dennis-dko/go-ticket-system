@@ -50,8 +50,8 @@ func SecurityHeaders(hstsMaxAge time.Duration) func(http.Handler) http.Handler {
 			// The application needs none of these, so they are switched off.
 			header.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=()")
 
-			// Responses carry working time and personal data; a shared cache
-			// must never keep them.
+			// Responses carry tickets and personal data; a shared cache must
+			// never keep them.
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				header.Set("Cache-Control", "no-store")
 				header.Set("Pragma", "no-cache")
@@ -294,7 +294,7 @@ func (l *RateLimiter) guards(r *http.Request) bool {
 		return true
 	}
 
-	// The ticket sign-in as well: it checks a second factor as a password
+	// The Kerberos sign-in as well: it checks a second factor as a password
 	// sign-in does, and a code is guessed at the same speed through either. Its
 	// GET only says whether it is on offer, and every sign-in screen asks.
 	if strings.HasSuffix(r.URL.Path, "/auth/kerberos") && r.Method == http.MethodPost {

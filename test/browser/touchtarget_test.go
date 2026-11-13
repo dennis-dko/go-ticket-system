@@ -31,7 +31,7 @@ func TestWhatAFingerPressesIsBigEnough(t *testing.T) {
 
 	p := open(t)
 	p.readyAdmin()
-	p.createAccount(t, "sven@example.com", "a-long-enough-password", "user")
+	p.createAccount(t, "sven@example.com", "a-long-enough-password", "agent")
 
 	p.run("a telephone", chromedp.EmulateViewport(390, 844))
 	p.run("open the accounts", chromedp.Evaluate(`switchView('users')`, nil),

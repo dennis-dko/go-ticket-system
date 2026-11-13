@@ -373,7 +373,7 @@ func TestAPasskeySignsInWithoutTheSecondFactor(t *testing.T) {
 // createOrdinaryAccount adds an ordinary account through the API, since the point of
 // these tests is the passkey ceremony and not the staff form.
 func (p *page) createOrdinaryAccount(t *testing.T, email, password string) {
-	p.createAccount(t, email, password, "user")
+	p.createAccount(t, email, password, "agent")
 }
 
 // createAccount is the same for an account that holds a different role, which is

@@ -27,9 +27,8 @@ type Date struct {
 // A timestamp brings a time of day and an offset, and neither may reach the
 // database: a stored date is midnight UTC of a calendar day (model.CalendarDay).
 // Both used to be stored as sent. SQLite then wrote "2026-07-03 23:30:00 -0500
-// -0500", which it cannot read back, so one booking made its owner's entry list
-// answer 500; PostgreSQL and MySQL kept the instant, which put the same booking
-// on the 4th. The day is the one written - "2026-07-03T23:30:00-05:00" is the
+// -0500", which it cannot read back, so one record made a whole list answer 500;
+// PostgreSQL and MySQL kept the instant, which put the same record on the 4th. The day is the one written - "2026-07-03T23:30:00-05:00" is the
 // 3rd - which is also how the spreadsheet importer reads the same form.
 //
 // A pointer receiver because it writes to the value, and this is the half of the
@@ -124,23 +123,6 @@ func queryInt(c *gofr.Context, name string, fallback int) int {
 	}
 
 	return v
-}
-
-// queryDate reads an optional date query parameter.
-func queryDate(c *gofr.Context, name string) (*time.Time, error) {
-	raw := strings.TrimSpace(c.Param(name))
-	if raw == "" {
-		return nil, nil //nolint:nilnil // absent parameter, not a failure
-	}
-
-	for _, layout := range []string{time.DateOnly, time.RFC3339} {
-		t, err := time.Parse(layout, raw)
-		if err == nil {
-			return &t, nil
-		}
-	}
-
-	return nil, apperror.InvalidFields(name)
 }
 
 func parseUint(raw, field string) (uint, error) {

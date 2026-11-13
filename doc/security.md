@@ -78,8 +78,8 @@ Implemented, and verified against a running instance:
 - **Secrets are never returned.** Database and LDAP passwords, and API tokens,
   are write-only over the API; clients get a `hasPassword` flag instead.
 - **Enumeration is avoided**: a wrong password and an unknown account fail
-  identically, and somebody else's project answers `404` rather than `403`, which
-  would confirm the id exists.
+  identically, and something the caller may not see answers `404` rather than
+  `403`, which would confirm the id exists.
 - **Passwords** are bcrypt hashes; session and API tokens are 256 bits of
   randomness stored only as SHA-256.
 

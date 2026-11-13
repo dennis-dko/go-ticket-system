@@ -143,91 +143,27 @@ func TestTheTraceExportersOfferedAreTheOnesTheServerAccepts(t *testing.T) {
 	}
 }
 
-// The reasons offered for an absence are the kinds the server records, in both
-// directions, and the script has a name for each of them - the list of
-// absences shows the kind the server sent, and a kind with no name there would
-// be shown as its identifier.
-func TestTheAbsencesOfferedAreTheKindsTheServerRecords(t *testing.T) {
-	offered := optionValues(t, asset(t, "/"), "kind")
-	supported := model.AbsenceKinds()
-
-	if absent := missing(supported, offered); len(absent) > 0 {
-		t.Errorf("the absence card offers no option for %v, so that kind cannot be recorded", absent)
-	}
-
-	for _, value := range offered {
-		if !contains(supported, value) {
-			t.Errorf("the absence card offers %q, which the server refuses on save", value)
-		}
-	}
-
+// Every country and region the server offers has a name on screen - the picker
+// that chooses where the installation keeps its public holidays would otherwise
+// offer a code.
+//
+// The holidays themselves have no names on screen any more: nothing shows a day
+// as a holiday since the calendar went, and the service hours leave them out
+// without saying which they are.
+func TestEveryPlaceHasAName(t *testing.T) {
 	js := asset(t, "/app.js")
-
-	for _, kind := range supported {
-		if !strings.Contains(js, "t('absence."+kind+"', ") {
-			t.Errorf("app.js names no absence of the kind %q, so the list shows its identifier", kind)
-		}
-	}
-}
-
-// Every country and region the server offers has a name on screen, and so does
-// every public holiday its rules can produce - a picker or a calendar would
-// otherwise show a code or a key. The holidays are collected from the rules
-// themselves, in every place and across the years their exceptions hold in,
-// rather than from a second list.
-func TestEveryPlaceAndEveryHolidayHasAName(t *testing.T) {
-	js := asset(t, "/app.js")
-
-	names := map[string]bool{}
-	substitutes := 0
 
 	for _, country := range model.HolidayCountries() {
 		if !strings.Contains(js, "t('country."+country.Code+"', ") {
 			t.Errorf("app.js names no country %q, so a picker offers its code", country.Code)
 		}
 
-		var places []string
-		if !country.RegionRequired {
-			places = append(places, country.Code)
-		}
-
 		for _, region := range country.Regions {
 			place := model.HolidayPlace(country.Code, region)
-			places = append(places, place)
 
 			if !strings.Contains(js, "t('region."+place+"', ") {
 				t.Errorf("app.js names no region %q, so a picker offers its code", place)
 			}
 		}
-
-		for _, place := range places {
-			for year := 1950; year <= 2040; year++ {
-				for _, holiday := range model.HolidaysIn(place, year) {
-					names[holiday.Name] = true
-
-					if holiday.Substitute {
-						substitutes++
-					}
-				}
-			}
-		}
-	}
-
-	if len(names) < 70 {
-		t.Fatalf("the rules produced %d holidays, fewer than the seventy they know; this case is not reading them all", len(names))
-	}
-
-	for name := range names {
-		if !strings.Contains(js, "t('holiday."+name+"', ") {
-			t.Errorf("app.js names no holiday %q, so the calendar shows its key", name)
-		}
-	}
-
-	if substitutes == 0 {
-		t.Fatal("no holiday was kept in place of one on a weekend; this case is not reading the countries that do")
-	}
-
-	if !strings.Contains(js, "t('holiday.substitute', ") {
-		t.Error("app.js has no words for a day kept in place of a holiday on a weekend, so it reads as the holiday itself")
 	}
 }

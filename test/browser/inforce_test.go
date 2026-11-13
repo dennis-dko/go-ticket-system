@@ -71,7 +71,6 @@ func TestWhatIsInForceIsStillSaidWhileTheLimitsAreEdited(t *testing.T) {
 					defaults: {},
 					effective: {
 						sessionLifetimeHours: 999,
-						maxDailyHours: 17,
 						rateLimit: 5,
 						rateLimitWindowSeconds: 60,
 						ldapSyncMaxDeleteRatio: 0.5,
@@ -104,7 +103,7 @@ func TestWhatIsInForceIsStillSaidWhileTheLimitsAreEdited(t *testing.T) {
 // What is in force is written the way every other figure on screen is.
 //
 // The line built its hours by appending a literal "h" to the raw number, so a
-// German reader saw "max./Tag 10.5 h" beside a timesheet saying "10,50 Std." -
+// German reader saw "10.5 h" where every other hour figure said "10,50 Std." -
 // the unit and the separator both, on the one screen where the figures are
 // being compared against what somebody is about to type.
 //
@@ -132,9 +131,8 @@ func TestWhatIsInForceIsWrittenTheWayTheReaderWritesNumbers(t *testing.T) {
 					configured: {},
 					defaults: {},
 					effective: {
-						sessionLifetimeHours: 24,
+						sessionLifetimeHours: 10.5,
 						sessionIdleMinutes: 30,
-						maxDailyHours: 10.5,
 						rateLimit: 5,
 						rateLimitWindowSeconds: 60,
 						ldapSyncMaxDeleteRatio: 0.125,
@@ -160,7 +158,7 @@ func TestWhatIsInForceIsWrittenTheWayTheReaderWritesNumbers(t *testing.T) {
 		t.Fatal("the German hour unit is \"h\" as well, so this case cannot tell the two apart")
 	}
 
-	for _, want := range []string{"24,00 " + unit, "10,50 " + unit, "Löschgrenze 0,125"} {
+	for _, want := range []string{"10,50 " + unit, "Löschgrenze 0,125"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("the line reads %q, which does not contain %q", line, want)
 		}
@@ -173,60 +171,6 @@ func TestWhatIsInForceIsWrittenTheWayTheReaderWritesNumbers(t *testing.T) {
 	}
 }
 
-// A person's working times are written in the users table the way every other
-// hour figure is.
-//
-// The table put them through toFixed(1), which is the one form fmtNumber exists
-// to replace: a German administrator read "7.8" for a target of seven and three
-// quarter hours - the separator wrong and the figure rounded to one that was
-// never set.
-func TestTheUsersTableWritesWorkingTimesTheWayTheReaderWritesNumbers(t *testing.T) {
-	t.Parallel()
-
-	p := open(t)
-	p.readyAdmin()
-	p.chooseLanguage("de")
-
-	p.run("open Users", p.click(`.tab[data-view="users"]`),
-		chromedp.WaitVisible("#table-users", chromedp.ByID))
-
-	p.run("answer with one account whose day is not a whole number", chromedp.Evaluate(`
-		(async () => {
-			const server = api;
-			api = (path, options) => path === '/users'
-				? Promise.resolve({ items: [{
-					id: 4711, name: 'Sven', email: 'sven@example.com', role: 'user',
-					isSystem: false, isExternal: false,
-					dailyTargetHours: 7.75, maxDailyHours: 10.5,
-				}] })
-				: server(path, options);
-
-			await loadUsers();
-
-			return 1;
-		})()`, nil, awaitPromise))
-
-	p.waitForText("#table-users tbody", "sven@example.com")
-
-	var row, unit string
-
-	p.run("read the row and the unit", chromedp.Evaluate(
-		`document.querySelector('#table-users tbody tr').textContent`, &row),
-		chromedp.Evaluate(`t('unit.hours', 'h')`, &unit))
-
-	for _, want := range []string{"7,75 " + unit, "10,50 " + unit} {
-		if !strings.Contains(row, want) {
-			t.Errorf("the row reads %q, which does not contain %q", row, want)
-		}
-	}
-
-	for _, unwanted := range []string{"7.8", "10.5"} {
-		if strings.Contains(row, unwanted) {
-			t.Errorf("the row reads %q, which still contains %q", row, unwanted)
-		}
-	}
-}
-
 // A limit that is switched off is said to be off, not written as a zero.
 //
 // Zero switches two of these off: the idle timeout, which is off unless somebody
@@ -234,7 +178,8 @@ func TestTheUsersTableWritesWorkingTimesTheWayTheReaderWritesNumbers(t *testing.
 // wrote both as figures - "idle 0 min", "delete limit 0" - and a zero beside a
 // limit reads as the strictest one there is: signed out at once, nothing may be
 // deleted. For the deletion limit that is the opposite of the truth, on the one
-// operation that removes accounts together with their hours, and the field
+// operation that removes accounts and leaves their tickets without an owner, and
+// the field
 // itself said "(0–1)" and nothing about what the end of that range does. The
 // idle field beside it already said "0 = never".
 func TestALimitThatIsSwitchedOffIsSaidToBeOff(t *testing.T) {

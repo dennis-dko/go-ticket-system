@@ -447,7 +447,7 @@ the certificate for you, `HSTS_MAX_AGE=0` keeps one that lapses from locking
 those browsers out, and tells the ones that stored it to forget it:
 
 ```bash
-openssl req -x509 -newkey rsa:2048 -nodes -days 825   -keyout privkey.pem -out fullchain.pem   -subj "/CN=zeiterfassung.intern"   -addext "subjectAltName=DNS:zeiterfassung.intern"
+openssl req -x509 -newkey rsa:2048 -nodes -days 825   -keyout privkey.pem -out fullchain.pem   -subj "/CN=helpdesk.intern"   -addext "subjectAltName=DNS:helpdesk.intern"
 ```
 
 A certificate that cannot be read stops the start rather than being discovered by
@@ -481,7 +481,7 @@ proxy passes to its plain port.
 
 ### It needs a name of its own, not a path
 
-`https://firma.example.com/zeiterfassung/` does not work, and cannot be made to
+`https://firma.example.com/helpdesk/` does not work, and cannot be made to
 work from the proxy side. The interface asks for `/app.js`, `/app.css`,
 `/theme.js` and `/favicon.ico`, and the script's API base is `/api/v1` - all
 absolute, and there is no setting that moves them. Under a sub-path the browser
@@ -517,12 +517,12 @@ Anything that reaches the port can also claim to be a proxy: set its own
 
 ### The whole configuration
 
-`/etc/apache2/sites-available/zeiterfassung.conf`:
+`/etc/apache2/sites-available/helpdesk.conf`:
 
 ```apache
 # Port 80 exists for the redirect and for certbot's challenge.
 <VirtualHost *:80>
-    ServerName zeiterfassung.firma.example.com
+    ServerName helpdesk.firma.example.com
 
     RewriteEngine On
     RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
@@ -530,11 +530,11 @@ Anything that reaches the port can also claim to be a proxy: set its own
 </VirtualHost>
 
 <VirtualHost *:443>
-    ServerName zeiterfassung.firma.example.com
+    ServerName helpdesk.firma.example.com
 
     SSLEngine on
-    SSLCertificateFile    /etc/letsencrypt/live/zeiterfassung.firma.example.com/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/zeiterfassung.firma.example.com/privkey.pem
+    SSLCertificateFile    /etc/letsencrypt/live/helpdesk.firma.example.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/helpdesk.firma.example.com/privkey.pem
 
     # Whatever a caller sent for itself goes, before Apache sets its own. The
     # sign-in rate limit counts per address and reads these; left alone, the
@@ -559,14 +559,14 @@ Anything that reaches the port can also claim to be a proxy: set its own
     # than delivered.
     SetEnvIfNoCase Request_URI "^/api/v1/events" no-gzip dont-vary
 
-    ErrorLog  ${APACHE_LOG_DIR}/zeiterfassung-error.log
-    CustomLog ${APACHE_LOG_DIR}/zeiterfassung-access.log combined
+    ErrorLog  ${APACHE_LOG_DIR}/helpdesk-error.log
+    CustomLog ${APACHE_LOG_DIR}/helpdesk-access.log combined
 </VirtualHost>
 ```
 
 ```bash
 sudo a2enmod proxy proxy_http headers ssl rewrite
-sudo a2ensite zeiterfassung
+sudo a2ensite helpdesk
 sudo apache2ctl configtest
 sudo systemctl reload apache2
 ```
@@ -619,7 +619,7 @@ CREATE USER 'gts'@'%' IDENTIFIED BY 'choose-something';
 GRANT ALL PRIVILEGES ON `go-ticket-system`.* TO 'gts'@'%';
 ```
 
-`utf8mb4` matters on MySQL: names, project titles and the notice on the sign-in
+`utf8mb4` matters on MySQL: names, ticket titles and the notice on the sign-in
 screen are whatever people type, and the older `utf8` is three bytes and cannot
 store all of it.
 
@@ -633,7 +633,7 @@ that fails after its first statement - a missing right, a lost connection -
 keeps what it did and loses the record that it ran, and the next start stops on
 "already exists" or "Duplicate column". On a first start the database holds
 nothing yet: drop and recreate it and start again. On an upgrade it holds
-everybody's hours, so undo only what the failed migration added - the error
+everybody's tickets, so undo only what the failed migration added - the error
 names the table or column - and start again. PostgreSQL and SQLite roll a
 failed migration back and need nothing.
 
@@ -688,11 +688,11 @@ the restart. `changeme123` is effectively full control of the installation, not 
 limited foothold. Every start says so in the log while it is still the password,
 as it says so for authentication switched off and for plain HTTP.
 
-The built-in administrator **records no time**. It sets up the installation and
-manages accounts and roles; it has no projects, no entries, no overtime balance
-and no reports, and the server refuses those to it by the same code that refuses
-them to anybody else. Somebody who both works here and administers gets the
-combined role instead of a second account.
+The built-in administrator **may do everything on the staff side**, tickets
+included: a ticket is the organisation's record rather than one person's, and
+whoever sets up queues has to be able to open one to see that it works. It does
+not reach the customer portal, which means something only for an account linked
+to a contact.
 
 ## Settings that need a restart
 
@@ -1097,11 +1097,11 @@ A refused round is written to the log as a warning, prefixed `signing in through
 the provider:`, with the provider's own reason - the sign-in screen says only
 that the provider did not confirm it.
 
-## Pushing reminders to browsers
+## Pushing notifications to browsers
 
 Off until somebody who administers the installation switches it on under
 **Settings → Push notifications**; nothing is configured in the environment.
-Then each person chooses, browser by browser, under **My account → Reminders**.
+Then each person chooses, browser by browser, under **My account → Notifications**.
 
 - **The server posts to the push services of the browsers' makers**, over https
   and to nothing else: `fcm.googleapis.com` for Chrome and the browsers built on
@@ -1119,9 +1119,10 @@ Then each person chooses, browser by browser, under **My account → Reminders**
   off keeps it, so the same browsers are reached when it is on again. Like the
   second factors it cannot be read once `SECRET_KEY` is lost or changed; nothing
   is pushed then, and the check says why in the log.
-- **Each reminder is pushed in the minute it falls due** by a check that runs
-  every minute while push is on. An instance that is down in that minute does not
-  push that reminder later - the banner on the page still says it.
+- **A push is held for an hour at most.** A push service keeps a message for a
+  browser that is offline for that long and then drops it, because news about a
+  ticket an hour old is better read on the page than announced. Nothing is pushed
+  again later, and nothing about what was pushed is kept.
 
 ## Updating from the interface
 
@@ -1360,10 +1361,9 @@ underneath. Three ways out, in order of how much trouble they are:
 Nothing is broken while this lasts. The application runs on the version it has;
 only the question "is there a newer one" goes unanswered.
 
-Only an account that administers the installation and has no working day of its
-own sees the card at all - the built-in administrator, or somebody holding the
-admin role. Not the combined role: this replaces the bytes that will be executed,
-which is a different kind of decision from changing a setting.
+Only an account that administers the installation sees the card at all - the
+built-in administrator, or somebody whose role holds *Administer the
+installation*.
 
 ## Backup
 
@@ -1371,8 +1371,8 @@ There is **no backup feature in the application**. No button, no endpoint, no
 permission. It is external, and what to copy depends on the dialect.
 
 **PostgreSQL or MySQL** — everything is in that server: accounts, roles and their
-permissions, projects, time entries, running timers, sessions, API tokens,
-passkeys, and the whole settings table, which includes branding and the logo, the
+permissions, tickets, contacts, sessions, API tokens, passkeys, and the whole
+settings table, which includes branding and the logo, the
 instance timezone, the directory configuration *including its bind password*,
 telemetry and the operational limits. A server-side dump is the backup.
 
@@ -1415,13 +1415,6 @@ systemctl stop gts && cp go-ticket-system-web_v1.3.0_linux_amd64 /opt/gts/go-tic
 The schema migrates itself on the way up. There is no separate command, and
 nothing to run afterwards.
 
-Releases up to v0.4.2 carried a terminal client, `go-ticket-system-client`,
-beside this binary. None does since: booking is the web interface's and the
-Android app's. An update neither replaces nor removes a client already handed
-out, and it knows only its own release's API, so take it out of use once the
-installation runs a later version. Asked for its old `track` command, this
-binary says where to book instead and exits with 2 rather than starting.
-
 ## Directory (LDAP) synchronisation
 
 The connection is configured **in the application**, under *Settings*, not in the
@@ -1444,32 +1437,21 @@ Read its header before including it; most deployments should not.
 
 ### Who may run one
 
-Editing the directory card, testing the connection and saving it need
-`settings:manage`, like every other setting. Running a synchronisation does
-not: **the preview, the button and the schedule field belong to an account that
-administers and has no working day of its own** - the built-in administrator, or
-somebody holding the `admin` role. An account that would be refused is not shown
-the card. It is shown a sentence in its place saying whose the run is, because a
-card that is simply missing reads as a feature that has been removed.
-
-The distinction is what a run does rather than what it reads. Configuring a
-directory is configuration; deleting every account the directory no longer holds
-along with everything those people recorded is not. The schedule sits on the
-same side of that line — it is the same deletion performed later and unattended
-— and it used to sit on the other one, so the caution the buttons were given
-could be walked around by typing five numbers into the field between them.
-
-An installation whose administration has been handed to a `user-admin` account
-therefore keeps one thing out of that account's reach. That is deliberate: the
-irreversible operation stays with an account whose only job is the installation -
-the built-in one, which exists before anybody has chosen anything, or one that
-was given the `admin` role on purpose.
+Editing the directory card, testing the connection, saving it and running a
+synchronisation all need *Administer the installation* (`settings:manage`), like
+every other setting - the schedule included, which is the same deletion performed
+later and unattended. A run deletes every account the directory no longer holds,
+so that right belongs only to somebody who may remove accounts. *Create and
+change roles* (`roles:write`) amounts to the same, because whoever holds it can tick the right
+on a role and assign it.
 
 A run reads the directory and never writes to it. It creates accounts the
 directory holds and this installation lacks, and it **deletes** directory-backed
-accounts the directory no longer holds — a purge, in one transaction: running
-timers, time entries, that person's projects, API tokens, passkeys, sessions,
-then the account. It is irreversible and it takes the recorded hours with it.
+accounts the directory no longer holds — a purge, in one transaction: API
+tokens, passkeys, sessions and everything else kept for that account alone, then
+the account. The tickets they owned or were responsible for stay, with nobody in
+that place and unlocked, and a contact they signed in as stays without the
+account. It is irreversible.
 Local accounts and the built-in administrator are never touched. An account
 created here stops being local the first time its owner signs in through the
 directory: it is taken over, keeps no local password, and from then on a run
@@ -1485,7 +1467,7 @@ Three guards stand between a misconfigured filter and a mass deletion:
    check.
 
 **Preview before you run.** The dry run reports the same candidates and, for each
-one, how many time entries would be destroyed.
+one, how many unfinished tickets would be left without an owner.
 
 **A run started from the screen deletes what it asked about, or nothing.** The
 button previews, names the damage, and sends the accounts it named with the run.
@@ -1501,7 +1483,7 @@ recorded for good.** Each account is one line at WARN, whoever started the run
 and whichever way it ended:
 
 ```text
-directory sync removed "dave@example.com" with 12 time entries
+directory sync removed "dave@example.com", leaving 3 unfinished tickets without an owner
 ```
 
 The account and every row that named it are gone by then, so nothing in the
@@ -1510,8 +1492,8 @@ what the run is for. What the database does keep is that the run happened: every
 run that removed or added an account leaves a row in `directory_runs`, listed
 under *Recent runs* on the synchronisation card and at
 `GET /api/v1/settings/ldap/sync/runs` - when it ran, whether somebody confirmed
-it against a preview, and how many accounts it removed, how many time entries
-went with them and how many accounts it added. No log level switches that off,
+it against a preview, and how many accounts it removed, how many tickets were
+left without an owner and how many accounts it added. No log level switches that off,
 and it names nobody. A scheduled run leaves three more
 kinds of line, since it has no screen to show them on: one at WARN when a guard
 refused it, saying why; one at ERROR when it failed; and at INFO when it started
@@ -1543,16 +1525,6 @@ mistakes it for a configured installation.
 
 ## Things that will surprise you
 
-- **`AUTH_ENABLED=false` is not reversible for the projects created under it.**
-  With enforcement off there is no "whose" to record, so a project made then has
-  no owner. That is consistent while it lasts - every caller sees everything. Turn
-  authentication on afterwards and those projects belong to nobody, which means
-  they are visible to nobody: not in the list, not to their creator, and not to an
-  administrator, because ownership *is* visibility here and there is no screen
-  that reaches a project it cannot see. The time entries booked against them
-  remain and still count. This is the concrete reason the mode is documented above
-  as suiting "a throwaway local trial and nothing else" - the trial's projects do
-  not survive the promotion.
 - Parsing is forgiving, not strict. A duration, integer or float that does not
   parse becomes the default **silently**. `LOG_LEVEL` resolves any unrecognised
   name to `INFO`. A `TRACER_RATIO` it cannot read records every trace, with an

@@ -2,11 +2,9 @@ package sqldb
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 	"github.com/dennis-dko/go-ticket-system/internal/domain/repository"
@@ -18,10 +16,8 @@ import (
 // display one without a second query.
 const userSelect = `SELECT u.id, u.name, u.email, u.role_id, COALESCE(r.name, ''),
 	u.password_hash, u.must_change_password, u.is_system,
-	u.daily_target_hours, u.max_daily_hours,
 	u.totp_secret, u.totp_enabled, u.language, u.is_external, u.external_id, u.timezone,
-	u.tour_seen, u.theme, u.holiday_region, u.every_day_counts_from,
-	u.balance_upper_limit, u.balance_lower_limit, u.skip_unbooked_reminder, u.timer_alert_hours
+	u.tour_seen, u.theme
 	FROM users u LEFT JOIN roles r ON r.id = u.role_id`
 
 // UserRepository stores users in a SQL database.
@@ -67,11 +63,11 @@ func (r *UserRepository) Save(ctx context.Context, user *model.User) (*model.Use
 
 	id, err := r.insert(ctx,
 		"INSERT INTO users (name, email, role_id, password_hash, must_change_password, "+
-			"is_system, daily_target_hours, max_daily_hours, totp_secret, totp_enabled, "+
+			"is_system, totp_secret, totp_enabled, "+
 			"language, is_external, external_id, timezone, tour_seen, theme) "+
-			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		user.Name, user.Email, user.RoleID, user.PasswordHash, user.MustChangePassword,
-		user.IsSystem, user.DailyTargetHours, user.MaxDailyHours,
+		user.IsSystem,
 		secret, user.TOTPEnabled, user.Language, user.IsExternal, user.ExternalID,
 		user.Timezone, user.TourSeen, user.Theme)
 	if err != nil {
@@ -162,14 +158,13 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) (*model.U
 
 	found, err := r.update(ctx, "users",
 		"UPDATE users SET name = ?, email = ?, role_id = ?, password_hash = ?, "+
-			"must_change_password = ?, daily_target_hours = ?, max_daily_hours = ?, "+
+			"must_change_password = ?, "+
 			"totp_secret = ?, totp_enabled = ?, language = ?, is_external = ?, "+
-			"external_id = ?, timezone = ?, tour_seen = ?, every_day_counts_from = ? WHERE id = ?",
+			"external_id = ?, timezone = ?, tour_seen = ? WHERE id = ?",
 		user.ID,
 		user.Name, user.Email, user.RoleID, user.PasswordHash, user.MustChangePassword,
-		user.DailyTargetHours, user.MaxDailyHours,
 		secret, user.TOTPEnabled, user.Language, user.IsExternal,
-		user.ExternalID, user.Timezone, user.TourSeen, nullableDay(user.EveryDayCountsFrom), user.ID)
+		user.ExternalID, user.Timezone, user.TourSeen, user.ID)
 	if err != nil {
 		return nil, translateUserErr(err, user.Email)
 	}
@@ -179,36 +174,6 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) (*model.U
 	}
 
 	return r.GetByID(ctx, user.ID)
-}
-
-func (r *UserRepository) SetBalanceLimits(ctx context.Context, id uint, upper, lower *float64) error {
-	found, err := r.update(ctx, "users",
-		"UPDATE users SET balance_upper_limit = ?, balance_lower_limit = ? WHERE id = ?",
-		id, upper, lower, id)
-	if err != nil {
-		return apperror.Internal(err)
-	}
-
-	if !found {
-		return apperror.NotFound("user", strconv.FormatUint(uint64(id), 10))
-	}
-
-	return nil
-}
-
-func (r *UserRepository) SetReminders(ctx context.Context, id uint, skipUnbooked bool, timerAlertHours *int) error {
-	found, err := r.update(ctx, "users",
-		"UPDATE users SET skip_unbooked_reminder = ?, timer_alert_hours = ? WHERE id = ?",
-		id, skipUnbooked, timerAlertHours, id)
-	if err != nil {
-		return apperror.Internal(err)
-	}
-
-	if !found {
-		return apperror.NotFound("user", strconv.FormatUint(uint64(id), 10))
-	}
-
-	return nil
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id uint) error {
@@ -236,39 +201,14 @@ type scanner interface {
 // where a TOTP seed turns back into itself and no way to add a fifth read that
 // forgets to.
 func (r *UserRepository) scanUser(s scanner) (*model.User, error) {
-	var (
-		user         model.User
-		countsFrom   dateTime
-		upper, lower sql.NullFloat64
-		alertHours   sql.NullInt64
-	)
+	var user model.User
 
 	err := s.Scan(&user.ID, &user.Name, &user.Email, &user.RoleID, &user.RoleName,
 		&user.PasswordHash, &user.MustChangePassword, &user.IsSystem,
-		&user.DailyTargetHours, &user.MaxDailyHours,
 		&user.TOTPSecret, &user.TOTPEnabled, &user.Language, &user.IsExternal, &user.ExternalID,
-		&user.Timezone, &user.TourSeen, &user.Theme, &user.HolidayPlace, &countsFrom,
-		&upper, &lower, &user.SkipUnbookedReminder, &alertHours)
+		&user.Timezone, &user.TourSeen, &user.Theme)
 	if err != nil {
 		return nil, err
-	}
-
-	if alertHours.Valid {
-		hours := int(alertHours.Int64)
-		user.TimerAlertHours = &hours
-	}
-
-	if countsFrom.Valid {
-		day := model.CalendarDay(countsFrom.Time)
-		user.EveryDayCountsFrom = &day
-	}
-
-	if upper.Valid {
-		user.BalanceUpperLimit = &upper.Float64
-	}
-
-	if lower.Valid {
-		user.BalanceLowerLimit = &lower.Float64
 	}
 
 	secret, err := r.secrets.Open(user.TOTPSecret)
@@ -328,8 +268,6 @@ func (r *UserRepository) SetPreference(
 		query = "UPDATE users SET timezone = ? WHERE id = ?"
 	case repository.PreferenceTheme:
 		query = "UPDATE users SET theme = ? WHERE id = ?"
-	case repository.PreferenceHolidayPlace:
-		query = "UPDATE users SET holiday_region = ? WHERE id = ?"
 	default:
 		return fmt.Errorf("unknown user preference %d", field)
 	}
@@ -354,14 +292,4 @@ func (r *UserRepository) SetTOTP(ctx context.Context, id uint, secret string, en
 		sealed, enabled, id)
 
 	return err
-}
-
-// nullableDay is a calendar day for a column that may hold none: NULL rather than
-// the zero time, which every dialect would store as a day in the year one.
-func nullableDay(day *time.Time) any {
-	if day == nil {
-		return nil
-	}
-
-	return model.CalendarDay(*day)
 }

@@ -9,11 +9,10 @@ import (
 
 // SheetRow is one row of a file as a preview shows it.
 //
-// Cells as text, in the order of the sheet's own columns. The time-entry import
-// has a typed response of its own, from when it was the only one; projects and
-// people share this because their previews differ only in what the columns are
-// called, and three preview tables in the interface to show the same three things
-// - what a row would do, and why it cannot - would be two too many.
+// Cells as text, in the order of the sheet's own columns. Roles and people share
+// this because their previews differ only in what the columns are called, and a
+// preview table for each in the interface to show the same things - what a row
+// would do, and why it cannot - would be one too many.
 type SheetRow struct {
 	// Number is the line in the spreadsheet, so somebody can go and look. The
 	// heading is row 1.

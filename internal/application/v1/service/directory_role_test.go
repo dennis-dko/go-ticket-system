@@ -52,7 +52,7 @@ func TestAFirstSignInStartsWithTheDirectorysDefaultRole(t *testing.T) {
 	f, sessions := newSessionFixture(t, &service.ExternalUser{
 		ID: "uuid-1", Email: "new.person@example.com", Name: "New Person", Role: "contractor",
 	})
-	customRole(t, f, "contractor", model.PermTimesheetReadOwn, model.PermTimesheetWriteOwn)
+	customRole(t, f, "contractor", model.PermTicketRead, model.PermTicketWrite)
 
 	if _, err := sessions.Login(context.Background(), "new.person@example.com", "anything", ""); err != nil {
 		t.Fatalf("login: %v", err)
@@ -65,7 +65,7 @@ func TestAFirstSignInStartsWithTheDirectorysDefaultRole(t *testing.T) {
 
 func TestASynchronisationCreatesAccountsWithTheDirectorysDefaultRole(t *testing.T) {
 	f := newSyncFixture(t, 0.5)
-	customRole(t, f.fixture, "contractor", model.PermTimesheetReadOwn, model.PermTimesheetWriteOwn)
+	customRole(t, f.fixture, "contractor", model.PermTicketRead, model.PermTicketWrite)
 
 	f.directory.users = []service.ExternalUser{
 		{ID: "uuid-1", Email: "arrived@example.com", Role: "contractor"},
@@ -94,15 +94,15 @@ func TestADefaultRoleThatAdministersIsNotHandedOut(t *testing.T) {
 		f, sessions := newSessionFixture(t, &service.ExternalUser{
 			ID: "uuid-1", Email: "new.person@example.com", Role: "keyholder",
 		})
-		customRole(t, f, "keyholder", model.PermTimesheetReadOwn, right)
+		customRole(t, f, "keyholder", model.PermTicketRead, right)
 
 		if _, err := sessions.Login(context.Background(), "new.person@example.com", "anything", ""); err != nil {
 			t.Fatalf("login: %v", err)
 		}
 
-		if got := roleOf(t, f, "new.person@example.com"); got != model.RoleUser {
+		if got := roleOf(t, f, "new.person@example.com"); got != model.RoleAgent {
 			t.Errorf("with %s on the default role the account starts as %q, want %q",
-				right, got, model.RoleUser)
+				right, got, model.RoleAgent)
 		}
 	}
 }
@@ -121,8 +121,8 @@ func TestADefaultRoleThatIsGoneFallsBackToTheEverydayOne(t *testing.T) {
 		t.Fatalf("sync: %v", err)
 	}
 
-	if got := roleOf(t, f.fixture, "arrived@example.com"); got != model.RoleUser {
-		t.Errorf("the account starts as %q, want %q", got, model.RoleUser)
+	if got := roleOf(t, f.fixture, "arrived@example.com"); got != model.RoleAgent {
+		t.Errorf("the account starts as %q, want %q", got, model.RoleAgent)
 	}
 }
 
@@ -130,7 +130,7 @@ func TestADefaultRoleThatIsGoneFallsBackToTheEverydayOne(t *testing.T) {
 // so the screen cannot say one thing while the server does another.
 func TestTheDirectorysDefaultRoleMayNotAdminister(t *testing.T) {
 	f := newFixture(t)
-	customRole(t, f, "keyholder", model.PermTimesheetReadOwn, model.PermSettingsManage)
+	customRole(t, f, "keyholder", model.PermTicketRead, model.PermSettingsManage)
 
 	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo, "Test")
 
@@ -142,34 +142,5 @@ func TestTheDirectorysDefaultRoleMayNotAdminister(t *testing.T) {
 	detail, ok := apperror.Detail(err)
 	if !ok || detail.Code != "directoryRoleAdministers" {
 		t.Fatalf("storing an administering default role answered %v, want directoryRoleAdministers", err)
-	}
-}
-
-// A first sign-in leaves the daily target to the default, as every other way
-// an account is made does.
-//
-// An account created through the form, and one the synchronisation creates,
-// store zero - "follow the default" - and the synchronisation's own comment
-// says what the alternative cost: a pinned figure that no longer moves with the
-// default and shows as a number where every other row shows "default". The
-// sign-in path still wrote the default's value in, so the same person arriving
-// by signing in rather than by a synchronisation got the pinned one.
-func TestAFirstSignInLeavesTheDailyTargetToTheDefault(t *testing.T) {
-	f, sessions := newSessionFixture(t, &service.ExternalUser{
-		ID: "uuid-1", Email: "new.person@example.com", Name: "New Person",
-	})
-
-	if _, err := sessions.Login(context.Background(), "new.person@example.com", "anything", ""); err != nil {
-		t.Fatalf("login: %v", err)
-	}
-
-	user, err := f.userRepo.GetByEmail(context.Background(), "new.person@example.com")
-	if err != nil {
-		t.Fatalf("no account was created: %v", err)
-	}
-
-	if user.DailyTargetHours != 0 {
-		t.Errorf("the account starts with a daily target of %v pinned, want 0, which "+
-			"follows the default", user.DailyTargetHours)
 	}
 }

@@ -14,40 +14,30 @@ import (
 // A migration that changes the schema and the data is not atomic on MySQL.
 //
 // GoFr runs each migration inside a transaction - migration.Datasource.SQL *is*
-// the *sql.Tx - so every statement in one, including the row-at-a-time work in
-// giveEveryProjectAnOwner, commits or rolls back together. On PostgreSQL and
-// SQLite that is the end of it.
+// the *sql.Tx - so every statement in one, a seed's row-at-a-time work included,
+// commits or rolls back together. On PostgreSQL and SQLite that is the end of it.
 //
 // MySQL commits implicitly on DDL. A migration that alters a table and then
 // updates rows therefore runs its UPDATE outside the transaction the migration
 // began: the schema change has already landed, and if the data change fails,
 // nothing goes back. The migration is recorded as failed with half of it on disk.
 //
-// What that costs is not abstract. rememberWhenASessionWasLastUsed adds
-// last_seen_at and then fills it from created_at, and its own comment says why:
-// leaving existing sessions at the zero time "would sign out everybody who is
-// signed in the second an installation updates". Split on MySQL, that is exactly
-// what happens - the migration written to prevent it becomes the cause of it.
+// What that costs is not abstract. A column added so that existing rows can be
+// given a value - when a session was last used, say, filled from when it was
+// opened so that nobody is signed out by an update - is exactly the migration
+// that mixes the two, and split on MySQL it becomes the cause of what it was
+// written to prevent.
 //
-// Six existing migrations mix the two. They are named here rather than fixed,
-// because the chain is append-only: they have run on every installation that
-// exists, and editing an applied migration is the one thing this file must never
-// do. This is a guard for the seventh.
-//
-// A new migration that needs both is two migrations - the schema in one, the data
-// in the next - which is CLAUDE.md §7's multi-phase rule applied to the engine
-// rather than to the deployment. It is atomic on every engine only if the schema
-// half is a single statement; the case below holds that.
+// No migration of this chain mixes them, and the list below is empty for that
+// reason rather than for want of looking: the chain this one replaced carried six
+// that had run everywhere before the rule was written. A migration that needs
+// both is two migrations - the schema in one, the data in the next - which is
+// CLAUDE.md §7's multi-phase rule applied to the engine rather than to the
+// deployment. It is atomic on every engine only if the schema half is a single
+// statement; the case below holds that.
 func TestNoNewMigrationMixesSchemaAndDataChanges(t *testing.T) {
-	// Applied long ago, on installations that exist. Fixed history, not a backlog.
-	alreadyMixed := []string{
-		"addPrivateProjects",
-		"addRoleBasedAccess",
-		"addSessionsAndPreferences",
-		"makeProjectOptional",
-		"rememberWhenASessionWasLastUsed",
-		"retireTheReviewPath",
-	}
+	// A migration is never taken off this list by editing it once it has shipped.
+	alreadyMixed := []string{}
 
 	chain := readChain(t)
 
@@ -231,25 +221,17 @@ func readChain(t *testing.T) chain {
 // it.
 //
 // So a new migration carries one schema statement, and a second change is a
-// second migration. Counted as string literals in the syntax tree, not in the
-// text, so a comment naming a statement does not count; a helper the migration
-// calls is counted with it. A switch that gives each dialect its own statement
-// counts as several here although only one runs - build the one statement from
-// the dialect instead, as the column types already are.
+// second migration - an index is one of its own, made by createIndex, which is
+// why All calls that one so often. Counted as string literals in the syntax
+// tree, not in the text, so a comment naming a statement does not count; a
+// helper the migration calls is counted with it. A switch that gives each
+// dialect its own statement counts as several here although only one runs -
+// build the one statement from the dialect instead, as the column types already
+// are.
 func TestNoNewMigrationRunsMoreThanOneSchemaStatement(t *testing.T) {
-	// Applied on installations that exist, and so left as they ran. The first two
-	// run one statement per dialect and only look like more.
-	alreadyMultiple := []string{
-		"widenTOTPSecret",
-		"makeProjectOptional",
-		"addExternalIdentity",
-		"addPrivateProjects",
-		"addRoleBasedAccess",
-		"addSessionsAndPreferences",
-		"createAPITokens",
-		"createPasskeys",
-		"rememberWhenAnEntryWasBookedAndCorrected",
-	}
+	// Empty, and a migration is never taken off this list by editing it once it
+	// has shipped.
+	alreadyMultiple := []string{}
 
 	chain := readChain(t)
 

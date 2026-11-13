@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/chromedp/chromedp"
+
 	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
@@ -17,56 +17,57 @@ import (
 // The import cards are not forms, so the sign-out's form reset never reached
 // them: the file stayed chosen, the verdict stayed written and the Import button
 // stayed offered - a clean verdict brings it with it. The checked rows went too
-// little further. The time entries' table is emptied with every other table, and
-// one line later the sign-out redraws for the language, which drew the kept
-// verdict straight back; the tables' own cards were never emptied at all. So
-// whoever signed in next found the last person's rows - their projects and notes
-// and hours - and a button that would write them into their own account.
+// little further: the sign-out redraws for the language, which drew a kept
+// verdict straight back, and the tables' own cards were never emptied at all. So
+// whoever signed in next found the last person's rows and a button that would
+// write them as their own.
 func TestASignOutTakesAnImportsFileAndVerdictWithIt(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 
-	entries, err := spreadsheet.Write([]spreadsheet.Row{
-		{Date: time.Now(), Hours: 2, Description: "A note of somebody else's"},
+	people, err := spreadsheet.WriteUsers("en", []spreadsheet.UserRow{
+		{Name: "A name of somebody else's", Email: "else@example.com", Role: "agent"},
 	})
 	if err != nil {
-		t.Fatalf("building the entries: %v", err)
+		t.Fatalf("building the people: %v", err)
 	}
 
-	projects, err := spreadsheet.WriteProjects("en", []spreadsheet.ProjectRow{
-		{Name: "A project of somebody else's", StartDate: time.Now()},
+	roles, err := spreadsheet.WriteRoles("en", []string{"tickets:read"}, []spreadsheet.RoleRow{
+		{Name: "elsewhere", Description: "A role of somebody else's", Granted: []string{"tickets:read"}},
 	})
 	if err != nil {
-		t.Fatalf("building the projects: %v", err)
+		t.Fatalf("building the roles: %v", err)
 	}
 
-	entriesPath := filepath.Join(dir, "entries.xlsx")
-	projectsPath := filepath.Join(dir, "projects.xlsx")
+	peoplePath := filepath.Join(dir, "people.xlsx")
+	rolesPath := filepath.Join(dir, "roles.xlsx")
 
-	for path, book := range map[string][]byte{entriesPath: entries, projectsPath: projects} {
+	for path, book := range map[string][]byte{peoplePath: people, rolesPath: roles} {
 		if err := os.WriteFile(path, book, 0o600); err != nil {
 			t.Fatalf("writing %s: %v", path, err)
 		}
 	}
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	const card = `#view-projects .card:has(input[type="file"])`
+	const (
+		peopleCard = `#view-users .card:has(input[type="file"])`
+		rolesCard  = `#view-roles .card:has(input[type="file"])`
+	)
 
-	p.run("check a file of time entries", p.click(`.tab[data-view="timesheets"]`),
-		chromedp.WaitVisible("#workbook-card", chromedp.ByID),
-		chromedp.SetUploadFiles("#wb-file", []string{entriesPath}, chromedp.ByQuery))
-	p.waitShown("#wb-preview")
-	p.run("press check", p.click("#wb-preview"))
-	p.waitForText("#table-workbook tbody", "A note of somebody else's")
+	p.run("check a file of people", p.click(`.tab[data-view="users"]`),
+		chromedp.WaitVisible(peopleCard, chromedp.ByQuery),
+		chromedp.SetUploadFiles(peopleCard+` input[type="file"]`, []string{peoplePath}, chromedp.ByQuery),
+		p.click(peopleCard+` button[data-i18n="wb.preview"]`))
+	p.waitForText(peopleCard+" tbody", "A name of somebody else's")
 
-	p.run("check a file of projects", p.click(`.tab[data-view="projects"]`),
-		chromedp.WaitVisible(card, chromedp.ByQuery),
-		chromedp.SetUploadFiles(card+` input[type="file"]`, []string{projectsPath}, chromedp.ByQuery),
-		p.click(card+` button[data-i18n="wb.preview"]`))
-	p.waitForText(card+" tbody", "A project of somebody else's")
+	p.run("check a file of roles", p.click(`.tab[data-view="roles"]`),
+		chromedp.WaitVisible(rolesCard, chromedp.ByQuery),
+		chromedp.SetUploadFiles(rolesCard+` input[type="file"]`, []string{rolesPath}, chromedp.ByQuery),
+		p.click(rolesCard+` button[data-i18n="wb.preview"]`))
+	p.waitForText(rolesCard+" tbody", "A role of somebody else's")
 
 	p.run("sign out", p.click("#logout"), chromedp.WaitVisible("#form-login", chromedp.ByID))
 
@@ -77,7 +78,7 @@ func TestASignOutTakesAnImportsFileAndVerdictWithIt(t *testing.T) {
 	}
 
 	p.run("read what the next account would find", chromedp.Evaluate(`(() => {
-		const cards = ['#workbook-card', '`+card+`'].map((s) => document.querySelector(s));
+		const cards = ['`+peopleCard+`', '`+rolesCard+`'].map((s) => document.querySelector(s));
 
 		return {
 			rows: cards.filter((c) => /somebody else's/.test(c.querySelector('tbody').textContent)).length,
@@ -104,56 +105,6 @@ func TestASignOutTakesAnImportsFileAndVerdictWithIt(t *testing.T) {
 	}
 }
 
-// An evaluation run by one account leaves nothing behind for the next.
-//
-// An evaluation is computed when somebody asks for one, and nothing on the next
-// sign-in asks again: the result card stayed up with the last account's total,
-// its target and booked hours, and the picture of where their time went, for
-// whoever opened the screen next. The sign-out emptied the tables and redrew the
-// rows back into them.
-func TestASignOutTakesTheLastEvaluationWithIt(t *testing.T) {
-	t.Parallel()
-
-	p := open(t)
-	p.readyWorker()
-
-	p.run("evaluate", p.click(`.tab[data-view="report"]`),
-		chromedp.WaitVisible("#form-report", chromedp.ByID),
-		p.click(`#form-report button[type="submit"]`))
-	p.waitShown("#report-result")
-
-	p.run("work out the balance", p.click(`.tab[data-view="overtime"]`),
-		chromedp.WaitVisible("#form-overtime", chromedp.ByID),
-		p.click(`#form-overtime button[type="submit"]`))
-	p.waitShown("#overtime-result")
-
-	p.run("sign out", p.click("#logout"), chromedp.WaitVisible("#form-login", chromedp.ByID))
-
-	var left []string
-
-	p.run("read what the next account would find", chromedp.Evaluate(`(() => {
-		const left = [];
-
-		for (const card of ['#report-result', '#overtime-result']) {
-			if (!document.querySelector(card).hidden) left.push(card + ' is up');
-		}
-
-		for (const text of ['#report-total', '#overtime-total', '#overtime-meta', '#overtime-rule', '#report-chart-caption', '#statistics-total', '#year-summary', '#report-budget']) {
-			if (document.querySelector(text).textContent.trim()) left.push(text + ' says ' + document.querySelector(text).textContent);
-		}
-
-		for (const holder of ['#table-report tbody', '#table-overtime tbody', '#report-chart', '#chart-days', '#chart-projects', '#year-tiles']) {
-			if (document.querySelector(holder).childElementCount) left.push(holder + ' holds a drawing');
-		}
-
-		return left;
-	})()`, &left))
-
-	for _, what := range left {
-		t.Errorf("after the sign-out %s", what)
-	}
-}
-
 // A form left correcting a record goes back to creating one when its account
 // signs out.
 //
@@ -175,7 +126,7 @@ func TestASignOutPutsEveryFormBackToCreating(t *testing.T) {
 		chromedp.WaitVisible("#form-user", chromedp.ByID),
 		chromedp.SendKeys(`#form-user input[name="name"]`, "Wilma", chromedp.ByQuery),
 		chromedp.SendKeys(`#form-user input[name="email"]`, "wilma@example.com", chromedp.ByQuery),
-		p.chooseOption(`#form-user select[name="role"]`, "user"),
+		p.chooseOption(`#form-user select[name="role"]`, "agent"),
 		chromedp.SendKeys(`#form-user input[name="password"]`, "wilma-password-1", chromedp.ByQuery),
 		p.click(`#form-user button[type="submit"]`))
 	p.waitForText("#table-users tbody", "wilma@example.com")
@@ -223,57 +174,25 @@ func TestASignOutPutsEveryFormBackToCreating(t *testing.T) {
 	}
 }
 
-// The month and the greeting an account was shown go with it as well.
+// The greeting an account was shown goes with it as well.
 //
-// The calendar grid is not a table, so emptying the tables left the last
-// account's days in it, each with its projects and hours, under the month's
-// total - and a next account with no time of its own never draws over it,
-// because the calendar returns before drawing for anybody who may not read
-// entries. The greeting names whoever it greeted beside their day's hours and
-// last entries, and is drawn again only when somebody arrives on it. The
-// sign-out's own comment already counts rows left under a tab that is merely
-// hidden as rows handed to the next person.
-func TestASignOutTakesTheCalendarAndTheGreetingWithIt(t *testing.T) {
+// The greeting names whoever it greeted, and is drawn again only when somebody
+// arrives on it - so whoever signed in next at the same desk could open it on the
+// last person's name. The sign-out's own comment counts what is left under a tab
+// that is merely hidden as handed to the next person.
+func TestASignOutTakesTheGreetingWithIt(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
 	p.readyWorker()
-	p.bookAnHourOn(t, "A project of somebody else's")
-
-	// Booked behind the screen's back, so the screen is asked to catch up.
-	p.run("look at the month", chromedp.Evaluate(`void refreshAll()`, nil),
-		p.click(`.tab[data-view="calendar"]`),
-		chromedp.WaitVisible("#calendar-days", chromedp.ByID))
-	p.waitForText("#calendar-days", "A project of somebody else's")
-
-	p.run("open the day", p.click(`#calendar-days .cal-projects`))
-	p.waitShown("#calendar-day-card")
 
 	p.run("be greeted", p.click("#app-title"))
 	p.waitForFilled("#welcome-title")
 
 	p.run("sign out", p.click("#logout"), chromedp.WaitVisible("#form-login", chromedp.ByID))
 
-	var left []string
-
-	p.run("read what the next account would find", chromedp.Evaluate(`(() => {
-		const left = [];
-
-		for (const holder of ['#calendar-days', '#welcome-recent-list']) {
-			if (document.querySelector(holder).childElementCount) left.push(holder + ' still holds what it drew');
-		}
-
-		for (const said of ['#calendar-summary', '#welcome-title', '#welcome-today', '#vacation-title', '#vacation-left']) {
-			if (document.querySelector(said).textContent.trim()) left.push(said + ' says ' + document.querySelector(said).textContent);
-		}
-
-		if (!document.querySelector('#calendar-day-card').hidden) left.push('the day card is open');
-
-		return left;
-	})()`, &left))
-
-	for _, what := range left {
-		t.Errorf("after the sign-out %s", what)
+	if said := p.text("#welcome-title"); said != "" {
+		t.Errorf("after the sign-out the greeting still says %q", said)
 	}
 }
 

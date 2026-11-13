@@ -431,45 +431,23 @@ func (a *app) signInAsAdmin(newPassword string) *client {
 // startWithWorker starts an instance and signs in both an administrator and somebody
 // who works here.
 //
-// The pair almost every case needs. The built-in administrator does not record time:
-// it exists on every installation before anybody has chosen anything, so it is how you
-// get in rather than somebody's working day. A case about booking, a timer, a limit or
-// a project therefore needs an account of its own to do it with, and the
-// administrator only to create that account.
+// The pair almost every case needs: the built-in administrator to set things up,
+// and an agent - who administers nothing - to find out what an ordinary account may
+// and may not do.
 func startWithWorker(t *testing.T) (*app, *client, *client) {
 	t.Helper()
 
 	a := start(t)
 	admin := a.signInAsAdmin("a-much-better-password")
 
-	return a, admin, a.signInAsUser(admin, "Wera", "wera@example.com")
-}
-
-// signInAsWorkingAdmin creates an account that both works here and administers.
-//
-// The one arrangement that spans the two jobs, and it is granted rather than assumed:
-// an ordinary account is given the combined role. The built-in administrator is not
-// that account and never becomes it - it administers, and nothing else.
-func (a *app) signInAsWorkingAdmin(admin *client, name, email string) *client {
-	a.t.Helper()
-
-	const password = "both-jobs-password-1"
-
-	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
-		"name": name, "email": email, "role": "user-admin", "password": password,
-	}), http.StatusCreated, http.StatusOK)
-
-	user := a.newClient()
-	user.signIn(email, password)
-
-	return user
+	return a, admin, a.signInAsAgent(admin, "Wera", "wera@example.com")
 }
 
 // signInAsGrantedAdministrator creates an account holding the admin role.
 //
-// Administration and no working day - the same shape as the built-in account,
-// which is what makes it equivalent to it. Not the combined role, which also
-// books time and is deliberately not equivalent.
+// The same rights as the built-in account, which is what makes it equivalent to
+// it - except where something is reserved for what the built-in account is
+// rather than for what it may do.
 func (a *app) signInAsGrantedAdministrator(admin *client, name, email string) *client {
 	a.t.Helper()
 
@@ -485,18 +463,18 @@ func (a *app) signInAsGrantedAdministrator(admin *client, name, email string) *c
 	return user
 }
 
-// signInAsUser creates an ordinary account and signs in as it.
+// signInAsAgent creates an account of the agent role, the one an account is
+// given when nobody says otherwise, and signs in as it.
 //
-// There is no second role any more. Everyone keeps their own time, projects and
-// calendar, and the built-in administrator runs the installation - so a test that
-// needs somebody who is not the administrator needs one of these.
-func (a *app) signInAsUser(admin *client, name, email string) *client {
+// It works on tickets and administers nothing, so a test that needs somebody who
+// is not an administrator needs one of these.
+func (a *app) signInAsAgent(admin *client, name, email string) *client {
 	a.t.Helper()
 
 	const password = "another-password-1"
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
-		"name": name, "email": email, "role": "user", "password": password,
+		"name": name, "email": email, "role": "agent", "password": password,
 	}), http.StatusCreated, http.StatusOK)
 
 	user := a.newClient()
@@ -505,57 +483,20 @@ func (a *app) signInAsUser(admin *client, name, email string) *client {
 	return user
 }
 
-// There is no signInAsAuditor any more.
-//
-// It built a custom role holding timesheets:read:all and timesheets:write:all, which
-// is how these tests used to get a caller who could see somebody else's entries. No
-// role can hold those rights now, because they do not exist: nobody reads or writes
-// anybody else's time, and there is no box to tick that changes it.
-//
-// What the tests that used it do instead depends on what they were really asking.
-// Most wanted the strongest possible caller over somebody else's work, and that is
-// now an ordinary account - signInAsUser. The deletion tests wanted to know whether a
-// row was still in the database, which no caller can answer, so they ask the database.
-
 // ------------------------------------------------------------------- types
 
 type userResponse struct {
-	ID                 uint    `json:"id"`
-	Name               string  `json:"name"`
-	Email              string  `json:"email"`
-	Role               string  `json:"role"`
-	IsSystem           bool    `json:"isSystem"`
-	IsExternal         bool    `json:"isExternal"`
-	MustChangePassword bool    `json:"mustChangePassword"`
-	Language           string  `json:"language"`
-	Timezone           string  `json:"timezone"`
-	EffectiveTimezone  string  `json:"effectiveTimezone"`
-	TourSeen           bool    `json:"tourSeen"`
-	DailyTargetHours   float64 `json:"dailyTargetHours"`
-	MaxDailyHours      float64 `json:"maxDailyHours"`
-	EveryDayCountsFrom *string `json:"everyDayCountsFrom"`
-}
-
-type timesheetResponse struct {
-	ID            uint    `json:"id"`
-	UserID        uint    `json:"userId"`
-	ProjectID     *uint   `json:"projectId"`
-	Date          string  `json:"date"`
-	DurationHours float64 `json:"durationHours"`
-	Description   *string `json:"description"`
-
-	// Null for an entry booked before the columns existed. Strings rather than
-	// time.Time so a case can check the wire format itself: a bare date would
-	// unmarshal happily and silently lose the time of day.
-	CreatedAt *string `json:"createdAt"`
-	UpdatedAt *string `json:"updatedAt"`
-}
-
-type projectResponse struct {
-	ID      uint   `json:"id"`
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	OwnerID *uint  `json:"ownerId"`
+	ID                 uint   `json:"id"`
+	Name               string `json:"name"`
+	Email              string `json:"email"`
+	Role               string `json:"role"`
+	IsSystem           bool   `json:"isSystem"`
+	IsExternal         bool   `json:"isExternal"`
+	MustChangePassword bool   `json:"mustChangePassword"`
+	Language           string `json:"language"`
+	Timezone           string `json:"timezone"`
+	EffectiveTimezone  string `json:"effectiveTimezone"`
+	TourSeen           bool   `json:"tourSeen"`
 }
 
 type listOf[T any] struct {

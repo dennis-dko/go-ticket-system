@@ -9,26 +9,25 @@ import (
 // What a run removed is said the same way whoever started it.
 //
 // A caller's log is the only record of a deletion that cannot be undone, and
-// the two callers each worded it for themselves: the schedule wrote
-// "(3 time entries)" and the button "and its 3 time entry/entries", for the same
+// there are two callers - the schedule and the button - writing about the same
 // event, in the one place somebody searches to find out what a run did. The
-// report words it now, and both write what it gives them.
+// report words it, and both write what it gives them.
 func TestARunSaysWhatItRemovedInOneWay(t *testing.T) {
 	report := &service.SyncReport{
 		Candidates: []service.SyncCandidate{
-			{Email: "stays@example.com", Timesheets: 9},
+			{Email: "stays@example.com", Tickets: 9},
 		},
 		Deleted: []service.SyncCandidate{
-			{Email: "dave@example.com", Timesheets: 3},
-			{Email: "erin@example.com", Timesheets: 1},
+			{Email: "dave@example.com", Tickets: 3},
+			{Email: "erin@example.com", Tickets: 1},
 			{Email: "frank@example.com"},
 		},
 	}
 
 	want := []string{
-		`directory sync removed "dave@example.com" with 3 time entries`,
-		`directory sync removed "erin@example.com" with 1 time entry`,
-		`directory sync removed "frank@example.com" with 0 time entries`,
+		`directory sync removed "dave@example.com", leaving 3 unfinished tickets without an owner`,
+		`directory sync removed "erin@example.com", leaving 1 unfinished ticket without an owner`,
+		`directory sync removed "frank@example.com", leaving 0 unfinished tickets without an owner`,
 	}
 
 	got := report.Removals()

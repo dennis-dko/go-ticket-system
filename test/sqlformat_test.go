@@ -16,11 +16,12 @@ import (
 //
 // A statement built with Sprintf is one the driver cannot parameterise, so each
 // is a place where the only protection is that nobody passes it anything else.
-// There are three, and all three are safe. CLAUDE.md called the first "the one
-// documented exception" for as long as the other two had existed: a count that
-// carried a rule, with nothing watching it, and found wrong by a read rather
-// than by a check. A line-at-a-time grep misses one of them, because its format
-// string runs over two lines - which is why this parses the files instead.
+// There is one, and it is safe. There were three while the migration chain still
+// carried two of its own, and CLAUDE.md called the first "the one documented
+// exception" for as long as the other two had existed: a count that carried a
+// rule, with nothing watching it, and found wrong by a read rather than by a
+// check. A line-at-a-time grep missed one of them, because its format string ran
+// over two lines - which is why this parses the files instead.
 //
 // Keyed by the function rather than the line, so the row survives the file
 // growing around it; a row whose function no longer formats SQL fails too.
@@ -28,12 +29,6 @@ func TestEveryValueFormattedIntoSQLIsNamed(t *testing.T) {
 	named := map[string]string{
 		"cmd/main.go:makeSQLiteWait": "sqliteBusyTimeout, a constant; " +
 			"a PRAGMA takes no parameters, so there is no other way to write it",
-
-		"internal/infrastructure/persistence/migration/migration.go:addRoleBasedAccess": "model.RoleUser, " +
-			"a constant, and the constant rather than a literal on purpose - the comment above it says why",
-
-		"internal/infrastructure/persistence/migration/migration.go:addSessionsAndPreferences": "the " +
-			"literal reports:read and model.RoleAdmin, a constant; the migration has run everywhere and stays as written",
 	}
 
 	found := map[string][]int{}

@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -28,8 +27,9 @@ import (
 // UnzipXMLSizeLimit, which rowsOf leaves unset, so excelize derives it as
 // min(UnzipSizeLimit, StreamChunkSize) = 16 MiB. Under that threshold the workbook
 // takes the in-memory path; over it, one cell reading `<v>-1</v>` was enough. The
-// right to try is the ordinary one: importing time entries needs
-// timesheets:write:own, which every account has.
+// right to try is an administrator's - importing accounts needs users:write -
+// which narrows who can send such a file without making it any more trustworthy:
+// a workbook is still something somebody was handed.
 //
 // Refused as unreadable or read with the broken cell empty, either is safe. What
 // must not happen is a panic escaping the reader, or a row coming out of the
@@ -44,7 +44,7 @@ func TestAWorkbookPointingAtANegativeSharedStringImportsNothing(t *testing.T) {
 			"size alone; this case has to get past that to mean anything", len(crafted))
 	}
 
-	rows, problems, err := Read(bytes.NewReader(crafted))
+	rows, problems, err := ReadUsers(bytes.NewReader(crafted))
 	if err != nil {
 		t.Logf("refused with: %v", err)
 
@@ -65,14 +65,14 @@ func TestAWorkbookPointingAtANegativeSharedStringImportsNothing(t *testing.T) {
 func TestALargeWorkbookWithSaneSharedStringsStillReads(t *testing.T) {
 	ordinary := workbookWithSharedStrings(t, `<c r="A2" t="s"><v>0</v></c>`)
 
-	rows, problems, err := Read(bytes.NewReader(ordinary))
+	rows, problems, err := ReadUsers(bytes.NewReader(ordinary))
 	if err != nil {
 		t.Fatalf("a large but valid workbook was refused: %v", err)
 	}
 
 	t.Logf("read %d rows and %d problems", len(rows), len(problems))
 
-	// The crafted row is one shared-string cell rather than a complete time entry,
+	// The crafted row is one shared-string cell rather than a complete account,
 	// so it comes back as a problem rather than as a row. Either one proves what
 	// this case is for: the reader reached row 2 of a workbook whose shared strings
 	// were spilled to a temporary file, instead of the guard turning that whole
@@ -103,11 +103,8 @@ func workbookWithNegativeSharedString(t *testing.T) []byte {
 func workbookWithSharedStrings(t *testing.T, cell string) []byte {
 	t.Helper()
 
-	genuine, err := Write([]Row{{
-		Date:        time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC),
-		User:        "Nils",
-		Hours:       2,
-		Description: "ordinary",
+	genuine, err := WriteUsers("", []UserRow{{
+		Name: "Nils", Email: "nils@example.test", Role: "agent",
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -189,7 +186,7 @@ func writeSheet(t *testing.T, to io.Writer, cell string) {
 	row.WriteString(`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`)
 	row.WriteString(`<sheetData><row r="1">`)
 
-	for i, heading := range timesheets.Headings {
+	for i, heading := range users.Headings {
 		name, err := excelize.ColumnNumberToName(i + 1)
 		if err != nil {
 			t.Fatal(err)

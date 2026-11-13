@@ -55,7 +55,7 @@ func TestSealStoredSecretsBringsWhatWasThereUnderTheKey(t *testing.T) {
 
 	roles := sqldb.NewRoleRepository(db, sqldb.DialectSQLite)
 
-	role, err := roles.GetByName(ctx, model.RoleUser)
+	role, err := roles.GetByName(ctx, model.RoleAgent)
 	if err != nil {
 		t.Fatalf("read seeded role: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestASecondPassMovesNothing(t *testing.T) {
 
 	roles := sqldb.NewRoleRepository(db, sqldb.DialectSQLite)
 
-	role, err := roles.GetByName(ctx, model.RoleUser)
+	role, err := roles.GetByName(ctx, model.RoleAgent)
 	if err != nil {
 		t.Fatalf("read seeded role: %v", err)
 	}

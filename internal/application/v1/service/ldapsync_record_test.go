@@ -3,10 +3,8 @@ package service_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/dennis-dko/go-ticket-system/internal/application/v1/service"
-	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
 // A run that removed somebody leaves a record of it that no log level can switch
@@ -22,14 +20,7 @@ func TestARunThatChangedSomethingIsRecordedWithoutWhom(t *testing.T) {
 
 	leaver := externalUser(t, f.fixture, "leaver@example.com")
 
-	for day := 1; day <= 3; day++ {
-		if _, err := f.timesheetRepo.Save(ctx, &model.Timesheet{
-			UserID: leaver, Date: model.CalendarDay(time.Date(2026, 9, day, 0, 0, 0, 0, time.UTC)),
-			DurationHours: 2,
-		}); err != nil {
-			t.Fatalf("booking an entry: %v", err)
-		}
-	}
+	f.owned.byUser[leaver] = 3
 
 	f.directory.users = []service.ExternalUser{{ID: "arrives", Email: "arrives@example.com"}}
 
@@ -46,10 +37,10 @@ func TestARunThatChangedSomethingIsRecordedWithoutWhom(t *testing.T) {
 		t.Fatalf("the run left %d records, want 1", len(runs))
 	}
 
-	if run := runs[0]; run.Confirmed || run.Deleted != 1 || run.EntriesDeleted != 3 ||
+	if run := runs[0]; run.Confirmed || run.Deleted != 1 || run.TicketsReleased != 3 ||
 		run.Created != 1 || run.RanAt.IsZero() {
 		t.Errorf("the run was recorded as %+v; want an unconfirmed run, dated, that removed one "+
-			"account with its 3 entries and added one", *run)
+			"account, left its 3 tickets without an owner and added one", *run)
 	}
 }
 

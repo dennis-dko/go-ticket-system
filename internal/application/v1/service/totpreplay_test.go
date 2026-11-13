@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 	"github.com/dennis-dko/go-ticket-system/internal/support/security"
 )
 
@@ -18,7 +19,7 @@ import (
 func TestASecondFactorCodeOpensOneSignInOnly(t *testing.T) {
 	f := newFixture(t)
 	email := "two.factor@example.com"
-	id := localUserWithRole(t, f, email, "user")
+	id := localUserWithRole(t, f, email, model.RoleAgent)
 
 	secret, err := security.NewTOTPSecret()
 	if err != nil {

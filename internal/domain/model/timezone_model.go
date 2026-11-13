@@ -6,14 +6,14 @@ import "time"
 //
 // UTC rather than the server's own zone: a server that is moved, or a container
 // image rebuilt on a differently configured host, would otherwise silently
-// change which calendar day people's hours land on.
+// change which calendar day a moment falls on.
 const DefaultTimezone = "UTC"
 
 // IsSupportedTimezone reports whether the name is one the runtime knows.
 //
 // The check is a real lookup rather than a pattern match, because a plausible
 // but wrong name like "Europe/Munich" would otherwise be stored and then fall
-// back to UTC at every use, quietly shifting bookings by an hour.
+// back to UTC at every use, quietly shifting every moment by an hour.
 func IsSupportedTimezone(name string) bool {
 	if name == "" {
 		return false

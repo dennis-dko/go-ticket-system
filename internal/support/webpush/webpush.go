@@ -107,12 +107,12 @@ type Message struct {
 var ErrGone = errors.New("the push service no longer knows this subscription")
 
 // recordSize is the size of the one record every message is: RFC 8188's
-// default, and far more than a reminder needs.
+// default, and far more than a notification needs.
 const recordSize = 4096
 
 // Send posts message to the push service of sub, encrypted for sub and signed
 // with k. ttl is how long the push service may keep it for a browser that is not
-// online; a reminder kept longer than its moment is no use to anybody.
+// online; news kept longer than its moment is no use to anybody.
 func (k Keys) Send(ctx context.Context, client *http.Client, sub Subscription, message Message, ttl time.Duration) error {
 	plain, err := json.Marshal(message)
 	if err != nil {
@@ -138,10 +138,10 @@ func (k Keys) Send(ctx context.Context, client *http.Client, sub Subscription, m
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("TTL", strconv.Itoa(int(ttl.Seconds())))
 
-	// Every message is a reminder about a moment, which RFC 8030 calls a
+	// Every message is news about a moment, which RFC 8030 calls a
 	// time-sensitive alert. Google's push service hands a high one to a dozing
 	// phone at once and may hold a normal one until the phone wakes, which is
-	// exactly when a reminder about a moment is no use.
+	// exactly when news about a moment is no use.
 	req.Header.Set("Urgency", "high")
 	req.Header.Set("Authorization", signed)
 

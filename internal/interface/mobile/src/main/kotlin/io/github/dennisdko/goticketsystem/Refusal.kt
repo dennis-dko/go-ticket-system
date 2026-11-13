@@ -22,10 +22,7 @@ class TokenRefused(message: String) : Refused(message)
  * it rather than as the word it travels in.
  */
 val refusalValues: Map<String, Map<Int, String>> = mapOf(
-    "archiveNeedsCompleted" to mapOf(0 to "statusName"),
     "notFound" to mapOf(0 to "entityName"),
-    "overDailyLimit" to mapOf(2 to "fmtDate"),
-    "projectClosedForBooking" to mapOf(1 to "statusName"),
 )
 
 /**

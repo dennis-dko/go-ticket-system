@@ -8,7 +8,7 @@ import (
 	"github.com/dennis-dko/go-ticket-system/internal/support/i18n"
 )
 
-// The Reminders card says what pushing to this browser does, and it promised the
+// The notification card says what pushing to this browser does, and it promised the
 // reminders "even while it is closed". No push reaches a browser on a computer
 // that is closed: the push service holds the reminder and hands it over when the
 // browser is started again, which is when they arrived on the computer this was
@@ -18,7 +18,7 @@ import (
 func TestThePushSentenceSaysTheBrowserHasToBeRunning(t *testing.T) {
 	declared := regexp.MustCompile(`data-i18n="push\.pushed"[^>]*>([^<]*)<`).FindStringSubmatch(asset(t, "/"))
 	if declared == nil {
-		t.Fatal("the Reminders card says nothing under push.pushed")
+		t.Fatal("the notification card says nothing under push.pushed")
 	}
 
 	for _, language := range []struct{ code, sentence, running, closed string }{

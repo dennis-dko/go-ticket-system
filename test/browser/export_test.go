@@ -46,7 +46,7 @@ func TestEverythingAboutTheAccountLeavesFromMyAccount(t *testing.T) {
 		names = append(names, file.Name)
 	}
 
-	for _, want := range []string{"about.json", "account.json", "time-entries.json"} {
+	for _, want := range []string{"about.json", "account.json", "api-tokens.json"} {
 		if !slices.Contains(names, want) {
 			t.Errorf("the archive holds %v, without %s", names, want)
 		}

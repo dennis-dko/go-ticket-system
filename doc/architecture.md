@@ -47,8 +47,8 @@ Decisions that would otherwise be surprising:
 - **The UI is served by custom middleware**, not GoFr's `AddStaticFiles`, which
   only reads from disk and would defeat the single-binary goal.
 - **Authorization sits in the handlers**, not in a route table: several rules
-  depend on the resource rather than the path — reading your own time entries
-  and reading everyone's share one route.
+  depend on the resource rather than the path — whether a ticket may be read is
+  decided by the queue it is in, not by the route that asks for it.
 - **The database connection is stored in a file**, not in the database. It
   describes *which* database to open, so keeping it inside that database would
   make it impossible to point the application elsewhere.

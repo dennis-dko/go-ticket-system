@@ -53,7 +53,7 @@ func TestASynchronisationThatStartsWhileAnotherRunsIsTurnedAway(t *testing.T) {
 
 	purger := &recordingPurger{users: f.userRepo}
 	sync := service.NewLDAPSyncService(directory, f.userRepo, f.roleRepo,
-		f.timesheetRepo, purger, nil, 0.9, model.RoleUser)
+		f.owned, purger, nil, 0.9, model.RoleAgent)
 
 	first := make(chan error, 1)
 

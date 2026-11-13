@@ -39,8 +39,8 @@ func scheduledSync(stopping context.Context, directory synchroniser, runs appser
 
 		// What it did, before whether it finished. A run that removed three
 		// accounts and then lost the database used to log "directory sync
-		// failed" and nothing else - three people's recorded hours gone, and
-		// no line naming them. The deletions are logged from the report
+		// failed" and nothing else - three people gone, and no line naming
+		// them. The deletions are logged from the report
 		// whichever way the run ended, in the report's own words.
 		for _, removed := range report.Removals() {
 			ctx.Logger.Warn(removed)

@@ -65,11 +65,11 @@ func TestTheUpdateCardOffersWhatThisDeploymentCanDo(t *testing.T) {
 
 }
 
-// Everybody who can reach the screen gets the card, including somebody who also
-// records their own time.
+// Everybody who can reach the screen gets the card, not only the built-in
+// administrator.
 //
 // It used to be narrower: the built-in administrator, or an account that
-// administers and books nothing. The argument was that an update changes what the
+// administered and did nothing else. The argument was that an update changes what the
 // application *is* rather than what it does. What settled it against that: the
 // screen is reached by holding settings:manage, everything else on it belongs to
 // whoever got there, and a card that appears for some of those people and not
@@ -80,7 +80,7 @@ func TestTheUpdateCardIsOfferedToEverybodyWhoAdministers(t *testing.T) {
 
 	p := open(t)
 	p.readyAdmin()
-	p.createAccount(t, "bothe@example.com", "both-jobs-password-1", "user-admin")
+	p.createAccount(t, "bothe@example.com", "both-jobs-password-1", "admin")
 
 	p.run("sign out", chromedp.Click("#logout", chromedp.ByID),
 		chromedp.WaitVisible("#form-login", chromedp.ByID))
@@ -93,8 +93,7 @@ func TestTheUpdateCardIsOfferedToEverybodyWhoAdministers(t *testing.T) {
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
 	if !p.visible("#update-card") {
-		t.Error("somebody who administers the installation and also books time is " +
-			"not shown the version card")
+		t.Error("somebody given the administration is not shown the version card")
 	}
 
 	// And what it says is the truth for this build rather than a card drawn empty:

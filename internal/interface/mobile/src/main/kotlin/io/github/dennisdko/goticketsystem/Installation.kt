@@ -2,19 +2,15 @@ package io.github.dennisdko.goticketsystem
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
-import java.time.LocalDate
-import java.time.OffsetDateTime
 
 /**
  * Installation is what the app asks the installation itself, around the web
- * interface it shows: a session for the token it was connected with, whether
- * the session the web interface holds is still one, and - for the reminders it
- * shows while it is closed - what its owner chose to be reminded of.
+ * interface it shows: a session for the token it was connected with, and whether
+ * the session the web interface holds is still one.
  *
  * Everything else is the web interface's own business. The app shows the
  * installation's pages rather than a copy of them, decided by the maintainer on
@@ -102,49 +98,6 @@ class Installation(private val address: String, private val words: Language, pri
             } finally {
                 connection.disconnect()
             }
-        }
-    }
-
-    /**
-     * reminders is what the owner of [token] chose to be reminded of and what is
-     * true right now: the hours their stopwatch is mentioned after, when the one
-     * running started, the last working day with nothing booked on it, and
-     * whether they are reminded of such a day at all. A part
-     * the token's role may not read is answered as nothing to remind of, as the
-     * page's notices are, rather than as a refusal.
-     */
-    suspend fun reminders(token: String): Reminders = withContext(Dispatchers.IO) {
-        val me = read("/api/v1/me", token) ?: throw notThis()
-        val timer = read("/api/v1/me/timer", token)
-        val notices = read("/api/v1/me/notices", token)
-
-        Reminders(
-            alertHours = me.optJSONObject("reminders")?.optInt("timerAlertHours", 0) ?: 0,
-            startedAt = timer?.takeIf { it.optBoolean("running") }?.optString("startedAt")
-                ?.takeIf { it.isNotBlank() }?.let { OffsetDateTime.parse(it).toInstant() },
-            unbookedDay = notices?.optString("unbookedDay")?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
-            unbookedReminder = me.optJSONObject("reminders")?.optBoolean("unbookedDay", false) ?: false,
-        )
-    }
-
-    /** read is what [path] answers the owner of [token], unwrapped from its data; null where it is refused or not found. */
-    private fun read(path: String, token: String): JSONObject? {
-        val connection = open(path)
-
-        try {
-            connection.setRequestProperty("Authorization", "Bearer $token")
-            connection.setRequestProperty("Accept", "application/json")
-
-            if (connection.responseCode == HttpURLConnection.HTTP_UNAUTHORIZED) throw tokenUnknown()
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-
-            val body = connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
-
-            return runCatching { JSONObject(body).optJSONObject("data") }.getOrNull()
-        } catch (e: IOException) {
-            throw unreachable(e)
-        } finally {
-            connection.disconnect()
         }
     }
 

@@ -188,9 +188,6 @@ func TestARestartThatIsWaitingIsSaidOnEveryScreenAndOnlyToAdministrators(t *test
 	// Away from the screen that caused it, which is the whole reason it is a
 	// banner: the tab below is somewhere else entirely.
 	//
-	// Accounts rather than time entries. This is the built-in administrator,
-	// which administers and records nothing, so there is no timesheet tab for it
-	// to be sent to.
 	p.run("go somewhere else", p.click(`.tab[data-view="users"]`))
 	p.waitShown("#view-users")
 

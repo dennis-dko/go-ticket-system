@@ -12,17 +12,16 @@ class RefusalTest {
         mapOf(
             "number.point" to ",",
             "number.group" to ".",
-            "layout.day" to "02.01.2006",
-            "err.projectClosedForBooking" to "„{0}“ ist {1}.",
-            "err.overDailyLimit" to "{0} über {1} am {2}",
+            "err.notFound" to "{0} mit der Kennung {1} wurde nicht gefunden.",
+            "err.overTheLimit" to "{0} über {1}",
             "err.invalidFields" to "Ungültige Felder",
             "err.maintenance" to "Wartung.",
-            "status.completed" to "abgeschlossen",
-            "field.durationHours" to "Stunden",
+            "entity.role" to "Rolle",
+            "field.name" to "Name",
         ),
     )
 
-    private val closed = """{"error":{"code":"projectClosedForBooking","message":"project Website is completed","values":["Website","completed"]}}"""
+    private val missing = """{"error":{"code":"notFound","message":"role with id 42 not found","values":["role",42]}}"""
 
     @Test
     fun aTokenTheInstallationDoesNotKnowIsSaidInTheAppsWords() {
@@ -32,31 +31,31 @@ class RefusalTest {
         )
     }
 
-    // In the page's words, with a status in its words too - not as it travels.
+    // In the page's words, with the kind of record in its words too - not as it travels.
     @Test
     fun aRefusalIsSaidAsThePageSaysIt() {
-        assertEquals("„Website“ ist abgeschlossen.", german.refused(422, "Unprocessable Entity", closed))
+        assertEquals("Rolle mit der Kennung 42 wurde nicht gefunden.", german.refused(404, "Not Found", missing))
     }
 
     // The page's English is the fallbacks in its own script, so English is the
     // installation's own sentence.
     @Test
     fun inEnglishTheInstallationsOwnSentenceIsSaid() {
-        assertEquals("project Website is completed", english.refused(422, "Unprocessable Entity", closed))
+        assertEquals("role with id 42 not found", english.refused(404, "Not Found", missing))
     }
 
     @Test
-    fun aDayAndTheFiguresAreWrittenAsTheScreenWritesThem() {
-        val over = """{"error":{"code":"overDailyLimit","values":[9.5,8,"2026-10-29"]}}"""
+    fun theFiguresAreWrittenAsTheScreenWritesThem() {
+        val over = """{"error":{"code":"overTheLimit","values":[9.5,8]}}"""
 
-        assertEquals("9,50 über 8 am 29.10.2026", german.refused(422, "Unprocessable Entity", over))
+        assertEquals("9,50 über 8", german.refused(422, "Unprocessable Entity", over))
     }
 
     @Test
     fun theFieldsAreNamedBeforeAnySentence() {
-        val invalid = """{"error":{"code":"badRequest","message":"invalid","param":["durationHours","comment"]}}"""
+        val invalid = """{"error":{"code":"badRequest","message":"invalid","param":["name","comment"]}}"""
 
-        assertEquals("Ungültige Felder: Stunden, comment", german.refused(400, "Bad Request", invalid))
+        assertEquals("Ungültige Felder: Name, comment", german.refused(400, "Bad Request", invalid))
     }
 
     @Test

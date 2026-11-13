@@ -22,7 +22,7 @@ containers; `task stage` runs the real deployment image against them. See
 **Installer.** With no database configured — no `DB_DIALECT` and no
 `configs/datasource.json` — the binary does not start the application. It serves
 an installer on the same port and waits, because there is nowhere to put an
-account, a project or an hour until a database exists.
+account, a ticket or a contact until a database exists.
 
 The connection is tested before it is accepted, written to
 `configs/datasource.json`, and then the application takes over the same port **in
@@ -62,7 +62,7 @@ password. Nothing has to be typed out of the documentation.
 
 It grants nothing that was not already granted. Whoever answered that screen read
 the setup token out of this process's log and decided where every account,
-project and hour will be kept — and the account they are handed is, until its
+ticket and contact will be kept — and the account they are handed is, until its
 password is changed, reachable by anybody who has read the table below. The
 handover is refused on an installation configured without the installer, and
 stops working the moment a real password is chosen.
@@ -106,27 +106,26 @@ sentence what the application is for, and offered a walk through it. The list of
 what you can do here is built from your own permissions, so nobody is promised
 something they cannot do.
 
-The walk itself covers booking time by hand and by stopwatch, the entry list and
-the calendar and correcting an entry from it, your
-own figures as charts, the overtime balance, projects including private ones,
-reports, tokens and the second factor, and appearance and language. Steps are
-dropped for anything your role cannot reach, so nobody is shown a tab they do not
+The walk itself covers the accounts and the roles, the ways of signing in -
+passkeys, a provider, the second factor and personal tokens - notifications,
+everything about you, and appearance and language, and for whoever administers
+every card on the *Settings* screen. Steps are dropped for anything your role
+cannot reach, so nobody is shown a tab they do not
 have, and the highlight points at the real control rather than a picture of one.
 
 It is offered once. Declining counts, the same way skipping does, and it can be
 restarted any time from *My account*. "Seen" is stored on the user, so a second
 device does not mean a second introduction.
 
-The **built-in administrator is not greeted**: that account arrives at the setup
-wizard, which is its own introduction, and a walk through booking time and reading
-an overtime balance would be a walk through somebody else's job. The card under
-*My account* still starts it on request.
+The **built-in administrator** is offered it too, once the setup wizard is done
+and a password chosen - never while the wizard is up, because being walked
+through the application by two things at once is worse than either alone, and the
+wizard is the one that has to happen first.
 
-On later visits there is a short **welcome back** instead, at the top of the first
-screen: what today already has booked on it, or a warning that you left a stopwatch
-running. Once per visit rather than per page load — a reload is not an arrival.
+On later visits the same screen says **welcome back** instead. Once per visit
+rather than per page load — a reload is not an arrival.
 
-**Live log.** The built-in administrator can read what the process has written,
+**Live log.** Whoever administers can read what the process has written,
 under *Settings*: filter by level, search the text, and set how often it
 refreshes in seconds — or pause it. Newest at the bottom, and it follows along
 only while you are already scrolled there, so reading something does not get

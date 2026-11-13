@@ -20,11 +20,10 @@ var users = Table{
 // accounts rather than creating them, matched on the mail address. That makes it the
 // right tool for what it is wanted for: moving a department to another role.
 //
-// No daily target, ceiling or time zone either, and they were here. They are time
-// figures, and everything to do with time belongs to the person it is about, who sets
-// it under My account - so a column for them would be one the import had to ignore,
-// and a column that is silently ignored is worse than one that is missing: somebody
-// edits forty of them and is told forty rows were written.
+// No time zone either, and it was here. It belongs to the person it is about, who
+// sets it under My account - so a column for it would be one the import had to
+// ignore, and a column that is silently ignored is worse than one that is missing:
+// somebody edits forty of them and is told forty rows were written.
 type UserRow struct {
 	// Number is the row in the sheet, so a complaint can name where to look.
 	Number int

@@ -60,9 +60,22 @@ func (c *countingRoles) GetByName(ctx context.Context, name string) (*model.Role
 	return c.RoleRepository.GetByName(ctx, name)
 }
 
+// countingOwned counts how often a run asks what an account would leave behind.
+type countingOwned struct {
+	service.OwnedTickets
+
+	counted int
+}
+
+func (c *countingOwned) CountUnfinishedOwnedBy(ctx context.Context, userID uint) (int, error) {
+	c.counted++
+
+	return c.OwnedTickets.CountUnfinishedOwnedBy(ctx, userID)
+}
+
 // A run asks the database by what it changes, not by how large the directory is.
 //
-// One question for the accounts, one for each departure's entries and one for
+// One question for the accounts, one for each departure's tickets and one for
 // each role the answer names; then a write for every arrival and every
 // departure. Nothing is asked per directory entry - both indexes are built from
 // the one answer and the one list of accounts - so a directory of thousands of
@@ -77,11 +90,11 @@ func TestARunReadsTheDatabaseByWhatChangesNotByTheSizeOfTheDirectory(t *testing.
 
 			users := &countingUsers{UserRepository: f.userRepo}
 			roles := &countingRoles{RoleRepository: f.roleRepo}
-			entries := &countingTimesheets{TimesheetRepository: f.timesheetRepo}
+			owned := &countingOwned{OwnedTickets: f.owned}
 			directory := &fakeDirectory{enabled: true}
 			purger := &recordingPurger{users: f.userRepo}
 
-			sync := service.NewLDAPSyncService(directory, users, roles, entries, purger, nil, 1, model.RoleUser)
+			sync := service.NewLDAPSyncService(directory, users, roles, owned, purger, nil, 1, model.RoleAgent)
 
 			for _, leaver := range []string{"one@example.com", "two@example.com", "three@example.com"} {
 				externalUser(t, f, leaver)
@@ -120,9 +133,9 @@ func TestARunReadsTheDatabaseByWhatChangesNotByTheSizeOfTheDirectory(t *testing.
 					roles.asked, arrivals)
 			}
 
-			if entries.counted != 3 || entries.rowsRead != 0 {
-				t.Errorf("the run counted entries %d time(s) and read %d row(s) for 3 departures",
-					entries.counted, entries.rowsRead)
+			if owned.counted != 3 {
+				t.Errorf("the run asked what an account leaves behind %d time(s) for 3 departures",
+					owned.counted)
 			}
 
 			if users.saves != arrivals {

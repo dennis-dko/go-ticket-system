@@ -93,8 +93,8 @@ func TestAShippedRoleIsShownRatherThanEdited(t *testing.T) {
 
 // The rights are words, with the identifier beside them and a legend under them.
 //
-// The boxes said "timesheets:write:own", which asks somebody deciding what a
-// colleague may do to read a namespace.
+// The boxes said "tickets:write", which asks somebody deciding what a colleague
+// may do to read a namespace.
 func TestTheRightsAreShownInWordsWithALegend(t *testing.T) {
 	t.Parallel()
 

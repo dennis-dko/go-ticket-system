@@ -26,8 +26,8 @@ func TestTheRoleInAUsersRowCanBeRead(t *testing.T) {
 	p := open(t)
 	p.readyAdmin()
 
-	p.createAccount(t, "bo@example.com", "a-long-enough-password", "user")
-	p.createAccount(t, "cleo@example.com", "a-long-enough-password", "user-admin")
+	p.createAccount(t, "bo@example.com", "a-long-enough-password", "agent")
+	p.createAccount(t, "cleo@example.com", "a-long-enough-password", "admin")
 
 	p.run("a desktop", chromedp.EmulateViewport(1600, 900))
 	p.chooseLanguage("de")

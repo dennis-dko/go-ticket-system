@@ -76,32 +76,6 @@ func (r *PushSubscriptionRepository) ForUser(ctx context.Context, userID uint) (
 	return subs, nil
 }
 
-func (r *PushSubscriptionRepository) Subscribed(ctx context.Context) ([]uint, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT DISTINCT user_id FROM push_subscriptions ORDER BY user_id")
-	if err != nil {
-		return nil, apperror.Internal(err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	users := make([]uint, 0)
-
-	for rows.Next() {
-		var id uint
-		if err := rows.Scan(&id); err != nil {
-			return nil, apperror.Internal(err)
-		}
-
-		users = append(users, id)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, apperror.Internal(err)
-	}
-
-	return users, nil
-}
-
 func (r *PushSubscriptionRepository) Delete(ctx context.Context, userID uint, endpoint string) (bool, error) {
 	affected, err := r.exec(ctx, "DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?", userID, endpoint)
 	if err != nil {

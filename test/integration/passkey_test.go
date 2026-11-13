@@ -25,7 +25,7 @@ func TestADirectoryAccountCannotRegisterAPasskey(t *testing.T) {
 
 	a := start(t)
 	admin := a.signInAsAdmin("a-much-better-password")
-	wera := a.signInAsUser(admin, "Wera", "wera@example.com")
+	wera := a.signInAsAgent(admin, "Wera", "wera@example.com")
 
 	var me struct {
 		User struct {

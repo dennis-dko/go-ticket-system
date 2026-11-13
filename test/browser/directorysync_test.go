@@ -36,7 +36,7 @@ func TestRunningTheSynchronisationSendsWhatWasConfirmed(t *testing.T) {
 		const server = api;
 
 		window.runs = [];
-		window.proposed = [{ userId: 42, name: 'Dave', email: 'dave@example.com', timesheets: 3 }];
+		window.proposed = [{ userId: 42, name: 'Dave', email: 'dave@example.com', tickets: 3 }];
 
 		api = (path, options) => {
 			const report = (dryRun, candidates) => Promise.resolve({
@@ -108,8 +108,8 @@ func TestAFailedSynchronisationShowsWhatIsLeft(t *testing.T) {
 		const server = api;
 
 		window.remaining = [
-			{ userId: 42, name: 'Dave', email: 'dave@example.com', timesheets: 3 },
-			{ userId: 43, name: 'Erin', email: 'erin@example.com', timesheets: 5 },
+			{ userId: 42, name: 'Dave', email: 'dave@example.com', tickets: 3 },
+			{ userId: 43, name: 'Erin', email: 'erin@example.com', tickets: 5 },
 		];
 
 		api = (path, options) => {

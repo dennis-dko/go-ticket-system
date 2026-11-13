@@ -34,9 +34,6 @@ type Operational struct {
 	// decides otherwise.
 	SessionIdleMinutes *float64 `json:"sessionIdleMinutes,omitempty"`
 
-	// MaxDailyHours caps what any one user may book on a single day.
-	MaxDailyHours *float64 `json:"maxDailyHours,omitempty"`
-
 	// RateLimit and RateLimitWindowSeconds bound sign-in attempts and
 	// token-authenticated calls per client.
 	RateLimit              *int `json:"rateLimit,omitempty"`
@@ -53,7 +50,6 @@ type Operational struct {
 type Limits struct {
 	SessionLifetimeHours   float64
 	SessionIdleMinutes     float64
-	MaxDailyHours          float64
 	RateLimit              int
 	RateLimitWindowSeconds int
 	LDAPSyncMaxDeleteRatio float64
@@ -69,10 +65,6 @@ func (o Operational) Resolve(fallback Limits) Limits {
 
 	if o.SessionIdleMinutes != nil {
 		out.SessionIdleMinutes = *o.SessionIdleMinutes
-	}
-
-	if o.MaxDailyHours != nil {
-		out.MaxDailyHours = *o.MaxDailyHours
 	}
 
 	if o.RateLimit != nil {
@@ -113,10 +105,6 @@ func (o Operational) InvalidOperationalFields() []string {
 		invalid = append(invalid, "sessionIdleMinutes")
 	}
 
-	if o.MaxDailyHours != nil && (*o.MaxDailyHours <= 0 || *o.MaxDailyHours > HoursPerDay) {
-		invalid = append(invalid, "maxDailyHours")
-	}
-
 	if o.RateLimit != nil && *o.RateLimit < MinRateLimit {
 		invalid = append(invalid, "rateLimit")
 	}
@@ -146,7 +134,7 @@ const (
 	MaxSessionLifetimeHours = 24 * 14
 
 	// MinSessionIdleMinutes is the floor for the idle timeout: shorter than this
-	// and somebody reading a long report is signed out while they read it - the
+	// and somebody reading a long ticket is signed out while they read it - the
 	// timeout would be measuring how fast people click rather than whether they
 	// are there.
 	MinSessionIdleMinutes = 5
@@ -155,19 +143,6 @@ const (
 	// idle timeout any more; the lifetime is the bound that matters at that
 	// scale.
 	MaxSessionIdleMinutes = 24 * 60
-
-	// HoursPerDay is the ceiling for a daily booking cap; more hours than a day
-	// has cannot be worked in one.
-	HoursPerDay = 24
-
-	// MinBookableHours is the shortest entry worth storing, and deliberately not
-	// a quarter of an hour: ticket system records the time that was worked, so
-	// nothing here rounds to a grid. It exists only to separate a short booking
-	// from a mistyped one - below half a minute, nobody meant it.
-	//
-	// The same floor is published in the OpenAPI document and set on the form, so
-	// all three agree about what the API will take.
-	MinBookableHours = 0.01
 
 	// MinRateLimit is the floor: below this the limiter would turn away ordinary
 	// use, including the administrator's own sign-in.

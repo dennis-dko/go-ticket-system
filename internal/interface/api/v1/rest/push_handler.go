@@ -90,7 +90,7 @@ func (h *PushHandler) SaveSwitch(c *gofr.Context) (any, error) {
 
 // State handles GET /api/v1/me/push.
 func (h *PushHandler) State(c *gofr.Context) (any, error) {
-	principal, err := h.authz.Require(c, model.PermTimesheetReadOwn)
+	principal, err := h.authz.Require(c, model.PermTicketRead)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (h *PushHandler) State(c *gofr.Context) (any, error) {
 // have the caller's reminders pushed to. The address it is signed with is the one
 // the browser reached the installation at, as a token's code holds it.
 func (h *PushHandler) Subscribe(c *gofr.Context) (any, error) {
-	principal, err := h.authz.Require(c, model.PermTimesheetReadOwn)
+	principal, err := h.authz.Require(c, model.PermTicketRead)
 	if err != nil {
 		return nil, err
 	}

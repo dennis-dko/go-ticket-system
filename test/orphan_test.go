@@ -13,7 +13,11 @@ import (
 
 // unreadOnPurpose is every package-level constant or variable nothing reads,
 // and why it is kept anyway. Keyed by package name and identifier.
-var unreadOnPurpose = map[string]string{}
+var unreadOnPurpose = map[string]string{
+	"model.StatePendingClose": "one of the seven states a ticket can be in, and the only one nothing " +
+		"reads before the ticket API changes a ticket's state; the set is kept whole rather than " +
+		"growing back a state at a time",
+}
 
 // TestEveryPackageLevelConstantAndVariableIsRead fails on a constant or a
 // variable in production code that nothing in the repository reads.

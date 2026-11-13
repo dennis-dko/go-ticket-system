@@ -17,17 +17,18 @@ import (
 // pointer-events: none, so that it does not swallow presses meant for the
 // control it rings. The consequence was that every press landed: on the
 // highlighted control, and on everything under the dimming as well. A tour
-// explaining the stopwatch while somebody starts it is a tour narrating a
+// explaining a card while somebody presses its buttons is a tour narrating a
 // screen that has moved on without it.
 func TestTheTourTakesThePageOutOfReachWhileItRuns(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	// An ordinary account is walked through on its first sign-in, so the tour is
-	// already up - but this asks for it rather than relying on that, because
-	// what is being tested is the sealing and not when the walk begins.
+	// An account is walked through on its first sign-in, so the tour may already
+	// be up - but this asks for it rather than relying on that, because what is
+	// being tested is the sealing and not when the walk begins. The administrator,
+	// because it has tabs to press besides the one it is on.
 	p.run("start the tour", chromedp.Evaluate(`startTour()`, nil))
 
 	p.run("wait for it", chromedp.WaitVisible("#tour-bubble", chromedp.ByQuery))
@@ -46,7 +47,7 @@ func TestTheTourTakesThePageOutOfReachWhileItRuns(t *testing.T) {
 	// tab is and lets whatever is on top of it receive it.
 	p.run("try to press a tab", chromedp.Evaluate(`
 		(() => {
-			const tab = document.querySelector('.tab[data-view="projects"]');
+			const tab = document.querySelector('.tab[data-view="roles"]');
 			if (!tab) return 'no tab';
 
 			const box = tab.getBoundingClientRect();
@@ -97,7 +98,7 @@ func TestTheTourTakesThePageOutOfReachWhileItRuns(t *testing.T) {
 
 	p.run("is the page still in the tab order", chromedp.Evaluate(`
 		(() => {
-			const tab = document.querySelector('.tab[data-view="projects"]');
+			const tab = document.querySelector('.tab[data-view="roles"]');
 			if (!tab) return false;
 
 			tab.focus();
@@ -120,11 +121,11 @@ func TestTheTourTakesThePageOutOfReachWhileItRuns(t *testing.T) {
 	p.waitGone("#tour-bubble")
 
 	// And afterwards the page is a page again.
-	p.run("press a tab", p.click(`.tab[data-view="projects"]`))
+	p.run("press a tab", p.click(`.tab[data-view="roles"]`))
 
 	deadline := time.Now().Add(waitPatience)
 	for time.Now().Before(deadline) {
-		if p.currentView() == "projects" {
+		if p.currentView() == "roles" {
 			return
 		}
 

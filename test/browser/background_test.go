@@ -37,7 +37,7 @@ func TestThePageMarksTheRequestsItMakesByItself(t *testing.T) {
 	p.atRest()
 
 	p.run("ask for something on purpose", chromedp.Evaluate(`(async () => {
-		await api('/timesheets?limit=1');
+		await api('/me/tokens');
 		return 1;
 	})()`, nil, awaitPromise))
 
@@ -53,18 +53,20 @@ func TestThePageMarksTheRequestsItMakesByItself(t *testing.T) {
 	for _, request := range asked {
 		marked := request.Background != nil && *request.Background == "1"
 
+		// The request asked for on purpose first, because its address starts with
+		// the one the minute's check asks.
 		switch {
+		case strings.Contains(request.URL, "/api/v1/me/tokens"):
+			seen[request.URL] = true
+
+			if marked {
+				t.Errorf("a request asked for on purpose, %s, was marked as the page's own", request.URL)
+			}
 		case strings.Contains(request.URL, "/api/v1/me"), strings.Contains(request.URL, "/api/v1/maintenance"):
 			seen[request.URL] = true
 
 			if !marked {
 				t.Errorf("the minute's check asked %s without saying the page asked it by itself", request.URL)
-			}
-		case strings.Contains(request.URL, "/api/v1/timesheets"):
-			seen[request.URL] = true
-
-			if marked {
-				t.Errorf("a request asked for on purpose, %s, was marked as the page's own", request.URL)
 			}
 		}
 	}

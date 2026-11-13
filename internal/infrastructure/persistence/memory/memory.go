@@ -244,8 +244,8 @@ func (r *UserRepository) SetPreference(
 		current.Language = value
 	case repository.PreferenceTimezone:
 		current.Timezone = value
-	case repository.PreferenceHolidayPlace:
-		current.HolidayPlace = value
+	case repository.PreferenceTheme:
+		current.Theme = value
 	default:
 		return fmt.Errorf("unknown user preference %d", field)
 	}
@@ -269,126 +269,8 @@ func (r *UserRepository) SetTOTP(_ context.Context, id uint, secret string, enab
 	return err
 }
 
-func (r *UserRepository) SetBalanceLimits(_ context.Context, id uint, upper, lower *float64) error {
-	current, err := r.store.get(id)
-	if err != nil {
-		return err
-	}
-
-	current.BalanceUpperLimit, current.BalanceLowerLimit = copyOf(upper), copyOf(lower)
-
-	_, err = r.store.update(id, current)
-
-	return err
-}
-
-func (r *UserRepository) SetReminders(_ context.Context, id uint, skipUnbooked bool, timerAlertHours *int) error {
-	current, err := r.store.get(id)
-	if err != nil {
-		return err
-	}
-
-	current.SkipUnbookedReminder, current.TimerAlertHours = skipUnbooked, copyOf(timerAlertHours)
-
-	_, err = r.store.update(id, current)
-
-	return err
-}
-
-// copyOf is a pointer to a copy, so a caller changing the value it passed in later
-// does not reach into what was stored - which no SQL database would let it do.
-func copyOf[T any](value *T) *T {
-	if value == nil {
-		return nil
-	}
-
-	kept := *value
-
-	return &kept
-}
-
 func (r *UserRepository) Delete(_ context.Context, id uint) error {
 	return r.store.delete(id)
-}
-
-// TimerRepository is an in-memory repository.TimerRepository.
-//
-// Keyed by user rather than by an id of its own, because a person has at most one
-// clock running - which is what the real table says too, with user_id as its
-// primary key.
-type TimerRepository struct {
-	mu     sync.RWMutex
-	timers map[uint]model.RunningTimer
-}
-
-// NewTimerRepository creates an empty one.
-func NewTimerRepository() *TimerRepository {
-	return &TimerRepository{timers: map[uint]model.RunningTimer{}}
-}
-
-var _ repository.TimerRepository = (*TimerRepository)(nil)
-
-func (r *TimerRepository) Get(_ context.Context, userID uint) (*model.RunningTimer, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	timer, running := r.timers[userID]
-	if !running {
-		// Nothing running is a normal state, not an error.
-		return nil, nil
-	}
-
-	found := timer
-
-	return &found, nil
-}
-
-func (r *TimerRepository) Start(_ context.Context, timer *model.RunningTimer) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.timers[timer.UserID] = *timer
-
-	return nil
-}
-
-func (r *TimerRepository) MoveStart(_ context.Context, userID uint, startedAt time.Time) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	timer, running := r.timers[userID]
-	if !running {
-		return nil
-	}
-
-	timer.StartedAt = startedAt
-	r.timers[userID] = timer
-
-	return nil
-}
-
-func (r *TimerRepository) Clear(_ context.Context, userID uint) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	delete(r.timers, userID)
-
-	return nil
-}
-
-func (r *TimerRepository) CountByProject(_ context.Context, projectID uint) (int, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	var count int
-
-	for _, timer := range r.timers {
-		if timer.ProjectID != nil && *timer.ProjectID == projectID {
-			count++
-		}
-	}
-
-	return count, nil
 }
 
 // RoleRepository is an in-memory repository.RoleRepository.
@@ -467,36 +349,6 @@ func (r *RoleRepository) CountUsers(ctx context.Context, roleID uint) (int, erro
 	}
 
 	return count, nil
-}
-
-// ProjectRepository is an in-memory repository.ProjectRepository.
-type ProjectRepository struct{ store *store[model.Project] }
-
-// NewProjectRepository creates an empty in-memory project repository.
-func NewProjectRepository() *ProjectRepository {
-	return &ProjectRepository{store: newStore[model.Project]("project")}
-}
-
-var _ repository.ProjectRepository = (*ProjectRepository)(nil)
-
-func (r *ProjectRepository) Save(_ context.Context, project *model.Project) (*model.Project, error) {
-	return r.store.add(project, func(p *model.Project, id uint) { p.ID = id }), nil
-}
-
-func (r *ProjectRepository) GetByID(_ context.Context, id uint) (*model.Project, error) {
-	return r.store.get(id)
-}
-
-func (r *ProjectRepository) GetAll(_ context.Context) ([]*model.Project, error) {
-	return r.store.all(), nil
-}
-
-func (r *ProjectRepository) Update(_ context.Context, project *model.Project) (*model.Project, error) {
-	return r.store.update(project.ID, project)
-}
-
-func (r *ProjectRepository) Delete(_ context.Context, id uint) error {
-	return r.store.delete(id)
 }
 
 // SessionRepository keeps signed-in sessions in memory.

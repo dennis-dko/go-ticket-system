@@ -115,7 +115,7 @@ func TestEnrolmentIsOnlyEverForTheCaller(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Petra", "email": "petra@example.com",
-		"role": "user", "password": "petra-password-1",
+		"role": "agent", "password": "petra-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	petra := a.newClient()

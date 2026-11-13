@@ -11,17 +11,17 @@ import (
 
 // CLAUDE.md points at exact lines, and nothing kept them pointing there.
 //
-// Nine places in that file name a `file.go:N` and say what is at it - the one
+// Five places in that file name a `file.go:N` and say what is at it - the one
 // permitted panic and the two Must... calls that are panics under another name,
-// the one SQL statement built with Sprintf, the one time.Sleep, and the three
-// deliberate calls to VisibleTo instead of RequireVisible. They are the
-// difference between "audit this rule and read the exception" and "audit this
-// rule and rediscover the exception", which is most of what makes an audit of
-// this repository cheap rather than expensive.
+// the constant GoFr's configuration is read from, and the one time.Sleep. They
+// are the difference between "audit this rule and read the exception" and
+// "audit this rule and rediscover the exception", which is most of what makes an
+// audit of this repository cheap rather than expensive.
 //
-// Two of the original seven had drifted by the time anybody looked: the Sprintf exception
-// had moved 1308 -> 1337 as the migration chain grew, and the VisibleTo call
-// 259 -> 272. Neither is wrong in a way anything would report. An auditor
+// Two of the original seven had drifted by the time anybody looked: a Sprintf
+// exception in the migration chain had moved 1308 -> 1337 as the chain grew, and
+// a call to VisibleTo 259 -> 272 - both gone since, with the time recording they
+// were in. Neither was wrong in a way anything would report. An auditor
 // following either reference reads an unremarkable line, concludes the exception
 // is gone, and either files the real one as a violation or, worse, trusts the
 // document over the tree.
@@ -63,16 +63,6 @@ func TestCLAUDEmdStillPointsAtWhatItSaysItDoes(t *testing.T) {
 			line:      150,
 			contains:  "netip.MustParsePrefix(",
 		},
-		// The statement's own words rather than "fmt.Sprintf(", which some thirty
-		// lines of that file satisfy - so the reference slid from the statement
-		// formatting model.RoleUser onto one formatting a column type, and stayed
-		// green the whole way.
-		{
-			reference: "internal/infrastructure/persistence/migration/migration.go:1444",
-			resolved:  "internal/infrastructure/persistence/migration/migration.go",
-			line:      1444,
-			contains:  "WHERE name = '%s') WHERE role_id IS NULL",
-		},
 		{
 			reference: "internal/infrastructure/config/datasource.go:125",
 			resolved:  "internal/infrastructure/config/datasource.go",
@@ -84,24 +74,6 @@ func TestCLAUDEmdStillPointsAtWhatItSaysItDoes(t *testing.T) {
 			resolved:  "internal/interface/api/v1/rest/restart_handler.go",
 			line:      488,
 			contains:  "time.Sleep(",
-		},
-		{
-			reference: "project_application_service.go:170",
-			resolved:  "internal/application/v1/service/project_application_service.go",
-			line:      170,
-			contains:  "VisibleTo(",
-		},
-		{
-			reference: "workbook_application_service.go:306",
-			resolved:  "internal/application/v1/service/workbook_application_service.go",
-			line:      306,
-			contains:  "VisibleTo(",
-		},
-		{
-			reference: "timesheet_application_service.go:322",
-			resolved:  "internal/application/v1/service/timesheet_application_service.go",
-			line:      322,
-			contains:  "VisibleTo(",
 		},
 	}
 

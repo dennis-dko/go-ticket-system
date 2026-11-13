@@ -10,17 +10,6 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
-    <!-- The reminders are shown as notifications, asked for from the Reminders
-         card's own button rather than when the app opens. -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- A reminder falls due at a moment, and a dozing phone holds everything else
-         the app could ask at it back until it wakes; an exact alarm is what is let
-         through on the minute. From Android 14 on the leave is not given at
-         installation, and until it is allowed under "Alarms & reminders" the
-         alarm comes within the hour after instead. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
     <!-- Nothing of the app's is backed up or carried to another phone.
          allowBackup="false" is what says so up to Android 11, so the rules file
          lint asks for there would only repeat it; data_extraction_rule says it
@@ -58,8 +47,5 @@
                 <data android:host="connect" android:scheme="go-ticket-system" />
             </intent-filter>
         </activity>
-
-        <!-- Called by the app's own alarm and by nothing else. -->
-        <receiver android:name=".ReminderAlarm" android:exported="false" />
     </application>
 </manifest>

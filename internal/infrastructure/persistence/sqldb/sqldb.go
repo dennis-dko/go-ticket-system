@@ -53,8 +53,8 @@ type txBeginner interface {
 // This matters wherever one logical change is several statements. Without it a
 // connection lost half way through leaves the database describing something
 // nobody asked for: a role stripped of its permissions between the delete and
-// the insert that was meant to replace them, or a person's recorded hours gone
-// while their account remains.
+// the insert that was meant to replace them, or an account's sessions gone while
+// the account remains.
 //
 // fn is given a base bound to the transaction and must use only that. Reaching
 // past it to the original datasource would take a second connection, which on
@@ -211,9 +211,8 @@ func (b base) exists(ctx context.Context, table string, id uint) (bool, error) {
 // and neither server dialect hands it back that way: lib/pq reads a TIMESTAMPTZ
 // in the PostgreSQL server's session zone, and GoFr opens MySQL with loc=Local,
 // the process's own. West of UTC both are the evening before, and a day is read
-// in the zone it carries - so every entry was shown, totalled and exported on
-// the day before it was booked. East of UTC nothing shows, which is how it went
-// unnoticed. A string from SQLite is left in the zone it was written with,
+// in the zone it carries - so every day was shown, totalled and exported as the
+// day before. East of UTC nothing shows, which is how it went unnoticed. A string from SQLite is left in the zone it was written with,
 // because that is the day as written - see dateLayouts for the rows that need it.
 type dateTime struct {
 	Time  time.Time
@@ -314,4 +313,17 @@ func ptr(d dateTime) *time.Time {
 	t := d.Time
 
 	return &t
+}
+
+// marks is a list of n placeholders in brackets, for a statement that compares
+// a column against a set: "(?, ?, ?)". Only the marks - the values travel as
+// arguments like every other - so a set of any size is still a parameterised
+// statement.
+func marks(n int) string {
+	if n <= 0 {
+		// An empty set matches nothing, and "()" is not SQL. NULL is in no set.
+		return "(NULL)"
+	}
+
+	return "(?" + strings.Repeat(", ?", n-1) + ")"
 }

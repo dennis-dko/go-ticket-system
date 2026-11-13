@@ -37,8 +37,8 @@ func TestTheDirectoryCardListsWhatRecentRunsChanged(t *testing.T) {
 
 			if (url.includes('/settings/ldap/sync/runs')) {
 				return new Response(JSON.stringify({ data: { items: [
-					{ ranAt: '2026-10-09T03:00:00Z', confirmed: false, deleted: 2, entriesDeleted: 37, created: 1 },
-					{ ranAt: '2026-10-08T14:30:00Z', confirmed: true, deleted: 1, entriesDeleted: 5, created: 0 },
+					{ ranAt: '2026-10-09T03:00:00Z', confirmed: false, deleted: 2, ticketsReleased: 37, created: 1 },
+					{ ranAt: '2026-10-08T14:30:00Z', confirmed: true, deleted: 1, ticketsReleased: 5, created: 0 },
 				], totalCount: 2 } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 			}
 

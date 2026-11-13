@@ -13,7 +13,7 @@
 const API = '/api/v1';
 
 /** Cached lookups so tables can show names instead of raw ids. */
-const cache = { users: [], projects: [], roles: [], permissions: [] };
+const cache = { users: [], roles: [], permissions: [] };
 
 /**
  * The branding as it was last read.
@@ -39,14 +39,6 @@ let loadedVersion = null;
 
 /** The signed-in user, their permissions, and whether auth is on at all. */
 let me = { user: null, permissions: [], authEnabled: false };
-
-/**
- * The account whose time the screens show while it is not one's own: one of the
- * accounts a manager looks after, chosen in the picker under the tabs. null is
- * one's own, which is what every page starts on - a reload is not the moment to
- * find oneself looking at somebody else's time without having chosen to.
- */
-let viewingFor = null;
 
 // ---------------------------------------------------------------- transport
 
@@ -288,9 +280,9 @@ async function reach(url, options) {
   // A write that is already on its way is not sent a second time.
   //
   // A double click, or Enter held down, submits a form twice before the first
-  // answer has come back - and a booking sent twice is the same hours recorded
-  // twice, an import sent twice every row written twice. Measured: two entries,
-  // created in the same second, from one form pressed twice. Asked here because
+  // answer has come back - and a record sent twice is written twice, an import
+  // sent twice every row written twice. Measured: two entries, created in the
+  // same second, from one form pressed twice. Asked here because
   // every request passes through here, so no form has to remember it.
   const key = writeKey(url, options);
 
@@ -313,7 +305,7 @@ async function reach(url, options) {
     unreachable.refusal = { detail: err.message };
     unreachable.cause = err;
 
-    // Which a booking can wait out: see keepForLater.
+    // Which the sign-in screen tells apart from a refusal: see showSignInOffline.
     unreachable.unreachable = true;
 
     throw unreachable;
@@ -454,11 +446,10 @@ function errorMessage(body) {
  * Refusals name fields by their column names. German has field.<name> for each,
  * and English has no dictionary, so English is whatever the lookup falls back to -
  * which was the name itself: an English refusal read "Invalid field(s):
- * durationHours" about a box labelled Hours. The same arrangement as
- * PERMISSION_TITLES, for the same reason.
+ * sessionIdleMinutes" about a box labelled Sign out after inactivity. The same
+ * arrangement as PERMISSION_TITLES, for the same reason.
  */
 const FIELD_NAMES = {
-  actor: 'Caller',
   banner: 'Banner text',
   baseDn: 'Base DN',
   code: 'Code',
@@ -466,68 +457,37 @@ const FIELD_NAMES = {
   companyUrl: 'Company website',
   confirmed: 'Confirmed accounts',
   country: 'Country',
-  currency: 'Currency',
-  dailyTargetHours: 'Target h/day',
-  date: 'Date',
-  budgetHours: 'Hour budget',
   clientId: 'Client ID',
   issuer: 'Issuer address',
   label: 'Name on the sign-in form',
-  start: 'Start',
-  end: 'End',
-  breakMinutes: 'Breaks (minutes)',
-  day: 'Day',
-  days: 'Days of leave a year',
   defaultRole: 'Default role',
   description: 'Description',
-  durationHours: 'Hours',
   email: 'Email',
-  everyDayCountsFrom: 'Every working day counts from',
-  endDate: 'End',
-  endedAt: 'Ended at',
   expiresInDays: 'Valid for (days)',
   footerText: 'Footer',
-  from: 'From',
-  fromYear: 'From the year',
   host: 'Host',
-  hours: 'Hours',
-  hourlyRate: 'Hourly rate',
   id: 'ID',
-  kind: 'Reason',
   language: 'Language',
   ldapSyncMaxDeleteRatio: 'Deletion limit',
   legalNotice: 'Legal notice',
   logLevel: 'Log level',
-  lowerBound: 'Lower bound of the balance',
-  maxDailyHours: 'Max h/day',
   name: 'Name',
   port: 'Port',
-  projectId: 'Project',
-  q: 'Search',
   region: 'State or region',
   rateLimit: 'Rate limit',
   rateLimitWindowSeconds: 'Rate limit window (seconds)',
   role: 'Role',
   sessionIdleMinutes: 'Sign out after inactivity (minutes)',
   sessionLifetimeHours: 'Session lifetime (hours)',
-  startDate: 'Start',
-  startedAt: 'Started at',
-  status: 'Status',
   syncSchedule: 'Schedule',
   tabTitle: 'Browser tab',
   theme: 'Appearance',
-  timerAlertHours: 'Mention the stopwatch after (hours)',
   timezone: 'Timezone',
   title: 'Title',
-  to: 'To',
   traceExporter: 'Trace exporter',
   tracerRatio: 'Share of traces recorded',
   tracerUrl: 'Collector',
-  upperBound: 'Upper bound of the balance',
   userFilter: 'User filter',
-  userId: 'User',
-  validFrom: 'Applies from',
-  year: 'Year',
 };
 
 /** fieldName names a refused field the way the screen names it, in the reader's language. */
@@ -641,23 +601,20 @@ function showRefusal(target, err) {
  * Which values of which refusal the screen writes in words of its own.
  *
  * fillIn writes a number the way the tables beside it do, and a string as it
- * arrives. Two kinds of string arrive in a form nobody on this screen reads: a day
- * in the order the wire uses, and a status as the word it is stored under. So a
- * German refusal said "am 2026-10-04" beside a form showing 04.10.2026, and "ist
- * completed" beside a badge saying "abgeschlossen" - a word the reader could look
+ * arrives. Some strings arrive in a form nobody on this screen reads: a day in
+ * the order the wire uses, a state as the word it is stored under, the kind of
+ * record a "not found" names. So a German refusal would say "ist closed_successful"
+ * beside a badge saying "erfolgreich geschlossen" - a word the reader could look
  * for and find nowhere.
  *
  * Named by code and position, because on the wire the values are plain strings
- * and stay so: an API client reads them too. Which of them is a day or a status is
+ * and stay so: an API client reads them too. Which of them is a day or a state is
  * known here, beside the sentences, and in the call that sends it.
  * TestARefusalWritesItsValuesTheWayTheScreenDoes reads every such call and fails
  * on one this does not name.
  */
 const REFUSAL_VALUES = {
-  archiveNeedsCompleted: { 0: statusName },
   notFound: { 0: entityName },
-  overDailyLimit: { 2: fmtDate },
-  projectClosedForBooking: { 1: statusName },
 };
 
 /** The values of one refusal, each written the way the rest of the screen writes it. */
@@ -717,18 +674,11 @@ const LANGUAGES = (() => {
   return typeof offered.en === 'string' ? offered : { en: 'English' };
 })();
 
-/**
- * Whether the signed-in user holds at least one of the given permissions.
- *
- * While the screens show an account a manager looks after, an own right counts only
- * where the manager may do the same for that account - see TEAM_COUNTERPARTS - so
- * the screens offer for somebody else exactly what the server takes.
- */
+/** Whether the signed-in user holds at least one of the given permissions. */
 function can(...permissions) {
   if (!me.authEnabled) return true;
 
-  return permissions.some((p) => me.permissions.includes(p)
-    && (!viewingFor || !(p in TEAM_COUNTERPARTS) || viewingFor.rights.includes(TEAM_COUNTERPARTS[p])));
+  return permissions.some((p) => me.permissions.includes(p));
 }
 
 /**
@@ -1679,7 +1629,7 @@ function holdFocus(button) {
   };
 }
 
-/** What a project's status is called, in the reader's language. */
+/** What a state is called, in the reader's language. */
 function statusName(status) {
   return t(`status.${status}`, status);
 }
@@ -2242,8 +2192,8 @@ function fmtDate(iso) {
  * A moment - a day and a time of day - in the reader's own convention.
  *
  * Deliberately not fmtDate, and the difference is not cosmetic. That one renders a
- * calendar day and pins the zone to UTC, because a booking's day carries no zone
- * and must not be shifted by one. These are instants, and the question they answer
+ * calendar day and pins the zone to UTC, because a stored day carries no zone and
+ * must not be shifted by one. These are instants, and the question they answer
  * - when was this credential last used - only means anything in the zone the
  * reader lives in.
  *
@@ -2293,19 +2243,6 @@ function fmtNumber(n) {
 }
 
 /**
- * An amount of money in its own currency, written the way the reader writes it:
- * 1.068,75 € on a German screen, €1,068.75 on an English one. A code the runtime
- * does not know is still written, as the figure beside the code. Display only.
- */
-function fmtMoney(amount, currency) {
-  try {
-    return new Intl.NumberFormat(activeLocale(), { style: 'currency', currency }).format(amount);
-  } catch {
-    return `${fmtNumber(amount)} ${currency}`;
-  }
-}
-
-/**
  * A share between none and all, written the way the reader writes a number and
  * in full.
  *
@@ -2329,19 +2266,6 @@ function fmtShare(n) {
  * language that abbreviates hours differently has somewhere to say so.
  */
 const fmtHours = (n) => `${fmtNumber(n)} ${t('unit.hours', 'h')}`;
-
-/** A balance in hours with its sign, which a credit carries as a plus. */
-const fmtSignedHours = (n) => `${n > 0 ? '+' : ''}${fmtHours(n)}`;
-
-/** Renders a signed balance, coloured as a credit or a debt. */
-function balanceCell(value) {
-  return el('td', {
-    class: `num ${value > 0 ? 'plus' : value < 0 ? 'minus' : ''}`,
-    text: fmtSignedHours(value),
-  });
-}
-
-const projectName = (id) => cache.projects.find((p) => p.id === id)?.name ?? `#${id}`;
 
 /** Replaces a tbody with rows, or a single "empty" row when there are none. */
 function fillTable(tbody, rows, columnCount, emptyText) {
@@ -2381,11 +2305,9 @@ function bulkBarOf(table) {
  * deletion, plus the bar that acts on them.
  *
  * Driven entirely by what the rows contain, so there is no list anywhere of which
- * tables have this. A table of rows nobody may delete - a report, an overtime
- * balance, the preview of a file about to be imported - is left exactly as it was,
- * and a table that grows a delete button later gets this without being told. The
- * calendar day gets it, without being mentioned anywhere, because its rows are time
- * entries and carry the same delete button the list does.
+ * tables have this. A table of rows nobody may delete - the preview of a file about
+ * to be imported, the runs of the directory synchronisation - is left exactly as it
+ * was, and a table that grows a delete button later gets this without being told.
  *
  * Returns whether the column is there, because the empty row's colspan has to
  * know.
@@ -2491,16 +2413,6 @@ function ensureBulkBar(table) {
       onclick: () => runBulkDelete(table),
     }));
 
-  // Time entries can be given a project together as well - the other half of
-  // recording hours first and categorising them later, which was otherwise one
-  // entry at a time. Their words are written by refreshBulkBar, like the
-  // delete button's.
-  if (table.dataset.assigns !== undefined && can('timesheets:transfer')) {
-    bar.append(
-      el('select', { class: 'bulk-project' }),
-      el('button', { type: 'button', class: 'secondary bulk-assign', onclick: () => runBulkAssign(table) }));
-  }
-
   // Above the table rather than below it: in a long table the bar would be off
   // the screen, and the rows being ticked start at the top.
   wrap.parentElement.insertBefore(bar, wrap);
@@ -2519,17 +2431,6 @@ function refreshBulkBar(table) {
   bar.querySelector('.bulk-count').textContent = t('bulk.count', '{n} selected')
     .replace('{n}', String(picked.length));
   bar.querySelector('button.danger').textContent = t('bulk.delete', 'Delete selected');
-
-  const assign = bar.querySelector('.bulk-assign');
-
-  if (assign) {
-    const choice = bar.querySelector('.bulk-project');
-
-    fillSelect(choice, cache.projects.filter((project) => project.status === 'active'),
-      { placeholder: t('bulk.assignTo', 'Assign to a project …') });
-    choice.setAttribute('aria-label', t('bulk.assignTo', 'Assign to a project …'));
-    assign.textContent = t('bulk.assign', 'Assign');
-  }
 
   const all = table.querySelector('thead .pick-all');
   if (all) {
@@ -2597,58 +2498,6 @@ async function runBulkDelete(table) {
 }
 
 /**
- * Gives every ticked time entry the project chosen in the bar, one after another.
- *
- * Through the single entry's own transfer, for the reason the batch deletion uses
- * the single deletion: each entry is held to the rules one is held to alone - that
- * it is the reader's, and that the project is theirs and open - so a batch can do
- * nothing a press on one row could not. A refusal partway does not undo the rest;
- * it is named, as the deletion names its own.
- *
- * Nothing is asked first. Unlike a deletion, an entry given the wrong project is
- * given the right one the same way.
- */
-async function runBulkAssign(table) {
-  const choice = bulkBarOf(table)?.querySelector('.bulk-project');
-  const projectId = Number(choice?.value);
-
-  // The row's own address, which is what a deletion is sent to and what its
-  // transfer hangs off.
-  const picked = [...table.querySelectorAll('tbody .row-pick')]
-    .filter((box) => box.checked)
-    .map((box) => box.deletes);
-
-  if (picked.length === 0) return;
-
-  if (!projectId) {
-    choice?.focus();
-
-    return;
-  }
-
-  const refused = [];
-  let done = 0;
-
-  for (const item of picked) {
-    try {
-      await api(`${item.path}/transfer`, { method: 'POST', body: JSON.stringify({ projectId }) });
-      done += 1;
-    } catch (err) {
-      refused.push(`${item.label}: ${err.message}`);
-    }
-  }
-
-  if (refused.length > 0) {
-    toast(`${fillIn(t('bulk.assignRefused', '{0} could not be assigned'), [refused.length])}`
-      + ` – ${refused[0]}`, 'error');
-  } else {
-    toast(fillIn(t('bulk.assigned', '{0} assigned to {1}'), [done, projectName(projectId)]), 'ok');
-  }
-
-  await reloadTimeViews();
-}
-
-/**
  * The "delete" button of a single row - and with it the row's ticket to being
  * deleted in a batch.
  *
@@ -2704,9 +2553,9 @@ function fillSelect(select, items, { placeholder, labelKey = 'name', valueKey = 
  * What each right is called, in words.
  *
  * The identifiers are what the API takes and what a role's rights are stored as -
- * "timesheets:write:own" - and they were what the ticking boxes said. That asks
+ * "tickets:write" - and they were what the ticking boxes said. That asks
  * somebody deciding what a colleague may do to read a namespace: the difference
- * between "projects:write" and "projects:archive" is plain once you know the
+ * between "tickets:create" and "tickets:write" is plain once you know the
  * system and a guess before that.
  *
  * The identifier stays beside the words rather than being replaced by them. It is
@@ -2723,46 +2572,44 @@ const PERMISSION_TITLES = {
   'roles:read': 'See roles',
   'roles:write': 'Create and change roles',
   'settings:manage': 'Administer the installation',
-  'projects:read': 'See projects',
-  'projects:write': 'Create and change projects',
-  'projects:delete': 'Delete projects',
-  'projects:archive': 'Archive projects',
-  'timesheets:read:own': 'See own time',
-  'timesheets:write:own': 'Record own time',
-  'timesheets:transfer': 'Move time between projects',
-  'reports:read:own': 'Evaluate own hours',
-  'settings:write:own': 'Change own settings',
-  'timesheets:read:team': 'See the time of assigned accounts',
-  'timesheets:write:team': 'Record time for assigned accounts',
-  'projects:write:team': 'Keep the projects of assigned accounts',
+  'queues:write': 'Set up queues',
+  'tickets:read': 'See tickets',
+  'tickets:create': 'Open tickets',
+  'tickets:write': 'Work on tickets',
+  'tickets:delete': 'Delete tickets',
+  'customers:read': 'See customers',
+  'customers:write': 'Create and change customers',
+  'faq:read': 'Read the knowledge base',
+  'faq:write': 'Write the knowledge base',
+  'reports:read': 'Evaluate tickets',
+  'portal:use': 'Use the customer portal',
 };
 
 /**
  * What each right actually allows, for the legend.
  *
- * One sentence, and specific: "See accounts" leaves open whether that includes
- * their recorded time, which is exactly the question somebody handing out rights
+ * One sentence, and specific: "See tickets" leaves open whether that is every
+ * ticket there is, which is exactly the question somebody handing out rights
  * is trying to answer.
  */
 const PERMISSION_DETAILS = {
-  'users:read': 'The list of accounts, their addresses and which role each holds. Not their recorded time - that takes a team right, for an account assigned to whoever holds it.',
+  'users:read': 'The list of accounts, their addresses and which role each holds.',
   'users:write': 'Add an account, change a name or an address, assign a role. Not the initial password of an account somebody else set up.',
-  'users:delete': 'Remove an account. Its recorded time goes with it.',
+  'users:delete': 'Remove an account. The tickets it owned stay and lose their owner, and what it wrote in them stays without its name.',
   'roles:read': 'The roles on this screen and what each grants.',
   'roles:write': 'Make a role, change what it grants, remove one nobody holds. The roles shipped with the application stay as they are.',
-  'settings:manage': 'The installation itself: the database connection, the directory, appearance, maintenance mode, telemetry, the log and the restart. This is the right that makes somebody an administrator.',
-  'projects:read': 'The list of projects and what each is called.',
-  'projects:write': 'Make a project and change one.',
-  'projects:delete': 'Remove a project. Time booked on it keeps its hours and loses the project.',
-  'projects:archive': 'Close a project to new bookings without deleting what is on it.',
-  'timesheets:read:own': 'One\u2019s own entries, calendar and balance. Somebody else\u2019s only through a team right, for an account an administrator assigned.',
-  'timesheets:write:own': 'Record, correct and delete one\u2019s own time, by hand or with the stopwatch.',
-  'timesheets:transfer': 'Move one\u2019s own entries from one project to another, in bulk.',
-  'reports:read:own': 'The report and the charts, over one\u2019s own hours.',
-  'settings:write:own': 'One\u2019s own account: password, language, appearance, timezone, working times, two-factor.',
-  'timesheets:read:team': 'As a manager: the entries, calendar, balance and evaluations of the accounts an administrator assigned - that a day was away, never why. Only while managers are switched on under Settings, and only beside the right to see one\u2019s own.',
-  'timesheets:write:team': 'As a manager: book, correct, move and delete time for the accounts an administrator assigned, each change named as one\u2019s own beside the entry. Only while managers are switched on, and only beside the right to record one\u2019s own.',
-  'projects:write:team': 'As a manager: make and change the projects of the accounts an administrator assigned, and archive or delete them as far as the role allows that for one\u2019s own. Only while managers are switched on.',
+  'settings:manage': 'The installation itself: the database connection, the directory, the mailboxes tickets arrive through, appearance, maintenance mode, telemetry, the log and the restart. This is the right that makes somebody an administrator.',
+  'queues:write': 'Make and change queues and decide which role reaches each - and with them the ticket types, the service levels and the answer templates. Whoever holds it reaches every queue.',
+  'tickets:read': 'The tickets in the queues this role reaches, with everything written in them. A queue the role does not reach is not there for it.',
+  'tickets:create': 'Open a ticket for a customer - one who called, or one to write to - in a queue this role may work in.',
+  'tickets:write': 'Answer, note, change state and priority, take a ticket and hand it over, move it to another queue - in the queues this role may work in.',
+  'tickets:delete': 'Remove a ticket for good, with everything written in it. For what should never have been one; a ticket that is done is closed instead.',
+  'customers:read': 'The organisations and the contacts tickets come from.',
+  'customers:write': 'Add and change organisations and contacts, and give a contact access to the customer portal.',
+  'faq:read': 'The knowledge base, its internal articles included.',
+  'faq:write': 'Write, change and remove knowledge base articles, and decide who may read each.',
+  'reports:read': 'Figures over the tickets of the queues this role reaches: how many arrived, how many were closed, how long they took.',
+  'portal:use': 'As a customer: open tickets, read and answer one’s own, and read the public knowledge base. Nothing of anybody else’s.',
 };
 
 /** The areas rights are grouped under, in the order they are shown. */
@@ -2770,9 +2617,12 @@ const PERMISSION_GROUPS = {
   users: 'Accounts',
   roles: 'Roles',
   settings: 'Settings',
-  projects: 'Projects',
-  timesheets: 'Time',
+  queues: 'Queues',
+  tickets: 'Tickets',
+  customers: 'Customers',
+  faq: 'Knowledge base',
   reports: 'Evaluations',
+  portal: 'Customer portal',
 };
 
 /** What a right is called, in the reader's language. */
@@ -2792,40 +2642,31 @@ function permissionGroup(right) {
   return { key: area, label: t(`perm.group.${area}`, PERMISSION_GROUPS[area] ?? area) };
 }
 
-// The role somebody gets when nobody has said otherwise: the one that records
-// time and administers nothing.
-const ORDINARY_ROLE = 'user';
-
-/**
- * The shipped role that administers and has no working day, for the places that
- * have to name it to somebody: whose the directory run is. Only ever shown, never
- * compared - administersOnly asks for the shape, because an installation may have
- * built a role of its own with it.
- */
-const ADMINISTERING_ROLE = 'admin';
+// The role somebody gets when nobody has said otherwise: the one that works on
+// tickets and administers nothing.
+const ORDINARY_ROLE = 'agent';
 
 /**
  * The English titles of the roles that ship.
  *
  * These are what an English reader sees, because English is what a t() fallback is for.
- * Without them the fallback would be the identifier itself, and "user-admin" is not a
- * thing to put in front of somebody deciding what a colleague may do.
+ * Without them the fallback would be the identifier itself, which is not a thing to
+ * put in front of somebody deciding what a colleague may do.
  *
  * A role an installation named itself is not in here and falls back to the name it was
  * given, which is the only sensible answer for a word this application has never seen.
  */
 const SHIPPED_ROLE_TITLES = {
   admin: 'Administrator',
-  user: 'User',
-  'user-admin': 'User & administrator',
-  manager: 'Manager',
+  agent: 'Agent',
+  customer: 'Customer',
 };
 
 /**
  * What a role is called, in the reader's language.
  *
  * The name in the database is an identifier: lowercase, hyphenated, English - admin,
- * user, user-admin. It is what the API takes, what the directory configuration stores
+ * agent, customer. It is what the API takes, what the directory configuration stores
  * and what the role editor edits. It is not what somebody choosing a colleague's role
  * should have to read, and it was: the dropdown, the account list, the greeting and the
  * confirmation before deleting a role all showed it raw, so a German reader picked
@@ -2855,9 +2696,9 @@ function roleDescription(role) {
 /**
  * The roles as something to choose from, each with what it is for.
  *
- * A dropdown of bare identifiers asks somebody to guess: "user-admin" against "user" is
- * a difference you can only infer, and the difference is whether that person can
- * administer the installation. The list on the Roles screen has always shown the
+ * A dropdown of bare identifiers asks somebody to guess: "agent" against "customer" is
+ * a difference you can only infer, and the difference is whether that person works on
+ * the staff side or only reaches the portal. The list on the Roles screen has always shown the
  * descriptions; the place where the choice is actually made did not.
  *
  * The value stays the identifier, because that is what the API takes.
@@ -2971,7 +2812,7 @@ function draftableFields(form) {
  *
  * A form exposes its controls as named properties of itself, and those come
  * first: a form holding <input name="id"> answers form.id with that input. Two
- * forms here do - the time entry and the role - so both wrote their draft under
+ * forms here did - a time entry's and the role's - so both wrote their draft under
  * the key "gts.draft.[object HTMLInputElement]", which is one key for two forms.
  * They overwrote each other, and on the way back in the first of them restored
  * whatever the other had left, then wrote its own emptiness over the top.
@@ -3120,62 +2961,6 @@ function forgetEveryDraft() {
 }
 
 /**
- * Where controls that hold typed work but belong to no form are kept.
- *
- * Almost everything somebody fills in here is in a form, and a form is what a
- * draft is filed under. The timer is not: its project and its description sit
- * beside the clock rather than in a form, because starting a timer is a button
- * rather than a submission - and until the timer is started they are the only
- * copy of what somebody has typed. Once it is running the server holds both and
- * gives them back on its own.
- *
- * Declared in the markup with data-keep rather than swept up by selector, so
- * what is carried across a load is a decision somebody made about that control
- * and not a consequence of where it happens to sit. A search box or a filter is
- * a question being asked, not work: they are left out.
- */
-const LOOSE_DRAFT_NAME = '(loose)';
-
-/** Writes down the controls marked to be kept. */
-function rememberLooseDraft() {
-  const values = {};
-
-  for (const field of $$('[data-keep]')) {
-    if (field.id && !field.disabled) values[field.id] = field.value;
-  }
-
-  try {
-    window.sessionStorage.setItem(draftsOf() + LOOSE_DRAFT_NAME, JSON.stringify(values));
-  } catch {
-    // Storage refused, or full. The screen is unaffected.
-  }
-}
-
-/** Puts them back. */
-function restoreLooseDraft() {
-  let values = null;
-
-  try {
-    values = JSON.parse(window.sessionStorage.getItem(draftsOf() + LOOSE_DRAFT_NAME) ?? 'null');
-  } catch {
-    // Unreadable or not there.
-  }
-
-  if (!values) return;
-
-  for (const field of $$('[data-keep]')) {
-    // Disabled means the screen has put it beyond reach and something else is
-    // deciding it - a running timer is filled from the server, and its own
-    // answer outranks anything typed before it started.
-    if (!field.id || field.disabled || !(field.id in values)) continue;
-
-    field.value = values[field.id];
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-}
-
-/**
  * Puts back what was in the forms when this tab was last loaded.
  *
  * After the loaders and not before: they fill every form from the server, so a
@@ -3192,8 +2977,6 @@ function restoreDrafts() {
   // there is nothing to put back - see draftsOf.
   const mine = draftsOf();
   if (!mine) return;
-
-  restoreLooseDraft();
 
   for (const form of $$('form')) {
     const key = formKey(form);
@@ -3234,9 +3017,8 @@ function restoreDrafts() {
 
     for (const field of draftableFields(form)) {
       // A disabled control is not somebody's unsaved work; it is something the
-      // screen has put beyond reach - a shipped role's rights, the project a
-      // running timer is already booked against - and putting a draft into one
-      // would be writing over what the server said.
+      // screen has put beyond reach - a shipped role's rights - and putting a
+      // draft into one would be writing over what the server said.
       if (field.disabled || !(field.name in draft.values)) continue;
 
       const was = draft.values[field.name];
@@ -3529,42 +3311,6 @@ function formData(form) {
     const value = typeof raw === 'string' ? raw.trim() : raw;
     if (value !== '') out[key] = value;
   }
-  return out;
-}
-
-/**
- * A form read for a correction, where a box somebody emptied is a change.
- *
- * formData drops an empty value. That is right for creating something and wrong
- * for correcting it: the server tells "there is none any more" from "I said
- * nothing about it" by whether the field arrived at all, and says so where it
- * reads an end date - "an empty string is how a form field that has been cleared
- * arrives". Dropped, it never arrives, and an emptied box saves as no change.
- *
- * The fields that may be emptied are named rather than inferred, because the
- * other kind sits in the same forms. A start date, a day, a duration are facts
- * the record must have; an empty one is somebody clearing a box rather than
- * removing a fact, and sending it would be refused. Those keep being dropped.
- *
- * One function because two forms needed it and only one had it. The project form
- * wrote its own object out by hand with a comment explaining exactly this, and
- * the booking form went on using formData - so an emptied description saved as no
- * change, and so did taking the project off an entry, which is how an entry stops
- * being categorised at all.
- *
- * id is never sent: it is the form's own identity and travels in the path.
- */
-function correctionFrom(form, emptiable) {
-  const out = {};
-
-  for (const [key, raw] of new FormData(form).entries()) {
-    if (key === 'id') continue;
-
-    const value = typeof raw === 'string' ? raw.trim() : raw;
-
-    if (value !== '' || emptiable.includes(key)) out[key] = value;
-  }
-
   return out;
 }
 
@@ -3928,11 +3674,11 @@ async function applyLanguage(language) {
  *
  * Everything above translates the markup, which is most of the interface and not
  * the part that goes wrong. What goes wrong is what the script has already
- * written into the page: an evaluation, an overtime balance, an import preview.
- * Those are drawn once, from an answer that arrived once, and nothing translated
- * them again - so switching the language left a screen whose table heading said
- * "Zeitraum" above a cell saying 07/14/2026, beside a total reading "5.01 h in
- * total". Every key was translated; none of them was looked up a second time.
+ * written into the page: an import preview, a synchronisation's preview, the
+ * version check. Those are drawn once, from an answer that arrived once, and
+ * nothing translated them again - so switching the language left a screen whose
+ * table heading was German beside a total still reading "5.01 h in total". Every
+ * key was translated; none of them was looked up a second time.
  *
  * The screens that refreshAll reloads do not need this - they are drawn again
  * from a new request. These are the ones nobody asked to reload, and re-fetching
@@ -3973,9 +3719,9 @@ function stopRedrawing(key) {
  * Forgets every screen drawn for whoever just signed out.
  *
  * Each draw keeps the answer it was made from, and the sign-out applies the
- * language to the screen it hands back - which redrew them all: the evaluation,
- * the balance and the import verdicts went back into the tables just emptied,
- * and stood there for whoever signed in next.
+ * language to the screen it hands back - which redrew them all: the import
+ * verdicts went back into the tables just emptied, and stood there for whoever
+ * signed in next.
  */
 function forgetEveryRedraw() {
   for (const key of [...redraws.keys()]) {
@@ -4158,8 +3904,8 @@ function adoptionMarker(userID) {
  * The browser knows two things the server cannot: which zone the person is
  * actually in, and which language they read. Until this, the language was
  * detected for the current page and thrown away on every load, and the zone was
- * not detected at all - so somebody in Vancouver saw their evening bookings land
- * on the instance's tomorrow until they found the setting.
+ * not detected at all - so somebody in Vancouver saw their evening's work land on
+ * the instance's tomorrow until they found the setting.
  *
  * The two are not decided the same way, and the difference is the point.
  *
@@ -4300,256 +4046,16 @@ function keepTheShell() {
   });
 }
 
-/** Where this account's bookings made without a connection wait on this device. */
-const OUTBOX_PREFIX = 'gts_outbox_';
-
 /**
- * Whose outbox this page reads, or none before anybody is signed in.
- *
- * Per account, as drafts are, so another account signing in on the same device
- * neither sees them nor sends them as its own.
- */
-function outboxKey() {
-  const who = me.user?.id;
-
-  return who ? `${OUTBOX_PREFIX}${who}` : '';
-}
-
-/** The bookings waiting on this device, oldest first. */
-function readOutbox() {
-  const key = outboxKey();
-  if (!key) return [];
-
-  try {
-    return JSON.parse(localStorage.getItem(key) ?? '[]');
-  } catch {
-    return [];
-  }
-}
-
-/** Keeps what waits, and says so on the banner. */
-function writeOutbox(items) {
-  const key = outboxKey();
-
-  if (key) {
-    try {
-      if (items.length) localStorage.setItem(key, JSON.stringify(items));
-      else localStorage.removeItem(key);
-    } catch {
-      // Storage refused - a private window, a full disk. What is drawn below is
-      // still true of this page, which is all that is left to say it to.
-    }
-  }
-
-  drawOutbox(items);
-}
-
-/**
- * Keeps a booking the installation could not be reached for, to send once it can.
- *
- * Only a new booking. A correction or a deletion acts on what the server holds
- * now, and done blind from a device that has not heard from it for an hour it
- * could undo what was done elsewhere in the meantime; a booking adds an entry and
- * replaces nothing, so it is the one write that can wait.
- */
-function keepForLater(body) {
-  const kept = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    body,
-    keptAt: new Date().toISOString(),
-  };
-
-  writeOutbox([...readOutbox(), kept]);
-}
-
-/** Changes one booking in the outbox as it is now, or takes it out with null. */
-function changeKept(id, change) {
-  writeOutbox(readOutbox().flatMap((item) => {
-    if (item.id !== id) return [item];
-
-    return change ? [{ ...item, ...change }] : [];
-  }));
-}
-
-/**
- * Whether a booking a page began sending, and did not live to say had arrived,
- * is on the server already: the same day, project, hours and description, booked
- * after it was kept. Asked rather than sent again, because sent again it would be
- * booked twice - which is what this did, measured, whenever the page that sent it
- * was replaced before it could say so.
- */
-async function alreadyBooked(kept) {
-  const day = kept.body.date;
-  const answer = await api(`/timesheets?${new URLSearchParams({ from: day, to: day, limit: '500' })}`);
-
-  return (answer?.items ?? []).some((entry) => entry.durationHours === Number(kept.body.durationHours)
-    && (entry.projectId ?? 0) === Number(kept.body.projectId || 0)
-    && (entry.description ?? '') === (kept.body.description ?? '')
-    && Date.parse(entry.createdAt) >= Date.parse(kept.keptAt));
-}
-
-/** The name the outbox is sent under, one page at a time across every tab. */
-const OUTBOX_LOCK = 'gts-outbox';
-
-/** Whether this page is sending the outbox now, where tabs cannot be asked. */
-let sendingOutbox = false;
-
-/**
- * Sends what waits, oldest first, once the installation can be reached.
- *
- * One page at a time, across every tab of this installation, through a lock the
- * browser holds for all of them: two tabs sending the same outbox would book
- * everything in it twice. Each booking is marked as on its way before it goes and
- * taken out the moment it has arrived, so a page replaced in between leaves one
- * that alreadyBooked asks about rather than one sent again.
- *
- * A booking the installation refuses - its project closed in the meantime, the day
- * full - stays with the reason until somebody corrects it: hours that vanished
- * because of a rule nobody saw are hours lost. One that cannot reach it stops the
- * round, and the rest wait with it, because they would only fail the same way.
- */
-async function sendOutbox() {
-  if (!me.user || !navigator.onLine || !readOutbox().some((item) => !item.refused)) return;
-
-  const round = async () => {
-    let sent = 0;
-
-    for (const item of readOutbox()) {
-      if (item.refused) continue;
-
-      try {
-        if (item.sending && await alreadyBooked(item)) {
-          changeKept(item.id, null);
-
-          continue;
-        }
-
-        changeKept(item.id, { sending: true });
-
-        await api('/timesheets', { method: 'POST', body: JSON.stringify(item.body) });
-
-        changeKept(item.id, null);
-        sent += 1;
-      } catch (err) {
-        if (err.unreachable) {
-          changeKept(item.id, { sending: false });
-
-          break;
-        }
-
-        changeKept(item.id, { sending: false, refused: err.message });
-      }
-    }
-
-    if (sent) {
-      toast(fillIn(t('outbox.sent', 'Sent what was booked without a connection: {0}'), [sent]), 'ok');
-      await reloadTimeViews();
-    }
-  };
-
-  if (navigator.locks) {
-    await navigator.locks.request(OUTBOX_LOCK, round);
-
-    return;
-  }
-
-  if (sendingOutbox) return;
-
-  sendingOutbox = true;
-
-  try {
-    await round();
-  } finally {
-    sendingOutbox = false;
-  }
-}
-
-/** Puts a refused booking back into the form, and out of the outbox. */
-function correctKept(kept) {
-  changeKept(kept.id, null);
-
-  const form = $('#form-timesheet');
-  if (!form) return;
-
-  switchView('timesheets');
-
-  setDateField(form.elements.date, kept.body.date ?? '');
-  form.elements.durationHours.value = kept.body.durationHours ?? '';
-  form.elements.description.value = kept.body.description ?? '';
-  form.elements.projectId.value = kept.body.projectId ? String(kept.body.projectId) : '';
-
-  form.scrollIntoView({ block: 'nearest' });
-  form.elements.durationHours.focus();
-}
-
-/**
- * Says what waits and what was refused, and that there is no connection while
- * there is none. A banner, because each is a state: true until the bookings are
- * sent or corrected, and gone the moment they are.
- */
-function drawOutbox(items = readOutbox()) {
-  const banner = $('#outbox-banner');
-  if (!banner) return;
-
-  const waiting = items.filter((item) => !item.refused);
-  const refused = items.filter((item) => item.refused);
-
-  const lines = [];
-
-  if (!navigator.onLine) {
-    lines.push(t('outbox.offline',
-      'No connection to the installation. New bookings stay on this device and are sent once it is back.'));
-  }
-
-  if (waiting.length) {
-    lines.push(fillIn(t('outbox.waiting',
-      'Booked without a connection and waiting on this device: {0}. They are sent once it is back.'),
-    [waiting.length]));
-  }
-
-  if (refused.length) {
-    lines.push(t('outbox.refused',
-      'The installation refused these bookings made without a connection. Correct them to book them again:'));
-  }
-
-  $('#outbox-text').textContent = lines.join(' ');
-
-  const list = $('#outbox-refused');
-  list.replaceChildren(...refused.map((item) => el('li', {},
-    [fmtDate(item.body.date), fmtHours(Number(item.body.durationHours)), item.body.description]
-      .filter(Boolean).join(' · ') + ` - ${item.refused} `,
-    el('button', {
-      type: 'button',
-      class: 'link-button',
-      text: t('outbox.correct', 'correct'),
-      onclick: () => correctKept(item),
-    }))));
-  list.hidden = refused.length === 0;
-
-  banner.hidden = lines.length === 0 || !me.user;
-}
-
-/**
- * The page's side of being offline: the banner follows the connection, what
- * waits is sent the moment it is back, and a page that could not even load for
- * want of one starts again by itself.
+ * The page's side of being offline: the sign-in screen says so while there is no
+ * connection, and a page that could not even load for want of one starts again
+ * by itself once it is back.
  */
 function wireOffline() {
-  window.addEventListener('offline', () => {
-    drawOutbox();
-    showSignInOffline(true);
-  });
+  window.addEventListener('offline', () => showSignInOffline(true));
 
   window.addEventListener('online', () => {
-    drawOutbox();
-
-    if (!$('#login-offline')?.hidden) {
-      startAgain();
-
-      return;
-    }
-
-    mutate(sendOutbox, null, null);
+    if (!$('#login-offline')?.hidden) startAgain();
   });
 }
 
@@ -4605,266 +4111,9 @@ function showSignInOffline(unreachable) {
   }, REACH_AGAIN_MS);
 }
 
-// ------------------------------------------------------------------ managers
+// ------------------------------------------------------- push notifications
 
-/**
- * The accounts this account looks after as a manager, from /me/team: each with its
- * id, its name and the team rights the manager's role gives over it. Empty for
- * everybody else, and for everybody while the installation has no managers.
- */
-let myTeam = [];
-
-/** The three team rights, which only ever reach an account a manager was assigned. */
-const TEAM_RIGHTS = ['timesheets:read:team', 'timesheets:write:team', 'projects:write:team'];
-
-/**
- * The team right that carries an own right over to an account a manager looks
- * after.
- *
- * While the screens show such an account, an own right counts only where the
- * manager's role gives its counterpart over that account - see can - so a control
- * is offered exactly where the server would take it. projects:read has none: any
- * team right lists the account's projects, and the account is only in the team
- * because the manager holds one.
- */
-const TEAM_COUNTERPARTS = {
-  'timesheets:read:own': 'timesheets:read:team',
-  'reports:read:own': 'timesheets:read:team',
-  'timesheets:write:own': 'timesheets:write:team',
-  'timesheets:transfer': 'timesheets:write:team',
-  'projects:write': 'projects:write:team',
-  'projects:archive': 'projects:write:team',
-  'projects:delete': 'projects:write:team',
-};
-
-/** The account the time on screen belongs to: the one being looked after, or one's own. */
-function subjectID() {
-  return viewingFor?.id ?? me.user?.id;
-}
-
-/**
- * A read of time, with userId while the screens show somebody a manager looks
- * after - so every screen asks the server about the same account, and none of
- * them about the manager by accident.
- */
-function forSubject(params = {}) {
-  const query = new URLSearchParams(params);
-
-  if (viewingFor) query.set('userId', String(viewingFor.id));
-
-  return query;
-}
-
-/** Somebody who acted in another's name: their name, or their number once they are gone. */
-function actorName(actor) {
-  return actor.name || `#${actor.id}`;
-}
-
-/**
- * Who booked or last changed an entry in its owner's name, as lines under what it
- * says - shown to the owner and to the manager alike, which is why it is kept.
- */
-function actedByLines(entry) {
-  return [
-    entry.recordedBy ? el('span', {
-      class: 'acted-by',
-      text: fillIn(t('team.recordedBy', 'booked by {0}'), [actorName(entry.recordedBy)]),
-    }) : null,
-    entry.updatedBy ? el('span', {
-      class: 'acted-by',
-      text: fillIn(t('team.updatedBy', 'changed by {0}'), [actorName(entry.updatedBy)]),
-    }) : null,
-  ];
-}
-
-/**
- * Reads whom this account looks after, and draws the picker under the tabs.
- *
- * The account on screen goes back to one's own once it is no longer in the list -
- * an assignment taken back, managers switched off - rather than going on asking
- * the server about an account it now refuses.
- */
-async function loadTeam() {
-  myTeam = me.authEnabled && me.user && !me.user.mustChangePassword
-    ? (await api('/me/team'))?.items ?? []
-    : [];
-
-  if (viewingFor) viewingFor = myTeam.find((member) => member.id === viewingFor.id) ?? null;
-
-  const picker = $('#viewing-for-picker');
-  if (picker) {
-    picker.replaceChildren(
-      el('option', { value: '', text: t('team.mine', 'Mine') }),
-      ...myTeam.map((member) => el('option', { value: String(member.id), text: member.name })),
-    );
-    picker.value = viewingFor ? String(viewingFor.id) : '';
-  }
-
-  const holder = $('#viewing-for');
-  if (holder) holder.hidden = myTeam.length === 0;
-
-  showViewingFor();
-}
-
-/**
- * Lets every screen follow whose time is on it: the banner that says so, the cards
- * that are always one's own, and the rights each control is offered by.
- */
-function showViewingFor() {
-  if (viewingFor) document.documentElement.dataset.viewingFor = String(viewingFor.id);
-  else delete document.documentElement.dataset.viewingFor;
-
-  const banner = $('#viewing-banner');
-  if (banner) banner.hidden = !viewingFor;
-
-  if (viewingFor) {
-    redrawable('viewingFor', () => {
-      $('#viewing-text').textContent = fillIn(t('team.viewingText',
-        'You are looking at the time of {0}. What you book or change here carries your name '
-        + 'beside the entry, and {0} sees it.'), [viewingFor.name]);
-    });
-  } else {
-    stopRedrawing('viewingFor');
-  }
-
-  applyPermissionVisibility();
-
-  // A screen that is always one's own is no place to be looking at somebody else's from.
-  const current = $('.tab[aria-current="true"]');
-  if (viewingFor && current?.hasAttribute('data-own-only')) switchView('timesheets');
-}
-
-/** Turns every screen to the time of an account this one looks after, or back to its own. */
-async function viewTimeOf(id) {
-  viewingFor = myTeam.find((member) => String(member.id) === String(id)) ?? null;
-
-  // What was evaluated a moment ago was another account's period.
-  for (const result of ['#overtime-result', '#report-result']) {
-    const card = $(result);
-    if (card) card.hidden = true;
-  }
-
-  showViewingFor();
-  await refreshAll();
-}
-
-/**
- * Asks which accounts look after somebody, and saves the answer.
- *
- * Offered only the accounts whose role gives a team right, because the server
- * refuses anybody else as a manager - and never the account itself. Without the
- * roles to tell, everybody else is offered and the server is the one to say no.
- */
-async function assignManagers(user) {
-  const assigned = (await api(`/users/${user.id}/managers`))?.managerIds ?? [];
-
-  const looksAfter = (roleName) => {
-    const role = cache.roles.find((known) => known.name === roleName);
-
-    return !role || (role.permissions ?? []).some((right) => TEAM_RIGHTS.includes(right));
-  };
-
-  const candidates = cache.users.filter((other) => other.id !== user.id && !other.isSystem
-    && looksAfter(other.role));
-
-  const chosen = await confirmDialog({
-    title: t('team.assignTitle', 'Managers'),
-    text: fillIn(t('team.assignText',
-      'Who looks after the time of {0}? They will see it, and {0} sees who they are.'), [user.name]),
-    confirmLabel: t('action.save', 'Save'),
-    danger: false,
-    choices: candidates.map((candidate) => ({
-      value: candidate.id,
-      label: candidate.name,
-      checked: assigned.includes(candidate.id),
-    })),
-    empty: t('team.noCandidates',
-      'Nobody holds a role that looks after other accounts yet. Give somebody the role "Manager" first.'),
-  });
-
-  if (!chosen) return;
-
-  await patch(`/users/${user.id}/managers`, { managerIds: chosen.map(Number) },
-    t('team.assigned', 'Managers assigned'), refreshAll);
-}
-
-/**
- * Whether a right belongs on the roles screen: every right, except the team rights
- * while the installation has no managers - they would reach nobody, and a switch
- * that does nothing is worse than none. A role holding one anyway shows it, so
- * what a role grants is never hidden from whoever is reading it.
- */
-function offeredRight(permission, held = []) {
-  return me.managersEnabled || !TEAM_RIGHTS.includes(permission) || held.includes(permission);
-}
-
-/** Says who may see this account's time, and what each of them may do with it. */
-async function loadMyManagers() {
-  const card = $('#managers-card');
-  if (!card) return;
-
-  card.hidden = !me.authEnabled;
-  if (!me.authEnabled || me.user?.mustChangePassword) return;
-
-  const managers = (await api('/me/managers'))?.items ?? [];
-
-  redrawable('myManagers', () => {
-    $('#managers-list').replaceChildren(...managers.map((manager) => el('li', {},
-      el('strong', { text: manager.name }),
-      el('span', { class: 'muted', text: manager.rights.map(permissionTitle).join(' · ') }))));
-    $('#managers-list').hidden = managers.length === 0;
-    $('#managers-nobody').hidden = managers.length > 0;
-  });
-}
-
-/** The installation's switch, as the server last said it - unless it is being changed. */
-async function loadManagersSwitch() {
-  const form = $('#form-managers');
-  if (!form || beingEdited(form)) return;
-
-  const state = await api('/settings/managers');
-
-  form.elements.enabled.checked = Boolean(state.enabled);
-  form.elements.enabled.defaultChecked = Boolean(state.enabled);
-}
-
-function wireManagers() {
-  const form = $('#form-managers');
-
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const enabled = form.elements.enabled.checked;
-
-    // Asked about only when switching them on, which is the direction in which
-    // somebody starts seeing a colleague's time. Off needs no question.
-    if (enabled && !form.elements.enabled.defaultChecked) {
-      const proceed = await confirmDialog({
-        title: t('team.switchTitle', 'Managers'),
-        text: t('team.switchConfirm',
-          'Switch managers on? Whoever is a manager then sees the time of the accounts an '
-          + 'administrator assigned to them - and those people see who.'),
-        confirmLabel: t('team.switchOn', 'Switch on'),
-        danger: false,
-      });
-
-      if (!proceed) {
-        form.elements.enabled.checked = false;
-
-        return;
-      }
-    }
-
-    saveForm(form, () => api('/settings/managers', {
-      method: 'PUT', body: JSON.stringify({ enabled }),
-    }), t('team.switchSaved', 'Managers saved'), refreshAll);
-  });
-
-  $('#viewing-for-picker')?.addEventListener('change', (event) => mutate(
-    () => viewTimeOf(event.target.value), null, null));
-}
-
-/** Whether the installation pushes reminders, as the server last said it - unless it is being changed. */
+/** Whether the installation pushes notifications, as the server last said it - unless it is being changed. */
 async function loadPushSwitch() {
   const form = $('#form-push');
   if (!form || beingEdited(form)) return;
@@ -4878,14 +4127,14 @@ async function loadPushSwitch() {
 /**
  * Whether this browser can be pushed to at all: a service worker to show what
  * arrives, and a push manager to subscribe through. The Android app's WebView
- * has neither, and shows the reminders as notifications of its own instead.
+ * has neither.
  */
 function pushable() {
   return 'serviceWorker' in navigator && 'PushManager' in window;
 }
 
 /**
- * The Reminders card's part about pushing to this browser: offered where the
+ * The notification card's part about pushing to this browser: offered where the
  * installation pushes and the browser can be pushed to, and saying so where this
  * browser is already among the reader's subscribed ones.
  */
@@ -4898,9 +4147,9 @@ async function drawPushState() {
   pushed.hidden = true;
 
   // Where it cannot be asked, nothing is offered that could only fail; the
-  // Reminders card's other parts stand either way.
+  // card's other parts stand either way.
   try {
-    const state = pushable() && can('timesheets:read:own') ? await api('/me/push') : null;
+    const state = pushable() && can('tickets:read') ? await api('/me/push') : null;
     if (!state?.enabled) return;
 
     const registration = await navigator.serviceWorker.getRegistration();
@@ -4966,7 +4215,7 @@ async function unsubscribeThisBrowser() {
 
 /**
  * Takes the browser out of the pushes when somebody signs out of it, so whoever
- * uses it next is not pushed the reminders of whoever left. A sign-out goes
+ * uses it next is not pushed the notifications of whoever left. A sign-out goes
  * ahead whatever this answers.
  */
 async function forgetThisBrowsersPush() {
@@ -4997,24 +4246,11 @@ function wirePush() {
     () => unsubscribeThisBrowser(), null, drawPushState));
 }
 
+// ------------------------------------------------------- accounts and roles
+
 async function loadUsers() {
-  // Listing accounts is a permission, and administering them is the only thing this
-  // list is for now.
-  //
-  // It used to be loaded for everybody, including whoever may not list accounts - who
-  // got a list of exactly one entry, themselves. That was to fill four dropdowns of
-  // colleagues: the booking form, the entry filter, the calendar and the overtime
-  // form. They were built when a role could hold timesheets:read:all, and they never
-  // worked as they read - the built-in administrator administers accounts and does not
-  // read what people recorded in them, so it was offered every colleague and every
-  // choice but itself came back 403. The filter was worse: "All users" quietly showed
-  // only your own entries, because the server pins the scope and the label did not
-  // know.
-  //
-  // A dropdown holding a single name is a question with one answer, so all four are
-  // gone, and with them the two rights they existed to use. Whose time it is is not a
-  // choice any more, it is who is signed in - except for a manager, whose one picker
-  // under the tabs lists only the accounts an administrator assigned to them.
+  // Listing accounts is a permission, and administering them is what this list
+  // is for.
   //
   // Emptied rather than left alone on the way out: a session that loses the right -
   // its role changed while it was signed in - must not go on showing the accounts it
@@ -5066,18 +4302,6 @@ async function loadUsers() {
         'data-action': 'reset-password',
         text: t('user.resetPassword', 'reset password'),
         onclick: () => resetPassword(u),
-      }));
-    }
-
-    // Who looks after this account, while the installation has managers - an
-    // assignment then reaches nothing, and a control that does nothing is worse
-    // than none. Not the built-in administrator, which keeps no time to look after.
-    if (can('users:write') && me.managersEnabled && !u.isSystem) {
-      actions.append(el('button', {
-        class: 'link',
-        'data-action': 'managers',
-        text: t('team.assign', 'managers'),
-        onclick: () => mutate(() => assignManagers(u), null, null),
       }));
     }
 
@@ -5163,13 +4387,11 @@ async function loadUsers() {
             'Managed in LDAP. The password lives there, and removing the entry there removes this account.')
           : '',
       }),
-      el('td', { class: 'num', text: u.dailyTargetHours ? fmtHours(u.dailyTargetHours) : t('field.default', 'default') }),
-      el('td', { class: 'num', text: u.maxDailyHours ? fmtHours(u.maxDailyHours) : t('field.default', 'default') }),
       actions,
     );
   });
 
-  fillTable($('#table-users tbody'), rows, 7, t('user.empty', 'No users yet.'));
+  fillTable($('#table-users tbody'), rows, 5, t('user.empty', 'No users yet.'));
 }
 
 /**
@@ -5352,9 +4574,9 @@ async function loadRoles() {
  * The rights to tick, and whether they can be ticked at all.
  *
  * fixed is for a system role. Its permissions cannot be changed - neither given nor
- * taken - because that role belongs to the built-in account, which configures the
- * installation and records no time; a right added here would hand it a working day from
- * the screen that administers roles.
+ * taken - because that role belongs to the built-in account, which holds everything on
+ * the staff side already; a right added here could only be the customer portal, handed
+ * to the one account nobody chose from the screen that administers roles.
  *
  * Shown as unavailable rather than left clickable and refused on save. The name of a
  * system role has always been read-only in this form for the same reason: a control
@@ -5370,8 +4592,6 @@ function renderPermissionCheckboxes(selected = [], { fixed = false } = {}) {
   let group = '';
 
   for (const permission of cache.permissions) {
-    if (!offeredRight(permission, selected)) continue;
-
     const area = permissionGroup(permission);
 
     if (area.key !== group) {
@@ -5420,7 +4640,7 @@ function renderPermissionLegend() {
 
   for (const permission of cache.permissions) {
     const detail = permissionDetail(permission);
-    if (!detail || !offeredRight(permission)) continue;
+    if (!detail) continue;
 
     list.append(el('dt', {},
       el('span', { text: permissionTitle(permission) }),
@@ -5514,280 +4734,6 @@ function resetRoleForm() {
   swapTheLabel($('#role-form-title'), 'role.create', 'Create role');
 }
 
-async function loadProjects() {
-  if (!can('projects:read')) return;
-
-  // A manager books on the projects of the account on screen and keeps them, so
-  // every list below is that account's while it is there.
-  const owner = viewingFor ? `?ownerId=${viewingFor.id}` : '';
-  cache.projects = (await api(`/projects${owner}`))?.items ?? [];
-
-  const bookable = cache.projects.filter((p) => p.status === 'active');
-  // A blank first option is what lets time be booked without a project, and it
-  // is named the same in both places. The stopwatch called it "Project
-  // (optional)" while the form beside it called it "No project" - two names for
-  // the same choice, on one screen.
-  fillSelect($('#timer-project'), bookable,
-    { placeholder: t('ts.noProject', 'No project') });
-  fillSelect($('#timer-switch-project'), bookable,
-    { placeholder: t('ts.noProject', 'No project') });
-  fillSelect($('#form-timesheet select[name=projectId]'), bookable,
-    { placeholder: t('ts.noProject', 'No project') });
-  // An evaluation covers all projects, one of them, or the hours that belong to
-  // none - so this select carries two options that are not projects. The picker
-  // used to be required and offer only real ones, which made the two questions
-  // people ask most often the two the screen could not answer.
-  //
-  // "none" is appended after the projects and the choice restored by hand,
-  // because fillSelect restores before it exists and would drop it every reload.
-  const reportProject = $('#form-report select[name=projectId]');
-  const chosenScope = reportProject.value;
-
-  fillSelect(reportProject, cache.projects,
-    { placeholder: t('filter.allProjects', 'All projects') });
-  reportProject.append(el('option', {
-    value: 'none', text: t('report.noProject', 'No project'),
-  }));
-  reportProject.value = chosenScope;
-  // The same three choices the evaluation offers, and for the same reason: the
-  // hours that never got a project are the ones somebody goes looking for, and
-  // "all projects" cannot narrow to them.
-  //
-  // Appended after the projects and the choice restored by hand, because
-  // fillSelect restores before this option exists and would drop it every reload.
-  const timesheetProject = $('#filter-ts-project');
-  const chosenProject = timesheetProject.value;
-
-  fillSelect(timesheetProject, cache.projects,
-    { placeholder: t('filter.allProjects', 'All projects') });
-
-  timesheetProject.append(el('option', {
-    value: 'none', text: t('report.noProject', 'No project'),
-  }));
-
-  timesheetProject.value = chosenProject;
-
-  const rows = cache.projects.map((p) => {
-    const actions = el('td', { class: 'actions' });
-
-    // Every project belongs to somebody, and the only ones anybody is handed are
-    // their own - so this is true of every row here. It stays because it is the
-    // question the delete button is really asking: you may remove your own way of
-    // organising your hours whatever your project permissions say.
-    const mine = me.user && p.ownerId === subjectID();
-
-    // Offered whatever the status. An archived project is a closed record and a
-    // name typed wrongly is still typed wrongly in it - and the server does not
-    // refuse the change, so a screen that hid the button would be inventing a
-    // rule of its own rather than reflecting one.
-    if (can('projects:write')) {
-      actions.append(el('button', {
-        class: 'link',
-        'data-action': 'edit',
-        text: t('action.edit', 'edit'),
-        onclick: () => editProject(p),
-      }));
-    }
-
-    if (can('projects:write') && p.status === 'active') {
-      actions.append(el('button', {
-        class: 'link',
-        text: t('action.complete', 'complete'),
-        onclick: () => patch(`/projects/${p.id}`, { status: 'completed' }, t('msg.projectCompleted', 'Project completed'), refreshAll),
-      }));
-    }
-
-    if (can('projects:archive') && p.status === 'completed') {
-      actions.append(el('button', {
-        class: 'link',
-        text: t('action.archive', 'archive'),
-        onclick: () => post(`/projects/${p.id}/archive`, null, t('msg.projectArchived', 'Project archived'), refreshAll),
-      }));
-    }
-
-    if (can('projects:delete') || mine) {
-      actions.append(deleteButton({
-        label: `${t('field.project', 'Project')} "${p.name}"`,
-        path: `/projects/${p.id}`,
-        message: t('msg.projectDeleted', 'Project deleted'),
-        after: refreshAll,
-      }));
-    }
-
-    const period = `${fmtDate(p.startDate)} – ${p.endDate ? fmtDate(p.endDate) : t('project.open', 'open')}`;
-
-    const name = el('td', { class: 'text', text: p.name });
-    if (p.budgetHours) name.append(budgetLine(p));
-    if (p.billable) name.append(rateLine(p));
-    // No "this one is yours" shade: they all are, and a table shaded from top to
-    // bottom says nothing that an unshaded one does not.
-    return el('tr', {},
-      name,
-      // A project needs no period, so the column stays quiet when there is none:
-      // it is one person's way of organising their hours, not a plan.
-      el('td', { class: p.startDate ? '' : 'empty', text: p.startDate ? period : '–' }),
-      el('td', { class: 'text', text: p.description || '–' }),
-      el('td', {}, statusBadge(p.status)),
-      actions,
-    );
-  });
-
-  fillTable($('#table-projects tbody'), rows, 5, t('project.empty', 'No projects yet.'));
-
-  // The templates name projects by number, and whether one can still be chosen
-  // depends on its project being open - which is what just changed.
-  if (entryTemplates.length) drawTemplates();
-}
-
-/** Opens an existing project in the form above the table. */
-function editProject(project) {
-  const form = $('#form-project');
-  if (!form) return;
-
-  form.elements.id.value = String(project.id);
-  form.elements.name.value = project.name;
-  form.elements.description.value = project.description ?? '';
-
-  // Through setDateField, because the visible box beside a date input is a second
-  // field kept in step with it: writing the value straight in changes the one
-  // nobody looks at and leaves the one everybody does reading the old date.
-  setDateField(form.elements.startDate, project.startDate ?? '');
-  setDateField(form.elements.endDate, project.endDate ?? '');
-  form.elements.budgetHours.value = project.budgetHours ?? '';
-  form.elements.billable.checked = Boolean(project.billable);
-  form.elements.hourlyRate.value = project.hourlyRate ?? '';
-  form.elements.currency.value = project.currency ?? '';
-
-  swapTheLabel($('#project-form-title'), 'project.edit', 'Edit project');
-  swapTheLabel($('#project-submit'), 'action.save', 'Save');
-  $('#project-cancel').hidden = false;
-
-  switchView('projects');
-  form.scrollIntoView({ block: 'nearest' });
-  form.elements.name.focus();
-}
-
-/** What a billable project's hours are charged at, as a line under its name. */
-function rateLine(project) {
-  return el('span', {
-    class: 'rate-line',
-    text: project.hourlyRate
-      ? fillIn(t('project.ratePerHour', 'billable at {0} an hour'), [fmtMoney(project.hourlyRate, project.currency)])
-      : t('project.noRate', 'billable, no rate yet'),
-  });
-}
-
-/**
- * How much of a project's budget is booked, as a line under its name: marked from
- * four fifths and again past the whole, with the share written out so the mark is
- * never the only thing saying it.
- */
-function budgetLine(project) {
-  const share = project.bookedHours / project.budgetHours;
-
-  return el('span', {
-    class: `budget-line ${share >= 1 ? 'over' : share >= 0.8 ? 'near' : ''}`,
-    text: fillIn(t('project.budgetUsed', '{0} of {1} booked · {2} %'),
-      [fmtHours(project.bookedHours), fmtHours(project.budgetHours), Math.round(share * 100)]),
-  });
-}
-
-/**
- * Says so when the hours booked take a project past four fifths of its budget or
- * past the whole of it. News, so a notice: the line in the project list says it
- * for as long as it stays true.
- *
- * Measured against the hours the screen last had, which is what the person was
- * last shown. With no budget anywhere this costs not even the request.
- */
-async function noticeBudgets() {
-  const before = new Map(cache.projects.filter((p) => p.budgetHours).map((p) => [p.id, p.bookedHours]));
-  if (before.size === 0) return;
-
-  await loadProjects();
-
-  for (const project of cache.projects) {
-    const was = before.get(project.id);
-    if (was === undefined || !project.budgetHours) continue;
-
-    const crossed = [1, 0.8].find((share) => was < project.budgetHours * share
-      && project.bookedHours >= project.budgetHours * share);
-
-    if (crossed === 1) {
-      toast(fillIn(t('project.budgetReached', '{0} has used its whole budget of {1}.'),
-        [project.name, fmtHours(project.budgetHours)]), 'ok');
-    } else if (crossed) {
-      toast(fillIn(t('project.budgetNear', '{0} has used four fifths of its budget of {1}.'),
-        [project.name, fmtHours(project.budgetHours)]), 'ok');
-    }
-  }
-}
-
-/** Puts the form back to making one. */
-function resetProjectForm() {
-  const form = $('#form-project');
-  if (!form) return;
-
-  form.reset();
-  form.elements.id.value = '';
-
-  // Emptied through setDateField for the same reason they were filled through it,
-  // and only then today back into the start: reset empties it, and making a
-  // second project should ask no more than the first one did.
-  setDateField(form.elements.startDate, '');
-  setDateField(form.elements.endDate, '');
-  fillToday(form.elements.startDate);
-
-  swapTheLabel($('#project-form-title'), 'project.create', 'Create project');
-  swapTheLabel($('#project-submit'), 'action.create', 'Create');
-  $('#project-cancel').hidden = true;
-}
-
-/**
- * Whether this caller may change this entry's figures.
- *
- * Whose it is and whether they may write their own time, and nothing else. It used
- * to also say that an approved entry is refused by the API however it is reached -
- * a rule that went with the review path, and a comment that outlived it by
- * describing a refusal the server no longer makes.
- *
- * The answer lives here so the list, the calendar and the row click cannot
- * disagree about it.
- */
-function mayEditTimesheet(entry) {
-  const mine = me.user && entry.userId === subjectID();
-
-  return Boolean(mine) && can('timesheets:write:own');
-}
-
-/**
- * Opens an existing entry in the booking form.
- *
- * The API has taken a full update since the beginning, but nothing in the
- * interface offered one: the only way to correct a typed figure was to delete the
- * entry and type it again. The form doubles as the editor rather than being
- * duplicated, so the field rules - step="any", the 24 hour ceiling, the
- * description bound - hold for a correction exactly as they do for a new booking.
- */
-function editTimesheet(entry) {
-  const form = $('#form-timesheet');
-  if (!form) return;
-
-  form.elements.id.value = String(entry.id);
-  form.elements.projectId.value = entry.projectId ? String(entry.projectId) : '';
-  setDateField(form.elements.date, entry.date);
-  form.elements.durationHours.value = String(entry.durationHours);
-  form.elements.description.value = entry.description ?? '';
-
-  swapTheLabel($('#timesheet-form-title'), 'ts.edit', 'Edit entry');
-  swapTheLabel($('#timesheet-submit'), 'action.save', 'Save');
-  $('#timesheet-cancel').hidden = false;
-
-  switchView('timesheets');
-  form.scrollIntoView({ block: 'nearest' });
-  form.elements.durationHours.focus();
-}
-
 /**
  * Puts words on an element that says two different things, and says which.
  *
@@ -5796,8 +4742,8 @@ function editTimesheet(entry) {
  * label that names a database or a file - carries the data-i18n it was written
  * with in the markup, and applyLanguage translates every one of those from its
  * key. So changing the language put the declared message back over the shown one:
- * a correction went back to reading "Book time" above a form still holding the
- * entry it had opened, with a button offering to book it. The heading disagreed
+ * a correction went back to reading "Add user" above a form still holding the
+ * account it had opened, with a button offering to add it. The heading disagreed
  * with the form, and the button disagreed with what pressing it would do.
  *
  * The English source travels too, and that half is easy to miss. applyLanguage
@@ -5819,927 +4765,18 @@ function swapTheLabel(node, key, english) {
   setLeadingText(node, t(key, english));
 }
 
-/** Puts the form back to booking a new entry. */
-function resetTimesheetForm() {
-  const form = $('#form-timesheet');
-  if (!form) return;
+// ---------------------------------------------------------- public holidays
 
-  form.elements.id.value = '';
-  form.elements.durationHours.value = '';
-  form.elements.description.value = '';
-
-  swapTheLabel($('#timesheet-form-title'), 'ts.book', 'Book time');
-  swapTheLabel($('#timesheet-submit'), 'action.book', 'Book');
-  $('#timesheet-cancel').hidden = true;
-}
-
-/** The templates this account has kept, as they were last loaded. */
-let entryTemplates = [];
-
-/** Loads the account's templates into the booking form's picker and their card. */
-async function loadTemplates() {
-  if (!can('timesheets:write:own')) return;
-
-  entryTemplates = (await api('/me/templates'))?.items ?? [];
-
-  redrawable('templates', drawTemplates);
-}
-
-/** What a template fills in, in one line: its project, its hours, its description. */
-function templateLabel(template) {
-  return [
-    template.projectId ? projectName(template.projectId) : t('ts.noProject', 'No project'),
-    template.durationHours ? fmtHours(template.durationHours) : null,
-    template.description,
-  ].filter(Boolean).join(' · ');
-}
-
-/**
- * Whether a template can still fill the form: the project it names, if it names
- * one, is still among those the form offers.
- *
- * A template keeps its project by number, and the project can be finished, handed
- * on or deleted after it was saved. Filling the form with one of those would set
- * the project field to a choice it does not have - which a select answers by
- * quietly showing "No project" - so the template is offered but cannot be chosen.
- */
-function templateUsable(template) {
-  return !template.projectId
-    || cache.projects.some((project) => project.id === template.projectId && project.status === 'active');
-}
-
-/** Draws the picker in the booking form and the card listing the templates. */
-function drawTemplates() {
-  const picker = $('#ts-template');
-
-  if (picker) {
-    // Marked as filled by a loader, so signing out empties it with the others.
-    picker.dataset.filled = '';
-    picker.replaceChildren(
-      el('option', { value: '', text: t('tpl.choose', 'Choose a template …') }),
-      ...entryTemplates.map((template) => el('option', {
-        value: String(template.id),
-        text: templateUsable(template)
-          ? templateLabel(template)
-          : `${templateLabel(template)} (${t('tpl.closed', 'its project takes no bookings')})`,
-        disabled: !templateUsable(template),
-      })),
-    );
-  }
-
-  $('#ts-template-row').hidden = entryTemplates.length === 0;
-  $('#templates-card').hidden = entryTemplates.length === 0;
-
-  const rows = entryTemplates.map((template) => el('tr', {},
-    el('td', {
-      class: template.projectId ? 'text' : 'text empty',
-      text: template.projectId ? projectName(template.projectId) : t('ts.noProject', 'No project'),
-    }),
-    el('td', { class: 'num', text: template.durationHours ? fmtShare(template.durationHours) : '–' }),
-    el('td', { class: 'text', text: template.description ?? '' }),
-    el('td', { class: 'actions' }, deleteButton({
-      label: `${t('tpl.one', 'Template')} "${templateLabel(template)}"`,
-      path: `/me/templates/${template.id}`,
-      message: t('tpl.deleted', 'Template deleted'),
-      after: loadTemplates,
-    })),
-  ));
-
-  fillTable($('#table-templates tbody'), rows, 4, t('tpl.empty', 'No templates yet.'));
-}
-
-/**
- * Fills the booking form from a template: the project, the hours and the
- * description, each emptied where the template has none, so the form reads as it
- * did when the template was saved. The date stays - a template has none - and
- * nothing is booked: that is still the button.
- */
-function fillFromTemplate(template) {
-  const form = $('#form-timesheet');
-  if (!form) return;
-
-  form.elements.projectId.value = template.projectId ? String(template.projectId) : '';
-  form.elements.durationHours.value = template.durationHours ? String(template.durationHours) : '';
-  form.elements.description.value = template.description ?? '';
-
-  // The hours, which are what is usually checked or typed next.
-  form.elements.durationHours.focus();
-}
-
-/** Keeps what the booking form holds - all but the date - as a template. */
-function saveAsTemplate() {
-  const form = $('#form-timesheet');
-  if (!form) return;
-
-  const { projectId, durationHours, description } = form.elements;
-
-  const body = {
-    projectId: projectId.value ? Number(projectId.value) : null,
-    durationHours: durationHours.value === '' ? null : Number(durationHours.value),
-    description: description.value.trim() || null,
-  };
-
-  mutate(() => api('/me/templates', { method: 'POST', body: JSON.stringify(body) }),
-    t('tpl.saved', 'Saved as a template'), loadTemplates);
-}
-
-/** Forgets the templates the picker and the card showed, for an account that has signed out. */
-function forgetTheTemplates() {
-  entryTemplates = [];
-
-  $('#ts-template-row').hidden = true;
-  $('#templates-card').hidden = true;
-}
-
-/**
- * The actions one time entry offers, as a table cell.
- *
- * Shared between the list and the calendar's day view, which render the same
- * records: two copies of these rules would be two places for "whose entry is this"
- * to be answered differently, and the copy nobody was looking at would be the
- * wrong one.
- *
- * What is offered depends on the status and on the caller, because the API refuses
- * the rest anyway - the API is the authority here and this only avoids offering
- * what it would turn down.
- */
-function timesheetActions(entry) {
-  const actions = el('td', { class: 'actions' });
-  const mayEdit = mayEditTimesheet(entry);
-
-  if (mayEdit) {
-    actions.append(el('button', {
-      class: 'link',
-      text: t('action.edit', 'edit'),
-      onclick: () => editTimesheet(entry),
-    }));
-  }
-
-  if (mayEdit) {
-    actions.append(deleteButton({
-      label: `${fmtDate(entry.date)}, ${fmtHours(entry.durationHours)}`,
-      path: `/timesheets/${entry.id}`,
-      message: t('msg.entryDeleted', 'Entry deleted'),
-      after: reloadTimeViews,
-    }));
-  }
-
-  // What it said before, for one of the reader's own entries saved again since it
-  // was booked - the only ones with a history to show, and the only ones whose
-  // history the server will show them.
-  if (entry.userId === subjectID() && entry.updatedAt && entry.updatedAt !== entry.createdAt) {
-    actions.append(el('button', {
-      class: 'link',
-      'data-action': 'history',
-      text: t('history.open', 'history'),
-      onclick: () => mutate(() => showEntryHistory(entry), null, null),
-    }));
-  }
-
-  return actions;
-}
-
-/**
- * Shows what an entry said before each correction, the most recently replaced
- * first: when it was replaced, and its day, project, hours and description then.
- *
- * A dialog over the screen rather than a card on one, because the entry is offered
- * in two places - the list and the calendar's day - and its history belongs to
- * neither. Read only: nothing in a history is put back by pressing it.
- */
-async function showEntryHistory(entry) {
-  const history = (await api(`/timesheets/${entry.id}/revisions`))?.items ?? [];
-  const previous = document.activeElement;
-
-  const projectOf = (id) => (id == null
-    ? t('ts.noProject', 'No project')
-    : cache.projects.find((p) => p.id === id)?.name ?? t('history.unlistedProject', 'a project no longer listed'));
-
-  const body = history.length
-    ? el('div', { class: 'table-wrap' }, el('table', { class: 'history-table' },
-      el('thead', {}, el('tr', {},
-        el('th', { text: t('history.replaced', 'Replaced') }),
-        el('th', { text: t('field.date', 'Date') }),
-        el('th', { text: t('field.project', 'Project') }),
-        el('th', { class: 'num', text: t('field.hours', 'Hours') }),
-        el('th', { text: t('field.description', 'Description') }))),
-      el('tbody', {}, ...history.map((version) => el('tr', {},
-        el('td', {}, fmtMoment(version.replacedAt), version.replacedBy ? el('span', {
-          class: 'acted-by',
-          text: fillIn(t('team.replacedBy', 'by {0}'), [actorName(version.replacedBy)]),
-        }) : null),
-        el('td', { text: fmtDate(version.date) }),
-        el('td', { class: 'text', text: projectOf(version.projectId) }),
-        el('td', { class: 'num', text: fmtHours(version.durationHours) }),
-        el('td', { class: 'text', text: version.description ?? '' }))))))
-    : el('p', { class: 'muted', text: t('history.none', 'Saved again since it was booked, without anything in it changing.') });
-
-  const card = el('div', { class: 'overlay-card history-card', role: 'dialog', 'aria-modal': 'true' },
-    el('h2', { text: fillIn(t('history.title', 'Earlier versions of the entry from {0}'), [fmtDate(entry.date)]) }),
-    body);
-
-  const overlay = el('div', { class: 'overlay history-overlay' }, card);
-
-  const onKey = (event) => {
-    if (event.key === 'Escape') close();
-  };
-
-  function close() {
-    document.removeEventListener('keydown', onKey);
-    overlay.remove();
-
-    if (previous instanceof HTMLElement) previous.focus();
-  }
-
-  const done = el('button', {
-    class: 'secondary', type: 'button', text: t('history.close', 'Close'), onclick: close,
-  });
-
-  card.append(el('div', { class: 'row confirm-actions' }, done));
-
-  document.addEventListener('keydown', onKey);
-  document.body.append(overlay);
-  done.focus();
-}
-
-/**
- * Reloads everything that shows time entries.
- *
- * The list and the calendar render the same records from two requests, so a
- * change that refreshes only one of them leaves the other showing yesterday -
- * which is what booking an entry and switching to the calendar used to do.
- */
-async function reloadTimeViews() {
-  // The grid first and only while it is on screen - it is drawn again on arrival
-  // anyway. First, because it is usually what was just typed into: until it is
-  // drawn again, a cell just booked has no entry behind it, and a number typed
-  // into it in the meantime would book a second one.
-  if (!$('#view-week')?.hidden) await loadWeekGrid();
-
-  await loadTimesheets();
-  await loadCalendar();
-
-  // And the budgets the hours just booked count towards.
-  await noticeBudgets();
-
-  // And the running balance they moved, which may have crossed a bound.
-  await loadNotices();
-}
-
-/**
- * How many entries the list asks for at a time.
- *
- * A screenful rather than everything. This list used to ask for every entry the
- * account had ever booked, on every load and again after every save, and the
- * request grew for as long as somebody kept recording time - the kind of slow
- * that arrives a week at a time and never becomes a bug report.
- *
- * Smaller than the API's own default page, deliberately: the endpoint answers
- * clients that are fetching rather than showing, and a table asks for what it can
- * put on a screen. Both are bounded, which is the part that matters.
- */
-const TIMESHEET_PAGE = 25;
-
-/** The entries the table is showing, which is a page of them at a time. */
-let timesheetEntries = [];
-
-/** How many there are altogether, which is what says whether there are more. */
-let timesheetTotal = 0;
-
-/** How many loads of the entries have begun, so an answer can tell it was overtaken. */
-let timesheetLoads = 0;
-
-/**
- * Loads the entries, one page at a time.
- *
- * `more` appends the next page instead of starting again. Everything else -
- * changing the filter, booking, correcting, deleting - starts again from the
- * first page on purpose: the list has changed underneath, and an offset into a
- * list that has moved skips one entry and repeats another.
- *
- * Only the newest load's answer is kept. Each one emptied the list as it began
- * and added its answer when it came back, so two at once - stepping through the
- * filter with the arrow keys sends one per step - put two projects' entries under
- * a filter naming one, and two presses of "more" the same page twice.
- */
-async function loadTimesheets(more = false) {
-  if (!can('timesheets:read:own')) return;
-
-  const params = timesheetFilterParams();
-
-  const before = more ? timesheetEntries : [];
-
-  params.set('limit', String(TIMESHEET_PAGE));
-  params.set('offset', String(before.length));
-
-  timesheetLoads += 1;
-  const asked = timesheetLoads;
-
-  const answer = await api(`/timesheets?${params}`);
-
-  if (asked !== timesheetLoads) return;
-
-  const page = answer?.items ?? [];
-
-  // What the server says, not what arrived: those differ exactly when there is
-  // another page, which is the whole question this screen has to answer.
-  timesheetTotal = answer?.totalCount ?? page.length;
-  timesheetEntries = before.concat(page);
-
-  const entries = timesheetEntries;
-
-  // Named `entry` rather than `t`, which would shadow the translation helper.
-  // No user column and no "this row is yours" highlight: every row is, so a column
-  // repeating one name and a shade behind every line say nothing.
-  const rows = entries.map((entry) => {
-    const actions = timesheetActions(entry);
-
-    return el('tr', {},
-      el('td', { text: fmtDate(entry.date) }),
-      el('td', {
-        class: entry.projectId ? 'text' : 'text empty',
-        text: entry.projectId ? projectName(entry.projectId) : t('ts.noProject', 'No project'),
-      }),
-      el('td', { class: 'num', text: fmtNumber(entry.durationHours) }),
-      el('td', { class: 'text' }, entry.description || '–', ...actedByLines(entry)),
-      actions,
-    );
-  });
-
-  fillTable($('#table-timesheets tbody'), rows, 5, t('ts.empty', 'No entries for this filter.'));
-
-  showTimesheetTally();
-
-  // The link answers to the filter as soon as the list does, from the count it
-  // already has: the new count comes back a request later, and until then a list
-  // of the waiting entries stood under the link that leads to it.
-  redrawable('unassigned', drawUnassigned);
-
-  await countUnassigned();
-}
-
-/** How many entries are waiting for a project, as last counted. */
-let unassignedEntries = 0;
-
-/**
- * Counts the entries still waiting for a project, for the link above the list.
- *
- * Hours can be recorded first and given a project later, and those are the ones
- * this collects. Counted whatever the list is narrowed to - a period, a search -
- * because the question is how many are waiting at all, not how many the filter
- * happens to show.
- */
-async function countUnassigned() {
-  const answer = await api(`/timesheets?${forSubject({ projectId: 'none', limit: '1' })}`);
-
-  unassignedEntries = answer?.totalCount ?? 0;
-
-  redrawable('unassigned', drawUnassigned);
-}
-
-/** Writes the link: hidden while nothing waits, and while the list already shows what does. */
-function drawUnassigned() {
-  const link = $('#ts-unassigned');
-  if (!link) return;
-
-  link.hidden = unassignedEntries === 0 || $('#filter-ts-project')?.value === 'none';
-  link.textContent = fillIn(t('ts.unassigned', '{0} without a project'), [unassignedEntries]);
-}
-
-/**
- * Says how much of the list is on screen, and offers the rest.
- *
- * Both go down together once everything is showing. A table that is complete and
- * one that has been cut short are otherwise the same picture, which is the only
- * way bounding the request could have gone wrong quietly.
- */
-function showTimesheetTally() {
-  const more = timesheetEntries.length < timesheetTotal;
-
-  $('#ts-more-row').hidden = !more;
-
-  $('#ts-shown').textContent = more
-    ? fillIn(t('ts.showing', 'Showing {0} of {1} entries'),
-      [timesheetEntries.length, timesheetTotal])
-    : '';
-}
-
-// --------------------------------------------------------------- week grid
-
-/** A YYYY-MM-DD day moved by a number of days, counted on the calendar. */
-function addDays(iso, days) {
-  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
-}
-
-/** The Monday of the week a YYYY-MM-DD day falls in. */
-function mondayOf(iso) {
-  const weekday = new Date(`${iso}T00:00:00Z`).getUTCDay();
-
-  return addDays(iso, -((weekday + 6) % 7));
-}
-
-/** The ISO 8601 number of the week that begins on a Monday. */
-function isoWeekNumber(monday) {
-  // The week's Thursday decides its year, and the week is counted from the week
-  // holding that year's first Thursday.
-  const thursday = new Date(Date.parse(`${addDays(monday, 3)}T00:00:00Z`));
-  const yearStart = Date.UTC(thursday.getUTCFullYear(), 0, 1);
-
-  return Math.floor((thursday.getTime() - yearStart) / (7 * 86400000)) + 1;
-}
-
-/** The Monday of the week the grid shows, or null before it was first opened. */
-let weekShown = null;
-
-/** What the grid was last drawn from, kept so a language change can redraw it. */
-let weekData = null;
-
-/**
- * The rows somebody added by hand that have nothing booked on them yet, per week.
- *
- * Kept on the page only: a row with no entry is not a fact about anything, and it
- * is gone with the week it was added to, which is when it stops being useful.
- */
-const weekExtraRows = new Map();
-
-/** What a row is keyed by: a project's id, or "none" for the hours without one. */
-const weekRowKey = (projectId) => (projectId ? String(projectId) : 'none');
-
-/**
- * Loads the week the grid shows: its entries, and what each of its days asks.
- *
- * A field somebody is typing into survives the redraw that follows - the redraw
- * after one cell's save can land while the next one is being filled in, and
- * throwing that away is what a background load must never do.
- */
-async function loadWeekGrid() {
-  if (!can('timesheets:read:own')) return;
-
-  if (!weekShown) weekShown = mondayOf(todayISO());
-
-  const from = weekShown;
-  const to = addDays(from, 6);
-
-  const [entries, answer] = await Promise.all([
-    everyTimesheet({ from, to }),
-    api(`/me/days?${new URLSearchParams({ from, to })}`),
-  ]);
-
-  // Overtaken by a step to another week while this was on its way.
-  if (from !== weekShown) return;
-
-  weekData = { from, entries, days: answer?.days ?? [] };
-
-  redrawable('weekGrid', drawWeekGrid);
-}
-
-/** Draws the grid from what was last loaded, in the language now in force. */
-function drawWeekGrid() {
-  if (!weekData) return;
-
-  const { from, entries, days } = weekData;
-  const dates = Array.from({ length: 7 }, (_, i) => addDays(from, i));
-  const names = weekdayNames();
-  const dayLabel = new Intl.DateTimeFormat(activeLocale(), {
-    day: '2-digit', month: '2-digit', timeZone: 'UTC',
-  });
-
-  $('#week-title').textContent = fillIn(t('week.title', 'Week {0} · {1} – {2}'),
-    [isoWeekNumber(from), fmtDate(from), fmtDate(dates[6])]);
-
-  for (const head of $$('#table-week th[data-day]')) {
-    const i = Number(head.dataset.day);
-    // Two parts, so a narrow window can set the date under the day's name in
-    // every column alike - see .week-date.
-    head.replaceChildren(
-      el('span', { text: names[i] ?? '' }),
-      ' ',
-      el('span', { class: 'week-date', text: dayLabel.format(new Date(`${dates[i]}T00:00:00Z`)) }));
-
-    // And what else the day is: a public holiday, an absence somebody recorded.
-    const day = days.find((d) => d.date === dates[i]);
-    if (day?.holiday) head.append(el('span', { class: 'week-tag', text: holidayOf(day) }));
-    if (day?.absence) head.append(el('span', { class: 'week-tag', text: absenceName(day.absence) }));
-  }
-
-  // The field being typed into, so the redraw can hand it back.
-  const focused = document.activeElement?.closest?.('#table-week input[data-cell]');
-  const typing = focused && focused.value !== focused.dataset.value
-    ? { cell: focused.dataset.cell, value: focused.value }
-    : (focused ? { cell: focused.dataset.cell } : null);
-
-  // And put back to what the server holds before it goes. Taken off the page with
-  // the focus in it, it fires its change on the way out, and booked what had been
-  // typed so far - while the field drawn in its place carried the same digits on
-  // and booked the whole number beside it: 1 and 1.5, for 1.5 typed once.
-  if (typing?.value !== undefined) focused.value = focused.dataset.value;
-
-  // The rows: every project with something booked this week, every row added by
-  // hand, the hours without a project last.
-  const rows = new Map();
-
-  for (const entry of entries) {
-    const key = weekRowKey(entry.projectId);
-    if (!rows.has(key)) rows.set(key, entries.filter((e) => weekRowKey(e.projectId) === key));
-  }
-
-  for (const key of weekExtraRows.get(from) ?? []) {
-    if (!rows.has(key)) rows.set(key, []);
-  }
-
-  const order = [...rows.keys()].sort((a, b) => {
-    if (a === 'none') return 1;
-    if (b === 'none') return -1;
-
-    return projectName(Number(a)).localeCompare(projectName(Number(b)));
-  });
-
-  const writable = can('timesheets:write:own');
-
-  const body = order.map((key) => {
-    const own = rows.get(key);
-    const project = key === 'none' ? null : cache.projects.find((p) => String(p.id) === key);
-    // A closed project takes no new hours, so its cells only show what it has.
-    const open = key === 'none' || project?.status === 'active';
-    const label = key === 'none' ? t('ts.noProject', 'No project') : projectName(Number(key));
-
-    const cells = dates.map((date) => {
-      const there = own.filter((entry) => entry.date === date);
-      const sum = there.reduce((total, entry) => total + entry.durationHours, 0);
-      const cellKey = `${key}|${date}`;
-
-      if (there.length > 1) {
-        // Several entries make this sum, and a new number could mean any of them.
-        const lead = el('button', {
-          type: 'button',
-          class: 'link week-several',
-          text: fmtShare(sum),
-          'aria-label': fillIn(t('week.several', '{0} entries - show them'), [there.length]),
-        });
-
-        lead.addEventListener('click', () => showTheDaysEntries(date, key));
-
-        return el('td', { class: 'num' }, lead);
-      }
-
-      if (!writable || !open) {
-        return el('td', { class: 'num', text: sum ? fmtShare(sum) : '–' });
-      }
-
-      return el('td', { class: 'num' }, el('input', {
-        type: 'number',
-        step: 'any',
-        min: '0',
-        inputmode: 'decimal',
-        class: 'week-cell',
-        'data-cell': cellKey,
-        'data-value': sum ? String(sum) : '',
-        'data-id': there.length === 1 ? String(there[0].id) : '',
-        'data-project': key === 'none' ? '' : key,
-        'data-date': date,
-        'aria-label': `${label}, ${fmtDate(date)}`,
-        value: sum ? String(sum) : '',
-      }));
-    });
-
-    const total = own.reduce((sum, entry) => sum + entry.durationHours, 0);
-
-    return el('tr', {},
-      el('th', { scope: 'row', class: key === 'none' ? 'text empty' : 'text', text: label }),
-      ...cells,
-      el('td', { class: 'num sum', text: fmtShare(total) }));
-  });
-
-  $('#table-week tbody').replaceChildren(...(body.length ? body : [
-    el('tr', {}, el('td', {
-      colspan: '9', class: 'empty', text: t('week.empty', 'Nothing booked this week yet.'),
-    })),
-  ]));
-
-  // What the week came to, day by day, against what each day asked.
-  const booked = dates.map((date) => entries
-    .filter((entry) => entry.date === date)
-    .reduce((sum, entry) => sum + entry.durationHours, 0));
-  const target = dates.map((date) => days.find((d) => d.date === date)?.target ?? 0);
-
-  const sumOf = (values) => values.reduce((a, b) => a + b, 0);
-  const signed = (n) => (Math.abs(n) < 0.005 ? '±0' : `${n > 0 ? '+' : '−'}${fmtShare(Math.abs(n))}`);
-
-  // A day that does not count towards the balance has none here either, rather
-  // than one the balance does not have. Which days count is the server's to say -
-  // the booked ones, and from the day somebody chose every working day up to
-  // today - so the row comes to what the balance says.
-  const counts = dates.map((date) => days.find((d) => d.date === date)?.counts ?? false);
-  const balance = dates.map((_, i) => (counts[i] ? booked[i] - target[i] : null));
-  const counted = balance.filter((value) => value !== null);
-
-  const footRow = (label, values, total, format) => el('tr', {},
-    el('th', { scope: 'row', text: label }),
-    ...values.map((value) => el('td', { class: 'num', text: value === null ? '–' : format(value) })),
-    el('td', { class: 'num sum', text: format(total) }));
-
-  $('#table-week tfoot').replaceChildren(
-    footRow(t('week.booked', 'Booked'), booked, sumOf(booked), fmtShare),
-    footRow(t('week.target', 'Target'), target, sumOf(target), fmtShare),
-    footRow(t('week.balance', 'Balance'), balance, sumOf(counted), signed));
-
-  // The projects a row can still be added for: the open ones not on the grid.
-  const add = $('#week-add-project');
-
-  if (add) {
-    const bookable = cache.projects.filter((p) => p.status === 'active' && !rows.has(String(p.id)));
-
-    add.replaceChildren(
-      el('option', { value: '', text: t('week.choose', 'Choose …') }),
-      ...bookable.map((p) => el('option', { value: String(p.id), text: p.name })),
-      ...(rows.has('none') ? [] : [el('option', { value: 'none', text: t('ts.noProject', 'No project') })]),
-    );
-  }
-
-  if (typing) {
-    const again = $(`#table-week input[data-cell="${CSS.escape(typing.cell)}"]`);
-
-    if (again) {
-      // Focused first and filled after, because a field takes the focus with the
-      // caret in front of what it holds, and the next digit typed went first. A
-      // field nobody had typed into yet is selected whole, as the Tab that
-      // reached it left it.
-      again.focus();
-
-      if (typing.value !== undefined) {
-        again.value = typing.value;
-        // A number the page put there is not one the browser reports a change
-        // for when the field is left, so it was shown and never booked - see the
-        // focusout in wireWeekGrid.
-        again.dataset.carried = '';
-      } else {
-        again.select();
-      }
-    }
-  }
-}
-
-/**
- * Takes the reader to the entries a cell sums up: the entries screen, narrowed to
- * that day and that project with the filters it already has.
- */
-function showTheDaysEntries(date, key) {
-  const project = $('#filter-ts-project');
-  if (project) project.value = key === 'none' ? 'none' : key;
-
-  setDateField($('#filter-ts-from'), date);
-  setDateField($('#filter-ts-to'), date);
-
-  const search = $('#filter-ts-q');
-  if (search) search.value = '';
-
-  switchView('timesheets');
-  mutate(loadTimesheets, null, null);
-}
-
-/**
- * Saves one cell: books a new entry, corrects the one behind it, or takes it back,
- * and draws the grid again whatever the server answered - see saveWeekCell.
- */
-async function commitWeekCell(input) {
-  const typed = input.value.trim();
-  const before = input.dataset.value;
-
-  if (typed === before) return;
-
-  const { id, project, date } = input.dataset;
-  const hours = Number(typed);
-
-  if (typed === '') {
-    if (!id) return;
-
-    const proceed = await confirmDialog({
-      title: t('week.removeTitle', 'Take this entry back?'),
-      text: fillIn(t('week.removeText', 'The {0} booked on {1} are deleted.'),
-        [fmtHours(Number(before)), fmtDate(date)]),
-      confirmLabel: t('action.delete', 'delete'),
-    });
-
-    if (!proceed) {
-      input.value = before;
-
-      return;
-    }
-
-    await saveWeekCell(() => api(`/timesheets/${id}`, { method: 'DELETE' }),
-      t('week.removed', 'Entry taken back'));
-
-    return;
-  }
-
-  if (!(hours > 0)) {
-    input.value = before;
-
-    return;
-  }
-
-  const call = id
-    ? () => api(`/timesheets/${id}`, { method: 'PUT', body: JSON.stringify({ durationHours: hours }) })
-    : () => api('/timesheets', {
-      method: 'POST',
-      body: JSON.stringify({
-        date, durationHours: hours, ...(project ? { projectId: Number(project) } : {}),
-      }),
-    });
-
-  await saveWeekCell(call, t('msg.booked', 'Time booked'));
-}
-
-/**
- * Makes one cell's change and draws the grid again once, from the server: with
- * everything else after a save, and on its own after a refusal, so a number the
- * server did not take does not stay on screen looking accepted.
- *
- * Once. It was drawn after the save and then again, and the second redraw landed
- * under whatever was being typed into the next cell by then.
- */
-async function saveWeekCell(call, message) {
-  let saved = false;
-
-  await mutate(call, message, async () => {
-    saved = true;
-    await reloadTimeViews();
-  });
-
-  if (!saved) await loadWeekGrid();
-}
-
-/**
- * Books the week before the one shown into the days of it that have nothing on
- * them yet.
- *
- * Asked first, because this books entries rather than filling a form. The answer
- * is shown whole, the left-out part included: a day that was already booked, or an
- * entry whose project has closed since, would otherwise look like something the
- * copy had missed.
- */
-async function copyLastWeek() {
-  const into = weekShown ?? mondayOf(todayISO());
-  const from = addDays(into, -7);
-
-  const proceed = await confirmDialog({
-    title: t('week.copyTitle', 'Copy last week?'),
-    text: fillIn(t('week.copyText',
-      'The entries of the week from {0} are booked again on the same weekdays of this one - only on days with nothing booked yet.'),
-    [fmtDate(from)]),
-    confirmLabel: t('week.copyConfirm', 'Copy'),
-    danger: false,
-  });
-
-  if (!proceed) return;
-
-  await mutate(() => api('/me/weeks/copy', { method: 'POST', body: JSON.stringify({ from, to: into }) }),
-    null,
-    async (copied) => {
-      toast(weekCopyNews(copied), 'ok');
-      await reloadTimeViews();
-    });
-}
-
-/** What a copy did, as one sentence per part of it that happened. */
-function weekCopyNews(copied) {
-  const news = [fillIn(t('week.copied', 'Entries copied: {0} ({1}).'),
-    [copied.copied, fmtHours(copied.hours)])];
-
-  if (copied.kept) {
-    news.push(fillIn(t('week.copyKept', 'Days already booked, left as they were: {0}.'), [copied.kept]));
-  }
-
-  if (copied.closed) {
-    news.push(fillIn(t('week.copyClosed', 'Left out because their project no longer takes bookings: {0}.'),
-      [copied.closed]));
-  }
-
-  return news.join(' ');
-}
-
-/** Forgets the week the grid showed, for an account that has signed out. */
-function forgetTheWeek() {
-  weekShown = null;
-  weekData = null;
-  weekExtraRows.clear();
-
-  $('#table-week tbody')?.replaceChildren();
-  $('#table-week tfoot')?.replaceChildren();
-}
-
-function wireWeekGrid() {
-  const table = $('#table-week');
-  if (!table) return;
-
-  // On change, which a number field fires when it is left or Enter is pressed -
-  // not on every keystroke, which would book "1" on the way to typing "1.5".
-  table.addEventListener('change', (event) => {
-    const input = event.target.closest('input[data-cell]');
-    if (!input) return;
-
-    delete input.dataset.carried;
-    commitWeekCell(input);
-  });
-
-  // Leaving a field the grid was drawn again under books what it carries. More
-  // typed after the redraw fires the change above first, which takes the mark
-  // off, so the number is booked once either way.
-  table.addEventListener('focusout', (event) => {
-    const input = event.target.closest('input[data-cell][data-carried]');
-    if (!input) return;
-
-    delete input.dataset.carried;
-    commitWeekCell(input);
-  });
-
-  const step = (weeks) => {
-    weekShown = addDays(weekShown ?? mondayOf(todayISO()), weeks * 7);
-    mutate(loadWeekGrid, null, null);
-  };
-
-  $('#week-prev').addEventListener('click', () => step(-1));
-  $('#week-next').addEventListener('click', () => step(1));
-  $('#week-today').addEventListener('click', () => {
-    weekShown = mondayOf(todayISO());
-    mutate(loadWeekGrid, null, null);
-  });
-
-  $('#week-copy').addEventListener('click', copyLastWeek);
-
-  $('#week-add-project').addEventListener('change', (event) => {
-    const key = event.target.value;
-    if (!key || !weekShown) return;
-
-    const added = weekExtraRows.get(weekShown) ?? new Set();
-    added.add(key);
-    weekExtraRows.set(weekShown, added);
-
-    drawWeekGrid();
-
-    // Straight into the row's first day, which is where somebody adding a row
-    // starts typing.
-    $(`#table-week input[data-cell^="${CSS.escape(key)}|"]`)?.focus();
-  });
-}
-
-// ----------------------------------------------------------------- calendar
-
-/**
- * The month the calendar is showing, as a Date on the first of that month.
- *
- * Empty until something renders it, because which month somebody is in is a
- * question about their own zone, and the zone is not known until they are signed
- * in. It used to be worked out from the browser's clock as this file loaded, which
- * is a different month from theirs for part of the first and the last day of every
- * one - so an account in Auckland read on a Berlin machine opened the calendar on
- * the month it had just left, with today highlighted nowhere in the grid.
- */
-let calendarMonth = null;
-
+/** A date as its calendar day in the browser's own zone, YYYY-MM-DD. */
 const ISO_DAY = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-/** The first of the month a YYYY-MM-DD day falls in. */
-function monthOf(iso) {
-  const [year, month] = iso.split('-').map(Number);
-
-  return new Date(year, month - 1, 1);
-}
-
-/** The month to show, worked out from this user's own today the first time it is asked. */
-function currentCalendarMonth() {
-  if (!calendarMonth) calendarMonth = monthOf(todayISO());
-
-  return calendarMonth;
-}
-
-/** The date this code last filled in, so a date the user typed is recognisable. */
-let autofilledDate = '';
-
-/**
- * Points the booking form at today, leaving a date the user chose alone.
- *
- * Overwriting their choice would be worse than a stale default: someone
- * catching up on last week's hours would silently book them against today.
- */
-function resetBookingDate() {
-  const field = $('#form-timesheet')?.elements.date;
-  if (!field) return;
-
-  if (field.value === '' || field.value === autofilledDate) {
-    autofilledDate = todayISO();
-    setDateField(field, autofilledDate);
-  }
-}
 
 /**
  * The calendar day it is right now, in the zone that applies to this user.
  *
  * Not `new Date().toISOString().slice(0, 10)`, which is the day in UTC: for
  * anyone east of Greenwich that is yesterday for part of every evening, and for
- * anyone west it is tomorrow for part of every morning. Booking hours against
- * the wrong day is the kind of error nobody notices until a month-end total is
- * short.
+ * anyone west it is tomorrow for part of every morning - the kind of error nobody
+ * notices until a month-end figure is short.
  *
  * Intl is used rather than date arithmetic because it is the only thing in the
  * platform that knows about daylight saving.
@@ -6759,227 +4796,17 @@ function todayISO() {
       timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(new Date());
   } catch {
-    // A zone the browser does not know must not break booking entirely.
+    // A zone the browser does not know must not break the screen entirely.
     return ISO_DAY(new Date());
   }
 }
 
 /**
- * Every entry in a range, however many pages the answer takes.
+ * What each country public holidays can be kept in is called, in words.
  *
- * The listing answers a page - a hundred entries unless asked for more, newest
- * first - so a caller that totals what one request brought back has totalled a
- * page. The calendar did: a month of a hundred and one entries lost its first
- * days, and its month total with them. Paged by the count the server reports
- * rather than by a page size written down here as well.
- */
-async function everyTimesheet(params) {
-  const entries = [];
-
-  for (;;) {
-    const query = new URLSearchParams(params);
-    query.set('offset', String(entries.length));
-
-    const answer = await api(`/timesheets?${query}`);
-    const page = answer?.items ?? [];
-
-    entries.push(...page);
-
-    if (page.length === 0 || entries.length >= (answer?.totalCount ?? 0)) return entries;
-  }
-}
-
-/**
- * Renders the month grid with the hours booked on each day.
- *
- * The whole month is fetched and grouped client-side; asking per day would be
- * dozens of round trips for one screen.
- */
-async function loadCalendar() {
-  if (!can('timesheets:read:own')) return;
-
-  const first = currentCalendarMonth();
-  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
-
-  const span = { from: ISO_DAY(first), to: ISO_DAY(last) };
-
-  // The month's days beside its entries, for what each day is besides worked on:
-  // a day somebody is away.
-  const [entries, month] = await Promise.all([
-    everyTimesheet(forSubject(span)),
-    api(`/me/days?${forSubject(span)}`),
-  ]);
-
-  // Not drawn if the arrows have moved on while it was on its way. Two quick
-  // presses ask for two months at once, and the fuller one answers later: drawn
-  // anyway, it put the month left behind under arrows already past it.
-  if (calendarMonth !== first) return;
-
-  const byDay = new Map();
-  for (const entry of entries) {
-    if (!byDay.has(entry.date)) byDay.set(entry.date, []);
-    byDay.get(entry.date).push(entry);
-  }
-
-  const marks = new Map((month?.days ?? []).map((day) => [day.date, day]));
-
-  renderCalendarGrid(first, last, byDay, marks);
-
-  // And the month's working time, which follows the arrows the calendar does.
-  await loadWorkDays();
-}
-
-function renderCalendarGrid(first, last, byDay, marks) {
-  const monthNames = t('cal.months', 'January,February,March,April,May,June,July,August,September,October,November,December').split(',');
-  $('#calendar-title').textContent = `${monthNames[first.getMonth()]} ${first.getFullYear()}`;
-
-  const weekdays = t('cal.weekdays', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',');
-  $('#calendar-weekdays').replaceChildren(...weekdays.map((d) => el('span', { text: d })));
-
-  // Weeks start on Monday, so Sunday (0) becomes the last column.
-  const leading = (first.getDay() + 6) % 7;
-  const cells = [];
-
-  for (let i = 0; i < leading; i += 1) {
-    cells.push(el('div', { class: 'cal-day outside' }));
-  }
-
-  const todayIso = todayISO();
-  const maxHours = Math.max(8, ...[...byDay.values()].map(
-    (list) => list.reduce((sum, e) => sum + e.durationHours, 0)));
-
-  let monthTotal = 0;
-
-  for (let d = 1; d <= last.getDate(); d += 1) {
-    const date = new Date(first.getFullYear(), first.getMonth(), d);
-    const iso = ISO_DAY(date);
-    const dayEntries = byDay.get(iso) ?? [];
-    const hours = dayEntries.reduce((sum, e) => sum + e.durationHours, 0);
-    monthTotal += hours;
-
-    const away = marks.get(iso)?.absence;
-    const holiday = marks.get(iso)?.holiday;
-
-    const classes = ['cal-day'];
-    if (dayEntries.length) classes.push('has-entries');
-    if (iso === todayIso) classes.push('today');
-    if (away || holiday) classes.push('away');
-
-    const cell = el(dayEntries.length ? 'button' : 'div', {
-      class: classes.join(' '),
-      ...(dayEntries.length ? { type: 'button' } : {}),
-    }, el('span', { class: 'cal-daynum', text: String(d) }));
-
-    if (holiday) cell.append(el('span', { class: 'cal-away', text: holidayOf(marks.get(iso)) }));
-    if (away) cell.append(el('span', { class: 'cal-away', text: absenceName(away) }));
-
-    if (hours > 0) {
-      cell.append(el('span', { class: 'cal-hours', text: fmtHours(hours) }));
-
-      const names = [...new Set(dayEntries.map(
-        (e) => (e.projectId ? projectName(e.projectId) : t('ts.noProject', 'No project'))))];
-      cell.append(el('span', { class: 'cal-projects', text: names.join(', ') }));
-
-      const bar = el('div', { class: 'cal-bar' });
-      bar.style.width = `${Math.min(100, (hours / maxHours) * 100)}%`;
-      cell.append(bar);
-
-      cell.addEventListener('click', () => showCalendarDay(iso, dayEntries));
-    }
-
-    cells.push(cell);
-  }
-
-  $('#calendar-days').replaceChildren(...cells);
-  $('#calendar-summary').textContent =
-    `${t('cal.monthTotal', 'Month total')}: ${fmtHours(monthTotal)}`;
-  $('#calendar-day-card').hidden = true;
-}
-
-/** Shows the entries behind one day. */
-function showCalendarDay(iso, entries) {
-  $('#calendar-day-title').textContent = fmtDate(iso);
-
-  const rows = entries.map((entry) => {
-    const row = el('tr', {},
-      el('td', { class: 'text', text: entry.projectId ? projectName(entry.projectId) : t('ts.noProject', 'No project') }),
-      el('td', { class: 'num', text: fmtNumber(entry.durationHours) }),
-      el('td', { class: 'text' }, entry.description || '–', ...actedByLines(entry)),
-      timesheetActions(entry),
-    );
-
-    if (mayEditTimesheet(entry)) {
-      row.classList.add('clickable');
-      row.tabIndex = 0;
-      row.title = t('cal.clickToEdit', 'Click an entry to edit it.');
-
-      // Anywhere on the row, except on the buttons it carries - a click on
-      // "delete" must not also open the entry behind the confirmation.
-      row.addEventListener('click', (e) => {
-        if (e.target.closest('button')) return;
-
-        editTimesheet(entry);
-      });
-
-      // Reachable without a mouse, since a row is not a control the browser
-      // would have given a keyboard behaviour to.
-      row.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-
-        e.preventDefault();
-        editTimesheet(entry);
-      });
-    }
-
-    return row;
-  });
-
-  fillTable($('#table-calendar-day tbody'), rows, 4, t('ot.empty', 'No bookings in this period.'));
-  $('#calendar-day-card').hidden = false;
-}
-
-function wireCalendar() {
-  const shift = (months) => {
-    const from = currentCalendarMonth();
-    calendarMonth = new Date(from.getFullYear(), from.getMonth() + months, 1);
-    mutate(loadCalendar, null, null);
-  };
-
-  $('#calendar-prev').addEventListener('click', () => shift(-1));
-  $('#calendar-next').addEventListener('click', () => shift(1));
-  $('#calendar-today').addEventListener('click', () => {
-    // This person's today, not the browser's - the same reason the grid highlights
-    // it from todayISO(). The two disagreeing is what sent the button to a month
-    // that did not contain the day it was named after.
-    calendarMonth = monthOf(todayISO());
-    mutate(loadCalendar, null, null);
-  });
-  $('#calendar-day-close').addEventListener('click', () => { $('#calendar-day-card').hidden = true; });
-}
-
-/**
- * What a kind of absence is called, in words.
- *
- * Each written out rather than looked up as absence.${kind}: the translation
+ * Each written out rather than looked up as country.${code}: the translation
  * checks read literal keys, and a key built at run time is one they cannot see
  * go missing.
- */
-function absenceName(kind) {
-  const names = {
-    vacation: () => t('absence.vacation', 'Leave'),
-    halfVacation: () => t('absence.halfVacation', 'Half a day of leave'),
-    sick: () => t('absence.sick', 'Sick'),
-    flexDay: () => t('absence.flexDay', 'Day off against overtime'),
-    localHoliday: () => t('absence.localHoliday', 'Holiday where I work'),
-    away: () => t('absence.away', 'Away'),
-  };
-
-  return names[kind]?.() ?? kind;
-}
-
-/**
- * What each country public holidays can be kept in is called, in words -
- * written out for the reason absenceName gives.
  */
 function countryName(code) {
   const names = {
@@ -7041,125 +4868,15 @@ function regionName(place) {
   return names[place]?.() ?? place;
 }
 
-/** A place in words: its country, and its region after it where it has one. */
-function placeName(place) {
-  const [country, region] = place.split('-');
-
-  return region ? `${countryName(country)}, ${regionName(place)}` : countryName(country);
-}
-
-/** What each public holiday is called, in words, written out for the same reason. */
-function holidayName(name) {
-  const names = {
-    newYear: () => t('holiday.newYear', 'New Year’s Day'),
-    secondJanuary: () => t('holiday.secondJanuary', '2 January'),
-    epiphany: () => t('holiday.epiphany', 'Epiphany'),
-    martinLutherKingDay: () => t('holiday.martinLutherKingDay', 'Martin Luther King Jr. Day'),
-    stBrigidsDay: () => t('holiday.stBrigidsDay', 'St Brigid’s Day'),
-    washingtonsBirthday: () => t('holiday.washingtonsBirthday', 'Washington’s Birthday'),
-    womensDay: () => t('holiday.womensDay', 'International Women’s Day'),
-    stPatricksDay: () => t('holiday.stPatricksDay', 'St Patrick’s Day'),
-    maundyThursday: () => t('holiday.maundyThursday', 'Maundy Thursday'),
-    goodFriday: () => t('holiday.goodFriday', 'Good Friday'),
-    easterSunday: () => t('holiday.easterSunday', 'Easter Sunday'),
-    easterMonday: () => t('holiday.easterMonday', 'Easter Monday'),
-    freedomDay: () => t('holiday.freedomDay', 'Freedom Day'),
-    queensDay: () => t('holiday.queensDay', 'Queen’s Day'),
-    kingsDay: () => t('holiday.kingsDay', 'King’s Day'),
-    labourDay: () => t('holiday.labourDay', 'Labour Day'),
-    mayBankHoliday: () => t('holiday.mayBankHoliday', 'May Bank Holiday'),
-    earlyMayBankHoliday: () => t('holiday.earlyMayBankHoliday', 'Early May Bank Holiday'),
-    constitutionDay: () => t('holiday.constitutionDay', 'Constitution Day'),
-    liberationDay: () => t('holiday.liberationDay', 'Liberation Day'),
-    victoryInEurope: () => t('holiday.victoryInEurope', 'Victory in Europe Day'),
-    europeDay: () => t('holiday.europeDay', 'Europe Day'),
-    greatPrayerDay: () => t('holiday.greatPrayerDay', 'General Prayer Day'),
-    ascension: () => t('holiday.ascension', 'Ascension Day'),
-    whitSunday: () => t('holiday.whitSunday', 'Whit Sunday'),
-    whitMonday: () => t('holiday.whitMonday', 'Whit Monday'),
-    azoresDay: () => t('holiday.azoresDay', 'Azores Day'),
-    memorialDay: () => t('holiday.memorialDay', 'Memorial Day'),
-    springBankHoliday: () => t('holiday.springBankHoliday', 'Spring Bank Holiday'),
-    corpusChristi: () => t('holiday.corpusChristi', 'Corpus Christi'),
-    republicDay: () => t('holiday.republicDay', 'Republic Day'),
-    juneBankHoliday: () => t('holiday.juneBankHoliday', 'June Bank Holiday'),
-    nationalDay: () => t('holiday.nationalDay', 'National Day'),
-    uprisingDay: () => t('holiday.uprisingDay', 'Anniversary of the uprising of 17 June 1953'),
-    juneteenth: () => t('holiday.juneteenth', 'Juneteenth'),
-    midsummerEve: () => t('holiday.midsummerEve', 'Midsummer Eve'),
-    midsummerDay: () => t('holiday.midsummerDay', 'Midsummer Day'),
-    madeiraDay: () => t('holiday.madeiraDay', 'Madeira Day'),
-    independenceDay: () => t('holiday.independenceDay', 'Independence Day'),
-    cyrilAndMethodiusDay: () => t('holiday.cyrilAndMethodiusDay', 'Saints Cyril and Methodius Day'),
-    janHusDay: () => t('holiday.janHusDay', 'Jan Hus Day'),
-    battleOfTheBoyne: () => t('holiday.battleOfTheBoyne', 'Battle of the Boyne'),
-    augustBankHoliday: () => t('holiday.augustBankHoliday', 'August Bank Holiday'),
-    summerBankHoliday: () => t('holiday.summerBankHoliday', 'Summer Bank Holiday'),
-    assumption: () => t('holiday.assumption', 'Assumption Day'),
-    childrensDay: () => t('holiday.childrensDay', 'World Children’s Day'),
-    statehoodDay: () => t('holiday.statehoodDay', 'Czech Statehood Day'),
-    germanUnity: () => t('holiday.germanUnity', 'German Unity Day'),
-    stFrancisDay: () => t('holiday.stFrancisDay', 'St Francis of Assisi’s Day'),
-    columbusDay: () => t('holiday.columbusDay', 'Columbus Day'),
-    octoberBankHoliday: () => t('holiday.octoberBankHoliday', 'October Bank Holiday'),
-    reformationDay: () => t('holiday.reformationDay', 'Reformation Day'),
-    allSaints: () => t('holiday.allSaints', 'All Saints’ Day'),
-    armisticeDay: () => t('holiday.armisticeDay', 'Armistice Day'),
-    veteransDay: () => t('holiday.veteransDay', 'Veterans Day'),
-    freedomAndDemocracyDay: () => t('holiday.freedomAndDemocracyDay', 'Struggle for Freedom and Democracy Day'),
-    repentanceDay: () => t('holiday.repentanceDay', 'Day of Prayer and Repentance'),
-    thanksgiving: () => t('holiday.thanksgiving', 'Thanksgiving'),
-    stAndrewsDay: () => t('holiday.stAndrewsDay', 'St Andrew’s Day'),
-    restorationOfIndependence: () => t('holiday.restorationOfIndependence', 'Restoration of Independence'),
-    immaculateConception: () => t('holiday.immaculateConception', 'Immaculate Conception'),
-    christmasEve: () => t('holiday.christmasEve', 'Christmas Eve'),
-    christmasDay: () => t('holiday.christmasDay', 'Christmas Day'),
-    stStephensDay: () => t('holiday.stStephensDay', 'Boxing Day'),
-    newYearsEve: () => t('holiday.newYearsEve', 'New Year’s Eve'),
-    royalWedding: () => t('holiday.royalWedding', 'Royal wedding'),
-    diamondJubilee: () => t('holiday.diamondJubilee', 'The Queen’s Diamond Jubilee'),
-    platinumJubilee: () => t('holiday.platinumJubilee', 'The Queen’s Platinum Jubilee'),
-    stateFuneral: () => t('holiday.stateFuneral', 'State funeral of Queen Elizabeth II'),
-    coronation: () => t('holiday.coronation', 'Coronation of King Charles III'),
-    dayOfRemembrance: () => t('holiday.dayOfRemembrance', 'Day of Remembrance and Recognition'),
-    worldCup: () => t('holiday.worldCup', 'Bank holiday for the World Cup'),
-  };
-
-  return names[name]?.() ?? name;
-}
-
-/**
- * The public holiday a day is, in words - said to be kept in place of one where
- * it fell on a weekend and the country keeps it on this day instead, which would
- * otherwise read as Christmas on the 27th.
- */
-function holidayOf(day) {
-  const name = holidayName(day.holiday);
-
-  return day.holidaySubstitute ? fillIn(t('holiday.substitute', '{0} (substitute day)'), [name]) : name;
-}
-
 /** The countries public holidays can be kept in and their regions, as last loaded. */
 let holidayCountries = [];
 
-/** Whose public holidays this account keeps, as last loaded. */
-let myHolidays = null;
-
-/** Loads where this account keeps public holidays into "My account". */
-async function loadMyHolidays() {
-  myHolidays = await api('/me/holidays');
-  holidayCountries = myHolidays?.countries ?? holidayCountries;
-
-  redrawable('myHolidays', fillMyHolidays);
-}
-
 /**
- * Fills a holiday card's two pickers from a choice: the countries after
+ * Fills the holiday card's two pickers from a choice: the countries after
  * whatever comes before them, and the regions of the one chosen.
  *
- * emptyCountry is what an empty choice shows: following the installation for a
- * person, and Germany for the installation - where nobody has chosen yet, with no
- * state, which keeps none until one is saved.
+ * emptyCountry is what an empty choice shows: Germany, where nobody has chosen
+ * yet, with no state - which keeps none until one is saved.
  */
 function fillHolidayPickers(form, choice, emptyCountry, ...before) {
   const locale = activeLocale();
@@ -7209,7 +4926,7 @@ function fillRegions(form, chosen) {
   select.value = regions.includes(chosen) ? chosen : '';
 }
 
-/** The choice a holiday card's pickers make: a place, or what stands in for one. */
+/** The choice the holiday card's pickers make: a place, or what stands in for one. */
 function chosenPlace(form) {
   const country = form.elements.country.value;
   const region = form.elements.region.value;
@@ -7219,439 +4936,33 @@ function chosenPlace(form) {
   return region ? `${country}-${region}` : country;
 }
 
-function fillMyHolidays() {
-  const form = $('#form-my-holidays');
-
-  // Not over a choice somebody has made and not yet saved.
-  if (!form || !myHolidays || beingEdited(form)) return;
-
-  const instance = myHolidays.instancePlace;
-  const kept = instance && instance !== 'none' ? placeName(instance) : t('holiday.noneKept', 'none');
-
-  fillHolidayPickers(form, myHolidays.place, '',
-    el('option', { value: '', text: fillIn(t('holiday.inherit', 'Follow the installation ({0})'), [kept]) }),
-    el('option', { value: 'none', text: t('holiday.noRegion', 'No public holidays') }));
-}
-
 function wireHolidays() {
-  for (const [form, endpoint] of [['#form-my-holidays', '/me/holidays'], ['#form-holidays', '/settings/holidays']]) {
-    $(form)?.elements.country.addEventListener('change', (event) => fillRegions(event.target.form, ''));
+  const form = $('#form-holidays');
+  if (!form) return;
 
-    $(form)?.addEventListener('submit', (event) => {
-      event.preventDefault();
+  form.elements.country.addEventListener('change', (event) => fillRegions(event.target.form, ''));
 
-      saveForm(event.target,
-        () => api(endpoint, { method: 'PUT', body: JSON.stringify({ place: chosenPlace(event.target) }) }),
-        t('holiday.saved', 'Public holidays saved'),
-        refreshAll);
-    });
-  }
-}
-
-/** Loads this year's absences into their card. */
-async function loadAbsences() {
-  if (!can('timesheets:read:own')) return;
-
-  const absences = (await api('/me/absences'))?.items ?? [];
-
-  const rows = absences.map((absence) => el('tr', {},
-    el('td', { text: fmtDate(absence.day) }),
-    el('td', { class: 'text', text: absenceName(absence.kind) }),
-    el('td', { class: 'actions' }, can('timesheets:write:own') ? deleteButton({
-      label: `${fmtDate(absence.day)}, ${absenceName(absence.kind)}`,
-      path: `/me/absences/${absence.day}`,
-      message: t('absence.removed', 'Absence taken back'),
-      after: reloadAbsences,
-    }) : null),
-  ));
-
-  fillTable($('#table-absences tbody'), rows, 3, t('absence.empty', 'No absence recorded this year.'));
-}
-
-/** Everything that shows somebody's absences, drawn again after one changed. */
-async function reloadAbsences() {
-  await loadAbsences();
-  await loadVacation();
-  await reloadTimeViews();
-}
-
-/** The year the leave card shows, or null before it was first drawn. */
-let vacationYear = null;
-
-/** What the leave card was last drawn from, kept so a language change can redraw it. */
-let vacationAccount = null;
-
-/** Loads a year of this account's leave into its card. */
-async function loadVacation() {
-  if (!can('timesheets:read:own')) return;
-
-  // This person's year, which is not the browser's for part of the last day of it.
-  if (!vacationYear) vacationYear = Number(todayISO().slice(0, 4));
-
-  const year = vacationYear;
-  const account = await api(`/me/vacation?year=${year}`);
-
-  // Overtaken by a step to another year while this was on its way.
-  if (year !== vacationYear) return;
-
-  vacationAccount = account;
-
-  redrawable('vacation', drawVacation);
-}
-
-function drawVacation() {
-  const account = vacationAccount;
-  if (!account) return;
-
-  $('#vacation-title').textContent = fillIn(t('vacation.title', 'Leave {0}'), [account.year]);
-
-  const given = account.entitlements.length > 0 && account.year >= account.entitlements[0].fromYear;
-
-  $('#vacation-left').textContent = given
-    ? fillIn(t('vacation.left', 'Days left: {0}'), [account.remaining])
-    : t('vacation.none', 'No leave given for this year yet: say below how many days a year give.');
-
-  $('#vacation-detail').textContent = given
-    ? fillIn(t('vacation.detail', 'Given: {0} · carried over: {1} · taken: {2} · planned: {3}'),
-      [account.entitlement, account.carriedOver, account.taken, account.planned])
-    : '';
-
-  const rows = account.entitlements.map((entitlement) => el('tr', {},
-    el('td', { text: String(entitlement.fromYear) }),
-    el('td', { class: 'num', text: fmtNumber(entitlement.days) }),
-    el('td', { class: 'actions' }, can('settings:write:own') ? deleteButton({
-      label: fillIn(t('vacation.from', 'from {0}'), [entitlement.fromYear]),
-      path: `/me/vacation/${entitlement.fromYear}`,
-      message: t('vacation.withdrawn', 'Entitlement taken back'),
-      after: loadVacation,
-    }) : null),
-  ));
-
-  fillTable($('#table-vacation tbody'), rows, 3, t('vacation.noEntitlements', 'No days of leave given yet.'));
-}
-
-/** Forgets the leave the card showed, for an account that has signed out. */
-function forgetTheVacation() {
-  vacationYear = null;
-  vacationAccount = null;
-
-  for (const said of ['#vacation-title', '#vacation-left', '#vacation-detail']) {
-    const node = $(said);
-    if (node) node.textContent = '';
-  }
-}
-
-function wireVacation() {
-  const step = (years) => {
-    vacationYear = (vacationYear ?? Number(todayISO().slice(0, 4))) + years;
-    mutate(loadVacation, null, null);
-  };
-
-  $('#vacation-prev')?.addEventListener('click', () => step(-1));
-  $('#vacation-next')?.addEventListener('click', () => step(1));
-
-  $('#form-vacation')?.addEventListener('submit', (event) => {
+  form.addEventListener('submit', (event) => {
     event.preventDefault();
 
-    const form = event.target;
-    const body = { fromYear: Number(form.elements.fromYear.value), days: Number(form.elements.days.value) };
-
-    saveForm(form, () => api('/me/vacation', { method: 'PUT', body: JSON.stringify(body) }),
-      t('vacation.saved', 'Leave saved'),
-      async () => {
-        form.reset();
-        await loadVacation();
-      });
+    saveForm(form,
+      () => api('/settings/holidays', { method: 'PUT', body: JSON.stringify({ place: chosenPlace(form) }) }),
+      t('holiday.saved', 'Public holidays saved'),
+      refreshAll);
   });
 }
 
-function wireAbsences() {
-  $('#form-absence')?.addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-    const body = formData(form);
-
-    mutate(() => api('/me/absences', { method: 'POST', body: JSON.stringify(body) }), null,
-      async (recorded) => {
-        toast(fillIn(t('absence.recorded', 'Days recorded: {0}'), [recorded?.totalCount ?? 0]), 'ok');
-
-        // Emptied through setDateField: reset empties the box the browser keeps,
-        // not the one shown beside it.
-        form.reset();
-        setDateField(form.elements.from, '');
-        setDateField(form.elements.to, '');
-
-        await reloadAbsences();
-      });
-  });
-}
-
+/** Draws what the account screen says about the account, from the account as it was last read. */
 function fillSettingsForm() {
   if (!me.user) return;
 
-  const form = $('#form-working-times');
-
-  // The zone picker first: it is a different form on the same screen and guards
-  // itself, so leaving it behind this one meant typing a daily target stopped the
-  // zone card following the server - a second form frozen by a guard that was
-  // never about it.
+  // Each of these guards itself against somebody part way through its form.
   fillMyTimezone();
-
-  // The same for the reminders, which guard themselves too.
-  fillReminders();
   drawNotifyState();
   drawPushState();
-
-  // Not over somebody who is part way through filling it in. This runs after
-  // every save on the screen and after a language is chosen, and it used to
-  // replace whatever had been typed with the server's copy.
-  if (beingEdited(form)) return;
-
-  form.elements.dailyTargetHours.value = me.user.dailyTargetHours || '';
-  form.elements.maxDailyHours.value = me.user.maxDailyHours || '';
-  setDateField(form.elements.everyDayCountsFrom, me.user.everyDayCountsFrom ?? '');
-}
-
-// ------------------------------------------------------------------ the year
-
-/** The year the tiles show, or null before they were first drawn. */
-let yearShown = null;
-
-/** What the tiles were last drawn from, kept so a language change can redraw them. */
-let yearData = null;
-
-/** Loads a year of days, and the year before it to compare with. */
-async function loadYearMap() {
-  if (!can('timesheets:read:own')) return;
-
-  // This person's year, which is not the browser's for part of the last day of it.
-  if (!yearShown) yearShown = Number(todayISO().slice(0, 4));
-
-  const year = yearShown;
-  const span = (y) => new URLSearchParams({ from: `${y}-01-01`, to: `${y}-12-31` });
-
-  const [shown, before] = await Promise.all([
-    api(`/me/days?${forSubject(span(year))}`),
-    api(`/me/days?${forSubject(span(year - 1))}`),
-  ]);
-
-  // Overtaken by a step to another year while this was on its way.
-  if (year !== yearShown) return;
-
-  yearData = { year, days: shown?.days ?? [], before: before?.days ?? [] };
-
-  redrawable('yearMap', drawYearMap);
-}
-
-/** How dark a day's tile is: by the hours booked on it, two hours a step. */
-function yearLevel(hours) {
-  if (!(hours > 0)) return 0;
-
-  return Math.min(5, Math.ceil(hours / 2));
-}
-
-function drawYearMap() {
-  if (!yearData) return;
-
-  const { year, days, before } = yearData;
-  const today = todayISO();
-
-  $('#year-title').textContent = fillIn(t('year.title', 'The year {0}'), [year]);
-
-  // The two years compared up to the same day: today, in the year that is running,
-  // and the whole of a year gone by. Comparing a year half done with a whole one
-  // would always say less.
-  const upTo = String(year) === today.slice(0, 4) ? today.slice(5) : '12-31';
-  const bookedUpTo = (list) => list
-    .filter((daily) => daily.date.slice(5) <= upTo)
-    .reduce((total, daily) => total + daily.booked, 0);
-
-  const summary = [
-    fillIn(t('year.booked', 'Booked: {0} · days with hours: {1}'),
-      [fmtHours(bookedUpTo(days)), days.filter((daily) => daily.booked > 0).length]),
-    fillIn(t('year.compare', '{0} to the same day: {1}'), [year - 1, fmtHours(bookedUpTo(before))]),
-  ].join(' · ');
-
-  $('#year-summary').textContent = summary;
-
-  // A column a week, Monday first: the first column starts with the days before
-  // the first of January, drawn but not shown, so every row is one weekday.
-  const first = new Date(Date.UTC(year, 0, 1));
-  const lead = (first.getUTCDay() + 6) % 7;
-
-  const tiles = Array.from({ length: lead }, () => el('span', { class: 'year-tile outside' }));
-
-  for (const daily of days) {
-    const classes = ['year-tile', `level-${yearLevel(daily.booked)}`];
-
-    if (daily.holiday) classes.push('holiday');
-    else if (daily.absence) classes.push('away');
-
-    if (daily.date === today) classes.push('today');
-
-    const why = daily.holiday ? holidayOf(daily) : (daily.absence ? absenceName(daily.absence) : '');
-
-    tiles.push(el('span', {
-      class: classes.join(' '),
-      title: [fmtDate(daily.date), fmtHours(daily.booked), why].filter(Boolean).join(' · '),
-    }));
-  }
-
-  const grid = $('#year-tiles');
-  grid.replaceChildren(...tiles);
-  grid.setAttribute('aria-label', `${$('#year-title').textContent}: ${summary}`);
-
-  // Each month's name above the column its first day falls in.
-  const months = t('cal.months',
-    'January,February,March,April,May,June,July,August,September,October,November,December').split(',');
-
-  $('#year-months').replaceChildren(...months.map((name, m) => {
-    const offset = lead + Math.round((Date.UTC(year, m, 1) - first.getTime()) / 86400000);
-    const label = el('span', { text: name.slice(0, 3) });
-
-    label.style.gridColumnStart = String(Math.floor(offset / 7) + 1);
-
-    return label;
-  }));
-
-  // The same two years as figures, month by month - what the tiles say, for
-  // somebody who cannot see them and for anybody who wants the numbers.
-  $('#year-this').textContent = String(year);
-  $('#year-before').textContent = String(year - 1);
-
-  const perMonth = (list) => months.map((_, m) => list
-    .filter((daily) => Number(daily.date.slice(5, 7)) === m + 1)
-    .reduce((total, daily) => total + daily.booked, 0));
-
-  const shown = perMonth(days);
-  const earlier = perMonth(before);
-
-  fillTable($('#table-year tbody'), months.map((name, m) => el('tr', {},
-    el('td', { class: 'text', text: name }),
-    el('td', { class: 'num', text: fmtHours(shown[m]) }),
-    el('td', { class: 'num', text: fmtHours(earlier[m]) }),
-  )), 3, '');
-}
-
-/** Forgets the year the tiles showed, for an account that has signed out. */
-function forgetTheYearMap() {
-  yearShown = null;
-  yearData = null;
-
-  for (const said of ['#year-title', '#year-summary', '#year-this', '#year-before']) {
-    const node = $(said);
-    if (node) node.textContent = '';
-  }
-
-  $('#year-tiles')?.replaceChildren();
-  $('#year-months')?.replaceChildren();
-}
-
-function wireYearMap() {
-  const step = (years) => {
-    yearShown = (yearShown ?? Number(todayISO().slice(0, 4))) + years;
-    mutate(loadYearMap, null, null);
-  };
-
-  $('#year-prev')?.addEventListener('click', () => step(-1));
-  $('#year-next')?.addEventListener('click', () => step(1));
 }
 
 // --------------------------------------------------------------- API tokens
-
-// ---------------------------------------------------------------- the week
-
-/** The weekday names the calendar uses, Monday first, in the reader's language. */
-function weekdayNames() {
-  return t('cal.weekdays', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',');
-}
-
-/**
- * Draws the plan form's seven fields and the table's weekday headings.
- *
- * Written by the script rather than into the markup so the names are the
- * calendar's own - one list of seven words rather than a second set of keys that
- * could come to call a day something else. Drawn again on a language change, and
- * only the names: the fields keep what was typed into them.
- */
-function drawScheduleDays() {
-  const names = weekdayNames();
-  const days = $('#schedule-days');
-
-  if (days && !days.children.length) {
-    const most = longestEntryHours();
-
-    for (let i = 0; i < 7; i += 1) {
-      days.append(el('label', { 'data-weekday': String(i) },
-        el('span', { class: 'weekday-name' }),
-        el('input', {
-          type: 'number', name: `day${i}`, step: 'any', min: '0', max: String(most), required: '',
-        })));
-    }
-  }
-
-  for (const label of $$('#schedule-days label[data-weekday]')) {
-    label.querySelector('.weekday-name').textContent = names[Number(label.dataset.weekday)] ?? '';
-  }
-
-  for (const head of $$('#table-schedules th[data-weekday]')) {
-    head.textContent = names[Number(head.dataset.weekday)] ?? '';
-  }
-}
-
-/** The week a plan form would save, read from its seven fields. */
-function scheduleHours(form) {
-  return Array.from({ length: 7 }, (_, i) => Number(form.elements[`day${i}`].value || 0));
-}
-
-/**
- * Loads the planned weeks and the week before the first.
- *
- * The form is filled with the week in force today - what somebody changing their
- * plan most likely starts from - unless it is being edited, and its first day
- * with today: a plan made now applies from now.
- */
-async function loadSchedules() {
-  if (!can('settings:write:own')) return;
-
-  const answer = await api('/me/schedules');
-  const items = answer?.items ?? [];
-  const before = answer?.before ?? [8, 8, 8, 8, 8, 0, 0];
-
-  redrawable('scheduleDays', drawScheduleDays);
-
-  const form = $('#form-schedule');
-
-  if (form && !beingEdited(form)) {
-    const today = todayISO();
-    const current = items.filter((item) => item.validFrom <= today).at(-1);
-    const week = current?.hours ?? before;
-
-    week.forEach((hours, i) => { form.elements[`day${i}`].value = String(hours); });
-    setDateField(form.elements.validFrom, today);
-  }
-
-  redrawable('scheduleBefore', () => {
-    $('#schedule-before').textContent = fillIn(t('schedule.before',
-      'Before the first plan, and without one: {0} h from Monday to Friday, nothing at the weekend.'),
-    [fmtShare(before[0])]);
-  });
-
-  const rows = items.map((item) => el('tr', {},
-    el('td', { text: fmtDate(item.validFrom) }),
-    ...item.hours.map((hours) => el('td', { class: 'num', text: fmtShare(hours) })),
-    el('td', { class: 'actions' }, deleteButton({
-      label: fillIn(t('schedule.label', 'The plan from {0}'), [fmtDate(item.validFrom)]),
-      path: `/me/schedules/${item.validFrom}`,
-      message: t('schedule.removed', 'Plan removed'),
-      after: loadSchedules,
-    })),
-  ));
-
-  fillTable($('#table-schedules tbody'), rows, 9,
-    t('schedule.empty', 'No plan yet - the daily target applies from Monday to Friday.'));
-}
 
 async function loadTokens() {
   const tokens = (await api('/me/tokens'))?.items ?? [];
@@ -7968,321 +5279,19 @@ function wireOpenID() {
   });
 }
 
-// ------------------------------------------------------------ working time
-
-/** The month of working days last loaded, which the document is made from. */
-let workDays = null;
-
-/**
- * When the days of the calendar's month began and finished, beside the hours
- * booked on them. A day booked on with no times recorded is among them, so the
- * record shows where it has a gap.
- */
-async function loadWorkDays() {
-  if (!can('timesheets:read:own')) return;
-
-  const first = currentCalendarMonth();
-  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
-  const span = { from: ISO_DAY(first), to: ISO_DAY(last) };
-
-  const month = await api(`/me/workdays?${new URLSearchParams(span)}`);
-
-  // Not drawn for a month the arrows have already left, as the calendar is not.
-  if (calendarMonth !== first) return;
-
-  workDays = month;
-  redrawable('workdays', drawWorkDays);
-
-  const form = $('#form-workday');
-  if (form && !beingEdited(form)) {
-    if (!form.elements.date.value) setDateField(form.elements.date, todayISO());
-
-    proposeTheClocksStart(form);
-  }
-}
-
-function drawWorkDays() {
-  const days = workDays?.days ?? [];
-  const writes = can('timesheets:write:own');
-
-  const rows = days.map((day) => el('tr', { class: day.recorded ? '' : 'unrecorded' },
-    el('td', { text: fmtDate(day.date) }),
-    el('td', { text: day.recorded ? day.start : '–' }),
-    el('td', { text: day.recorded ? day.end : '–' }),
-    el('td', { class: 'num', text: day.recorded ? String(day.breakMinutes) : '–' }),
-    el('td', { class: 'num', text: day.recorded ? fmtHours(day.workedHours) : '–' }),
-    el('td', { class: 'num', text: fmtHours(day.bookedHours) }),
-    el('td', { class: 'act' }, ...(day.notices ?? []).map(actNotice)),
-    el('td', { class: 'actions' }, ...(writes ? workDayActions(day) : [])),
-  ));
-
-  fillTable($('#table-workdays tbody'), rows, 8,
-    t('work.empty', 'Nothing recorded or booked this month.'));
-
-  const past = days.filter((day) => day.notices?.length).length;
-
-  $('#workday-total').textContent = [
-    days.length ? fillIn(t('work.total', 'Worked {0}, booked {1}'),
-      [fmtHours(workDays.totalWorked), fmtHours(workDays.totalBooked)]) : '',
-    past ? fillIn(t('work.noticeCount', '{0} days past a limit of the Working Hours Act.'), [past]) : '',
-  ].filter(Boolean).join(' · ');
-}
-
-/**
- * One limit of the Working Hours Act a shift went past, as the server read it.
- * Written as a sentence rather than a mark, because the PDF is made from this
- * table and a mark alone would mean nothing on paper.
- */
-function actNotice(notice) {
-  const said = {
-    longDay: () => t('work.longDay', 'More than ten hours (Working Hours Act § 3)'),
-    shortBreak: () => fillIn(t('work.shortBreak', '{0} minutes of breaks needed (Working Hours Act § 4)'),
-      [notice.minutes]),
-    shortRest: () => fillIn(t('work.shortRest', 'Only {0} of rest since the day before (Working Hours Act § 5)'),
-      [fmtHours(notice.minutes / 60)]),
-  }[notice.rule];
-
-  return el('span', { class: 'act-notice', text: said ? said() : notice.rule });
-}
-
-/** What can be done with a day: correct it, and take back what was recorded. */
-function workDayActions(day) {
-  const correct = el('button', { type: 'button', class: 'link', text: t('action.edit', 'edit') });
-  correct.addEventListener('click', () => fillTheWorkDayForm(day));
-
-  if (!day.recorded) return [correct];
-
-  return [correct, deleteButton({
-    label: fmtDate(day.date),
-    path: `/me/workdays/${day.date}`,
-    message: t('work.removed', 'Working time taken back'),
-    after: loadWorkDays,
-  })];
-}
-
-/** Puts a day into the form, to be corrected or recorded at last. */
-function fillTheWorkDayForm(day) {
-  const form = $('#form-workday');
-
-  setDateField(form.elements.date, day.date);
-  form.elements.start.value = day.start ?? '';
-  form.elements.end.value = day.end ?? '';
-  form.elements.breakMinutes.value = String(day.breakMinutes ?? 0);
-
-  if (!day.recorded) proposeTheClocksStart(form);
-
-  form.scrollIntoView({ block: 'nearest' });
-  form.elements.start.focus();
-}
-
-/**
- * Offers the running stopwatch's start as the day's, where the form shows that
- * day with no start yet: the clock already knows when the work began, and
- * somebody who started it on arriving should not have to type it again.
- * Offered, not recorded - nothing is kept until the form is saved.
- */
-function proposeTheClocksStart(form) {
-  if (!runningTimer || form.elements.start.value) return;
-
-  const started = wallClock(runningTimer.startedAt);
-  if (started.date === form.elements.date.value) form.elements.start.value = started.time;
-}
-
-/** The working time as the screen shows it, for the document. */
-async function workDayDocument() {
-  return {
-    title: t('work.title', 'Working time'),
-    colours: screenColours(),
-    subtitle: $('#calendar-title').textContent.trim(),
-    sections: [{
-      heading: t('work.title', 'Working time'),
-      caption: t('work.documentCaption',
-        'A record kept by its owner for themselves: when each day began and finished, its breaks, and the hours booked on it.'),
-      table: tableAsFigures($('#table-workdays')),
-    }],
-    summary: [
-      { label: t('work.worked', 'Worked'), value: fmtHours(workDays?.totalWorked ?? 0) },
-      { label: t('work.booked', 'Booked'), value: fmtHours(workDays?.totalBooked ?? 0) },
-    ],
-  };
-}
-
-function wireWorkDays() {
-  const form = $('#form-workday');
-  if (!form) return;
-
-  form.elements.date.addEventListener('change', () => proposeTheClocksStart(form));
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const date = form.elements.date.value;
-    const body = {
-      start: form.elements.start.value,
-      end: form.elements.end.value,
-      breakMinutes: Number(form.elements.breakMinutes.value || 0),
-    };
-
-    saveForm(form, () => api(`/me/workdays/${date}`, { method: 'PUT', body: JSON.stringify(body) }),
-      t('work.saved', 'Working time recorded'),
-      loadWorkDays);
-  });
-}
-
-// ------------------------------------------------------------ calendar feed
-
-/** Whether this person has a calendar feed, as last read. */
-let calendarFeed = null;
-
-/**
- * Says whether this person has a calendar feed, since when, and when it was last
- * read - which is how somebody finds out whether their calendar is reading the
- * address at all, since a calendar that cannot reach it says nothing.
- */
-async function loadCalendarFeed() {
-  if (!can('timesheets:read:own')) return;
-
-  calendarFeed = await api('/me/calendar-feed');
-
-  // An address on the card that is no longer this person's - replaced or removed
-  // in another tab - reads nothing, and the card went on saying "add it now".
-  const shown = $('#feed-address')?.dataset.prefix;
-  if (shown && shown !== calendarFeed?.prefix) forgetTheFeedAddress();
-
-  const active = Boolean(calendarFeed?.active);
-
-  $('#feed-state').textContent = active
-    ? fillIn(t('feed.active', 'Address {0}… since {1}, last read: {2}.'), [
-      calendarFeed.prefix,
-      fmtMoment(calendarFeed.createdAt),
-      calendarFeed.lastReadAt ? fmtMoment(calendarFeed.lastReadAt) : t('feed.unread', 'not yet'),
-    ])
-    : t('feed.none', 'No address yet.');
-
-  if (active) swapTheLabel($('#feed-create'), 'feed.replace', 'New address');
-  else swapTheLabel($('#feed-create'), 'feed.create', 'Create address');
-  $('#feed-remove').hidden = !active;
-}
-
-/**
- * Takes a feed's address off the screen.
- *
- * It is a key to somebody's recorded days, working until it is replaced, and it
- * exists once, in the answer that made it - so it goes when the screen is left or
- * the session ends, as a token's value does, rather than staying for whoever sits
- * down next.
- */
-function forgetTheFeedAddress() {
-  const panel = $('#feed-address');
-  if (!panel) return;
-
-  panel.hidden = true;
-  delete panel.dataset.prefix;
-  $('#feed-address-value').textContent = '';
-
-  // The code carries the same key, in its picture, so it goes with the text.
-  const qr = $('#feed-qr');
-  qr.hidden = true;
-  qr.removeAttribute('src');
-  $('#feed-qr-hint').hidden = true;
-}
-
-/**
- * Takes the card back to knowing nothing about an account's feed, for the next
- * account: the address, and what the card said about it - the start of its key,
- * when it was made and last read. The next sign-in loads its own, but only for an
- * account whose role shows the card, and what the last one left in it stayed for
- * every other.
- */
-function forgetTheCalendarFeed() {
-  calendarFeed = null;
-  forgetTheFeedAddress();
-
-  const state = $('#feed-state');
-  if (state) state.textContent = '';
-
-  swapTheLabel($('#feed-create'), 'feed.create', 'Create address');
-
-  const remove = $('#feed-remove');
-  if (remove) remove.hidden = true;
-}
-
-function wireCalendarFeed() {
-  $('#feed-create').addEventListener('click', async () => {
-    // Replacing one stops every calendar that was given it, which is what replacing
-    // it is for - and worth saying before it happens, not after.
-    if (calendarFeed?.active) {
-      const replace = await confirmDialog({
-        title: t('feed.replaceTitle', 'Create a new address?'),
-        text: t('feed.replaceText', 'Every calendar given the current address stops showing your days. That is what you want if somebody may have seen it.'),
-        confirmLabel: t('feed.replace', 'New address'),
-      });
-      if (!replace) return;
-    }
-
-    mutate(async () => {
-      const feed = await api('/me/calendar-feed', { method: 'POST' });
-
-      // The answer says where the feed is read relative to this installation, and
-      // the address a calendar needs is the one this page was reached at.
-      $('#feed-address-value').textContent = `${location.origin}${feed.path}`;
-      $('#feed-address').dataset.prefix = feed.prefix;
-
-      // The same address as a code, for the phone a calendar is usually on. The
-      // server builds it from this page's own origin, so it is the text above.
-      const qr = $('#feed-qr');
-      qr.hidden = !feed.qr;
-      qr.alt = feed.qr ? t('feed.qrAlt', 'QR code of the calendar address') : '';
-      if (feed.qr) qr.src = feed.qr;
-      $('#feed-qr-hint').hidden = !feed.qr;
-
-      $('#feed-address').hidden = false;
-
-      await loadCalendarFeed();
-    }, null, null);
-  });
-
-  $('#feed-remove').addEventListener('click', async () => {
-    const remove = await confirmDialog({
-      title: t('feed.removeTitle', 'Remove the address?'),
-      text: t('feed.removeText', 'Every calendar given this address stops showing your days.'),
-      confirmLabel: t('feed.remove', 'Remove address'),
-    });
-    if (!remove) return;
-
-    mutate(() => api('/me/calendar-feed', { method: 'DELETE' }),
-      t('feed.removed', 'Address removed'),
-      async () => {
-        forgetTheFeedAddress();
-        await loadCalendarFeed();
-      });
-  });
-}
-
 // ------------------------------------------------------------ administration
 
 /**
- * Whether this account administers the installation and has no working day.
+ * Whether this account administers the installation: the built-in administrator,
+ * or anybody whose role holds settings:manage.
  *
- * The built-in administrator, and anybody holding the admin role - which is the
- * same thing said twice: that role is the administration and none of the working
- * day, and an installation that hands it to somebody has decided that person
- * administers. This asked whether the caller *was* the built-in account, so the
- * few things reserved for it stayed reserved for it, and the way to reach them
- * was to sign in as the one account nobody can attribute to a person.
- *
- * Asked as a shape rather than by the role's name, which an installation may have
- * changed. The combined role is deliberately not this: somebody who also books
- * time keeps their own screens, their walk through and their working times, and
- * was never meant to inherit the directory purge with them.
- *
- * Mirrors Authorizer.AdministersOnly, and has to: this decides what is offered
- * and that decides what is answered. A screen offering what the server refuses is
- * worse than one that offers nothing.
+ * Mirrors Authorizer.RequireInstallationAdmin, and has to: this decides what is
+ * offered and that decides what is answered. A screen offering what the server
+ * refuses is worse than one that offers nothing.
  */
-const administersOnly = () => !me.authEnabled
+const administers = () => !me.authEnabled
   || (me.user?.isSystem ?? false)
-  || (can('settings:manage') && !can('timesheets:write:own'));
+  || can('settings:manage');
 
 /**
  * Applies the instance branding.
@@ -8660,7 +5669,6 @@ async function loadAdmin() {
   if (!can('settings:manage')) return;
 
   await loadMaintenance();
-  await loadManagersSwitch();
   await loadPushSwitch();
 
   const branding = await api('/branding');
@@ -8848,28 +5856,7 @@ async function loadAdmin() {
 
   await loadOpenIDSettings();
 
-  // The directory run belongs to the built-in administrator, because it deletes
-  // the accounts the directory no longer holds along with everything they
-  // recorded. Somebody holding settings:manage saw the card and both buttons, and
-  // was refused by the server on pressing either - and could set the schedule that
-  // performs the same deletion unattended, which the server now refuses too.
-  //
-  // data-perm cannot express this: it names a permission, and this is about which
-  // account it is.
-  $('#sync-card').hidden = !administersOnly();
-
   await loadSyncRuns();
-
-  // And said, to the account it is taken from. Everybody who reaches this screen
-  // administers; the ones who also record time found one card fewer and nothing
-  // about why, on a screen the tour had told them carried it.
-  $('#sync-elsewhere').hidden = administersOnly();
-  $('#sync-elsewhere-text').textContent = t('sync.elsewhere',
-    'Not offered to this account. A run deletes the accounts the directory no longer holds, '
-    + 'together with the time recorded on them, so it belongs to an account that administers and '
-    + 'records no time of its own: the built-in administrator, or one holding the role "{0}". '
-    + 'Sign in with one of those to preview, run or schedule it.')
-    .replace('{0}', roleTitle(ADMINISTERING_ROLE));
 
   const schedule = $('#form-sync-schedule');
   if (schedule) {
@@ -8938,7 +5925,6 @@ const CHANGE_SENTENCES = {
   'user.deleted': () => t('change.userDeleted', 'Deleted the account {0}'),
   'user.role': () => t('change.userRole', 'Gave {0} the role {1}'),
   'user.password': () => t('change.userPassword', 'Set a new password for {0}'),
-  'user.managers': () => t('change.userManagers', 'Assigned managers to {0}'),
   'users.imported': () => t('change.usersImported', 'Imported accounts from a spreadsheet'),
   'role.created': () => t('change.roleCreated', 'Created the role {0}'),
   'role.updated': () => t('change.roleUpdated', 'Changed the role {0}'),
@@ -8954,7 +5940,6 @@ const CHANGE_SENTENCES = {
   'settings.holidays': () => t('change.holidays', 'Changed the public holidays'),
   'settings.datasource': () => t('change.datasource', 'Changed the database connection'),
   'settings.telemetry': () => t('change.telemetry', 'Changed logging, metrics and tracing'),
-  'settings.managers': () => t('change.managers', 'Switched managers {1}'),
   'settings.push': () => t('change.push', 'Switched push notifications {1}'),
   'installation.restart': () => t('change.restart', 'Restarted the application'),
   'installation.update': () => t('change.update', 'Started an update'),
@@ -8967,8 +5952,6 @@ function describeChange(entry) {
   const detail = {
     'user.role': () => roleTitle(entry.detail),
     'settings.maintenance': () => (entry.detail === 'true'
-      ? t('change.on', 'on') : t('change.off', 'off')),
-    'settings.managers': () => (entry.detail === 'true'
       ? t('change.on', 'on') : t('change.off', 'off')),
     'settings.push': () => (entry.detail === 'true'
       ? t('change.on', 'on') : t('change.off', 'off')),
@@ -8988,7 +5971,7 @@ function describeChange(entry) {
  */
 async function loadSyncRuns() {
   const tbody = $('#table-sync-runs tbody');
-  if (!tbody || !administersOnly()) return;
+  if (!tbody) return;
 
   const runs = await api('/settings/ldap/sync/runs');
 
@@ -9000,7 +5983,7 @@ async function loadSyncRuns() {
         : t('sync.unattended', 'Schedule or script'),
     }),
     el('td', { class: 'num', text: String(run.deleted) }),
-    el('td', { class: 'num', text: String(run.entriesDeleted) }),
+    el('td', { class: 'num', text: String(run.ticketsReleased) }),
     el('td', { class: 'num', text: String(run.created) }),
   ));
 
@@ -9335,8 +6318,9 @@ function sayAtLeastSomething(result) {
 /**
  * Runs a directory reconciliation, or previews one.
  *
- * The real run asks for confirmation naming the exact number of accounts and
- * recorded entries at stake, because it cannot be undone.
+ * The real run asks for confirmation naming the exact number of accounts it
+ * deletes and of the unfinished tickets they leave without an owner, because it
+ * cannot be undone.
  */
 function wireDirectorySync() {
   const status = $('#sync-status');
@@ -9351,7 +6335,7 @@ function wireDirectorySync() {
     const rows = report.candidates.map((c) => el('tr', {},
       el('td', { class: 'text', text: c.name }),
       el('td', { text: c.email }),
-      el('td', { class: `num ${c.timesheets > 0 ? 'minus' : ''}`, text: String(c.timesheets) }),
+      el('td', { class: `num ${c.tickets > 0 ? 'minus' : ''}`, text: String(c.tickets) }),
     ));
 
     fillTable($('#table-sync tbody'), rows, 3, t('sync.none', 'No accounts are missing from the directory.'));
@@ -9410,12 +6394,13 @@ function wireDirectorySync() {
 
       if (preview.aborted) return;
 
-      const hours = preview.candidates.reduce((sum, c) => sum + c.timesheets, 0);
+      const tickets = preview.candidates.reduce((sum, c) => sum + c.tickets, 0);
 
       if (preview.candidates.length > 0) {
-        const question = t('sync.confirm', 'WARNING: {n} account(s) and {h} time entries will be deleted irreversibly. Continue?')
+        const question = t('sync.confirm', 'WARNING: {n} account(s) will be deleted irreversibly, '
+          + 'and {t} unfinished ticket(s) left without an owner. Continue?')
           .replace('{n}', String(preview.candidates.length))
-          .replace('{h}', String(hours));
+          .replace('{t}', String(tickets));
 
         const proceed = await confirmDialog({
           title: t('sync.confirmTitle', 'Run the synchronisation?'),
@@ -9777,15 +6762,15 @@ const removeAfterConfirm = async (what, path, msg, after) => {
 };
 
 /**
- * Deletes a user, asking first when it would destroy recorded time.
+ * Deletes a user, asking first when it would leave tickets without an owner.
  *
  * The server refuses that deletion rather than performing it, and its refusal
- * carries the number of entries. So the question put to the administrator has
- * the real number in it rather than a general warning: "42 entries" is a
- * different decision from "some data may be lost", and only the server knows
- * which it is.
+ * carries the number of unfinished tickets the account owns. So the question put
+ * to the administrator has the real number in it rather than a general warning:
+ * "42 tickets" is a different decision from "some tickets may be affected", and
+ * only the server knows which it is.
  *
- * An account with nothing recorded is deleted straight away. Asking about
+ * An account owning no unfinished ticket is deleted straight away. Asking about
  * something with no consequence trains people to click through the dialog that
  * does have one.
  */
@@ -9807,10 +6792,10 @@ async function deleteUser(user) {
 
     // The refusal explains what is attached, so it becomes the question - the
     // server's own sentence as the detail, because it carries the count, and
-    // "42 entries" is a different decision from "some data may be lost".
+    // "42 tickets" is a different decision from "some tickets may be affected".
     const proceed = await confirmDialog({
       title: t('confirm.deleteTitle', 'Delete for good?'),
-      text: t('user.deleteConfirm', 'Delete anyway? The recorded time cannot be recovered.'),
+      text: t('user.deleteConfirm', 'Delete anyway? The tickets it owns stay, without an owner.'),
       detail: err.message,
       confirmLabel: t('action.delete', 'delete'),
     });
@@ -9819,7 +6804,7 @@ async function deleteUser(user) {
   }
 
   mutate(
-    () => api(`/users/${user.id}?purge=true`, { method: 'DELETE' }),
+    () => api(`/users/${user.id}?confirm=true`, { method: 'DELETE' }),
     done,
     refreshAll);
 }
@@ -9920,9 +6905,9 @@ async function submitLogin(e) {
   const form = e.target;
 
   // The second step of a ticket sign-in, which asks for the code and nothing
-  // else. See askForTheCodeAfterATicket.
+  // else. See askForTheCodeAfterKerberos.
   if (form.dataset.via === 'ticket') {
-    await signInWithTicket({ totp: form.elements.totp.value.trim() });
+    await signInWithKerberos({ totp: form.elements.totp.value.trim() });
 
     return;
   }
@@ -10002,7 +6987,7 @@ async function arriveAfterSignIn() {
 }
 
 /** Whether this installation offers a sign-in with the browser's Kerberos ticket. */
-let ticketsOffered = false;
+let kerberosOffered = false;
 
 /**
  * Where a tab remembers not to try a ticket by itself.
@@ -10015,12 +7000,12 @@ let ticketsOffered = false;
  * sign-in that works clears it. sessionStorage, so it is this tab's and ends
  * with it.
  */
-const TICKET_HELD_BACK_KEY = 'gts.kerberos.heldBack';
+const KERBEROS_HELD_BACK_KEY = 'gts.kerberos.heldBack';
 
 /** Whether the page may try the ticket before anybody asks it to. */
-function mayTryTheTicketUnasked() {
+function mayTryKerberosUnasked() {
   try {
-    return window.sessionStorage.getItem(TICKET_HELD_BACK_KEY) === null;
+    return window.sessionStorage.getItem(KERBEROS_HELD_BACK_KEY) === null;
   } catch {
     // Without storage a sign-out could not be remembered past a reload, so the
     // page would sign straight back in. The button still works.
@@ -10028,17 +7013,17 @@ function mayTryTheTicketUnasked() {
   }
 }
 
-function holdTheTicketBack() {
+function holdKerberosBack() {
   try {
-    window.sessionStorage.setItem(TICKET_HELD_BACK_KEY, '1');
+    window.sessionStorage.setItem(KERBEROS_HELD_BACK_KEY, '1');
   } catch {
-    // Nothing to remember it in; mayTryTheTicketUnasked already says no.
+    // Nothing to remember it in; mayTryKerberosUnasked already says no.
   }
 }
 
-function letTheTicketTryAgain() {
+function letKerberosTryAgain() {
   try {
-    window.sessionStorage.removeItem(TICKET_HELD_BACK_KEY);
+    window.sessionStorage.removeItem(KERBEROS_HELD_BACK_KEY);
   } catch {
     // Nothing was stored, so nothing is held back by it.
   }
@@ -10051,14 +7036,14 @@ function letTheTicketTryAgain() {
  * configured - so a browser is never sent the Negotiate challenge by an
  * installation that could do nothing with the answer.
  */
-async function loadTicketSupport() {
+async function loadKerberosSupport() {
   try {
-    ticketsOffered = Boolean((await api('/auth/kerberos'))?.available);
+    kerberosOffered = Boolean((await api('/auth/kerberos'))?.available);
   } catch {
-    ticketsOffered = false;
+    kerberosOffered = false;
   }
 
-  $('#login-kerberos').hidden = !ticketsOffered;
+  $('#login-kerberos').hidden = !kerberosOffered;
 }
 
 /**
@@ -10074,7 +7059,7 @@ async function loadTicketSupport() {
  * nothing, because the form is the answer, and holds the ticket back for the
  * rest of the tab. Asked for with the button, a failure is said.
  */
-async function signInWithTicket({ quietly = false, totp = '' } = {}) {
+async function signInWithKerberos({ quietly = false, totp = '' } = {}) {
   let result;
 
   try {
@@ -10084,7 +7069,7 @@ async function signInWithTicket({ quietly = false, totp = '' } = {}) {
     });
   } catch (err) {
     if (quietly) {
-      holdTheTicketBack();
+      holdKerberosBack();
 
       return;
     }
@@ -10111,12 +7096,12 @@ async function signInWithTicket({ quietly = false, totp = '' } = {}) {
   // The ticket was good and the account has a second factor: the ticket stands in
   // for the password and for nothing else.
   if (result?.totpRequired) {
-    askForTheCodeAfterATicket();
+    askForTheCodeAfterKerberos();
 
     return;
   }
 
-  letTheTicketTryAgain();
+  letKerberosTryAgain();
   await arriveAfterSignIn();
 }
 
@@ -10130,7 +7115,7 @@ async function signInWithTicket({ quietly = false, totp = '' } = {}) {
  * and stop being required - a hidden field that is still required cannot be
  * submitted past, and the form would silently do nothing.
  */
-function askForTheCodeAfterATicket() {
+function askForTheCodeAfterKerberos() {
   const form = $('#form-login');
 
   form.dataset.via = 'ticket';
@@ -10170,15 +7155,15 @@ function backToThePasswordForm() {
 
   form.elements.totp.value = '';
   showCodeField($('#login-totp-field'), false);
-  $('#login-kerberos').hidden = !ticketsOffered;
+  $('#login-kerberos').hidden = !kerberosOffered;
   $('#login-passkey').hidden = !passkeysAvailable;
   $('#login-kerberos-leave').hidden = true;
   $('#login-error').hidden = true;
 }
 
 /** The two buttons a ticket sign-in adds to the form. */
-function wireTicketSignIn() {
-  $('#login-kerberos').addEventListener('click', () => signInWithTicket());
+function wireKerberosSignIn() {
+  $('#login-kerberos').addEventListener('click', () => signInWithKerberos());
   $('#login-kerberos-leave').addEventListener('click', backToThePasswordForm);
 }
 
@@ -10246,17 +7231,8 @@ function forgetTheLastAccount() {
   }
 
   cache.users = [];
-  cache.projects = [];
   cache.roles = [];
   cache.permissions = [];
-
-  // Whose time was on screen, and whom this account looked after: the next
-  // account to sign in starts on its own.
-  viewingFor = null;
-  myTeam = [];
-  delete document.documentElement.dataset.viewingFor;
-  $('#viewing-banner').hidden = true;
-  $('#viewing-for').hidden = true;
 
   // Emptied rather than left to the next render, which may never come: a table
   // whose loader returns early keeps whatever it last held.
@@ -10269,13 +7245,9 @@ function forgetTheLastAccount() {
   // between them.
   for (const body of $$('table[id] tbody')) body.replaceChildren();
 
-  // And the lists, which are not tables and were left standing. loadProjects
-  // fills four of them - the stopwatch's, the booking form's, the report form's
-  // and the entry filter's - and every loader here returns at its first line when
-  // the right is absent, so an account that may book time and may not read
-  // projects was shown the last person's project names. Those are private: a
-  // project belongs to exactly one person, which is why the record was hidden in
-  // the first place.
+  // And the lists, which are not tables and were left standing: a loader that
+  // returns at its first line when the right is absent leaves the last person's
+  // choices in every list it filled.
   //
   // Only the ones a loader filled, by the mark fillSelect leaves. The rule is the
   // same one the tables above are chosen by, and for the same reason - the legend
@@ -10289,20 +7261,6 @@ function forgetTheLastAccount() {
   // The selection bars belong to those rows and would otherwise stand over an
   // empty table offering to delete three things.
   for (const bar of $$('.bulk-bar')) bar.remove();
-
-  // And the entry list's own memory, with the line that counts it. "Showing 25 of
-  // 26 entries" is how much the last account recorded, and it is a div beside the
-  // list rather than a table, so the sweep above did not reach it: it stood over
-  // an emptied table until some loader replaced it, which for an account without
-  // timesheets:read:own never happens. How much somebody recorded is theirs, by
-  // the same reasoning that hides the project record.
-  //
-  // Through showTimesheetTally rather than by emptying the span here, so one place
-  // still knows how that line is drawn - and it takes the "load more" row down
-  // with it, which would otherwise offer to fetch the rest of somebody else's.
-  timesheetEntries = [];
-  timesheetTotal = 0;
-  showTimesheetTally();
 
   // And an enrolment somebody was half way through. The panel holds a shared
   // secret, the otpauth URI that carries it together with the account's address,
@@ -10322,10 +7280,6 @@ function forgetTheLastAccount() {
   // a working credential rather than an enrolment nobody finished.
   forgetTheTokenValue();
 
-  // And a calendar feed's address, which is one too - a key to somebody's days -
-  // with what the card said about it.
-  forgetTheCalendarFeed();
-
   // And the installation's address as a code, so that no code outlives a session.
   forgetTheAndroidCode();
 
@@ -10337,53 +7291,9 @@ function forgetTheLastAccount() {
   // theirs into one that shows it.
   hideEveryRevealedPassword();
 
-  // And where the calendar was left. It is worked out once and remembered, and
-  // the arrows write to it, so somebody who paged back to March and signed out
-  // left March for whoever signed in next.
-  //
-  // Not only untidy: the memo was made in the previous account's zone, and its
-  // own comment says why that is the whole reason the month is worked out late
-  // rather than early - "which month somebody is in is a question about their own
-  // zone, and the zone is not known until they are signed in". Held across a
-  // sign-out it is the same wrong answer that comment was written against,
-  // reached from the other side.
-  calendarMonth = null;
-
-  // And the month it drew. The grid is not a table, so emptying the tables left
-  // its days and their projects, and an account that may not read entries never
-  // draws over them - loadCalendar returns first.
-  $('#calendar-days').replaceChildren();
-  $('#calendar-summary').textContent = '';
-  $('#calendar-day-card').hidden = true;
-
-  // And the greeting, which names whoever it greeted beside their day's hours
-  // and last entries, and is drawn again only when somebody arrives on it.
+  // And the greeting, which names whoever it greeted and is drawn again only
+  // when somebody arrives on it.
   $('#welcome-title').textContent = '';
-  $('#welcome-today').textContent = '';
-  $('#welcome-recent-list').replaceChildren();
-  $('#welcome-recent').hidden = true;
-
-  // The week beside them, and the week on the grid: this account's hours, which
-  // must not wait behind the sign-in screen for whoever comes next.
-  $('#welcome-week-bars').replaceChildren();
-  $('#welcome-week').hidden = true;
-  forgetTheWeek();
-
-  // And the templates: the sweeps above empty the picker and the card's rows, and
-  // this hides the two, which would otherwise stand empty for the next account.
-  forgetTheTemplates();
-
-  // And how many of the last account's entries were waiting for a project.
-  unassignedEntries = 0;
-  drawUnassigned();
-
-  // And their leave, whose figures are theirs.
-  forgetTheVacation();
-
-  // And their year, tile by tile.
-  forgetTheYearMap();
-
-
 
   // And each form's own reset, which resetting the form does not reach: a hidden
   // field keeps its value through one, so a form left correcting a record kept
@@ -10392,16 +7302,11 @@ function forgetTheLastAccount() {
   // caches and the account are gone, because two of them draw from those.
   resetUserForm();
   resetRoleForm();
-  resetProjectForm();
-  resetTimesheetForm();
 
   // And the imports this account had checked. The cards are not forms, so the
   // reset of every form never reached the file, the verdict or the button that
   // writes it.
   forgetEveryImport();
-
-  // And what it evaluated, which nothing asks for again at the next sign-in.
-  forgetEveryEvaluation();
 
   // Last, after the tables are emptied: the sign-out applies the language next,
   // and every draw still registered would put its account's rows back.
@@ -10439,7 +7344,7 @@ async function doLogout() {
   // sign them straight back in with the ticket. Here rather than wherever a
   // session ends, because a session the server ended is not a choice anybody
   // made.
-  holdTheTicketBack();
+  holdKerberosBack();
 
   handBackTheScreen();
 }
@@ -10511,20 +7416,6 @@ function handBackTheScreen(message) {
   // under it. The reason a session ends is said on the sign-in form instead.
   $('#toast')?.replaceChildren();
 
-  // And the stopwatch, which is the fifth of them. It is cleared in one place
-  // only - inside renderTimer, on a pass where nothing is running - so signing
-  // out with a clock going left setInterval firing once a second, painting one
-  // person's elapsed time onto a screen that had been handed back.
-  //
-  // What would have cleared it is the next account's loadTimer, and that returns
-  // at its first line for an account without timesheets:write:own. For those it
-  // was never cleared at all.
-  //
-  // Through renderTimer rather than clearing the interval here, so there is one
-  // place that knows how the clock is put away.
-  runningTimer = null;
-  renderTimer();
-
   // And the notice those two could have put up. It is about what the account
   // that is leaving may do, and it must not be waiting for whoever signs in at
   // the same desk next.
@@ -10548,28 +7439,6 @@ function handBackTheScreen(message) {
   forgetEveryDraft();
 
   for (const form of $$('form')) form.reset();
-
-  // And the typed work that belongs to no form, which the line above cannot
-  // reach. The stopwatch's project and description sit beside the clock rather
-  // than in a form - starting a timer is a button, not a submission - and that is
-  // the whole reason the loose-draft machinery exists for them.
-  //
-  // So the store was emptied and the screen was not: signing out left the
-  // description standing, and the next person at that desk signed in and found
-  // it. Free text about what somebody was doing is exactly what must not be
-  // handed on, and it is the same failure the paragraph above describes for the
-  // forms - fixed there, and not here, because these came later and are
-  // deliberately not forms.
-  //
-  // Cleared by the same declaration that decides what is kept, data-keep, so the
-  // two cannot drift apart. A select with no empty option would be left showing
-  // nothing at all, which reads as broken rather than as cleared, so it goes back
-  // to its first entry instead.
-  for (const field of $$('[data-keep]')) {
-    field.value = '';
-
-    if (field.tagName === 'SELECT' && field.selectedIndex < 0) field.selectedIndex = 0;
-  }
 
   // And what this installation is waiting to restart into, which is the
   // administration of the installation and none of the next person's business.
@@ -10726,7 +7595,7 @@ async function loadLanguages() {
  * Each step names a real selector rather than describing a control in prose,
  * so a step whose target has been removed can be detected and dropped instead
  * of pointing at nothing. `view` switches to the tab first, because explaining
- * the calendar while the timesheet is on screen helps nobody.
+ * a card on one screen while another is showing helps nobody.
  *
  * `permission` keeps the tour honest about what this person can actually do:
  * a user has no Roles tab, and a tour that mentions one is a tour that
@@ -10738,8 +7607,8 @@ const TOUR_STEPS = [
     view: null,
     title: () => t('tour.welcome.title', 'The way back'),
     text: () => t('tour.welcome.text',
-      'The title takes you to the welcome screen from wherever you are. It says what '
-      + 'today already has on it, and it can start this walk again.'),
+      'The title takes you to the welcome screen from wherever you are, and the welcome '
+      + 'screen can start this walk again.'),
   },
   {
     target: '#tabs',
@@ -10750,173 +7619,13 @@ const TOUR_STEPS = [
       + 'so this bar is shorter for some people than for others.'),
   },
   {
-    target: '#timer-card',
-    view: 'timesheets',
-    permission: 'timesheets:write:own',
-    title: () => t('tour.timer.title', 'The stopwatch'),
-    text: () => t('tour.timer.text',
-      'Start it when you start, stop it when you are done, and it books the time it '
-      + 'measured. It keeps running if you close the browser, because it runs on the '
-      + 'server rather than in this tab.'),
-  },
-  {
-    target: '#form-timesheet',
-    view: 'timesheets',
-    permission: 'timesheets:write:own',
-    title: () => t('tour.book.title', 'Booking time'),
-    text: () => t('tour.book.text',
-      'Pick a date, enter the hours, done. A project is optional, so hours can be recorded '
-      + 'now and sorted later. What you write is what is stored, to the minute: nothing '
-      + 'here rounds to a quarter of an hour.'),
-  },
-  {
-    target: '#table-timesheets',
-    view: 'timesheets',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.entries.title', 'Your entries'),
-    text: () => t('tour.entries.text',
-      'Everything you booked, filterable by project. Click a row to correct it, or tick '
-      + 'several and delete them in one go. It stays yours to change: there is nobody to '
-      + 'submit it to.'),
-  },
-  {
-    target: '#workbook-card',
-    view: 'timesheets',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.sheet.title', 'In and out as a spreadsheet'),
-    text: () => t('tour.sheet.text',
-      'Your hours as a spreadsheet, with the column headings in the language you are '
-      + 'reading. An import shows you what it would change before it changes anything. '
-      + 'Every table worth moving this way has the same pair on its own screen.'),
-  },
-  {
-    target: '#templates-card',
-    view: 'timesheets',
-    permission: 'timesheets:write:own',
-    title: () => t('tour.templates.title', 'Templates'),
-    text: () => t('tour.templates.text',
-      'Bookings you make often, kept with "Save as template" in the form above. A template '
-      + 'only fills the form in: nothing is booked until you press Book.'),
-  },
-  {
-    target: '#week-card',
-    view: 'week',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.week.title', 'The week as a grid'),
-    text: () => t('tour.week.text',
-      'A row for each project and a column for each day. A number typed into an empty cell '
-      + 'books it, and a changed number corrects the entry behind it.'),
-  },
-  {
-    target: '#calendar-days',
-    view: 'calendar',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.calendar.title', 'The month at a glance'),
-    text: () => t('tour.calendar.text',
-      'Which days have hours on them, and how many. Click a day to see what is behind '
-      + 'it, and click one of those entries to correct it.'),
-  },
-  {
-    target: '#workday-card',
-    view: 'calendar',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.workday.title', 'Your working time'),
-    text: () => t('tour.workday.text',
-      'When you began, when you finished and how long your breaks were, beside the hours you '
-      + 'booked - and as a PDF. Days past a limit of the Working Hours Act are marked.'),
-  },
-  {
-    target: '#vacation-card',
-    view: 'calendar',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.leave.title', 'Your leave'),
-    text: () => t('tour.leave.text',
-      'How many days of leave a year gives you, what was carried over, taken and planned, '
-      + 'and how many are left.'),
-  },
-  {
-    target: '#absence-card',
-    view: 'calendar',
-    permission: 'timesheets:write:own',
-    title: () => t('tour.absence.title', 'Days away'),
-    text: () => t('tour.absence.text',
-      'Leave, illness and days taken against overtime, recorded over a range. Only the days '
-      + 'your week asks something of count, so a fortnight of leave is ten working days.'),
-  },
-  {
-    target: '#chart-days',
-    view: 'overtime',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.stats.title', 'Your own figures'),
-    text: () => t('tour.stats.text',
-      'Hours per day, per project and per activity, over any period you choose. Yours alone, '
-      + 'and nobody else sees them.'),
-  },
-  {
-    target: '#year-card',
-    view: 'overtime',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.year.title', 'The year at a glance'),
-    text: () => t('tour.year.text',
-      'Every day of the year as a tile, darker the more you booked, with public holidays and '
-      + 'days away marked - and the year so far beside the last one up to the same day.'),
-  },
-  {
-    target: '#form-overtime',
-    view: 'overtime',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.overtime.title', 'Your overtime balance'),
-    text: () => t('tour.overtime.text',
-      'Booked hours against what the day asks of you: your weekly plan, or without one '
-      + 'your daily target from Monday to Friday. Only days with bookings count until you choose '
-      + 'a day under My account; from then on every working day counts, and public holidays and '
-      + 'absences ask less.'),
-  },
-  {
-    target: '#form-project',
-    view: 'projects',
-    permission: 'projects:write',
-    title: () => t('tour.projects.title', 'Your projects'),
-    text: () => t('tour.projects.text',
-      'Somewhere to put your hours, and yours alone: only you see them and only you book '
-      + 'on them. Two people on the same job keep a project each.'),
-  },
-  {
-    target: '#table-projects',
-    view: 'projects',
-    permission: 'projects:read',
-    title: () => t('tour.projectList.title', 'Where each project stands'),
-    text: () => t('tour.projectList.text',
-      'Only an active project takes hours. Complete one when the work is done, and archive it '
-      + 'once it is completed: its hours stay readable.'),
-  },
-  {
-    target: '#form-report',
-    view: 'report',
-    permission: 'reports:read:own',
-    title: () => t('tour.report.title', 'Reports'),
-    text: () => t('tour.report.text',
-      'What you booked over a period: on one project, across all of them at once, or only '
-      + 'the hours you never assigned to one. Your own hours - there is no breakdown per '
-      + 'colleague, because nobody sees what anybody else recorded.'),
-  },
-  {
-    target: '#form-statement',
-    view: 'report',
-    permission: 'reports:read:own',
-    title: () => t('tour.statement.title', 'A statement of work'),
-    text: () => t('tour.statement.text',
-      'The hours of your billable projects in a period, at their rate and totalled per '
-      + 'currency. Not an invoice: the number, the tax and the customer are yours to write.'),
-  },
-  {
     target: '#form-user',
     view: 'users',
     permission: 'users:write',
     title: () => t('tour.users.title', 'The people who work here'),
     text: () => t('tour.users.text',
-      'Add an account and give it a role. It starts on the instance default, and its owner '
-      + 'changes their own working times from My account.'),
+      'Add an account and give it a role: an agent works on tickets, a customer reaches the '
+      + 'portal and nothing else.'),
   },
   {
     target: '#table-users',
@@ -10936,41 +7645,6 @@ const TOUR_STEPS = [
     text: () => t('tour.roles.text',
       'A role is a set of rights, and each one is enforced by real code rather than by a '
       + 'hidden button. Tick what the role may do; every account holding it changes with it.'),
-  },
-  {
-    target: '#form-working-times',
-    view: 'settings',
-    title: () => t('tour.account.title', 'My account'),
-    text: () => t('tour.account.text',
-      'Your daily target and your daily ceiling. The target is what the overtime balance '
-      + 'is measured against, and nobody but you sets it.'),
-  },
-  {
-    target: '#form-balance-bounds',
-    view: 'settings',
-    permission: 'settings:write:own',
-    title: () => t('tour.bounds.title', 'Bounds for your balance'),
-    text: () => t('tour.bounds.text',
-      'Two figures your running balance should stay between, as on a flexitime account. '
-      + 'While it lies outside them, a banner says so on every screen.'),
-  },
-  {
-    target: '#form-reminders',
-    view: 'settings',
-    permission: 'timesheets:write:own',
-    title: () => t('tour.reminders.title', 'Reminders'),
-    text: () => t('tour.reminders.text',
-      'A banner when the stopwatch has run longer than you choose, or when your last working '
-      + 'day has nothing booked on it. For the stopwatch, this browser can notify you as well.'),
-  },
-  {
-    target: '#schedule-card',
-    view: 'settings',
-    permission: 'settings:write:own',
-    title: () => t('tour.schedule.title', 'Your week'),
-    text: () => t('tour.schedule.text',
-      'How many hours each weekday asks of you, for the overtime balance. A plan applies from '
-      + 'the day you choose; the weeks before it keep the plan they had.'),
   },
   {
     target: '#passkey-card',
@@ -10997,23 +7671,25 @@ const TOUR_STEPS = [
     title: () => t('tour.install.title', 'The Android app'),
     text: () => t('tour.install.text',
       'Scan this code with an Android phone to download the app of the release this '
-      + 'installation runs. It shows this interface and reminds you with notifications.'),
+      + 'installation runs. It shows this interface.'),
+  },
+  {
+    target: '#notify-card',
+    view: 'settings',
+    title: () => t('tour.notify.title', 'Being told'),
+    text: () => t('tour.notify.text',
+      'What happens to your tickets is said on the screen while a page is open. Here this '
+      + 'browser can say it as a notification as well, and receive it while it is closed '
+      + 'where the installation allows that.'),
   },
   {
     target: '#form-my-timezone',
     view: 'settings',
     title: () => t('tour.myZone.title', 'Your timezone'),
     text: () => t('tour.myZone.text',
-      'It decides which calendar day a booking lands on. It is taken from your browser the '
-      + 'first time you sign in, and this is where you disagree with that.'),
-  },
-  {
-    target: '#form-my-holidays',
-    view: 'settings',
-    title: () => t('tour.myHolidays.title', 'Your public holidays'),
-    text: () => t('tour.myHolidays.text',
-      'The public holidays where you work: marked in the calendar and on the week, and left '
-      + 'out of your leave. Leave it on the installation\'s unless you work somewhere else.'),
+      'Moments are written in it for you: when a ticket arrived, when a deadline falls. It is '
+      + 'taken from your browser the first time you sign in, and this is where you disagree '
+      + 'with that.'),
   },
   {
     target: '#totp-card',
@@ -11024,20 +7700,11 @@ const TOUR_STEPS = [
       + 'secret, where scanning is not an option.'),
   },
   {
-    target: '#feed-card',
-    view: 'settings',
-    permission: 'timesheets:read:own',
-    title: () => t('tour.feed.title', 'Your days in your own calendar'),
-    text: () => t('tour.feed.text',
-      'An address that puts your booked hours and your days away into Outlook, Google or your '
-      + 'phone\'s calendar. Whoever has it can read them, so it is shown only once.'),
-  },
-  {
     target: '#token-card',
     view: 'settings',
     title: () => t('tour.tokens.title', 'Tokens for scripts and the app'),
     text: () => t('tour.tokens.text',
-      'A personal token lets a script book time as you, and connects the Android app that '
+      'A personal token lets a script use the API as you, and connects the Android app that '
       + 'scans its code. It carries exactly the rights your role has when it is used, and is '
       + 'shown once, when it is created.'),
   },
@@ -11048,14 +7715,6 @@ const TOUR_STEPS = [
     text: () => t('tour.password.text',
       'Changing it ends every other session but this one. An account that signs in through '
       + 'the directory has no password here to change.'),
-  },
-  {
-    target: '#managers-card',
-    view: 'settings',
-    title: () => t('tour.myManagers.title', 'Who may see your time'),
-    text: () => t('tour.myManagers.text',
-      'Nobody but you, unless the installation has managers and an administrator assigns you '
-      + 'one. Whoever may would be named here.'),
   },
   {
     target: '#export-card',
@@ -11102,21 +7761,12 @@ const TOUR_STEPS = [
       + 'is what tells a test instance from the real one at a glance.'),
   },
   {
-    target: '#form-managers',
-    view: 'admin',
-    permission: 'settings:manage',
-    title: () => t('tour.managers.title', 'Managers'),
-    text: () => t('tour.managers.text',
-      'Switched on, a manager looks after the time and projects of the accounts you assign '
-      + 'to them under Users. A manager learns that a day was away, never why.'),
-  },
-  {
     target: '#form-push',
     view: 'admin',
     permission: 'settings:manage',
     title: () => t('tour.push.title', 'Push notifications'),
     text: () => t('tour.push.text',
-      'Whether the reminders reach a browser that is closed. Off until you switch it on, '
+      'Whether notifications reach a browser that is closed. Off until you switch it on, '
       + 'because every push leaves through the push service of the browser\'s maker.'),
   },
   {
@@ -11125,8 +7775,8 @@ const TOUR_STEPS = [
     permission: 'settings:manage',
     title: () => t('tour.limits.title', 'Limits and lifetimes'),
     text: () => t('tour.limits.text',
-      'How long a session lasts, how many requests a caller may make, and the figures a '
-      + 'new account starts on.'),
+      'How long a session lasts, how many requests a caller may make, and how much of the '
+      + 'directory one synchronisation may remove.'),
   },
   {
     target: '#form-timezone',
@@ -11134,8 +7784,9 @@ const TOUR_STEPS = [
     permission: 'settings:manage',
     title: () => t('tour.zone.title', 'The installation\'s timezone'),
     text: () => t('tour.zone.text',
-      'Which calendar day a booking falls on, for everybody who has not chosen their own '
-      + 'under My account.'),
+      'The day a ticket\'s number is taken from and the zone the service hours are read in - '
+      + 'and the zone moments are written in for everybody who has not chosen their own under '
+      + 'My account.'),
   },
   {
     target: '#form-holidays',
@@ -11143,8 +7794,8 @@ const TOUR_STEPS = [
     permission: 'settings:manage',
     title: () => t('tour.holidays.title', 'The installation\'s public holidays'),
     text: () => t('tour.holidays.text',
-      'A country and, where its holidays differ, a state or a region, for everybody who has '
-      + 'not chosen their own. Until a choice is saved, nobody keeps any.'),
+      'A country and, where its holidays differ, a state or a region. The service hours leave '
+      + 'its public holidays out; until a choice is saved, none is left out.'),
   },
   {
     target: '#form-datasource',
@@ -11169,18 +7820,9 @@ const TOUR_STEPS = [
     view: 'admin',
     permission: 'settings:manage',
     title: () => t('tour.ldap.title', 'Signing in against a directory'),
-
-    // Two sentences, because the card under this one is not on every
-    // administrator's screen, and the tour is walked by the ones it is missing
-    // for: an account that only administers gets the setup wizard instead.
-    text: () => (administersOnly()
-      ? t('tour.ldap.text',
-        'Accounts can come from LDAP instead of being created here. Below it, the '
-        + 'reconciliation runs on a schedule, and can be previewed before it is run by hand.')
-      : t('tour.ldap.textElsewhere',
-        'Accounts can come from LDAP instead of being created here. Reconciling them deletes '
-        + 'accounts, and is left to the built-in administrator or the role "{0}".')
-        .replace('{0}', roleTitle(ADMINISTERING_ROLE))),
+    text: () => t('tour.ldap.text',
+      'Accounts can come from LDAP instead of being created here. Below it, the '
+      + 'reconciliation runs on a schedule, and can be previewed before it is run by hand.'),
   },
   {
     target: '#form-openid',
@@ -11238,9 +7880,8 @@ function applicableTourSteps() {
  * This asked for offsetParent, and offsetParent is null for everything inside a
  * screen that is not the current one - every `.view` but one is display:none. So
  * every step outside the screen the tour happened to start on measured as absent
- * and was dropped: a tour begun on the time entries came to four steps and looked
- * complete, and the calendar, the projects, the reports and My account were simply
- * never mentioned. A step switches to its own screen before it runs, so where
+ * and was dropped: a tour begun on one screen came to four steps and looked
+ * complete, and every other screen was simply never mentioned. A step switches to its own screen before it runs, so where
  * somebody is standing right now says nothing about whether the control exists.
  *
  * What does say so is a hidden that is not a screen - a card kept back because
@@ -11427,7 +8068,7 @@ async function startTour() {
  * pointer-events: none so that it does not swallow presses meant for the
  * control it is drawing a ring around. The result was that every press landed -
  * on the highlighted control, and on everything under the dimming too. A tour
- * explaining the stopwatch while somebody starts it is a tour narrating
+ * explaining a card while somebody presses its buttons is a tour narrating
  * something that is no longer on the screen it describes.
  *
  * inert is the other half, and the blocker cannot do it: a blocker stops the
@@ -11609,17 +8250,11 @@ function greetedThisVisit() {
  * Never while the setup wizard is up: being walked through the application by
  * two things at once is worse than either alone, and the wizard is the one
  * that has to happen first.
- *
- * Not for the built-in administrator either. That account arrives at the setup
- * wizard, which is its own introduction and covers the screens it actually uses;
- * a tour of booking time and reading an overtime balance would be a tour of
- * somebody else's job. The card under My account still starts it on request.
  */
 async function maybeWelcome() {
   if (!me.user || me.user.tourSeen) return;
   if (!$('#setup-wizard').hidden) return;
   if (me.user.mustChangePassword) return;
-  if (administersOnly()) return;
   if (greetedThisVisit()) return;
 
   await startTour();
@@ -11628,11 +8263,11 @@ async function maybeWelcome() {
 /**
  * Fills in the greeting screen for whoever is looking at it.
  *
- * Rendered on every arrival rather than once, because half of what it says is
- * about today - what is already booked, whether a stopwatch was left running -
- * and a screen somebody can come back to has to be right when they do.
+ * Rendered on every arrival rather than once, because what it offers follows
+ * what this account may do, and a screen somebody can come back to has to be
+ * right when they do.
  */
-async function renderWelcome() {
+function renderWelcome() {
   if (!me.user) return;
 
   // Somebody who has been walked through the application is not new to it, so
@@ -11655,33 +8290,13 @@ async function renderWelcome() {
     : greeting.plain;
 
   $('#welcome-text').textContent = t('welcome.text',
-    'This is where your working time is recorded. A short walk through it takes '
+    'This is where requests are taken in, worked on and answered. A short walk through it takes '
     + 'about a minute, and you can start it again at any time under My account.');
-
-  // What today already has on it. Only for somebody who has hours of their own:
-  // an account that only administers has no today to report.
-  const today = $('#welcome-today');
-  today.textContent = can('timesheets:read:own') ? await todayInOneSentence() : '';
-  today.hidden = !today.textContent;
 
   // What the application is for, in the order somebody meets it. Only the points
   // this person can actually act on: a list that promises something somebody cannot
   // do is worse than a shorter list.
-  //
-  // There was a fourth, about reviewing and approving what your people submit,
-  // asked of a permission the application had already stopped defining - so can()
-  // answered no for everybody, and yes for everybody with authentication switched
-  // off, where it greeted the first user with a job that does not exist.
   const points = [
-    can('timesheets:write:own')
-      && t('welcome.point.book', 'Book hours by hand, or run a stopwatch and let it book them.'),
-    can('timesheets:read:own')
-      && t('welcome.point.see', 'See your month in a calendar, and your own figures as charts.'),
-    // The daily target is the one part of "My account" that only somebody who works
-    // here has, so it is named separately. The greeting used to promise it to
-    // everybody, including the account that records no time at all.
-    can('settings:write:own')
-      && t('welcome.point.target', 'Set your own daily target and ceiling under My account.'),
     can('users:write')
       && t('welcome.point.administer',
         'Add the people who work here, and decide what each of them may do.'),
@@ -11692,228 +8307,10 @@ async function renderWelcome() {
   $('#welcome-points').replaceChildren(...points.map((text) => el('li', { text })));
 
   // Every step of the walk points at a control, and a step whose control this person
-  // cannot reach is dropped - so for an account that only administers there is nothing
-  // left to walk through. Offering it anyway would open an empty tour, which is a
-  // worse first impression than not offering one.
+  // cannot reach is dropped - so for an account that only administers there may be
+  // nothing left to walk through. Offering it anyway would open an empty tour, which
+  // is a worse first impression than not offering one.
   $('#welcome-tour').hidden = applicableTourSteps().length === 0;
-
-  // Not awaited with the rest: the greeting is readable without it, and holding
-  // the screen for a list of five lines would be holding it for a courtesy.
-  renderWeekAtAGlance();
-  renderRecentEntries();
-}
-
-/**
- * This week on the greeting: today's hours against today's target, the week's
- * against the week's, and a bar per day.
- *
- * Today counts the running clock in, measured to now, if it started today - that
- * is time being worked rather than time not yet booked, and leaving it out makes
- * the morning look idle to the person in the middle of it. A clock started on
- * another day belongs to that day, as its booking will.
- *
- * Only for somebody who records time, like the entries beside it.
- */
-async function renderWeekAtAGlance() {
-  const card = $('#welcome-week');
-  if (!card) return;
-
-  if (!can('timesheets:read:own')) {
-    card.hidden = true;
-
-    return;
-  }
-
-  let answer;
-  let clock = null;
-
-  try {
-    answer = await api('/me/days');
-
-    if (can('timesheets:write:own')) {
-      const timer = await api('/me/timer');
-      if (timer?.running) clock = timer;
-    }
-  } catch {
-    // A courtesy, like the rest of the greeting: the screens behind it report
-    // anything that is really wrong.
-    card.hidden = true;
-
-    return;
-  }
-
-  const today = todayISO();
-  const days = (answer?.days ?? []).map((daily) => ({ ...daily }));
-
-  if (clock && wallClock(clock.startedAt).date === today) {
-    const running = days.find((daily) => daily.date === today);
-    if (running) running.booked += clock.elapsedHours ?? 0;
-  }
-
-  card.hidden = false;
-  redrawable('welcomeWeek', () => drawWeekAtAGlance(days, today));
-}
-
-/** Draws the week, in the language now in force. */
-function drawWeekAtAGlance(days, today) {
-  const booked = days.reduce((sum, daily) => sum + daily.booked, 0);
-  const target = days.reduce((sum, daily) => sum + daily.target, 0);
-
-  $('#welcome-week-total').textContent = fillIn(t('welcome.weekTotal', '{0} of {1}'),
-    [fmtHours(booked), fmtHours(target)]);
-
-  const now = days.find((daily) => daily.date === today);
-  const line = $('#welcome-week-today');
-  const meter = $('#welcome-today-meter');
-
-  if (now) {
-    const left = now.target - now.booked;
-
-    line.textContent = fillIn(t('welcome.weekToday', 'Today {0} of {1}'),
-      [fmtHours(now.booked), fmtHours(now.target)])
-      + (left > 0.005 ? ` - ${fillIn(t('welcome.weekRemaining', '{0} still to go'), [fmtHours(left)])}` : '');
-
-    meter.hidden = !(now.target > 0);
-    meter.querySelector('.seg').style.width = `${Math.min(100, (now.booked / (now.target || 1)) * 100)}%`;
-  } else {
-    line.textContent = '';
-    meter.hidden = true;
-  }
-
-  // One scale for the seven, so a day's bar can be compared with the next one:
-  // the longest day there is, booked or asked, and never less than eight hours.
-  const tallest = Math.max(8, ...days.map((daily) => Math.max(daily.booked, daily.target)));
-  const names = weekdayNames();
-
-  const bars = days.map((daily, i) => {
-    const track = el('span', { class: 'week-track' });
-    const fill = el('span', { class: 'week-fill' });
-
-    track.style.height = `${(daily.target / tallest) * 100}%`;
-    fill.style.height = `${(Math.min(daily.booked, tallest) / tallest) * 100}%`;
-
-    const name = names[i] ?? '';
-
-    return el('li', {
-      class: daily.date === today ? 'week-day today' : 'week-day',
-      'aria-label': fillIn(t('welcome.weekDay', '{0}: {1} of {2}'),
-        [name, fmtHours(daily.booked), fmtHours(daily.target)]),
-    },
-    el('span', { class: 'week-column' }, track, fill),
-    el('span', { class: 'week-name', text: name, 'aria-hidden': 'true' }));
-  });
-
-  $('#welcome-week-bars').replaceChildren(...bars);
-}
-
-/** How many entries the greeting shows, and how far back it looks for them. */
-const WELCOME_RECENT_COUNT = 5;
-const WELCOME_RECENT_DAYS = 90;
-
-/**
- * The last few entries, on the greeting.
- *
- * A bounded window rather than the whole history: this endpoint answers with
- * everything when it is given no dates, and a greeting has no business
- * downloading three years of somebody's working life to show five lines of it.
- * Ninety days is long enough that somebody coming back from a month away still
- * sees their own work, and the empty case says how far it looked rather than
- * "nothing", which would be a different and wrong statement.
- *
- * Only for somebody who records time. The built-in administrator has no entries
- * at all, and a panel explaining that is worse than no panel.
- */
-async function renderRecentEntries() {
-  const panel = $('#welcome-recent');
-  if (!panel) return;
-
-  if (!can('timesheets:read:own')) {
-    panel.hidden = true;
-
-    return;
-  }
-
-  const to = todayISO();
-  const from = ISO_DAY(new Date(Date.parse(`${to}T00:00:00Z`) - WELCOME_RECENT_DAYS * 86400000));
-
-  let entries = [];
-
-  try {
-    const params = new URLSearchParams({ from, to });
-
-    entries = (await api(`/timesheets?${params}`))?.items ?? [];
-  } catch {
-    // A greeting is a courtesy. The entries screen reports anything that is
-    // actually wrong with reading them.
-    panel.hidden = true;
-
-    return;
-  }
-
-  panel.hidden = false;
-
-  // Newest first, and the newest of a day first within it: the answer is ordered
-  // for a table that reads forwards, and this reads backwards.
-  const newest = [...entries]
-    .sort((a, b) => (a.date === b.date ? b.id - a.id : b.date.localeCompare(a.date)))
-    .slice(0, WELCOME_RECENT_COUNT);
-
-  $('#welcome-recent-list').replaceChildren(...newest.map(recentEntryRow));
-  $('#welcome-recent-empty').hidden = newest.length > 0;
-}
-
-/** One entry, as a line of the greeting's list. */
-function recentEntryRow(entry) {
-  const project = entry.projectId
-    ? projectName(entry.projectId)
-    : t('ts.noProject', 'No project');
-
-  return el('li', { class: 'welcome-recent-row' },
-    el('span', { class: 'welcome-recent-when', text: fmtDate(entry.date) }),
-    el('span', { class: 'welcome-recent-what' },
-      el('span', { class: 'welcome-recent-project', text: project }),
-      // The note where there is one, which is what tells two entries on one
-      // project apart.
-      ...(entry.description
-        ? [el('span', { class: 'welcome-recent-note', text: entry.description })]
-        : [])),
-    el('span', { class: 'welcome-recent-hours', text: fmtHours(entry.durationHours) }),
-  );
-}
-
-/** What today looks like, in one sentence. */
-async function todayInOneSentence() {
-  const today = todayISO();
-
-  try {
-    const running = await api('/me/timer');
-
-    if (running?.running) {
-      return t('welcome.timerRunning',
-        'A stopwatch is still running. Stop it on the time entries screen to book the time.');
-    }
-  } catch {
-    // Not worth a word: the greeting is a courtesy, and the screen behind it
-    // reports anything that is actually wrong.
-  }
-
-  try {
-    const entries = await everyTimesheet({ from: today, to: today });
-    const hours = entries.reduce((sum, entry) => sum + entry.durationHours, 0);
-
-    if (hours > 0) {
-      // fmtHours rather than fmtNumber with an "h" in the sentence: the unit is
-      // a word, and a sentence that spells it out is a second place a translator
-      // has to remember it - which is how this one came to say "h" while the
-      // dictionary's own unit said "Std."
-      return t('welcome.todayHours', '{0} booked today so far.')
-        .replace('{0}', fmtHours(hours));
-    }
-
-    return t('welcome.todayNothing', 'Nothing booked today yet.');
-  } catch {
-    return '';
-  }
 }
 
 /**
@@ -11985,8 +8382,9 @@ const SETUP_STEPS = {
   timezone: {
     title: () => t('setup.timezone.title', 'Choose the timezone'),
     text: () => t('setup.timezone.text',
-      'This decides which calendar day a booking falls on. Left unset it is UTC, '
-      + 'which puts evening bookings on the wrong day for most of the world.'),
+      'This decides the day a ticket\'s number is taken from and the zone the service '
+      + 'hours are read in. Left unset it is UTC, which is the wrong hour for most of '
+      + 'the world.'),
     fields: () => {
       const select = el('select', { name: 'timezone' });
       fillTimezoneSelect(select, guessTimezone());
@@ -12081,7 +8479,7 @@ let setup = { state: null, index: 0 };
 
 /** Loads the wizard state and shows it if anything is outstanding. */
 async function loadSetup() {
-  if (!administersOnly()) {
+  if (!administers()) {
     $('#setup-wizard').hidden = true;
 
     return;
@@ -12339,7 +8737,7 @@ function wireSetup() {
 
 /** The fields of the operational form, in the order they appear. */
 const OPERATIONAL_FIELDS = [
-  'sessionLifetimeHours', 'sessionIdleMinutes', 'maxDailyHours', 'rateLimit',
+  'sessionLifetimeHours', 'sessionIdleMinutes', 'rateLimit',
   'rateLimitWindowSeconds', 'ldapSyncMaxDeleteRatio',
 ];
 
@@ -12364,13 +8762,12 @@ function fillOperationalForm(data) {
   // A zero that switches a limit off is said to be off. Written as a figure it
   // read as the strictest limit there is, and for the deletion limit that is the
   // opposite of the truth: "delete limit 0" was a synchronisation allowed to
-  // remove every account the directory no longer lists, with their hours.
+  // remove every account the directory no longer lists.
   const offOr = (value, shown) => (value === 0 ? t('ops.off', 'off') : shown);
 
   $('#operational-effective').textContent = `${t('ops.effective', 'Currently in force')}: `
     + `${t('ops.sessionShort', 'session')} ${fmtHours(effective.sessionLifetimeHours)}, `
     + `${t('ops.idleShort', 'idle')} ${offOr(effective.sessionIdleMinutes, `${effective.sessionIdleMinutes} min`)}, `
-    + `${t('ops.maxShort', 'max/day')} ${fmtHours(effective.maxDailyHours)}, `
     + `${t('ops.rateShort', 'rate')} ${effective.rateLimit}/${effective.rateLimitWindowSeconds} s, `
     + `${t('ops.ratioShort', 'delete limit')} ${offOr(effective.ldapSyncMaxDeleteRatio, fmtShare(effective.ldapSyncMaxDeleteRatio))}`;
 
@@ -12474,10 +8871,9 @@ async function loadUpdate() {
   const card = $('#update-card');
   if (!card) return;
 
-  // Everybody who can reach this screen. It used to be narrower - the account
-  // that administers and records no time - and that made one card on the screen
-  // appear for some of the people who got here and not others, which is a rule
-  // nobody can hold in their head while using it.
+  // Everybody who can reach this screen, and nobody narrower: a card that appears
+  // for some of the people who got here and not others is a rule nobody can hold
+  // in their head while using it.
   if (!can('settings:manage')) {
     card.hidden = true;
 
@@ -13489,696 +9885,7 @@ function wirePasswordReveal(root = document) {
   }
 }
 
-// ------------------------------------------------------------------ charts
-
-/**
- * Draws a bar chart, by hand.
- *
- * No chart library, and not for want of one: the Content-Security-Policy allows
- * no external origin at all and the assets are embedded, so anything fetched from
- * a CDN would simply be blocked. That leaves SVG built in the page - and
- * createElementNS rather than createElement, because an <svg> built in the HTML
- * namespace parses without complaint and renders nothing.
- *
- * Horizontal bars with the label beside each one, which is what survives a long
- * project name and a narrow phone. A vertical chart with rotated labels reads
- * badly at both ends.
- */
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-function svg(tag, attributes = {}) {
-  const node = document.createElementNS(SVG_NS, tag);
-
-  for (const [name, value] of Object.entries(attributes)) {
-    node.setAttribute(name, String(value));
-  }
-
-  return node;
-}
-
-/**
- * How many colours the charts have for naming things apart.
- *
- * Matched by .chart-colour-0 .. -7 in the stylesheet, where the actual hues
- * live so that each theme can hold its own.
- */
-const CHART_COLOURS = 8;
-
-/**
- * The colour a project keeps, wherever it is drawn.
- *
- * From the project's own identity rather than from its position in the list.
- * Position would mean the colours shuffle whenever a project is added, finishes,
- * or simply has no hours in the period being looked at - and a colour that means
- * something different on every visit is decoration rather than information. This
- * way a project is the same colour in the bars, in the columns, in the pie, and
- * again tomorrow.
- *
- * Eight hues for any number of projects, so two of them can collide. That is
- * worth it: the label is beside every bar and in the pie's key, so the colour
- * groups the eye rather than carrying the meaning on its own.
- */
-function chartColourFor(key) {
-  if (key === undefined || key === null || key === '') return '';
-
-  // The hours that belong to no project are not a project, and a colour of their
-  // own would put them among them. They keep the neutral one - and so do the hours
-  // that name no activity, for the same reason.
-  if (key === NO_PROJECT_KEY || key === NO_ACTIVITY_KEY) return 'chart-colour-none';
-
-  let hash = 0;
-
-  for (const character of String(key)) {
-    hash = (hash * 31 + character.codePointAt(0)) % 100000007;
-  }
-
-  return `chart-colour-${hash % CHART_COLOURS}`;
-}
-
-/** What the bucket for unassigned hours is called, in every chart. */
-const NO_PROJECT_KEY = 'no-project';
-
-/** What the bucket for hours that name no activity is called. */
-const NO_ACTIVITY_KEY = 'no-activity';
-
-/** One bar per activity, keyed by the tag so each keeps its colour, and the hours naming none last. */
-function activityBars(tags, untagged) {
-  return [
-    ...tags.map((tag) => ({ label: `#${tag.tag}`, value: tag.hours, key: `#${tag.tag}` })),
-    ...(untagged > 0
-      ? [{ label: t('stats.noActivity', 'No activity'), value: untagged, key: NO_ACTIVITY_KEY }]
-      : []),
-  ];
-}
-
-/** One bar per project, each carrying the identity its colour comes from. */
-function projectBars(projects) {
-  return projects.map((project) => ({
-    // A project with no name is one that has been deleted since; the hours it
-    // holds still count, so it is shown rather than dropped.
-    label: project.projectId
-      ? (project.name || t('stats.deletedProject', 'deleted project'))
-      : t('stats.noProject', 'No project'),
-    value: project.hours,
-    key: project.projectId || NO_PROJECT_KEY,
-  }));
-}
-
-/**
- * The words a chart is announced by.
- *
- * role="img" is the right choice for a drawing - a screen reader working through
- * forty <text> nodes one after another is not a chart, it is a list of numbers in
- * drawing order - but it makes the drawing one opaque node, so the labels and
- * figures inside it stop being readable. Without a name the one element on these
- * screens that is entirely picture was announced as "image" and nothing else.
- *
- * Taken from the markup rather than written here. Every chart already has its
- * words directly above it - a heading on the statistics screen, the caption under
- * an evaluation - and they are already translated, so a sentence of its own would
- * be a second thing to translate and a second thing to keep in step with the
- * first. A container with nothing above it gets no name, which is no worse than
- * what it had.
- */
-function nameTheChart(container, chart) {
-  const naming = (container.closest('.chart-wrap') ?? container).previousElementSibling;
-  const words = naming?.textContent.trim();
-
-  if (words) chart.setAttribute('aria-label', words);
-}
-
-/** The width a chart is drawn at where there is room for it. */
-const CHART_WIDEST = 640;
-
-/**
- * The width below which a chart is no longer squeezed but scrolls: the bars'
- * labels and figures take 180 of it, and what is left is the track.
- */
-const CHART_NARROWEST = 260;
-
-/** How to draw each chart box's chart again, and the width it was drawn at. */
-const fittedCharts = new WeakMap();
-
-/**
- * Draws a chart again when its box changes width.
- *
- * A frame later rather than inside the observer: the drawing changes the box's
- * height, and changing what is being observed from inside the observer is a loop
- * the browser reports as an error. And only while the box still holds a drawing -
- * one emptied since, by a sign-out or by an answer with nothing to chart, stays
- * empty rather than getting the old picture back.
- */
-const chartBoxes = typeof ResizeObserver === 'function'
-  ? new ResizeObserver((entries) => {
-    for (const { target } of entries) {
-      const fitted = fittedCharts.get(target);
-
-      if (fitted && target.clientWidth > 0 && chartWidth(target) !== fitted.width) {
-        requestAnimationFrame(() => {
-          if (target.lastElementChild instanceof SVGSVGElement) fittedCharts.get(target)?.again();
-        });
-      }
-    }
-  })
-  : null;
-
-/** The width to draw a chart at: its box's, within the two bounds above. */
-function chartWidth(container) {
-  const room = container.clientWidth;
-
-  // Nothing while its screen is hidden, which is when most charts are drawn - a
-  // reload fills every screen. Drawn at the widest then, and again on arrival.
-  if (room === 0) return CHART_WIDEST;
-
-  return Math.min(Math.max(room, CHART_NARROWEST), CHART_WIDEST);
-}
-
-/**
- * Gives a chart the width of the box it goes into, and remembers how to draw it
- * again when that changes.
- *
- * Drawn 640 wide whatever the box, a chart on a telephone either shrank as a
- * whole - its type at five pixels - or, kept at its size, put the bars' figures
- * and the whole of the pie's key past the right edge of a box that scrolls with
- * no bar on a touch screen to say so. At the box's own width the type stays what
- * the stylesheet says and every part is where it can be seen. The width changes
- * after the drawing - a hidden screen opened, a telephone turned, a window
- * narrowed - so the box is watched; see chartBoxes.
- */
-function fitChart(container, again) {
-  const width = chartWidth(container);
-
-  // A chart drawn blind is remembered as drawn for no width at all, so the first
-  // width its box has draws it again - which is also the first moment its names
-  // can be measured (fitChartTexts).
-  fittedCharts.set(container, { again, width: container.clientWidth > 0 ? width : 0 });
-  chartBoxes?.observe(container);
-
-  return width;
-}
-
-/**
- * Shortens each name in a chart to the room it was given, with a mark where it
- * was cut and the whole of it on hover.
- *
- * A name longer than its place was cut wherever the drawing happened to end: the
- * bars painted their track over the rest of it, a column's name ran off the
- * picture and across its neighbour's, and the pie's key lost the figure at the
- * end of its line past the right edge. Measured rather than counted in letters,
- * because the type is proportional - so only once the chart is on the page, and
- * not while its screen is hidden, where a text has no length. What follows the
- * name, the key's figure, stays whole and the name gives way to it.
- */
-function fitChartTexts(chart) {
-  for (const text of chart.querySelectorAll('text[data-room]')) {
-    const room = Number(text.dataset.room);
-
-    if (text.getComputedTextLength() <= room) continue;
-
-    const whole = text.textContent;
-    const after = text.dataset.after ?? '';
-    const name = whole.slice(0, whole.length - after.length);
-
-    // The longest start of the name that fits with the mark and what follows it.
-    let fits = 0;
-    let tooLong = name.length;
-
-    while (tooLong - fits > 1) {
-      const middle = Math.floor((fits + tooLong) / 2);
-
-      text.textContent = `${name.slice(0, middle).trimEnd()}…${after}`;
-
-      if (text.getComputedTextLength() <= room) fits = middle;
-      else tooLong = middle;
-    }
-
-    text.textContent = `${name.slice(0, fits).trimEnd()}…${after}`;
-
-    const title = svg('title');
-    title.textContent = whole;
-    text.append(title);
-  }
-}
-
-/**
- * The drawing a chart goes into: as wide as its container, and never narrower than
- * it is drawn.
- *
- * Narrower than that it used to shrink as a whole - the viewBox fits the picture
- * into its box, type included - so on a telephone a chart's labels came out at
- * about five pixels, between bands of empty space where the box kept the height
- * the rows needed. It is drawn for its box's width now (fitChart), and a box
- * narrower than the narrowest a chart is drawn at scrolls sideways rather than
- * shrinking it.
- */
-function chartDrawing(width, height) {
-  const chart = svg('svg', {
-    viewBox: `0 0 ${width} ${height}`,
-    width: '100%',
-    height,
-    role: 'img',
-  });
-
-  chart.style.minWidth = `${width}px`;
-
-  return chart;
-}
-
-/**
- * Renders bars into a container.
- *
- * bars is [{label, value, key, title}], where key is the identity the colour is
- * taken from and title overrides the hover text. The scale runs from zero to the
- * largest value,
- * because a bar chart that starts anywhere else exaggerates every difference on
- * it - and these are hours, where twice as long should look twice as long.
- */
-function drawBarChart(container, bars, formatValue) {
-  container.replaceChildren();
-
-  if (bars.length === 0) return;
-
-  const rowHeight = 22;
-  const gap = 4;
-  const labelWidth = 118;
-  const valueWidth = 62;
-  const width = fitChart(container, () => drawBarChart(container, bars, formatValue));
-  const height = bars.length * (rowHeight + gap);
-  const trackWidth = width - labelWidth - valueWidth;
-
-  const chart = chartDrawing(width, height);
-
-  nameTheChart(container, chart);
-
-  const largest = Math.max(...bars.map((bar) => bar.value), 0);
-
-  bars.forEach((bar, index) => {
-    const y = index * (rowHeight + gap);
-
-    // Both texts stand a few units in from the edges of the drawing rather than on
-    // them. Gecko measures an outer glyph a pixel past the point it is anchored at,
-    // and the drawing clips there - on a telephone, where the drawing is the box.
-    const label = svg('text', {
-      x: 3,
-      y: y + rowHeight * 0.72,
-      class: 'chart-label',
-      'data-room': labelWidth - 8,
-    });
-    label.textContent = bar.label;
-    chart.append(label);
-
-    // The track, so an empty day is still a row rather than nothing at all.
-    chart.append(svg('rect', {
-      x: labelWidth, y, width: trackWidth, height: rowHeight, rx: 4, class: 'chart-track',
-    }));
-
-    if (bar.value > 0 && largest > 0) {
-      // Zero-based, and at least a sliver wide so a very small value is visible
-      // rather than looking like nothing was recorded.
-      const barWidth = Math.max(2, (bar.value / largest) * trackWidth);
-
-      const rect = svg('rect', {
-        x: labelWidth,
-        y,
-        width: barWidth,
-        height: rowHeight,
-        rx: 4,
-        class: `chart-bar ${chartColourFor(bar.key)}`.trim(),
-      });
-
-      // The exact figure on hover, since the bar is a comparison and not a
-      // readout.
-      const title = svg('title');
-      title.textContent = bar.title ?? `${bar.label}: ${formatValue(bar.value)}`;
-      rect.append(title);
-
-      chart.append(rect);
-    }
-
-    const value = svg('text', {
-      x: width - 3,
-      y: y + rowHeight * 0.72,
-      class: 'chart-value',
-      'text-anchor': 'end',
-    });
-    value.textContent = formatValue(bar.value);
-    chart.append(value);
-  });
-
-  container.append(chart);
-  fitChartTexts(chart);
-}
-
-/**
- * The same figures as a column chart: one upright bar per entry.
- *
- * Its own function rather than a flag on drawBarChart, because turning that one
- * on its side is not a rotation - the label moves from beside the bar to under
- * it, which is the whole reason to choose one over the other. Columns compare a
- * handful of things well and run out of room for names at about a dozen.
- */
-function drawColumnChart(container, bars, formatValue) {
-  container.replaceChildren();
-
-  if (bars.length === 0) return;
-
-  const width = fitChart(container, () => drawColumnChart(container, bars, formatValue));
-  const height = 260;
-  const labelBand = 46;
-  const valueBand = 16;
-  const plot = height - labelBand - valueBand;
-  const slot = width / bars.length;
-  const barWidth = Math.min(56, slot * 0.6);
-
-  const chart = chartDrawing(width, height);
-
-  nameTheChart(container, chart);
-
-  const largest = Math.max(...bars.map((bar) => bar.value), 0);
-
-  // The floor, so a period with nothing on it is still a chart rather than an
-  // empty box.
-  chart.append(svg('line', {
-    x1: 0, y1: valueBand + plot, x2: width, y2: valueBand + plot, class: 'chart-axis',
-  }));
-
-  bars.forEach((bar, index) => {
-    const centre = index * slot + slot / 2;
-    const barHeight = largest > 0 && bar.value > 0
-      ? Math.max(2, (bar.value / largest) * plot)
-      : 0;
-    const top = valueBand + plot - barHeight;
-
-    if (barHeight > 0) {
-      const rect = svg('rect', {
-        x: centre - barWidth / 2,
-        y: top,
-        width: barWidth,
-        height: barHeight,
-        rx: 4,
-        class: `chart-bar ${chartColourFor(bar.key)}`.trim(),
-      });
-
-      const title = svg('title');
-      title.textContent = bar.title ?? `${bar.label}: ${formatValue(bar.value)}`;
-      rect.append(title);
-      chart.append(rect);
-
-      // Above the column rather than inside it: inside is unreadable on a short
-      // one, which is exactly the column somebody is squinting at.
-      const value = svg('text', {
-        x: centre, y: top - 4, class: 'chart-value', 'text-anchor': 'middle',
-      });
-      value.textContent = formatValue(bar.value);
-      chart.append(value);
-    }
-
-    const label = svg('text', {
-      x: centre,
-      y: valueBand + plot + 16,
-      class: 'chart-label',
-      'text-anchor': 'middle',
-      'data-room': slot - 6,
-    });
-    label.textContent = bar.label;
-    chart.append(label);
-  });
-
-  container.append(chart);
-  fitChartTexts(chart);
-}
-
-/**
- * The same figures as a pie: one slice per entry, sized by its share.
- *
- * Only for things that add up to something - hours per project add up to the
- * hours worked, so a share is a real quantity. Entries worth nothing are left
- * out rather than drawn as a slice of no width, which would put a label on the
- * rim pointing at a line.
- */
-function drawPieChart(container, slices, formatValue) {
-  container.replaceChildren();
-
-  const shown = slices.filter((slice) => slice.value > 0);
-  const total = shown.reduce((sum, slice) => sum + slice.value, 0);
-
-  if (total <= 0) return;
-
-  const size = 260;
-  const radius = size / 2 - 8;
-  const width = fitChart(container, () => drawPieChart(container, slices, formatValue));
-
-  // The key beside the pie where there is room for it, and under it where there
-  // is not: on a telephone a key beside a pie this size starts where the screen
-  // ends.
-  const stacked = width < size + 24 + 200;
-  const cx = stacked ? width / 2 : size / 2;
-  const cy = size / 2;
-  const keyLeft = stacked ? 0 : size + 24;
-
-  // One row of the key per slice. Beside the pie the picture is whichever of the
-  // two is taller: the pie is a fixed 260 and the key runs down beside it, so from
-  // the thirteenth project the key was simply outside the box - not clipped
-  // visibly, just absent, on a chart that otherwise looked finished. Under it, the
-  // picture is both. The key is what tells two projects sharing one of the eight
-  // hues apart, which is the reason chartColourFor gives for eight being enough.
-  const keyRow = 20;
-  const keyTop = stacked ? size + 24 : 14;
-  const height = stacked
-    ? keyTop + (shown.length - 1) * keyRow + 8
-    : Math.max(size, keyTop + shown.length * keyRow + 6);
-
-  const chart = chartDrawing(width, height);
-
-  nameTheChart(container, chart);
-
-  let angle = -Math.PI / 2;
-
-  shown.forEach((slice, index) => {
-    const share = slice.value / total;
-    const sweep = share * Math.PI * 2;
-    const end = angle + sweep;
-
-    // A full circle cannot be drawn as an arc - the start and end points would
-    // be the same and the path collapses - so the single-slice case is a circle.
-    const shape = shown.length === 1
-      ? svg('circle', { cx, cy, r: radius })
-      : svg('path', {
-        d: [
-          `M ${cx} ${cy}`,
-          `L ${cx + radius * Math.cos(angle)} ${cy + radius * Math.sin(angle)}`,
-          `A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1`,
-          `${cx + radius * Math.cos(end)} ${cy + radius * Math.sin(end)}`,
-          'Z',
-        ].join(' '),
-      });
-
-    // The same colour the bars gave it, so switching shape does not repaint
-    // every project. Falls back to a step of the accent for a pie of something
-    // that is not projects, where there is no identity to be stable about.
-    shape.setAttribute('class',
-      `chart-slice ${chartColourFor(slice.key) || `chart-slice-${index % 6}`}`);
-
-    const title = svg('title');
-    title.textContent = slice.title
-      ?? `${slice.label}: ${formatValue(slice.value)} (${Math.round(share * 100)}%)`;
-    shape.append(title);
-    chart.append(shape);
-
-    // The key, beside the pie rather than on it: a label on a thin slice either
-    // overlaps its neighbour or points at nothing.
-    const y = keyTop + index * keyRow;
-
-    chart.append(svg('rect', {
-      x: keyLeft, y: y - 10, width: 12, height: 12, rx: 3,
-      class: `chart-slice ${chartColourFor(slice.key) || `chart-slice-${index % 6}`}`,
-    }));
-
-    const figure = ` — ${formatValue(slice.value)}`;
-
-    const label = svg('text', {
-      x: keyLeft + 20,
-      y,
-      class: 'chart-label',
-      'data-room': width - keyLeft - 24,
-      'data-after': figure,
-    });
-    label.textContent = `${slice.label}${figure}`;
-    chart.append(label);
-
-    angle = end;
-  });
-
-  container.append(chart);
-  fitChartTexts(chart);
-}
-
-/** The default range: the current month, in whatever zone applies to the user. */
-function defaultStatisticsRange() {
-  const today = todayISO();
-  const firstOfMonth = `${today.slice(0, 7)}-01`;
-
-  return { from: firstOfMonth, to: today };
-}
-
-/**
- * Puts a period into a pair of empty date fields, on arrival.
- *
- * Every screen that evaluates a period has a From and a To, and leaving them
- * empty meant something different on each: the statistics card filled them in
- * when Evaluate was pressed - so the answer arrived for a period nobody had
- * seen until the fields changed under it - while the report and the overtime
- * balance sent nothing at all and quietly evaluated the whole history.
- *
- * Filled when the screen is opened instead, which is the only one of the three
- * that can be checked before acting. Refusing to evaluate until somebody types
- * a date would be the worst of them: there is an obvious right answer here, and
- * demanding it be typed is make-work.
- *
- * Only when both are empty. A period somebody set is theirs, including one they
- * cleared on purpose - and this runs on every visit to the screen.
- */
-function fillDateRange(from, to) {
-  if (!from || !to || from.value || to.value) return;
-
-  const range = defaultStatisticsRange();
-
-  setDateField(from, range.from);
-  setDateField(to, range.to);
-}
-
-/**
- * The date pairs on the screens that evaluate a period.
- *
- * Two of them share the Overtime screen: the balance is asked for over a period,
- * and the hours card above it over another. They are separate questions with
- * separate answers, so they get separate fields - and both start filled in.
- */
-function fillRangesFor(view) {
-  const pairs = {
-    overtime: [
-      ['#statistics-from', '#statistics-to'],
-      ['#form-overtime input[name="from"]', '#form-overtime input[name="to"]'],
-    ],
-    report: [
-      ['#form-report input[name="from"]', '#form-report input[name="to"]'],
-      ['#form-statement input[name="from"]', '#form-statement input[name="to"]'],
-    ],
-  }[view] ?? [];
-
-  for (const [from, to] of pairs) {
-    fillDateRange($(from), $(to));
-  }
-
-  // The single dates, which are the same idea with one field.
-  //
-  // A project is made today, so its start is today until somebody says
-  // otherwise - the same courtesy the evaluation screens do with their period.
-  // Its end is left alone: empty there means "no end planned", which is most
-  // projects, and filling it would invent a deadline.
-  if (view === 'projects') fillToday($('#form-project input[name="startDate"]'));
-}
-
-/** Puts today into a date field that is empty, on arrival. */
-function fillToday(field) {
-  if (!field || field.value) return;
-
-  setDateField(field, todayISO());
-}
-
-async function loadStatistics() {
-  const card = $('#statistics-card');
-  if (!card || !can('timesheets:read:own')) return;
-
-  const range = defaultStatisticsRange();
-
-  if (!$('#statistics-from').value) setDateField($('#statistics-from'), range.from);
-  if (!$('#statistics-to').value) setDateField($('#statistics-to'), range.to);
-
-  const params = forSubject({
-    from: $('#statistics-from').value,
-    to: $('#statistics-to').value,
-  });
-
-  const stats = await api(`/me/statistics?${params}`);
-
-  evaluatedPeriod.statistics = { from: stats.from, to: stats.to };
-
-  $('#statistics-total').textContent =
-    `${t('stats.total', 'Total')}: ${fmtHours(stats.totalHours ?? 0)}`;
-
-  const days = stats.days ?? [];
-  const projects = stats.projects ?? [];
-
-  // Empty days are drawn as empty rows on purpose - a chart of only the days that
-  // have entries shows a full week where there were two working days.
-  // Through fmtDate like every other date on screen. These labels were the raw
-  // ISO string the endpoint sends, so the one chart on the Overtime screen wrote
-  // 2026-08-12 beside a table writing 12.08.2026 - the same day, twice, in two
-  // conventions, on one screen.
-  drawBarChart($('#chart-days'),
-    days.map((day) => ({ label: fmtDate(day.date), value: day.hours })),
-    fmtHours);
-
-  drawBarChart($('#chart-projects'), projectBars(projects), fmtHours);
-  drawBarChart($('#chart-activities'), activityBars(stats.tags ?? [], stats.untaggedHours ?? 0), fmtHours);
-
-  $('#statistics-empty').hidden = (stats.totalHours ?? 0) > 0;
-}
-
-// The spreadsheet card, from here to the end of this section: exporting what is on
-// screen, and importing a file.
-//
-// The import is deliberately two steps. A file assembled by hand is wrong more
-// often than it is right, and the first thing somebody needs is to be shown what
-// their file would do - which rows would be written, which would not, and why -
-// before anything is.
-
-/**
- * The filters the entry list is showing, as the parameters both the list and the
- * export send.
- *
- * One builder for both, so the file can never hold more than the screen it was
- * started from - two that agreed today would be two that could disagree tomorrow.
- */
-function timesheetFilterParams() {
-  const params = new URLSearchParams();
-
-  const projectId = $('#filter-ts-project')?.value;
-  const from = $('#filter-ts-from')?.value;
-  const to = $('#filter-ts-to')?.value;
-  const search = $('#filter-ts-q')?.value.trim();
-
-  if (projectId) params.set('projectId', projectId);
-  if (from) params.set('from', from);
-  if (to) params.set('to', to);
-  if (search) params.set('q', search);
-
-  // The list and the export alike, so the file is what the screen showed.
-  if (viewingFor) params.set('userId', String(viewingFor.id));
-
-  return params;
-}
-
-/** The same filters as a query string for the export, or nothing. */
-function timesheetFilterQuery() {
-  const params = timesheetFilterParams();
-
-  return params.toString() ? `?${params}` : '';
-}
-
-/**
- * Downloads the export.
- *
- * Through fetch and a blob rather than by pointing the browser at the URL: the
- * request needs the session cookie and a sensible filename, and the server cannot
- * set Content-Disposition - GoFr owns the response headers. Naming it here is
- * better anyway, because this is where the period being looked at is known.
- */
-async function exportWorkbook() {
-  await downloadSheet(`/timesheets/export${timesheetFilterQuery()}`,
-    t('wb.filename', 'time-entries'));
-}
+// ------------------------------------------- export and import, table by table
 
 /**
  * Fetches a file and hands it to the browser to save under a readable name.
@@ -14235,68 +9942,6 @@ async function downloadSheet(path, name) {
 }
 
 /**
- * Sends an evaluation to be laid out, and saves the document that comes back.
- *
- * One language parameter, unlike everything else here: every word of the body is
- * already in this request, read off the screen in the language the screen is in.
- * The footer is not - the installation's name and the moment are the server's to
- * say, and it has to be told which language is reading in order to say them.
- */
-async function downloadDocument(doc, name) {
-  // The language, which is the one thing in a document the server words itself.
-  // Everything else here was read off the screen and arrives already written;
-  // the footer is the server's line, and it used to be signed off in English
-  // under a German evaluation, with the date in an order no German page uses.
-  await downloadFile(`${API}/exports/document?lang=${encodeURIComponent(activeLanguage())}`,
-    name, 'pdf', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': readCookie('gts_csrf'),
-    },
-    body: JSON.stringify(doc),
-  });
-}
-
-/** Sends the chosen file, either to look or to write. */
-async function sendWorkbook(dryRun) {
-  const input = $('#wb-file');
-  const file = input?.files?.[0];
-
-  if (!file) {
-    throw new Error(t('wb.noFile', 'Choose a file first.'));
-  }
-
-  const body = new FormData();
-  body.append('file', file);
-  body.append('dryRun', dryRun ? 'true' : 'false');
-
-  // No Content-Type of our own: the browser has to set it, because only it knows
-  // the multipart boundary it generated.
-  const res = await reach(`${API}/timesheets/import`, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'X-CSRF-Token': readCookie('gts_csrf') },
-    body,
-  });
-
-  noticePermissionChange(res.headers.get('X-Permissions-Revision'));
-
-  let payload = null;
-  try {
-    payload = await res.json();
-  } catch {
-    // Falls through to the status below.
-  }
-
-  if (!res.ok) {
-    throw refusalFrom(res, payload);
-  }
-
-  return payload?.data ?? null;
-}
-
-/**
  * Why a row of an imported file cannot be written, in the reader's language.
  *
  * The preview around it is translated - the headings, and the cells, down to a
@@ -14328,552 +9973,16 @@ function rowProblem(row) {
   return fillIn(sentence, refusalValues(row.problemCode, row.problemValues));
 }
 
-/** Shows what the file would do, row by row. */
-function renderWorkbookPreview(result) {
-  const rows = (result?.rows ?? []).map((row) => el('tr', { class: row.problem ? 'rejected' : '' },
-    el('td', { class: 'num', text: String(row.row) }),
-    el('td', { text: row.date ? fmtDate(row.date) : '–' }),
-    el('td', { class: 'text', text: row.user || '–' }),
-    el('td', { class: 'text', text: row.project || t('ts.noProject', 'No project') }),
-    el('td', { class: 'num', text: row.hours ? fmtNumber(row.hours) : '–' }),
-    el('td', { class: 'text', text: row.description || '–' }),
-    el('td', { class: row.problem ? 'minus' : 'muted', text: rowProblem(row) || '✓' }),
-  ));
-
-  fillTable($('#table-workbook tbody'), rows, 7, t('wb.empty', 'The file has no entries in it.'));
-  $('#wb-preview-wrap').hidden = false;
-
-  const writable = result?.writable ?? 0;
-  const rejected = result?.rejected ?? 0;
-
-  $('#wb-summary').textContent = rejected > 0
-    ? t('wb.someRejected', '{0} of {1} rows can be imported. Nothing is written while any row is refused.')
-      .replace('{0}', String(writable)).replace('{1}', String(writable + rejected))
-    : t('wb.allReady', 'All {0} rows can be imported.').replace('{0}', String(writable));
-
-  // The import button only where it would do something: offering it for a file
-  // that would be refused is offering a failure.
-  $('#wb-import').hidden = rejected > 0 || writable === 0;
-}
-
 /** The resets of the tables' import cards, which buildSheetCard builds. */
 const sheetCardResets = [];
 
 /** Puts every import card back to its resting state. */
 function forgetEveryImport() {
-  resetWorkbookCard();
-
   for (const reset of sheetCardResets) reset();
 }
 
-/** Puts the card back to its resting state. */
-function resetWorkbookCard() {
-  const input = $('#wb-file');
-  if (input) input.value = '';
-
-  // The preview it described is gone, so there is nothing to draw again.
-  stopRedrawing('workbookPreview');
-
-  $('#wb-preview').hidden = true;
-  $('#wb-import').hidden = true;
-  $('#wb-clear').hidden = true;
-  $('#wb-preview-wrap').hidden = true;
-  $('#wb-summary').textContent = '';
-  $('#table-workbook tbody').replaceChildren();
-}
-
-function wireWorkbook() {
-  const card = $('#workbook-card');
-  if (!card) return;
-
-  $('#wb-export').addEventListener('click', () => mutate(
-    exportWorkbook, t('wb.exported', 'Export saved'), null));
-
-  $('#wb-file').addEventListener('change', () => {
-    const chosen = Boolean($('#wb-file').files?.length);
-
-    // As resetWorkbookCard does, and says why: the preview it described is gone,
-    // so there is nothing to draw again. Choosing a different file makes that
-    // just as true as clearing the card does.
-    stopRedrawing('workbookPreview');
-
-    $('#wb-preview').hidden = !chosen;
-    $('#wb-clear').hidden = !chosen;
-    $('#wb-import').hidden = true;
-    $('#wb-preview-wrap').hidden = true;
-    $('#wb-summary').textContent = chosen
-      ? t('wb.chosen', 'Check the file to see what it would do.')
-      : '';
-  });
-
-  // Through redrawable, because the preview's columns and its refusals are
-  // translated and the file it describes is not going to be sent again on a
-  // language change.
-  $('#wb-preview').addEventListener('click', () => mutate(
-    () => sendWorkbook(true), null,
-    (result) => redrawable('workbookPreview', () => renderWorkbookPreview(result))));
-
-  $('#wb-import').addEventListener('click', () => mutate(
-    () => sendWorkbook(false),
-    t('wb.imported', 'The file was imported'),
-    async (result) => {
-      resetWorkbookCard();
-      await reloadTimeViews();
-
-      if (result?.imported) {
-        toast(t('wb.importedCount', '{0} entries created.')
-          .replace('{0}', String(result.imported)), 'ok');
-      }
-    }));
-
-  $('#wb-clear').addEventListener('click', resetWorkbookCard);
-}
-
-// --------------------------------------------- an evaluation as a document
-
 /**
- * What has to be written into a copy of a chart before it can leave the page.
- *
- * The drawings take everything from the stylesheet - eight hues named by class,
- * strokes, type - and a copy lifted out of the document has no stylesheet to
- * take it from. getComputedStyle is what resolves that: it gives back the
- * settled value, with every var() and color-mix() already worked out, which is
- * exactly the colour that is on the screen rather than the recipe for it.
- */
-const PAINTED = [
-  'fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap',
-  'opacity', 'font-family', 'font-size', 'font-weight', 'text-anchor',
-  'dominant-baseline', 'color',
-];
-
-/**
- * How much bigger than the screen the picture is drawn.
- *
- * The chart on screen is a few hundred pixels wide and goes onto paper at about
- * 170 millimetres. At one to one that is roughly 40 dots per inch, which looks
- * like a screenshot of a chart rather than a chart. Twice over is enough to
- * print cleanly and keeps the file small enough to post.
- */
-const CHART_SCALE = 2;
-
-/**
- * What the picture may not exceed, in pixels and along a side.
- *
- * The first is the server's own bound, document.MaxChartPixels, kept here as the
- * same number so this makes a picture the server will take rather than one it
- * turns away - and a refusal about pixels says nothing to somebody who asked for
- * a year of days. TestTheChartPictureBoundIsTheOneTheServerEnforces holds the two
- * together.
- *
- * The reasoning above that bound is about width, which is the card's, and the
- * height of a chart is its number of rows: drawBarChart gives each bar 26 pixels,
- * so a year of days is 9,490 pixels tall before scaling. Measured, that comes out
- * at 2528x18980 - 48 megapixels, three times what the server decodes - and the
- * period has no maximum on either date, so it is an ordinary request.
- *
- * The second is the browser's, not the server's: a canvas stops being drawn past
- * a certain side however small its area, and 16,384 is the figure that holds
- * everywhere rather than the largest one Chrome allows.
- */
-const MAX_PICTURE_PIXELS = 16 * 1024 * 1024;
-const MAX_PICTURE_SIDE = 16384;
-
-/**
- * The two shades a printed chart is fixed to, whatever the screen was set to.
- *
- * A chart goes onto white paper, and the theme somebody reads in is not a fact
- * about the page. The bars keep the colours they have - those say which series
- * is which, and are the whole point of the picture - but the words beside them
- * are written in ink and the empty part of a bar is unprinted paper.
- *
- * What made this worth fixing was the dark theme: labels are drawn in the muted
- * shade and the empty part of a bar in the page background, so an exported chart
- * arrived as a column of solid black bars with figures beside them in a grey
- * that disappeared.
- */
-const PAPER_INK = '#000000';
-const PAPER_GROUND = '#ffffff';
-
-/**
- * Takes a picture of a chart, exactly as it stands.
- *
- * The whole reason the document is built from the screen rather than from the
- * database: these charts are drawn here, by hand, and re-drawing them on the
- * server would be a second implementation of them in a second language.
- *
- * The ground is painted first, and it is white, because the picture is going onto
- * paper. This used to take the card's own background on the reasoning that the
- * document should show the chart that was on the screen - which is true of the
- * shape and the colours and is not true of the theme: a dark screen produced a
- * dark rectangle with pale type on it, printed onto a white page.
- */
-async function chartAsPicture(container) {
-  const source = container?.querySelector('svg');
-  if (!source) return '';
-
-  const box = source.getBoundingClientRect();
-  const width = Math.max(1, Math.round(box.width));
-  const height = Math.max(1, Math.round(box.height));
-
-  const copy = source.cloneNode(true);
-
-  const originals = [source, ...source.querySelectorAll('*')];
-  const copies = [copy, ...copy.querySelectorAll('*')];
-
-  // Set one property at a time rather than writing a style attribute.
-  //
-  // The two look interchangeable and are not: style-src is 'self' with no
-  // 'unsafe-inline', and writing the attribute is exactly what that governs, so
-  // the browser blocked every one of them and said so ninety-six times per
-  // exported chart. The picture still came out, because the attribute value is
-  // set even when applying it is refused and the serializer reads the value -
-  // which is why this went unnoticed: the export worked, and only the console
-  // knew what it cost.
-  //
-  // Assigning through the CSSOM is not an inline style and is not covered by the
-  // directive. It reflects into the attribute the serializer reads, so the copy
-  // carries its colours out exactly as before.
-  copies.forEach((node, i) => {
-    const settled = window.getComputedStyle(originals[i]);
-
-    PAINTED.forEach((property) => {
-      const value = settled.getPropertyValue(property);
-      if (value) node.style.setProperty(property, value);
-    });
-  });
-
-  // And then the two things that are about paper rather than about the screen.
-  //
-  // After the loop above rather than instead of it: everything else the chart
-  // says with colour is kept, because a bar's colour is which series it is. Only
-  // the ink and the unprinted part are overruled.
-  for (const words of copy.querySelectorAll('text')) {
-    words.style.setProperty('fill', PAPER_INK);
-  }
-
-  for (const empty of copy.querySelectorAll('.chart-track')) {
-    empty.style.setProperty('fill', PAPER_GROUND);
-  }
-
-  // Named explicitly: an <svg> handed to an <img> is a document of its own, and
-  // one without a namespace or a size does not render at all.
-  copy.setAttribute('xmlns', SVG_NS);
-  copy.setAttribute('width', String(width));
-  copy.setAttribute('height', String(height));
-
-  const drawing = new XMLSerializer().serializeToString(copy);
-
-  const picture = new Image();
-
-  await new Promise((resolve, reject) => {
-    picture.onload = resolve;
-    picture.onerror = () => reject(new Error(t('report.chartFailed',
-      'The chart could not be turned into a picture.')));
-
-    // A data URI rather than a blob: the Content-Security-Policy allows data:
-    // for images and nothing else, and this is the one place that matters.
-    picture.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(drawing)}`;
-  });
-
-  // Twice the size on screen, unless that would be more than can be drawn or more
-  // than the server will decode. Scaled down to fit rather than refused: the
-  // document places this at about 170mm whatever it was on screen, so what a long
-  // period costs is resolution nobody was going to see, and the alternative is a
-  // refusal the reader cannot act on.
-  //
-  // Floored rather than rounded, so the product cannot land a pixel above the
-  // bound it was computed from.
-  const scale = Math.min(
-    CHART_SCALE,
-    Math.sqrt(MAX_PICTURE_PIXELS / (width * height)),
-    MAX_PICTURE_SIDE / width,
-    MAX_PICTURE_SIDE / height,
-  );
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.floor(width * scale));
-  canvas.height = Math.max(1, Math.floor(height * scale));
-
-  const ink = canvas.getContext('2d');
-
-  // The page, not the card. This took the card's own background, which is what
-  // put a dark rectangle behind a chart exported from the dark theme.
-  ink.fillStyle = PAPER_GROUND;
-  ink.fillRect(0, 0, canvas.width, canvas.height);
-  ink.drawImage(picture, 0, 0, canvas.width, canvas.height);
-
-  return canvas.toDataURL('image/png');
-}
-
-/**
- * Reads a table off the screen as the figures it is showing.
- *
- * The rendered table rather than the answer it was drawn from: what goes in the
- * document is what somebody is looking at, already sorted, already formatted,
- * already in their number and date conventions. Reading the response again here
- * would mean formatting all of it a second time, and the second time would drift
- * from the first.
- *
- * Columns of buttons and of tick boxes are dropped. They are the two things on a
- * table that are not figures, and neither means anything on paper.
- */
-function tableAsFigures(table) {
-  if (!table) return null;
-
-  const headings = [...table.querySelectorAll('thead th')];
-
-  const wanted = headings
-    .map((heading, i) => (heading.classList.contains('actions')
-      || heading.classList.contains('pick') ? -1 : i))
-    .filter((i) => i >= 0);
-
-  if (wanted.length === 0) return null;
-
-  const rows = [...table.querySelectorAll('tbody tr')]
-    // The "nothing here" line is a message, not a row of figures.
-    .filter((row) => !row.querySelector('td.empty'))
-    .map((row) => wanted.map((i) => row.children[i]?.textContent.trim() ?? ''));
-
-  return {
-    columns: wanted.map((i) => headings[i].textContent.trim()),
-    numeric: wanted.map((i) => headings[i].classList.contains('num')),
-    rows,
-  };
-}
-
-/**
- * The colours this screen is drawn in, for the document to be drawn in too.
- *
- * Read from the page rather than written out here, so a theme, a re-themed
- * build or a token somebody changes are all followed without this knowing about
- * any of them. getComputedStyle gives the settled value - the var() and the
- * color-mix() already worked out - which is the same reason the charts are
- * copied that way.
- *
- * The names are the interface's own tokens, and only one of them is used: the
- * page keeps its own ink and takes the accent. That is decided on the server -
- * Palette.resolve, with TestThePageHasItsOwnInkWhateverTheScreenSent holding it -
- * and the reason is that a theme is a fact about a screen at a moment rather than
- * about a printed page. Replacing only the shades that could not be read gave two
- * different documents from one installation, depending on how whoever exported it
- * happened to be reading.
- *
- * So the other four travel and are not used. They stay in the payload because a
- * field a client already sends is part of the contract, and because the decision
- * about which of them a page takes belongs where the page is written.
- */
-function screenColours() {
-  const settled = window.getComputedStyle(document.documentElement);
-
-  const read = (token) => settled.getPropertyValue(token).trim();
-
-  return {
-    accent: read('--accent'),
-    text: read('--text'),
-    muted: read('--muted'),
-    border: read('--border'),
-    surface: read('--surface'),
-  };
-}
-
-/**
- * The period each evaluation on screen was worked out for, as its answer named it,
- * and for the report the projects it was asked about.
- *
- * Not the form's date boxes: they hold what the next evaluation will ask for. Read
- * off them, a document was headed with whatever somebody had typed since - April
- * over March's figures - and with nothing when the boxes were left empty and the
- * server chose the period itself. The report's select is the same kind of box.
- */
-const evaluatedPeriod = {
-  report: null, overtime: null, statistics: null, statement: null,
-};
-
-/** The period a document covers, as an answer named it. */
-function periodOf(period) {
-  if (!period?.from || !period?.to) return '';
-
-  return `${fmtDate(period.from)} – ${fmtDate(period.to)}`;
-}
-
-/**
- * Which projects a report covers, in the words its select offers them in.
- *
- * Kept as it was asked rather than as the answer names it, because the answer
- * says 0 both for every project and for none of them.
- */
-function coverageOf(evaluated) {
-  if (!evaluated) return '';
-
-  if (!evaluated.projectId) return t('filter.allProjects', 'All projects');
-
-  if (evaluated.projectId === 'none') return t('report.noProject', 'No project');
-
-  return projectName(Number(evaluated.projectId));
-}
-
-/**
- * Sends one evaluation off to be laid out, and saves what comes back.
- *
- * The whole card is disabled while it runs. Building the picture and posting it
- * takes a moment on a long table, and a second press would produce a second
- * identical document rather than a faster one.
- */
-async function exportEvaluation(button, name, build) {
-  if (!button) return;
-
-  // What the button is, kept so it can be given back. The key comes off the
-  // element and the English from the copy applyLanguage made of it, falling back
-  // to what is on screen for a page that has only ever been English - which is
-  // exactly when the two are the same thing.
-  const key = button.dataset.i18n;
-  const english = button.dataset.i18nSource ?? button.textContent;
-  const giveBack = holdFocus(button);
-
-  button.disabled = true;
-
-  // Declared while it says it, not written over the top of a key that says
-  // something else. applyLanguage copies an element's English source the first
-  // time it translates one, so a language change during an export copied
-  // "Preparing …" as the English of a button that exports - and put it back on an
-  // idle button every time the page was read in English for the rest of the
-  // session. Measured: it survived the export finishing and both switches.
-  swapTheLabel(button, 'report.exporting', 'Preparing …');
-
-  try {
-    await downloadDocument(await build(), name);
-  } catch (err) {
-    toastFailure(err);
-  } finally {
-    button.disabled = false;
-
-    if (key) swapTheLabel(button, key, english);
-    else button.textContent = english;
-
-    giveBack();
-  }
-}
-
-/** The report screen: the chart as chosen, the table, and the total. */
-async function reportDocument() {
-  const total = $('#report-total').textContent.trim();
-
-  return {
-    title: t('report.title', 'Report'),
-    colours: screenColours(),
-    subtitle: [coverageOf(evaluatedPeriod.report), periodOf(evaluatedPeriod.report)]
-      .filter(Boolean).join(' · '),
-    sections: [{
-      heading: t('report.result', 'Result'),
-      caption: $('#report-chart-caption').textContent.trim(),
-      chart: await chartAsPicture($('#report-chart')),
-      table: tableAsFigures($('#table-report')),
-    }],
-    summary: total ? [{ label: t('stats.total', 'Total'), value: total }] : [],
-  };
-}
-
-/** The statement last worked out, which the document and the workbook are made of. */
-let statementShown = null;
-
-/**
- * The statement of work: the table, and a total per currency as the figures
- * under it - the table's foot is not a row of figures a document reads.
- */
-async function statementDocument() {
-  return {
-    title: t('statement.title', 'Statement of work'),
-    colours: screenColours(),
-    subtitle: periodOf(evaluatedPeriod.statement),
-    sections: [{ table: tableAsFigures($('#table-statement')) }],
-    summary: (statementShown?.totals ?? []).map((total) => ({
-      label: fillIn(t('statement.total', 'Total in {0}'), [total.currency]),
-      value: fmtMoney(total.amount, total.currency),
-    })),
-  };
-}
-
-/** The statistics screen: both charts, in the order they are on it. */
-async function statisticsDocument() {
-  return {
-    title: t('stats.title', 'My hours'),
-    colours: screenColours(),
-    subtitle: periodOf(evaluatedPeriod.statistics),
-    sections: [
-      {
-        heading: t('stats.perDay', 'Hours per day'),
-        chart: await chartAsPicture($('#chart-days')),
-      },
-      {
-        heading: t('stats.perProject', 'Hours per project'),
-        chart: await chartAsPicture($('#chart-projects')),
-      },
-      {
-        heading: t('stats.perActivity', 'Hours per activity'),
-        chart: await chartAsPicture($('#chart-activities')),
-      },
-    ],
-    summary: [{
-      label: t('stats.total', 'Total'),
-      value: $('#statistics-total').textContent.replace(/^[^:]*:\s*/, '').trim(),
-    }],
-  };
-}
-
-/** The overtime screen: the day-by-day table and the balance. */
-async function overtimeDocument() {
-  return {
-    title: t('nav.overtime', 'Overtime'),
-    colours: screenColours(),
-    subtitle: periodOf(evaluatedPeriod.overtime),
-    sections: [{
-      heading: t('ot.balance', 'Balance'),
-      caption: $('#overtime-meta').textContent.trim(),
-      table: tableAsFigures($('#table-overtime')),
-    }],
-    summary: [{
-      label: t('ot.balance', 'Balance'),
-      value: $('#overtime-total').textContent.trim(),
-    }],
-  };
-}
-
-/**
- * Wires one button that turns a screen into a document.
- *
- * The name is a function rather than a string because it is read when the button
- * is pressed, not when it is wired: somebody who switches language after the
- * page loads should get a file named in the language they are now reading.
- */
-function wireDocumentExport(selector, name, build) {
-  const button = $(selector);
-  if (!button) return;
-
-  button.addEventListener('click', () => exportEvaluation(button, name(), build));
-}
-
-/**
- * Wires each of them.
- *
- * The keys are written out at each call rather than gathered into a table above
- * it. A table would read better and would put every one of them beyond the
- * reach of the test that checks each key is translated - it scans this file for
- * t('...') and cannot follow a key through a variable.
- */
-function wireDocumentExports() {
-  wireDocumentExport('#report-pdf', () => t('report.filename', 'report'), reportDocument);
-  wireDocumentExport('#statistics-pdf', () => t('stats.filename', 'statistics'),
-    statisticsDocument);
-  wireDocumentExport('#overtime-pdf', () => t('ot.filename', 'overtime'), overtimeDocument);
-  wireDocumentExport('#workday-pdf', () => t('work.filename', 'working-time'), workDayDocument);
-  wireDocumentExport('#statement-pdf', () => t('statement.filename', 'statement-of-work'),
-    statementDocument);
-}
-
-// ------------------------------------------- export and import, table by table
-
-/**
- * The tables that go in and out as a spreadsheet, beside the time entries.
+ * The tables that go in and out as a spreadsheet.
  *
  * Each one exports what its own tab shows and imports into its own table, which is
  * the whole point: a single pair of buttons somewhere general would have meant
@@ -14884,23 +9993,14 @@ function wireDocumentExports() {
  * export. A passkey is bound to the device holding it and means nothing anywhere
  * else. Neither is a table a spreadsheet can carry honestly.
  *
- * Roles were on that list, on the grounds that one cell holding
- * "projects:read,projects:write,..." is a list that has to be exactly right,
- * where a typo removes a right silently. That objection was to the format rather
- * than to the table: the sheet gives every permission a column of its own
- * holding yes or no, so a typo is a heading that does not match a right the
- * application enforces, and the import refuses the file by name. Reviewing what
- * four roles may do is a grid, and the role screen shows one role at a time.
+ * A role's rights are not one cell holding "tickets:read,tickets:write,...",
+ * which is a list that has to be exactly right and where a typo removes a right
+ * silently: the sheet gives every permission a column of its own holding yes or
+ * no, so a typo is a heading that does not match a right the application
+ * enforces, and the import refuses the file by name. Reviewing what several
+ * roles may do is a grid, and the role screen shows one role at a time.
  */
 const SHEET_CARDS = [
-  {
-    key: 'projects',
-    path: '/projects',
-    view: '#view-projects',
-    read: 'projects:read',
-    write: 'projects:write',
-    reload: () => refreshAll(),
-  },
   {
     key: 'users',
     path: '/users',
@@ -14922,14 +10022,14 @@ const SHEET_CARDS = [
 /**
  * Builds the export/import card for one table.
  *
- * Built here rather than written into index.html three times over. The markup is
+ * Built here rather than written into index.html once per table. The markup is
  * identical for every table - the only differences are the words and the endpoint -
- * and three copies of it in the page is three places to fix the next time one of
- * these buttons needs to change.
+ * and a copy of it per table is a place per table to fix the next time one of these
+ * buttons needs to change.
  *
  * The preview is driven by the answer: the server sends its column headings, already
- * translated, so this renders a file of projects and a file of people with the same
- * code and needs to know nothing about either.
+ * translated, so this renders a file of roles and a file of people with the same code
+ * and needs to know nothing about either.
  */
 function buildSheetCard(spec) {
   const summary = el('p', { class: 'muted' });
@@ -15068,9 +10168,8 @@ function buildSheetCard(spec) {
     summary.textContent = chosen ? t('wb.chosen', 'Check the file to see what it would do.') : '';
   });
 
-  // Keyed per card, so the three cards this builds keep three previews rather
-  // than overwriting each other's. The timesheet card in the markup was never
-  // part of that: it has a key of its own.
+  // Keyed per card, so the cards this builds keep a preview each rather than
+  // overwriting each other's.
   check.addEventListener('click', () => mutate(() => send(true), null,
     (result) => redrawable(`sheetPreview:${spec.key}`, () => preview(result))));
 
@@ -15110,20 +10209,16 @@ function buildSheetCard(spec) {
  * them.
  */
 const SHEET_TEXTS = {
-  projects: 'Exports your projects. An import matches rows '
-    + 'by name: a name that already exists is updated, a new one is created. '
-    + 'An empty cell leaves that '
-    + 'value alone, so nothing is lost by a column somebody deleted.',
   roles: 'Exports every role with a column per permission, holding yes or no - which '
-    + 'is the grid you want when the question is what four roles may do. An import '
+    + 'is the grid you want when the question is what several roles may do. An import '
     + 'matches rows by name, creates a role that is not there yet, and refuses a '
     + 'heading naming a right this application does not enforce. A system role can be '
     + 'described differently and nothing else.',
   users: 'Exports every account: name, email, role, and whether its password lives in '
     + 'the directory. An import changes the name and the role, matched on the email '
     + 'address, and does not create accounts - a new one needs a password, which does '
-    + 'not belong in a spreadsheet. Working times and time zones are not here: they '
-    + 'belong to whoever they are about, who sets them under My account.',
+    + 'not belong in a spreadsheet. Time zones are not here: they belong to whoever '
+    + 'they are about, who sets theirs under My account.',
 };
 
 function wireSheetCards() {
@@ -15135,780 +10230,29 @@ function wireSheetCards() {
   }
 }
 
-/**
- * What the evaluation is showing as a picture, and which shape it is drawn in.
- *
- * The shape is remembered for the session rather than reset on every
- * evaluation: somebody who prefers a pie prefers it for the next period too.
- */
-// The chart's state, kept as the answer rather than as the drawing.
-//
-// It held finished labels and a finished caption, both translated at the moment
-// the answer arrived - so a language change left "Hours per project" over bars
-// labelled "no project" on an otherwise German screen. The words are made at
-// drawing time now, which is also the only time they are needed.
-const reportChart = { kind: 'bars', scope: 'projects', projects: [], days: [] };
-
-/**
- * Takes down every evaluation this account ran, and the pictures of its hours.
- *
- * An evaluation is computed when somebody asks for one, and nothing on the next
- * sign-in asks again: the result cards stayed up with the last account's totals,
- * its name, target and booked hours, and the charts of where its time went. The
- * chart's shape is a preference rather than anybody's hours, and its buttons
- * show it, so only the figures go.
- */
-function forgetEveryEvaluation() {
-  for (const card of ['#report-result', '#overtime-result']) {
-    const node = $(card);
-    if (node) node.hidden = true;
-  }
-
-  for (const said of ['#report-total', '#report-chart-caption', '#overtime-total', '#overtime-meta',
-    '#overtime-rule', '#statistics-total', '#report-budget', '#workday-total']) {
-    const node = $(said);
-    if (node) node.textContent = '';
-  }
-
-  for (const picture of ['#report-chart', '#chart-days', '#chart-projects', '#chart-activities']) {
-    $(picture)?.replaceChildren();
-  }
-
-  reportChart.projects = [];
-  reportChart.days = [];
-}
-
-/**
- * Fetches the breakdown for the period just evaluated and draws it.
- *
- * What it breaks down depends on what was asked. Across all projects the
- * interesting division is between them, which is also the only one where a pie
- * means anything - the parts add up to the whole. With one project named, or
- * only the hours belonging to none, there is one part, so the days are the
- * division worth seeing.
- */
-async function loadReportChart(from, to, projectId) {
-  const container = $('#report-chart');
-  if (!container) return;
-
-  // Scoped the way the evaluation was. The endpoint answers for every project
-  // unless told otherwise, so an unscoped chart beside a table totalling one
-  // project is two different numbers on one screen, both offered as the answer.
-  const params = forSubject({ from, to });
-  if (projectId) params.set('projectId', projectId);
-
-  const stats = await api(`/me/statistics?${params}`);
-
-  const everyProject = !projectId;
-
-  // The field names are the ones the endpoint sends. This read project.project
-  // and day.booked, and neither exists: every label came out as "no project",
-  // and an undefined value threw inside the hours formatter, which mutate()
-  // turned into an error toast over an empty chart. The chart under Overtime
-  // reads the same answer correctly and is what this should have been copied
-  // from rather than written from memory.
-  reportChart.scope = everyProject ? 'projects' : 'days';
-  reportChart.projects = stats.projects ?? [];
-  reportChart.days = stats.days ?? [];
-
-  redrawable('reportChart', drawReportChart);
-}
-
-/** Draws the breakdown in whichever shape is selected. */
-function drawReportChart() {
-  const container = $('#report-chart');
-  if (!container) return;
-
-  for (const button of $$('#report-chart-switch button')) {
-    button.setAttribute('aria-pressed', String(button.dataset.chart === reportChart.kind));
-    button.classList.toggle('secondary', button.dataset.chart !== reportChart.kind);
-  }
-
-  // The words, made now rather than when the answer arrived, so a language change
-  // reaches them.
-  const byProject = reportChart.scope === 'projects';
-
-  const bars = byProject
-    ? projectBars(reportChart.projects)
-    : reportChart.days.map((day) => ({ label: fmtDate(day.date), value: day.hours }));
-
-  $('#report-chart-caption').textContent = byProject
-    ? t('report.byProject', 'Hours per project')
-    : t('report.byDay', 'Hours per day');
-
-  const draw = {
-    bars: drawBarChart,
-    columns: drawColumnChart,
-    pie: drawPieChart,
-  }[reportChart.kind] ?? drawBarChart;
-
-  draw(container, bars, fmtHours);
-}
-
-function wireReportChart() {
-  const holder = $('#report-chart-switch');
-  if (!holder) return;
-
-  holder.addEventListener('click', (e) => {
-    const button = e.target.closest('button[data-chart]');
-    if (!button) return;
-
-    reportChart.kind = button.dataset.chart;
-    drawReportChart();
-  });
-}
-
-function wireStatistics() {
-  const button = $('#statistics-load');
-  if (!button) return;
-
-  button.addEventListener('click', () => mutate(loadStatistics, null, null));
-}
-
-// ------------------------------------------------------------------ stopwatch
-
-/** The running clock, or null. Kept so the display can tick without asking. */
-let runningTimer = null;
-
-/** The interval that ticks the display, so it can be stopped when nothing runs. */
-let timerTick = null;
-
-/**
- * Whether the running clock is past what one entry can hold, as last drawn - or
- * null when that has not been worked out for the clock in hand yet. Kept so the
- * once-a-second paint acts on the moment it changes rather than on every tick.
- */
-let timerForgotten = null;
-
-/**
- * Whether the running clock is past the hours its owner chose to be told after,
- * as last drawn - null until worked out for the clock in hand, so the first look
- * at a clock already past them draws the banner without a notification: the
- * notification is for a clock crossing the line while somebody is elsewhere.
- */
-let timerLong = null;
-
-/**
- * The longest one entry may be, in hours.
- *
- * Read from the booking form's own limit rather than written down here again: that
- * limit is the one TestTheFormLimitsAreTheOnesTheServerEnforces holds to the
- * server's, so a clock past it is exactly one the server books only with an end.
- */
-function longestEntryHours() {
-  const max = Number($('#form-timesheet [name=durationHours]')?.max);
-
-  return Number.isFinite(max) && max > 0 ? max : 24;
-}
-
-/**
- * A moment as the day and the time on the reader's own wall clock - the values a
- * date field and a time field take.
- *
- * In the account's zone rather than the browser's, because a time sent without an
- * offset is read by the server in that zone, and the two differ for anybody whose
- * laptop is set to somewhere else.
- */
-function wallClock(iso) {
-  const at = new Date(iso);
-  const options = {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  };
-
-  let parts;
-
-  try {
-    parts = new Intl.DateTimeFormat('en-CA', {
-      ...options, timeZone: me.user?.effectiveTimezone || undefined,
-    }).formatToParts(at);
-  } catch {
-    // A zone the browser does not know falls back to its own, as todayISO does.
-    parts = new Intl.DateTimeFormat('en-CA', options).formatToParts(at);
-  }
-
-  const part = (type) => parts.find((p) => p.type === type)?.value ?? '';
-
-  return {
-    date: `${part('year')}-${part('month')}-${part('day')}`,
-    time: `${part('hour')}:${part('minute')}`,
-  };
-}
-
-/** The three corrections a running clock offers, one form each. */
-const TIMER_FORMS = ['start', 'end', 'switch'];
-
-/**
- * Opens one of the clock's corrections and closes the others, filled from the
- * clock it corrects.
- *
- * focus is off when the form opens by itself - the end form, for a clock found to
- * be forgotten - because moving somebody's cursor into a form they did not ask for
- * takes it out of whatever they were typing.
- */
-function openTimerForm(which, { focus = true } = {}) {
-  for (const name of TIMER_FORMS) {
-    const form = $(`#form-timer-${name}`);
-    if (form) form.hidden = name !== which;
-  }
-
-  const form = $(`#form-timer-${which}`);
-  if (!form || !runningTimer) return;
-
-  if (which === 'start') {
-    const { date, time } = wallClock(runningTimer.startedAt);
-
-    setDateField(form.elements.date, date);
-    form.elements.time.value = time;
-  }
-
-  if (which === 'end') {
-    // A forgotten clock most likely ended on the day it started; one stopped a
-    // little late ended today.
-    setDateField(form.elements.date,
-      timerForgotten ? wallClock(runningTimer.startedAt).date : todayISO());
-    form.elements.time.value = '';
-  }
-
-  if (which === 'switch') {
-    form.reset();
-  }
-
-  if (focus) {
-    (which === 'switch' ? form.elements.projectId : form.elements.time).focus();
-  }
-}
-
-function closeTimerForms() {
-  for (const name of TIMER_FORMS) {
-    const form = $(`#form-timer-${name}`);
-    if (form) form.hidden = true;
-  }
-}
-
-/**
- * The words the clock carries, drawn again whenever the language changes: when it
- * started, and - for one past what an entry can hold - the banner.
- */
-function drawTimerWords() {
-  const since = $('#timer-since-text');
-
-  if (since && runningTimer) {
-    since.textContent = fillIn(t('timer.since', 'Running since {0}'),
-      [fmtMoment(runningTimer.startedAt)]);
-  }
-
-  drawTimerBanner();
-}
-
-/**
- * The notice that a clock has been forgotten.
- *
- * A banner, because it is a state that stays true on every screen until the clock
- * is booked or discarded - and somebody looking at the calendar is the one who
- * most needs to hear it. It books nothing itself: the time entries named in the
- * sentence are where that happens, one place to read it and one place to act.
- */
-function drawTimerBanner() {
-  const banner = $('#timer-banner');
-  if (!banner) return;
-
-  const forgotten = runningTimer !== null && timerForgotten === true;
-  const long = runningTimer !== null && timerLong === true;
-  banner.hidden = !forgotten && !long;
-
-  if (banner.hidden) return;
-
-  const text = $('#timer-banner-text');
-  text.textContent = '';
-
-  // Split on the placeholder, so where the link falls is the translator's
-  // business - as with the restart banner. The forgotten clock's sentence wins:
-  // it says what the other one says and what to do about it.
-  const since = fmtMoment(runningTimer.startedAt);
-  const sentence = forgotten
-    ? t('timer.banner',
-      'A stopwatch has been running since {0}, longer than one entry can hold. '
-      + 'Under {1} it can be booked up to the time the work really ended.')
-    : fillIn(t('timer.longBanner',
-      'The stopwatch has been running since {0}, longer than the {2} you chose to be told after. '
-      + 'Under {1} it can be stopped.'),
-    [null, null, alertHoursText()]);
-  const [before, after] = sentence.split('{1}');
-
-  text.append(fillIn(before ?? '', [since]));
-
-  const link = el('button', {
-    type: 'button',
-    class: 'link-button',
-    id: 'timer-banner-open',
-    text: t('nav.timesheets', 'Time entries'),
-  });
-
-  link.addEventListener('click', openTheStopwatch);
-  text.append(link);
-
-  text.append(fillIn(after ?? '', [since]));
-}
-
-// ------------------------------------------------------------ own notices
-
-/** What about this person's own time deserves a banner, as the server read it. */
-let personalNotices = null;
-
-/**
- * Asks what about this person's own time deserves a banner. Worked out on the
- * server, because the balance read against the bounds is the overtime rule's,
- * and that rule lives in one place.
- */
-async function loadNotices() {
-  if (!can('reports:read:own')) return;
-
-  personalNotices = await api('/me/notices');
-
-  drawBalanceBanner();
-  fillBalanceBounds();
-  drawUnbookedBanner();
-}
-
-/**
- * The last working day with nothing booked on it. The sentence leads to the
- * booking form with that day already in it, which is the whole of what there is
- * to do about it.
- */
-function drawUnbookedBanner() {
-  const banner = $('#unbooked-banner');
-  if (!banner) return;
-
-  const day = personalNotices?.unbookedDay;
-
-  banner.hidden = !day;
-  if (!day) return;
-
-  // The calendar's own short name for the weekday, so the banner cannot call a
-  // day something the week grid does not.
-  const weekday = weekdayNames()[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7];
-  const values = [`${weekday} ${fmtDate(day)}`];
-  const [before, after] = t('remind.unbooked', 'Nothing is booked on {0}, a working day by your plan. '
-    + 'It can be added under {1}.').split('{1}');
-
-  const link = el('button', {
-    type: 'button', class: 'link-button', id: 'unbooked-banner-open', text: t('nav.timesheets', 'Time entries'),
-  });
-  link.addEventListener('click', () => openTheBookingFormOn(day));
-
-  $('#unbooked-banner-text').replaceChildren(fillIn(before ?? '', values), link, fillIn(after ?? '', values));
-}
-
-/** Takes whoever pressed the link to the booking form, with the day in it. */
-function openTheBookingFormOn(day) {
-  switchView('timesheets');
-
-  const form = $('#form-timesheet');
-  if (!form) return;
-
-  setDateField(form.elements.date, day);
-  form.scrollIntoView({ block: 'center' });
-  form.elements.durationHours?.focus();
-}
-
-/**
- * Tells somebody looking at another window that the stopwatch has passed the
- * hours they chose, where the browser allows it. Through the service worker
- * where one is registered, because a browser that shows notifications only from
- * one - Chrome on Android - refuses the page's own constructor, and a phone's
- * browser was left with the banner alone. The constructor is for a page with no
- * worker, and where neither works the banner is all there is.
- */
-async function notifyTheLongStopwatch() {
-  if (!('Notification' in window) || Notification.permission !== 'granted' || !runningTimer) return;
-
-  const title = t('timer.longTitle', 'The stopwatch is still running');
-  const options = {
-    body: fillIn(t('timer.longBody', 'Since {1}, longer than the {0} you chose.'),
-      [alertHoursText(), fmtMoment(runningTimer.startedAt)]),
-    tag: 'gts-stopwatch',
-  };
-
-  try {
-    // getRegistration rather than ready, which waits for ever where nothing was
-    // ever registered.
-    const registration = await navigator.serviceWorker?.getRegistration();
-    if (registration) {
-      await registration.showNotification(title, options);
-
-      return;
-    }
-
-    new Notification(title, options);
-  } catch {
-    // The banner says it.
-  }
-}
-
-/**
- * The hours the stopwatch is mentioned after, with the unit the screen writes
- * hours in. A whole number, so not fmtHours: "10 h" rather than "10.00 h".
- */
-function alertHoursText() {
-  return `${me.reminders?.timerAlertHours ?? 0} ${t('unit.hours', 'h')}`;
-}
-
-/** The reminder choices as they are stored, unless somebody is changing them. */
-function fillReminders() {
-  const form = $('#form-reminders');
-  if (!form || !me.reminders || beingEdited(form)) return;
-
-  form.elements.unbookedDay.checked = me.reminders.unbookedDay;
-  form.elements.timerAlertHours.value = String(me.reminders.timerAlertHours);
-}
-
-/**
- * The Android app's notifications, where the page is shown in it. The app's
- * WebView has no Notification of its own, so the app registers
- * GoTicketSystemNotifications instead: state() answers in the words of the
- * browser's Notification.permission - granted, default or denied - and request()
- * asks the phone, which answers by dispatching gts-notifications on the window
- * once its owner has chosen. The reminders themselves the app shows as
- * notifications of its own, open or closed, asking the installation itself.
- */
-function appNotifications() {
-  return window.GoTicketSystemNotifications ?? null;
-}
+// ------------------------------------------------------------ notifications
 
 /**
  * Whether this browser will show a notification, and the button that asks it
  * where it has not been asked yet. A refusal can only be taken back in the
- * browser's own settings, so it is said rather than asked again. In the Android
- * app the same is asked of the phone, in the app's words rather than a browser's.
+ * browser's own settings, so it is said rather than asked again. The Android
+ * app's WebView has no Notification, so inside the app this says it cannot show
+ * one - which is true of the app as well, while it shows none of its own.
  */
 function drawNotifyState() {
   const button = $('#notify-allow');
   const state = $('#notify-state');
   if (!button || !state) return;
 
-  const app = appNotifications();
-  if (app) {
-    const permission = app.state();
-
-    button.hidden = permission !== 'default';
-    swapTheLabel(button, 'remind.allowAppNotifications', 'Allow notifications from this app');
-    state.textContent = {
-      granted: () => t('remind.appNotifyGranted',
-        'This app shows the reminders as notifications, whether it is open or not.'),
-      denied: () => t('remind.appNotifyDenied',
-        'The phone blocks this app\'s notifications; that can only be changed in its settings.'),
-    }[permission]?.() ?? '';
-
-    return;
-  }
-
   const permission = 'Notification' in window ? Notification.permission : 'unsupported';
 
   button.hidden = permission !== 'default';
   state.textContent = {
-    granted: () => t('remind.notifyGranted', 'This browser shows notifications from here.'),
-    denied: () => t('remind.notifyDenied',
+    granted: () => t('notify.granted', 'This browser shows notifications from here.'),
+    denied: () => t('notify.denied',
       'This browser blocks notifications from here; that can only be changed in its own settings.'),
-    unsupported: () => t('remind.notifyUnsupported', 'This browser cannot show notifications.'),
+    unsupported: () => t('notify.unsupported', 'This browser cannot show notifications.'),
   }[permission]?.() ?? '';
-}
-
-/**
- * The running balance past a bound its owner set. The sentence carries the way
- * to the bounds inside it, split on the placeholder so where the link falls is
- * the translator's business - as with the stopwatch's banner.
- */
-function drawBalanceBanner() {
-  const banner = $('#balance-banner');
-  if (!banner) return;
-
-  const balance = personalNotices?.balance;
-  const outside = balance?.outside;
-
-  banner.hidden = !outside;
-  if (!outside) return;
-
-  const above = outside === 'above';
-  const sentence = above
-    ? t('bounds.above', 'Your running balance is {0}, above the upper bound of {1} you set under {2}.')
-    : t('bounds.below', 'Your running balance is {0}, below the lower bound of {1} you set under {2}.');
-  const values = [fmtSignedHours(balance.hours), fmtSignedHours(above ? balance.upperBound : balance.lowerBound)];
-  const [before, after] = sentence.split('{2}');
-
-  const link = el('button', {
-    type: 'button', class: 'link-button', id: 'balance-banner-open', text: t('nav.settings', 'My account'),
-  });
-  link.addEventListener('click', openTheBalanceBounds);
-
-  $('#balance-banner-text').replaceChildren(fillIn(before ?? '', values), link, fillIn(after ?? '', values));
-}
-
-/** The bounds as they are stored, and the balance they are chosen against. */
-function fillBalanceBounds() {
-  const form = $('#form-balance-bounds');
-  const balance = personalNotices?.balance;
-  if (!form || !balance) return;
-
-  if (!beingEdited(form)) {
-    form.elements.upperBound.value = balance.upperBound ?? '';
-    form.elements.lowerBound.value = balance.lowerBound ?? '';
-  }
-
-  $('#balance-now').textContent = balance.since
-    ? fillIn(t('bounds.now', 'Your running balance is {0}, counted from {1}.'),
-      [fmtSignedHours(balance.hours), fmtDate(balance.since)])
-    : t('bounds.nothingYet', 'Nothing counts towards your balance yet.');
-}
-
-/** Takes whoever pressed the balance banner's link to the bounds it is about. */
-function openTheBalanceBounds() {
-  switchView('settings');
-
-  const form = $('#form-balance-bounds');
-  if (form) form.scrollIntoView({ block: 'center' });
-}
-
-/** Takes whoever pressed the banner's link to the clock it is about. */
-function openTheStopwatch() {
-  switchView('timesheets');
-
-  const card = $('#timer-card');
-  if (card) card.scrollIntoView({ block: 'center' });
-}
-
-/**
- * Acts on the clock having crossed into, or out of, being longer than an entry.
- *
- * Past it, stopping now and switching are taken away - the server would refuse
- * both - and the end form opens by itself, saying why. It is only opened when it
- * is not already open, so a reload while somebody is typing an end time leaves
- * what they typed alone.
- */
-function applyTimerForgotten() {
-  const running = runningTimer !== null;
-  const forgotten = running && timerForgotten === true;
-
-  $('#timer-stop').hidden = !running || forgotten;
-  $('#timer-switch-open').hidden = !running || forgotten;
-  $('#timer-end-forgotten').hidden = !forgotten;
-
-  if (forgotten && $('#form-timer-end').hidden) openTimerForm('end', { focus: false });
-
-  drawTimerBanner();
-}
-
-/**
- * Renders the clock's state.
- *
- * The elapsed time is counted here rather than polled, because a request per
- * second to be told the same thing is a request per second - and counted on the
- * server's clock, which is the one the booking is measured on. The device's own
- * can be minutes out: two minutes slow, its difference from the recorded start
- * came out negative and the stopwatch read 00:00:00 for two minutes after Start.
- * So the offset between the two is measured once, when the server's answer
- * arrives - the start plus what it says it has measured is its own now - and
- * the wall clock does the rest, which keeps counting through a laptop's sleep
- * where a monotonic clock may not.
- */
-function renderTimer() {
-  const card = $('#timer-card');
-  if (!card) return;
-
-  const running = runningTimer !== null;
-
-  $('#timer-start').hidden = running;
-  $('#timer-stop').hidden = !running;
-  $('#timer-switch-open').hidden = !running;
-  $('#timer-discard').hidden = !running;
-  $('#timer-end-open').hidden = !running;
-  $('#timer-since').hidden = !running;
-  $('#timer-project').disabled = running;
-  $('#timer-description').disabled = running;
-
-  if (!running) {
-    $('#timer-elapsed').textContent = '';
-
-    if (timerTick) {
-      clearInterval(timerTick);
-      timerTick = null;
-    }
-
-    timerForgotten = null;
-    timerLong = null;
-    closeTimerForms();
-    stopRedrawing('timerWords');
-    applyTimerForgotten();
-
-    return;
-  }
-
-  redrawable('timerWords', drawTimerWords);
-
-  const started = new Date(runningTimer.startedAt).getTime();
-  const offset = runningTimer.clockOffset ?? 0;
-  const longest = longestEntryHours() * 3600;
-
-  const paint = () => {
-    const seconds = Math.max(0, Math.floor((Date.now() + offset - started) / 1000));
-    const hh = String(Math.floor(seconds / 3600)).padStart(2, '0');
-    const mm = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-    const ss = String(seconds % 60).padStart(2, '0');
-
-    $('#timer-elapsed').textContent = `${hh}:${mm}:${ss}`;
-
-    // Acted on when it changes, which is once: on the first paint of a clock,
-    // and again if one runs on past the limit while the page is open.
-    const forgotten = seconds > longest;
-
-    if (forgotten !== timerForgotten) {
-      timerForgotten = forgotten;
-      applyTimerForgotten();
-    }
-
-    // The hours its owner chose to be told after, read on every tick so a choice
-    // saved under My account applies without the clock being loaded again. Not
-    // once the clock is past what an entry holds: that banner says more.
-    const alert = (me.reminders?.timerAlertHours ?? 0) * 3600;
-    const long = alert > 0 && seconds >= alert && !forgotten;
-
-    if (long !== timerLong) {
-      const crossed = long && timerLong === false;
-
-      timerLong = long;
-      drawTimerBanner();
-
-      if (crossed) notifyTheLongStopwatch();
-    }
-  };
-
-  paint();
-
-  if (!timerTick) timerTick = setInterval(paint, 1000);
-}
-
-async function loadTimer() {
-  if (!can('timesheets:write:own')) return;
-
-  const state = await api('/me/timer');
-
-  runningTimer = state.running
-    ? {
-      ...state,
-      // How far the server's clock is ahead of this device's: see renderTimer.
-      clockOffset: new Date(state.startedAt).getTime() + (state.elapsedHours ?? 0) * 3600000
-        - Date.now(),
-    }
-    : null;
-
-  // Worked out again for the clock just read: a correction or a switch can have
-  // moved it to either side of the limit.
-  timerForgotten = null;
-  timerLong = null;
-
-  // What it was started with, so stopping books what was chosen - the fields
-  // are disabled while it runs, and this is what they show. Written whether or
-  // not there is a project, because a switch can leave a clock running on none
-  // after one that had one.
-  if (runningTimer) {
-    $('#timer-project').value = runningTimer.projectId ? String(runningTimer.projectId) : '';
-    $('#timer-description').value = runningTimer.description ?? '';
-  }
-
-  renderTimer();
-}
-
-function wireTimer() {
-  const start = $('#timer-start');
-  if (!start) return;
-
-  start.addEventListener('click', () => {
-    const projectId = $('#timer-project').value;
-    const description = $('#timer-description').value.trim();
-
-    const body = {};
-    if (projectId) body.projectId = Number(projectId);
-    if (description) body.description = description;
-
-    mutate(
-      () => api('/me/timer', { method: 'POST', body: JSON.stringify(body) }),
-      t('timer.started', 'The clock is running'),
-      loadTimer);
-  });
-
-  $('#timer-stop').addEventListener('click', () => {
-    mutate(
-      () => api('/me/timer/stop', { method: 'POST' }),
-      t('msg.booked', 'Time booked'),
-      // Both time views as well: a booking has just appeared in each of them.
-      async () => { await loadTimer(); await reloadTimeViews(); });
-  });
-
-  $('#timer-discard').addEventListener('click', async () => {
-    const proceed = await confirmDialog({
-      title: t('timer.discardTitle', 'Discard the measured time?'),
-      text: t('timer.discardText',
-        'The clock is stopped and nothing is recorded. This cannot be undone.'),
-      confirmLabel: t('timer.discard', 'Discard'),
-    });
-
-    if (!proceed) return;
-
-    mutate(
-      () => api('/me/timer', { method: 'DELETE' }),
-      t('timer.discarded', 'The clock was discarded'),
-      loadTimer);
-  });
-
-  $('#timer-adjust-open').addEventListener('click', () => openTimerForm('start'));
-  $('#timer-end-open').addEventListener('click', () => openTimerForm('end'));
-  $('#timer-switch-open').addEventListener('click', () => openTimerForm('switch'));
-
-  for (const name of TIMER_FORMS) {
-    $(`#timer-${name}-cancel`).addEventListener('click', closeTimerForms);
-  }
-
-  // A time without an offset, read by the server in this account's zone - the one
-  // the fields were filled in.
-  const moment = (form) => `${form.elements.date.value}T${form.elements.time.value}`;
-
-  $('#form-timer-start').addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    const startedAt = moment(event.currentTarget);
-
-    mutate(
-      () => api('/me/timer', { method: 'PUT', body: JSON.stringify({ startedAt }) }),
-      t('timer.adjusted', 'Start corrected'),
-      async () => { closeTimerForms(); await loadTimer(); });
-  });
-
-  $('#form-timer-end').addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    const endedAt = moment(event.currentTarget);
-
-    mutate(
-      () => api('/me/timer/stop', { method: 'POST', body: JSON.stringify({ endedAt }) }),
-      t('msg.booked', 'Time booked'),
-      async () => { closeTimerForms(); await loadTimer(); await reloadTimeViews(); });
-  });
-
-  $('#form-timer-switch').addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    const body = {};
-    const description = form.elements.description.value.trim();
-
-    if (form.elements.projectId.value) body.projectId = Number(form.elements.projectId.value);
-    if (description) body.description = description;
-
-    mutate(
-      () => api('/me/timer/switch', { method: 'POST', body: JSON.stringify(body) }),
-      t('timer.switched', 'Booked - the clock carries on'),
-      async () => { closeTimerForms(); await loadTimer(); await reloadTimeViews(); });
-  });
 }
 
 // ------------------------------------------------------------- installing
@@ -16423,8 +10767,8 @@ async function signInWithPasskey() {
  * The built-in administrator keeps its password on purpose, so it is never
  * offered a passkey it might then come to rely on.
  *
- * isSystem here rather than administersOnly, which is the one place the two
- * deliberately differ. Everything else reserved for the built-in account was
+ * isSystem here rather than whether the account administers, which is the one
+ * place the two deliberately differ. Everything else reserved for the built-in account was
  * reserved for what it *does*, and an account holding the admin role does the
  * same things - but this is reserved for what it *is*: the guaranteed way back
  * in, which a way back in tied to one particular phone would stop being.
@@ -17483,27 +11827,9 @@ function switchView(name) {
 
   rememberView(name);
 
-  // The period this screen evaluates, visible before anything is evaluated.
-  fillRangesFor(name);
-
-  // Filled on arrival rather than once, because what it says about today goes
-  // stale. Not awaited: switching screens is not something to hold up for two
-  // requests, and the screen reads correctly while they are in flight.
+  // Filled on arrival rather than once, because who it greets and what it
+  // offers them may have changed since it was last drawn.
   if (name === 'welcome') renderWelcome();
-
-  // The week, likewise: what it shows is the server's, and may have moved since.
-  if (name === 'week') mutate(loadWeekGrid, null, null);
-
-  // And the year beside the evaluations, which is two requests and loaded only
-  // where it is looked at.
-  if (name === 'overtime') mutate(loadYearMap, null, null);
-
-  // The stopwatch's start as the day's, for a clock started since the calendar
-  // was last drawn - which costs no request, the clock being in hand already.
-  if (name === 'calendar') {
-    const workday = $('#form-workday');
-    if (workday && !beingEdited(workday)) proposeTheClocksStart(workday);
-  }
 
   // The log viewer polls, so it follows the screen it lives on rather than
   // running for as long as the tab is open.
@@ -17525,7 +11851,6 @@ function switchView(name) {
     if ($('#totp-setup') && !$('#totp-setup').hidden) renderTOTPState();
 
     forgetTheTokenValue();
-    forgetTheFeedAddress();
   }
 }
 
@@ -17750,13 +12075,9 @@ async function refreshAll() {
   // Whether a newer version exists, for whoever may do something about it.
   startReleaseWatch();
 
-  // Before the booking date is worked out, because that depends on the zone -
-  // and on a first sign-in the zone is the thing being adopted.
+  // On a first sign-in the zone and the language are the browser's, adopted
+  // here; what the account says afterwards is read again.
   if (await adoptBrowserDefaults()) await loadMe();
-
-  // Only now is the applicable zone known, so the booking date is set here
-  // rather than at start-up, where it would still be the browser's guess.
-  resetBookingDate();
 
   // Before every other loader, because the server blocks the rest of the API
   // while the initial password stands - and that is exactly when the wizard is
@@ -17782,35 +12103,14 @@ async function refreshAll() {
     return;
   }
 
-  // Whose time the screens show, before any of them is filled.
-  await loadTeam();
-
   // Roles first: the user table renders a role picker from them.
   await loadRoles();
-  await Promise.all([loadUsers(), loadProjects()]);
-  await loadTimesheets();
-  // After users and projects, so the calendar can resolve names.
-  await loadCalendar();
-  await loadTimer();
-  await loadStatistics();
+  await loadUsers();
   await loadAdmin();
   await loadTokens();
-  await loadCalendarFeed();
   await loadAndroidCode();
   await loadPasskeys();
   await loadOpenIDLink();
-  await loadSchedules();
-  await loadTemplates();
-  await loadAbsences();
-  await loadVacation();
-  await loadMyHolidays();
-  await loadNotices();
-  await loadMyManagers();
-
-  // What was booked without a connection, now that there is one - and the banner
-  // for whoever is signed in now.
-  drawOutbox();
-  await sendOutbox();
   fillSettingsForm();
 
   document.documentElement.dataset.loaded = 'yes';
@@ -17841,10 +12141,6 @@ function wireForms() {
       return;
     }
 
-    // No working times here. A new account starts on the instance default under
-    // Settings and its owner changes it under My account - a daily target is a time
-    // figure, and administering an installation is not the same job as recording time
-    // in it.
     const body = formData(form);
 
     mutate(() => api('/users', { method: 'POST', body: JSON.stringify(body) }),
@@ -17873,8 +12169,6 @@ function wireForms() {
       async () => { resetRoleForm(); await refreshAll(); });
   });
 
-  $('#welcome-recent-all')?.addEventListener('click', () => switchView('timesheets'));
-
   $('#role-reset').addEventListener('click', resetRoleForm);
 
   // The same thing, offered where a shipped role is being read rather than at
@@ -17885,370 +12179,15 @@ function wireForms() {
     $('#form-role').elements.name.focus();
   });
 
-  $('#form-project').addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const form = e.target;
-    const id = form.elements.id.value;
-
-    if (id) {
-      // Through correctionFrom rather than written out here. This was the object
-      // that knew an emptied optional field has to travel as empty, and it was
-      // the only one - the booking form beside it did not, so an emptied
-      // description there saved as no change. One reader for both now.
-      //
-      // The start date is not among the emptiable ones: it is the one date a
-      // project must have, so an empty one is somebody clearing a box rather than
-      // removing a fact, and sending it would be refused. Left out, it stays what
-      // it was.
-      const changes = correctionFrom(form, ['description', 'endDate']);
-
-      // A number, and an emptied box as 0, which is how the server is told to take
-      // the budget off - a budget of nothing is no budget.
-      const budget = form.elements.budgetHours.value;
-      changes.budgetHours = budget === '' ? 0 : Number(budget);
-
-      // The same for the rate: an emptied box takes it off. The switch says what
-      // it says either way, and an emptied currency is euros again.
-      const rate = form.elements.hourlyRate.value;
-      changes.hourlyRate = rate === '' ? 0 : Number(rate);
-      changes.billable = form.elements.billable.checked;
-      changes.currency = form.elements.currency.value.trim();
-
-      mutate(() => api(`/projects/${id}`,
-        { method: 'PUT', body: JSON.stringify(changes) }),
-      t('msg.projectSaved', 'Project saved'),
-      async () => { resetProjectForm(); await refreshAll(); });
-
-      return;
-    }
-
-    const body = formData(form);
-
-    if (body.budgetHours !== undefined) body.budgetHours = Number(body.budgetHours);
-    if (body.hourlyRate !== undefined) body.hourlyRate = Number(body.hourlyRate);
-    body.billable = form.elements.billable.checked;
-
-    // A project made while looking after somebody is theirs.
-    if (viewingFor) body.ownerId = viewingFor.id;
-
-    mutate(() => api('/projects', { method: 'POST', body: JSON.stringify(body) }),
-      t('msg.projectCreated', 'Project created'),
-      async () => { resetProjectForm(); await refreshAll(); });
-  });
-
-  $('#project-cancel').addEventListener('click', resetProjectForm);
-
-  $('#form-timesheet').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const id = form.elements.id.value;
-
-    // The same form books and corrects; the id decides which - and it decides
-    // how the form is read, too. Booking drops an empty box, correcting sends
-    // it: see correctionFrom. Number('') is 0, which is how the service is told
-    // to take a project off again; Number(undefined) is NaN, which reaches it as
-    // null and means "leave it alone".
-    const editing = Boolean(id);
-
-    const raw = editing
-      ? correctionFrom(form, ['description', 'projectId'])
-      : formData(form);
-
-    const body = {
-      ...raw,
-      projectId: Number(raw.projectId),
-      durationHours: Number(raw.durationHours),
-    };
-
-    // Booked for the account on screen. A correction needs no name: the entry
-    // already says whose it is.
-    if (!editing && viewingFor) body.userId = viewingFor.id;
-
-    const path = editing ? `/timesheets/${id}` : '/timesheets';
-    const method = editing ? 'PUT' : 'POST';
-
-    // Whether the booking waits on this device rather than having been booked,
-    // which decides what is said once it is put away.
-    let kept = false;
-
-    mutate(async () => {
-      try {
-        await api(path, { method, body: JSON.stringify(body) });
-      } catch (err) {
-        if (editing || !err.unreachable) throw err;
-
-        // A new booking waits on this device rather than being lost with the
-        // connection, and goes once it is back.
-        keepForLater(body);
-        kept = true;
-      }
-    }, editing ? t('msg.entrySaved', 'Entry saved') : null,
-    async () => {
-      // Keeps the project and the date, so booking several entries in a row stays
-      // quick.
-      resetTimesheetForm();
-
-      // Kept, nothing changed on the server to show, and nothing could be asked
-      // of it anyway: reloading would only add a second notice to the first.
-      if (kept) {
-        toast(t('outbox.kept', 'No connection: kept on this device, and sent once it is back.'), 'ok');
-
-        return;
-      }
-
-      if (!editing) toast(t('msg.booked', 'Time booked'), 'ok');
-
-      await reloadTimeViews();
-    });
-  });
-
-  $('#timesheet-cancel').addEventListener('click', resetTimesheetForm);
-
-  // Back to the placeholder once it has filled the form: left showing the
-  // template, it would go on claiming the form says what the template says after
-  // somebody had changed the hours.
-  $('#ts-template').addEventListener('change', (event) => {
-    const template = entryTemplates.find((kept) => String(kept.id) === event.target.value);
-
-    event.target.value = '';
-
-    if (template) fillFromTemplate(template);
-  });
-
-  $('#ts-template-save').addEventListener('click', saveAsTemplate);
-
-  // One row, because the total covers the reader's own hours and nobody else's.
-  // The column used to name the person, which is now always the same person.
-  function renderReport(report, projectId) {
-    evaluatedPeriod.report = { from: report.from, to: report.to, projectId };
-
-    const rows = (report.entries ?? []).map((entry) => el('tr', {},
-      el('td', { text: `${fmtDate(report.from)} – ${fmtDate(report.to)}` }),
-      el('td', { class: 'num', text: fmtNumber(entry.hours) }),
-    ));
-
-    fillTable($('#table-report tbody'), rows, 2, t('ot.empty', 'No bookings in this period.'));
-    $('#report-total').textContent = t('report.total', '{0} in total')
-      .replace('{0}', fmtHours(report.totalHours));
-
-    // One project with a budget: how much of it everything booked so far uses -
-    // every hour there is, not only the period's, because that is what a budget
-    // is spent by.
-    const project = projectId && projectId !== 'none'
-      ? cache.projects.find((p) => String(p.id) === String(projectId))
-      : null;
-
-    $('#report-budget').textContent = project?.budgetHours
-      ? fillIn(t('report.budget', 'All its hours together: {0} of its budget of {1} ({2} %).'),
-        [fmtHours(project.bookedHours), fmtHours(project.budgetHours),
-          Math.round((project.bookedHours / project.budgetHours) * 100)])
-      : '';
-
-    $('#report-result').hidden = false;
-  }
-
-  $('#form-report').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const { projectId, from, to } = formData(e.target);
-    const params = forSubject();
-    if (projectId) params.set('projectId', projectId);
-    if (from) params.set('from', from);
-    if (to) params.set('to', to);
-    const suffix = params.toString() ? `?${params}` : '';
-
-    mutate(async () => {
-      // /reports rather than /projects/{id}/report, because the selection is not
-      // always a project: an empty projectId means every one of them and "none"
-      // means the hours that never got one, and neither fits in a path.
-      const report = await api(`/reports${suffix}`);
-
-      // Drawn through redrawable, so a language change draws it again from this
-      // same answer rather than leaving an English total under a German heading.
-      redrawable('report', () => renderReport(report, projectId));
-
-      // The same period as a picture. The figures come from the statistics
-      // endpoint rather than the report, because a total is one number and a
-      // chart of one number says nothing - that endpoint already breaks the
-      // same range down, scoped to this person by the same right.
-      await loadReportChart(report.from, report.to, projectId);
-    }, null, null);
-  });
-
-  function renderOvertime(balance) {
-    evaluatedPeriod.overtime = { from: balance.from, to: balance.to };
-
-    const rows = (balance.days ?? []).map((d) => el('tr', {},
-      el('td', { text: [fmtDate(d.date), d.holiday ? holidayOf(d) : null,
-        d.absence ? absenceName(d.absence) : null].filter(Boolean).join(' · ') }),
-      el('td', { class: 'num', text: fmtHours(d.booked) }),
-      el('td', { class: 'num', text: fmtHours(d.target) }),
-      balanceCell(d.balance),
-    ));
-
-    fillTable($('#table-overtime tbody'), rows, 4,
-      t('ot.nothingCounts', 'Nothing in this period counts towards the balance.'));
-
-    $('#overtime-rule').textContent = balance.everyDayCountsFrom
-      ? fillIn(t('ot.ruleEveryDay', 'Every working day counts from {0}.'), [fmtDate(balance.everyDayCountsFrom)])
-      : t('ot.ruleBooked', 'Only the days you booked on count. Choose a day under "My account" to count every working day.');
-
-    const total = balance.totalBalance;
-    const pill = $('#overtime-total');
-    pill.textContent = `${total > 0 ? '+' : ''}${fmtHours(total)}`;
-    pill.className = `pill ${total > 0 ? 'plus' : total < 0 ? 'minus' : ''}`;
-    $('#overtime-meta').textContent = t('ot.meta', '{0} · target {1}/day · booked {2} of {3}')
-      .replace('{0}', balance.userName)
-      .replace('{1}', fmtHours(balance.dailyTarget))
-      .replace('{2}', fmtHours(balance.totalBooked))
-      .replace('{3}', fmtHours(balance.totalTarget));
-    $('#overtime-result').hidden = false;
-  }
-
-  /**
-   * A statement of work, line by line and a total per currency. Drawn through
-   * redrawable, so a change of language writes the same figures in the other
-   * language's words and number format.
-   */
-  function renderStatement(statement) {
-    $('#statement-period').textContent = periodOf(evaluatedPeriod.statement);
-
-    const rows = statement.lines.map((line) => el('tr', {},
-      el('td', { class: 'text', text: line.name }),
-      el('td', { class: 'num', text: fmtHours(line.hours) }),
-      el('td', {
-        class: line.hourlyRate === null ? 'num empty' : 'num',
-        text: line.hourlyRate === null
-          ? t('statement.noRate', 'no rate yet')
-          : fmtMoney(line.hourlyRate, line.currency),
-      }),
-      el('td', { class: 'num', text: line.amount === null ? '–' : fmtMoney(line.amount, line.currency) }),
-    ));
-
-    fillTable($('#table-statement tbody'), rows, 4,
-      t('statement.empty', 'No billable hours in this period.'));
-
-    $('#table-statement tfoot').replaceChildren(...statement.totals.map((total) => el('tr', {},
-      el('th', { scope: 'row', class: 'text', text: fillIn(t('statement.total', 'Total in {0}'), [total.currency]) }),
-      el('td', { class: 'num', text: fmtHours(total.hours) }),
-      el('td', {}),
-      el('td', { class: 'num', text: fmtMoney(total.amount, total.currency) }),
-    )));
-
-    $('#statement-result').hidden = false;
-  }
-
-  $('#form-statement').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const { from, to } = formData(e.target);
-
-    mutate(async () => {
-      const statement = await api(`/reports/statement?${forSubject({ from, to })}`);
-
-      statementShown = statement;
-      evaluatedPeriod.statement = { from: statement.from, to: statement.to };
-
-      redrawable('statement', () => renderStatement(statement));
-    }, null, null);
-  });
-
-  // The same statement as a workbook - the one shown, not what the boxes say now.
-  $('#statement-xlsx').addEventListener('click', () => mutate(() => downloadSheet(
-    `/reports/statement/export?${forSubject(evaluatedPeriod.statement ?? {})}`,
-    t('statement.filename', 'statement-of-work')), null, null));
-
-  $('#form-overtime').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const { from, to } = formData(e.target);
-    const params = new URLSearchParams();
-    if (from) params.set('from', from);
-    if (to) params.set('to', to);
-    const suffix = params.toString() ? `?${params}` : '';
-
-    mutate(async () => {
-      // The balance of the account on screen: your own, or one you look after as a
-      // manager. Any other id is refused rather than answered.
-      const balance = await api(`/users/${subjectID()}/overtime${suffix}`);
-
-      redrawable('overtime', () => renderOvertime(balance));
-    }, null, null);
-  });
-
-  $('#form-working-times').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const form = e.target;
-    // Empty means "use the instance default", which the API expresses as 0.
-    const body = {
-      dailyTargetHours: Number(form.elements.dailyTargetHours.value || 0),
-      maxDailyHours: Number(form.elements.maxDailyHours.value || 0),
-      // An empty field is the request to take the day off again, which is how the
-      // server reads an empty string.
-      everyDayCountsFrom: form.elements.everyDayCountsFrom.value,
-    };
-    saveForm(form, () => api(`/users/${me.user.id}/working-times`,
-      { method: 'PUT', body: JSON.stringify(body) }),
-      t('msg.workingTimesSaved', 'Working hours saved'),
-      refreshAll);
-  });
-
-  $('#form-reminders').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const body = {
-      unbookedDay: form.elements.unbookedDay.checked,
-      timerAlertHours: Number(form.elements.timerAlertHours.value || 0),
-    };
-
-    saveForm(form, () => api('/me/reminders', { method: 'PUT', body: JSON.stringify(body) }),
-      t('remind.saved', 'Reminders saved'),
-      async () => { await loadMe(); fillReminders(); await loadNotices(); });
-  });
-
   $('#notify-allow').addEventListener('click', async () => {
-    const app = appNotifications();
-
-    // The phone answers in its own time, with gts-notifications below.
-    if (app) {
-      app.request();
-
-      return;
-    }
-
     if ('Notification' in window) await Notification.requestPermission();
 
     drawNotifyState();
   });
 
-  window.addEventListener('gts-notifications', drawNotifyState);
-
   $('#export-me').addEventListener('click', () => mutate(
     () => downloadFile(`${API}/me/export`, t('export.filename', 'everything-about-me'), 'zip'),
     t('wb.exported', 'Export saved'), null));
-
-  $('#form-balance-bounds').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const form = e.target;
-
-    // Both at once, as the endpoint takes them: an empty field is no bound.
-    const bound = (input) => (input.value === '' ? null : Number(input.value));
-    const body = { upperBound: bound(form.elements.upperBound), lowerBound: bound(form.elements.lowerBound) };
-
-    saveForm(form, () => api('/me/balance-limits', { method: 'PUT', body: JSON.stringify(body) }),
-      t('bounds.saved', 'Bounds saved'),
-      loadNotices);
-  });
-
-  $('#form-schedule').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const body = { validFrom: form.elements.validFrom.value, hours: scheduleHours(form) };
-
-    saveForm(form, () => api('/me/schedules', { method: 'POST', body: JSON.stringify(body) }),
-      t('schedule.saved', 'Plan saved'),
-      // Everything, because the balance and everything measured against it has
-      // just changed.
-      refreshAll);
-  });
 
   $('#form-password').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -18273,51 +12212,13 @@ function wireForms() {
       });
   });
 
-  $('#filter-ts-project').addEventListener('change',
-    () => mutate(loadTimesheets, null, null));
-
-  // Into the entries still waiting for a project, which is the project filter's
-  // own "No project" - this only makes it findable.
-  $('#ts-unassigned').addEventListener('click', () => {
-    $('#filter-ts-project').value = 'none';
-    mutate(loadTimesheets, null, null);
-  });
-
-  // A day is taken once it is complete - picked, or typed and left - and the
-  // search once the typing pauses: asked on every keystroke it would be a request
-  // per letter, each overtaking the one before.
-  const filters = $('#form-ts-filters');
-
-  filters.addEventListener('change', (event) => {
-    if (event.target.id !== 'filter-ts-q') mutate(loadTimesheets, null, null);
-  });
-
-  let searchPause = null;
-
-  $('#filter-ts-q').addEventListener('input', () => {
-    clearTimeout(searchPause);
-    searchPause = setTimeout(() => mutate(loadTimesheets, null, null), 300);
-  });
-
-  // Enter asks at once rather than waiting out the pause.
-  filters.addEventListener('submit', (event) => {
-    event.preventDefault();
-    clearTimeout(searchPause);
-    mutate(loadTimesheets, null, null);
-  });
-
-  // Through mutate like every other loader, so a half-filled booking form is left
-  // alone while the table grows underneath it.
-  $('#ts-more').addEventListener('click',
-    () => mutate(() => loadTimesheets(true), null, null));
-
   $('#tabs').addEventListener('click', (e) => {
     const tab = e.target.closest('.tab');
     if (tab) switchView(tab.dataset.view);
   });
 
-  // Following a link to #calendar, or editing the address bar, moves the screen
-  // rather than leaving the address disagreeing with what is shown.
+  // Following a link to another screen, or editing the address bar, moves the
+  // screen rather than leaving the address disagreeing with what is shown.
   window.addEventListener('hashchange', () => {
     // Only once there is a session; before that the sign-in screen is the whole
     // interface and switching underneath it would change what appears after it.
@@ -18332,7 +12233,7 @@ async function init() {
   // the user must still be able to sign in rather than face a form whose
   // submit handler was never attached, which would silently reload the page.
   $('#form-login').addEventListener('submit', submitLogin);
-  wireTicketSignIn();
+  wireKerberosSignIn();
 
   // Before anything can fail for want of a connection, so a page that cannot
   // reach the installation says so rather than only failing.
@@ -18360,15 +12261,6 @@ async function init() {
   // into a card the moment it appears is already protected from the loaders
   // filling the cards after it. Forms nothing refills are unaffected by it.
   $$('form').forEach(watchForEditing);
-
-  // And the few controls that hold typed work without belonging to one. Bound to
-  // the document rather than to each control, because some of them are drawn
-  // later than this runs.
-  for (const event of ['input', 'change']) {
-    document.addEventListener(event, (e) => {
-      if (e.target?.dataset?.keep !== undefined) rememberLooseDraft();
-    });
-  }
 
   // Appearance is a device setting and needs no session, so the picker works on
   // the sign-in screen too.
@@ -18404,21 +12296,16 @@ async function init() {
   // rather than popping in afterwards. The ticket's button likewise, and the
   // answer decides whether a ticket is tried at all below.
   await loadPasskeySupport();
-  await loadTicketSupport();
+  await loadKerberosSupport();
   await loadOpenIDOffer();
   await loadMaintenance();
 
   try {
     wireForms();
     wireTOTP();
-    wireCalendar();
-    wireAbsences();
-    wireVacation();
-    wireYearMap();
     wireHolidays();
     wireAdmin();
     wireTokens();
-    wireCalendarFeed();
     wireDirectorySync();
     wireTimezones();
     wireOperational();
@@ -18439,31 +12326,21 @@ async function init() {
     trackHeight('.topbar', '--topbar-height');
     trackHeight('#site-footer', '--footer-height');
     placeFooter();
-    wireTimer();
-    wireWeekGrid();
     wireInstall();
-    wireStatistics();
-    wireDocumentExports();
-    wireReportChart();
-    wireWorkbook();
     wireSheetCards();
     wireSetup();
     wireTour();
     wireWelcome();
     wirePasskeys();
     wireOpenID();
-    wireWorkDays();
     wireLogViewer();
     wireMaintenance();
-    wireManagers();
     wirePush();
     $('#logout').addEventListener('click', doLogout);
     $('#language-picker').addEventListener('change', (e) => mutate(
       () => api('/me/language', { method: 'PUT', body: JSON.stringify({ language: e.target.value }) }),
       null,
       refreshAll));
-
-    resetBookingDate();
   } catch (err) {
     toastFailure(err, t('msg.initFailed', 'Initialisation failed'));
   }
@@ -18509,9 +12386,9 @@ async function init() {
     // been told otherwise - after the form is up, so a browser without a ticket
     // is simply left looking at it. Only where the failure put the form up: a
     // load that failed behind a session that was accepted keeps its screen.
-    if (!$('#login-screen').hidden && ticketsOffered && !handedToASession
-      && mayTryTheTicketUnasked()) {
-      await signInWithTicket({ quietly: true });
+    if (!$('#login-screen').hidden && kerberosOffered && !handedToASession
+      && mayTryKerberosUnasked()) {
+      await signInWithKerberos({ quietly: true });
     }
   }
 }

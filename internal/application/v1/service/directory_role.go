@@ -43,7 +43,7 @@ func roleForArrival(
 }
 
 // roleAdministers reports whether a role holds rights over the installation
-// rather than over a working day.
+// rather than over the work done in it.
 //
 // Both rights are asked about, because they are the same right one step apart:
 // settings:manage is the installation, and roles:write is the ability to tick

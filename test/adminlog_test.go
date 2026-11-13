@@ -17,7 +17,6 @@ var changesNothing = map[string]string{
 	"POST /api/v1/settings/datasource/test":   "tries a connection and keeps nothing",
 	"POST /api/v1/settings/update/check":      "asks whether a newer release exists",
 	"POST /api/v1/setup/claim":                "signs in the browser that answered the installer, which is a sign-in",
-	"PUT /api/v1/users/{id}/working-times":    "a person's own figures, which only their owner sets",
 }
 
 // Every route that changes accounts, roles or settings is in the administration

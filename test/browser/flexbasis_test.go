@@ -19,7 +19,7 @@ import (
 // rows turn, and the box only looks wrong on a screen nobody was measuring: the
 // log's search box was found in a screenshot from a telephone, 144px of nothing
 // above the refresh interval. So the sign-in and every screen of an administrator
-// and of somebody who records time are walked at telephone width, and every flex
+// and of an agent are walked at telephone width, and every flex
 // item in a column whose basis is a length is asked how much of its height its
 // content does not use.
 func TestNoFlexBasisBecomesAnEmptyHeightOnATelephone(t *testing.T) {
@@ -66,14 +66,16 @@ func TestNoFlexBasisBecomesAnEmptyHeightOnATelephone(t *testing.T) {
 		p.run("a desktop", chromedp.EmulateViewport(1280, 900))
 	}
 
-	walk := func(who string) {
+	// least is how many screens the account has at the fewest, so that tabs that
+	// were not found fail the case rather than leaving nothing to measure.
+	walk := func(who string, least int) {
 		var views []string
 
 		p.run("list "+who+"'s screens", chromedp.Evaluate(
 			`[...document.querySelectorAll('.tab[data-view]')].filter(tab => !tab.hidden).map(tab => tab.dataset.view)`,
 			&views))
 
-		if len(views) < 2 {
+		if len(views) < least {
 			t.Fatalf("too few screens to walk for %s, which says the tabs were not found: %v", who, views)
 		}
 
@@ -88,10 +90,11 @@ func TestNoFlexBasisBecomesAnEmptyHeightOnATelephone(t *testing.T) {
 	measure("sign-in")
 
 	p.readyAdmin()
-	walk("administrator")
+	walk("administrator", 4)
 
+	// One screen, My account, until the ticket screens exist.
 	p.becomeWorker()
-	walk("worker")
+	walk("agent", 1)
 
 	if len(found) > 0 {
 		t.Errorf("on a 390px screen a flex basis meant as a width leaves height empty:\n\t%s",

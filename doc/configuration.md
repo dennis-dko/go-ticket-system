@@ -39,9 +39,8 @@ ports, `TLS_*`, `AUTH_ENABLED`, `UI_ENABLED`, and `LDAP_SYNC_SCHEDULE`, which is
 the only cron expression there is — the session prune runs at 03:00 and is not
 configurable at all.
 
-**Administered only** - `SESSION_LIFETIME`, `MAX_DAILY_HOURS`, `RATE_LIMIT`,
-`RATE_LIMIT_WINDOW` and `LDAP_SYNC_MAX_DELETE_RATIO` - no longer appear in
-`configs/.env` at all. They used to, beside being administrable, and every
+**Administered only** - `SESSION_LIFETIME`, `RATE_LIMIT`, `RATE_LIMIT_WINDOW` and
+`LDAP_SYNC_MAX_DELETE_RATIO` - no longer appear in `configs/.env` at all. They used to, beside being administrable, and every
 built-in fallback was already identical to the line in the file: two places
 holding one value, of which the file's was always the losing copy. Setting one
 in the environment still decides what a fresh installation begins with, before
@@ -100,7 +99,6 @@ nothing sets the variable.
 | `UPDATE_TOKEN` | empty | identifies this installation to the feed. Almost never needed: checking takes no credentials. The limit is counted **per address**, so a dozen instances behind one office connection share sixty checks an hour, and running out answers `403` |
 | `LDAP_SYNC_SCHEDULE` | empty | cron for the directory reconciliation; empty means manual only. Administered under *Settings* as well, where what is saved wins from the next start |
 | `LDAP_SYNC_MAX_DELETE_RATIO` | `0.5` | refuse a run removing more than this share of directory accounts. **Administered under Settings**; not in `configs/.env` |
-| `MAX_DAILY_HOURS` | `24` | instance-wide cap per person per day, at most `24`; anything else is read as the default. **Administered under Settings**; not in `configs/.env` |
 | `LOG_LEVEL` | `INFO` | `DEBUG`…`FATAL`; anything else is read as `INFO`. **Administered under Settings**; in `configs/.dev.env` only |
 | `TRACE_EXPORTER` | empty | `otlp` or `jaeger`; empty exports nothing |
 | `TRACER_URL` | – | the collector as `host:port`, **without** a scheme |
@@ -108,7 +106,7 @@ nothing sets the variable.
 
 ## What can be changed from the interface, and what cannot
 
-Five of the values above are **operational limits** rather than deployment
+A few of the values above are **operational limits** rather than deployment
 facts, so *Settings → Operation and limits* overrides them while the
 application runs — no restart, no file access. A field left empty keeps
 following the file, and its value is shown as the placeholder, so it is always
@@ -119,7 +117,6 @@ force, and *Reset* drops every override at once.
 | --- | --- |
 | `SESSION_LIFETIME` | to the next sign-in |
 | `SESSION_IDLE` | to every session, from the next request |
-| `MAX_DAILY_HOURS` | to the next booking |
 | `RATE_LIMIT` / `RATE_LIMIT_WINDOW` | within seconds |
 | `LDAP_SYNC_MAX_DELETE_RATIO` | at the next synchronisation |
 

@@ -22,28 +22,30 @@ func TestSigningInAgainReturnsToTheScreenThatWasOpen(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	p.run("go to the calendar",
-		chromedp.Click(`.tab[data-view="calendar"]`, chromedp.ByQuery),
-		chromedp.WaitVisible("#calendar-days", chromedp.ByID))
+	// Not the screen an administrator starts on, so coming back to it is a return
+	// rather than an arrival.
+	p.run("go to the roles",
+		chromedp.Click(`.tab[data-view="roles"]`, chromedp.ByQuery),
+		chromedp.WaitVisible("#table-roles", chromedp.ByID))
 
 	p.run("sign out", p.click("#logout"), chromedp.WaitVisible("#form-login", chromedp.ByID))
 
-	p.signIn(workerEmail, workerPassword)
+	p.signIn(harness.AdminEmail, adminPassword)
 	p.waitGone("#login-screen")
 
 	deadline := time.Now().Add(waitPatience)
 	for time.Now().Before(deadline) {
-		if p.visible("#calendar-days") {
+		if p.visible("#table-roles") {
 			break
 		}
 
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	if !p.visible("#calendar-days") {
-		t.Errorf("signing in again did not return to the calendar\n\napplication log:\n%s",
+	if !p.visible("#table-roles") {
+		t.Errorf("signing in again did not return to the roles\n\napplication log:\n%s",
 			p.app.Log())
 	}
 }
@@ -120,29 +122,29 @@ func TestAReloadStaysOnTheScreenThatWasOpen(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`),
-		chromedp.WaitVisible("#view-calendar", chromedp.ByID))
+	p.run("open the roles", p.click(`.tab[data-view="roles"]`),
+		chromedp.WaitVisible("#view-roles", chromedp.ByID))
 
 	// The address bar names it, which is what survives the reload.
 	var hash string
 
 	p.run("read the address", chromedp.Evaluate(`window.location.hash`, &hash))
 
-	if !strings.Contains(hash, "calendar") {
-		t.Fatalf("the address bar reads %q after opening the calendar, so a reload "+
+	if !strings.Contains(hash, "roles") {
+		t.Fatalf("the address bar reads %q after opening the roles, so a reload "+
 			"has nothing to go back to", hash)
 	}
 
 	p.run("reload", chromedp.Reload(), chromedp.WaitVisible("#tabs", chromedp.ByID))
 	p.waitGone("#login-screen")
 
-	// The calendar again, and not the greeting.
-	p.run("wait for the calendar", chromedp.WaitVisible("#view-calendar", chromedp.ByID))
+	// The roles again, and not the greeting.
+	p.run("wait for the roles", chromedp.WaitVisible("#view-roles", chromedp.ByID))
 
 	if p.visible("#view-welcome") {
-		t.Error("the reload landed on the greeting rather than on the calendar")
+		t.Error("the reload landed on the greeting rather than on the roles")
 	}
 
 	var open string
@@ -150,7 +152,7 @@ func TestAReloadStaysOnTheScreenThatWasOpen(t *testing.T) {
 	p.run("read which tab is current", chromedp.Evaluate(
 		`document.querySelector('.tab[aria-current="true"]')?.dataset.view ?? ''`, &open))
 
-	if open != "calendar" {
+	if open != "roles" {
 		t.Errorf("the navigation marks %q as the open screen after the reload", open)
 	}
 }

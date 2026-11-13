@@ -3,10 +3,78 @@
 package browser
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
 	"time"
 
 	"github.com/chromedp/chromedp"
 )
+
+// waitFor polls a condition until it holds or the patience runs out.
+func (p *page) waitFor(what string, holds func() bool) {
+	p.t.Helper()
+
+	deadline := time.Now().Add(waitPatience)
+
+	for time.Now().Before(deadline) {
+		if holds() {
+			return
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}
+
+	p.t.Fatalf("waited for %s and it never came; the log says:\n%s", what, p.app.Log())
+}
+
+// waitForDownload waits for a finished file of the wanted kind to appear.
+//
+// Two things make this more than "wait for the directory to have something in
+// it". Chrome writes a .crdownload file while it is still writing and renames it
+// when it is done, so a file that exists is not a download that has finished.
+// And the directory is not ours: SetDownloadBehavior sets it for the browser,
+// which drops its own things there - a run of this failed on "downloads.htm",
+// a Chrome component, whose contents are quite reasonably not the file asked for.
+//
+// So it waits for the kind of file that was asked for, and says what else was
+// there if it never arrives.
+func waitForDownload(t *testing.T, into, kind string) string {
+	t.Helper()
+
+	deadline := time.Now().Add(waitPatience)
+
+	var seen []string
+
+	for time.Now().Before(deadline) {
+		entries, err := os.ReadDir(into)
+		if err != nil {
+			t.Fatalf("looking in the download directory: %v", err)
+		}
+
+		seen = seen[:0]
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			seen = append(seen, entry.Name())
+
+			if strings.HasSuffix(entry.Name(), kind) {
+				return filepath.Join(into, entry.Name())
+			}
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	t.Fatalf("no %s file was downloaded within %s; the directory holds %v",
+		kind, waitPatience, seen)
+
+	return ""
+}
 
 // reload loads the page again and waits until the interface has opened the
 // screen it starts on.

@@ -345,55 +345,14 @@ func TestEveryPlaceOfferedHasItsHolidays(t *testing.T) {
 	}
 }
 
-// A place written before there were countries is a German state's code, which
-// every place was then - Berlin's BE before Belgium's, and Thuringia's TH before
-// Thailand's - and is written that way again for a client from then.
-func TestAPlaceWrittenBeforeCountriesIsAGermanState(t *testing.T) {
-	for legacy, want := range map[string]string{
-		"NI": "DE-NI", "BE": "DE-BE", "TH": "DE-TH", "": "", model.NoHolidays: model.NoHolidays, "AT": "AT", "DE-HH": "DE-HH",
+// A choice of public holidays names a place, or nowhere: none chosen yet, and
+// the choice to keep none, both keep none.
+func TestAChoiceOfHolidaysNamesAPlaceOrNowhere(t *testing.T) {
+	for choice, want := range map[string]string{
+		"DE-BY": "DE-BY", "AT": "AT", "": "", model.NoHolidays: "",
 	} {
-		if got := model.LegacyHolidayPlace(legacy); got != want {
-			t.Errorf("%q read as written before countries is %q, want %q", legacy, got, want)
-		}
-	}
-
-	for _, country := range model.HolidayCountries() {
-		if country.Code != "DE" {
-			continue
-		}
-
-		for _, state := range country.Regions {
-			if got := model.LegacyHolidayRegion(model.LegacyHolidayPlace(state)); got != state {
-				t.Errorf("%s read and written again as before countries is %q", state, got)
-			}
-		}
-	}
-
-	for _, choice := range []string{"", model.NoHolidays, "AT", "GB-SCT", "FR-57"} {
-		if got := model.LegacyHolidayRegion(choice); got != choice {
-			t.Errorf("%q written as before countries is %q, want it as it is", choice, got)
-		}
-	}
-}
-
-// A person's place is their own choice, the installation's where they made none,
-// and nowhere where the choice that decides is none - theirs, or the
-// installation's they follow.
-func TestAPersonsHolidayPlaceFollowsTheirChoice(t *testing.T) {
-	for _, c := range []struct{ personal, installation, want string }{
-		{"", "DE-BY", "DE-BY"},
-		{model.NoHolidays, "DE-BY", ""},
-		{"DE-HH", "DE-BY", "DE-HH"},
-		{"AT", "DE-BY", "AT"},
-		{"", model.NoHolidays, ""},
-		{"", "", ""},
-		{"AT", model.NoHolidays, "AT"},
-	} {
-		user := model.User{HolidayPlace: c.personal}
-
-		if got := user.HolidayPlaceOf(c.installation); got != c.want {
-			t.Errorf("a choice of %q in an installation keeping %q keeps %q, want %q",
-				c.personal, c.installation, got, c.want)
+		if got := model.HolidaysKeptAt(choice); got != want {
+			t.Errorf("a choice of %q keeps the holidays of %q, want %q", choice, got, want)
 		}
 	}
 }

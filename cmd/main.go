@@ -16,7 +16,7 @@ import (
 	// on zoneinfo files being present on the host, which a scratch or distroless
 	// container has none of - and the binary is meant to be self-contained. The
 	// cost is a few hundred kilobytes; the alternative is every zone silently
-	// resolving to UTC and bookings landing on the wrong day.
+	// resolving to UTC and every moment shown in the wrong one.
 	_ "time/tzdata"
 
 	"gofr.dev/pkg/gofr"
@@ -264,17 +264,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// The terminal client began as this binary's track command and is gone now,
-	// and the command line that started it is answered rather than ignored: an
-	// argument this binary does not know is passed over and the server starts, so
-	// a script still following the old instructions would serve an installer and
-	// print a setup token instead of booking an hour.
-	if len(os.Args) > 1 && os.Args[1] == "track" {
-		_, _ = fmt.Fprintln(os.Stderr, "there is no terminal client any more: "+
-			"book in the web interface, or in the Android app from the release this installation runs")
-		os.Exit(2)
-	}
-
 	// Capture the process output before anything writes to it. GoFr's logger
 	// takes os.Stdout when gofr.New() constructs it and keeps it for the life
 	// of the process, so this is the only moment at which the log viewer can be
@@ -284,10 +273,6 @@ func main() {
 	// The log viewer's own polls go to the console and not into what it shows;
 	// see QuietRequestsTo. The route is the one RegisterRoutes gives the viewer.
 	logs.QuietRequestsTo("/api/v1/admin/logs")
-
-	// And no line carries a calendar feed's key, which is the whole of the address
-	// a reading of it is logged under; see Conceal.
-	logs.Conceal(appservice.CalendarFeedKeyPrefix)
 
 	if terminal {
 		// Interception makes the output a pipe, and GoFr prints JSON when its
@@ -559,18 +544,8 @@ func main() {
 	userRepo := sqldb.NewUserRepository(db, cfg.Dialect).WithSecrets(secrets)
 	roleRepo := sqldb.NewRoleRepository(db, cfg.Dialect)
 	sessionRepo := sqldb.NewSessionRepository(db, cfg.Dialect)
-	projectRepo := sqldb.NewProjectRepository(db, cfg.Dialect)
-	timesheetRepo := sqldb.NewTimesheetRepository(db, cfg.Dialect)
 	settingsRepo := sqldb.NewSettingsRepository(db, cfg.Dialect)
-
-	timerRepo := sqldb.NewTimerRepository(db, cfg.Dialect)
-	scheduleRepo := sqldb.NewWorkScheduleRepository(db, cfg.Dialect)
-	templateRepo := sqldb.NewTemplateRepository(db, cfg.Dialect)
-	absenceRepo := sqldb.NewAbsenceRepository(db, cfg.Dialect)
-	vacationRepo := sqldb.NewVacationRepository(db, cfg.Dialect)
-	calendarFeedRepo := sqldb.NewCalendarFeedRepository(db, cfg.Dialect)
 	identityRepo := sqldb.NewOpenIDIdentityRepository(db, cfg.Dialect)
-	workDayRepo := sqldb.NewWorkDayRepository(db, cfg.Dialect)
 	tokenRepo := sqldb.NewAPITokenRepository(db, cfg.Dialect)
 	passkeyRepo := sqldb.NewPasskeyRepository(db, cfg.Dialect)
 	directoryRunRepo := sqldb.NewDirectoryRunRepository(db, cfg.Dialect)
@@ -621,7 +596,6 @@ func main() {
 	limits := appservice.NewLimitsProvider(settingsService, model.Limits{
 		SessionLifetimeHours:   cfg.SessionLifetime.Hours(),
 		SessionIdleMinutes:     cfg.SessionIdle.Minutes(),
-		MaxDailyHours:          cfg.MaxDailyHours,
 		RateLimit:              cfg.RateLimit,
 		RateLimitWindowSeconds: int(cfg.RateLimitWindow.Seconds()),
 		LDAPSyncMaxDeleteRatio: cfg.LDAPSyncMaxDeleteRatio,
@@ -633,54 +607,25 @@ func main() {
 	registerBusinessMetrics(app)
 
 	sessions := appservice.NewSessionService(userRepo, roleRepo, sessionRepo, auth, cfg.SessionLifetime).
-		WithExternalAuth(ldapClient, model.RoleUser).
+		WithExternalAuth(ldapClient, model.RoleAgent).
 		WithLimits(limits).
 		WithMetrics(app.Metrics())
 
-	ldapSync := appservice.NewLDAPSyncService(ldapClient, userRepo, roleRepo, timesheetRepo,
-		userRepo, directoryRunRepo, cfg.LDAPSyncMaxDeleteRatio, model.RoleUser).
+	// The account repository answers what an account would leave behind and
+	// removes it, so the two cannot disagree about which tickets are its own.
+	ldapSync := appservice.NewLDAPSyncService(ldapClient, userRepo, roleRepo, userRepo,
+		userRepo, directoryRunRepo, cfg.LDAPSyncMaxDeleteRatio, model.RoleAgent).
 		WithLimits(limits).
 		WithMetrics(app.Metrics())
 
-	users := appservice.NewUserApplicationService(userRepo, roleRepo, timesheetRepo, userRepo)
+	users := appservice.NewUserApplicationService(userRepo, roleRepo, userRepo, userRepo)
 	roles := appservice.NewRoleApplicationService(roleRepo)
-	projects := appservice.NewProjectApplicationService(projectRepo, timesheetRepo, timerRepo)
-	timesheets := appservice.NewTimesheetApplicationService(
-		timesheetRepo, userRepo, projectRepo, cfg.MaxDailyHours).
-		WithLimits(limits).
-		WithMetrics(app.Metrics())
-	// The installation's public holidays, read per call like its zone, so a place
-	// chosen on the Settings screen holds from the next answer on.
-	holidayPlaces := appservice.PlaceSource(settingsService.HolidayPlace)
-
-	// Which day it is for somebody, in their own zone: a working day nobody booked
-	// counts once it has been, and for somebody in Auckland that is a day earlier
-	// than for the server. The installation's zone where they have none, and its
-	// default where it cannot be read, as every page decides it.
-	today := appservice.Today(func(ctx context.Context, user *model.User) time.Time {
-		zone, err := settingsService.Timezone(ctx)
-		if err != nil {
-			zone = model.DefaultTimezone
-		}
-
-		return time.Now().In(user.TimezoneOf(zone))
-	})
-
-	overtime := appservice.NewOvertimeService(timesheetRepo, userRepo, scheduleRepo, absenceRepo, holidayPlaces, today)
-	workWeeks := appservice.NewWorkScheduleService(scheduleRepo, userRepo)
-	templates := appservice.NewTemplateService(templateRepo, projectRepo)
-	absences := appservice.NewAbsenceService(absenceRepo, userRepo, scheduleRepo, holidayPlaces)
-	leave := appservice.NewVacationService(vacationRepo, absenceRepo, userRepo, scheduleRepo, holidayPlaces, today)
-	workDays := appservice.NewWorkDayService(workDayRepo, timesheetRepo)
 
 	// What this installation is called in a language, wherever it has to name
-	// itself: the prompt a passkey device shows, the foot of an exported document,
-	// and the calendar somebody subscribes to.
+	// itself: the prompt a passkey device shows.
 	//
 	// The administered title if there is one, so a person sees the name they
-	// know rather than the default the process was started with. One function
-	// rather than one per caller - it was written inline for the first of them,
-	// and the second would have been the same six lines again.
+	// know rather than the default the process was started with.
 	instanceNameIn := func(ctx context.Context, language string) string {
 		branding, err := settingsService.Branding(ctx)
 		if err != nil {
@@ -694,9 +639,6 @@ func main() {
 		return cfg.AppName
 	}
 
-	calendarFeeds := appservice.NewCalendarFeedService(calendarFeedRepo, userRepo, timesheetRepo,
-		absenceRepo, projectRepo, auth, today, instanceNameIn)
-
 	// Signing in through the provider configured under Settings, read per sign-in
 	// so a change there holds from the next one. Ten seconds for every request to
 	// the provider: a sign-in waits on them, and one that has stopped answering
@@ -704,22 +646,10 @@ func main() {
 	openIDSignIn := appservice.NewOpenIDService(identityRepo, userRepo, settingsService.OpenID,
 		openid.New(10*time.Second))
 
-	// Through the timesheet service rather than the repository, so a timer
-	// booking meets exactly the rules a typed one meets.
-	timers := appservice.NewTimerService(timerRepo, timesheets)
-	statistics := appservice.NewStatisticsService(timesheetRepo, projectRepo)
-
-	// The timesheet service is passed in rather than reimplemented: the import has
-	// to enforce the rules the API enforces, and the only way to be sure of that is
-	// to call them.
-	workbook := appservice.NewWorkbookService(timesheetRepo, userRepo, projectRepo, timesheets)
-	projectSheets := appservice.NewProjectWorkbookService(projects)
 	userSheets := appservice.NewUserWorkbookService(userRepo, roleRepo, users)
 	roleSheets := appservice.NewRoleWorkbookService(roleRepo, roles)
 
 	userDomain := domainservice.NewUserDomainService(userRepo, roleRepo)
-	projectDomain := domainservice.NewProjectDomainService(projectRepo)
-	timesheetDomain := domainservice.NewTimesheetDomainService(timesheetRepo, projectRepo)
 
 	// The built-in administrator is created after the migrations have run, so
 	// there is always a way in even on a brand new database.
@@ -840,19 +770,12 @@ func main() {
 				"Set AUTH_ENABLED=true to enforce sign-in and role permissions")
 	}
 
-	// Who may act for whom. One instance for the authorizer and the handlers, so
-	// the switch and the assignments are read the same way by both.
-	team := appservice.NewTeamService(sqldb.NewManagedAccountRepository(db, cfg.Dialect),
-		settingsRepo, userRepo, roleRepo, projectRepo)
+	authorizer := rest.NewAuthorizer(cfg.AuthEnabled())
 
-	authorizer := rest.NewAuthorizer(cfg.AuthEnabled()).WithTeam(team)
-
-	statements := appservice.NewStatementService(timesheetRepo, projectRepo)
-
-	// Reminders pushed to the browsers people subscribe, where the installation
-	// allows it at all - which it ships not doing.
-	push := appservice.NewPushService(settingsRepo, sqldb.NewPushSubscriptionRepository(db, cfg.Dialect),
-		auth, timers, overtime).WithSecrets(secrets)
+	// Notifications pushed to the browsers people subscribe, where the
+	// installation allows it at all - which it ships not doing.
+	push := appservice.NewPushService(settingsRepo, sqldb.NewPushSubscriptionRepository(db, cfg.Dialect)).
+		WithSecrets(secrets)
 
 	// Built here rather than inline, because both the middleware that reads it and
 	// the handler that clears it need the same instance - two would mean the
@@ -987,9 +910,9 @@ func main() {
 		return name
 	})
 
-	// In the language that asked, where there is one. An installation that has
-	// named itself in German and is read in German should not be signed off in
-	// English at the foot of its own evaluation.
+	// In the language that asked, where there is one: an installation that has
+	// named itself in German and is read in German is named so on the prompt of
+	// the device a passkey is made on.
 	instanceName := func(ctx *gofr.Context) string {
 		return instanceNameIn(ctx, strings.TrimSpace(ctx.Param("lang")))
 	}
@@ -1021,17 +944,13 @@ func main() {
 				func(ctx context.Context, userID uint) error {
 					return sessions.LogoutOthers(ctx, userID, "")
 				})),
-		Roles:      rest.NewRoleHandler(roles, authorizer),
-		Projects:   rest.NewProjectHandler(projects, projectDomain, authorizer).WithTimezone(instanceTimezone),
-		Timesheets: rest.NewTimesheetHandler(timesheets, timesheetDomain, authorizer, instanceTimezone),
-		Me:         rest.NewMeHandler(auth, sessions, overtime, authorizer, instanceTimezone).WithTeam(team),
-		Team:       rest.NewTeamHandler(team, authorizer),
-		Push:       rest.NewPushHandler(push, authorizer),
-		Statements: rest.NewStatementHandler(statements, authorizer, instanceTimezone),
-		Tokens:     rest.NewAPITokenHandler(apiTokens, authorizer),
-		LDAPSync:   rest.NewLDAPSyncHandler(ldapSync, authorizer),
-		Setup:      setupHandler,
-		Logs:       rest.NewLogHandler(logs, authorizer),
+		Roles:    rest.NewRoleHandler(roles, authorizer),
+		Me:       rest.NewMeHandler(auth, sessions, authorizer, instanceTimezone),
+		Push:     rest.NewPushHandler(push, authorizer),
+		Tokens:   rest.NewAPITokenHandler(apiTokens, authorizer),
+		LDAPSync: rest.NewLDAPSyncHandler(ldapSync, authorizer),
+		Setup:    setupHandler,
+		Logs:     rest.NewLogHandler(logs, authorizer),
 		Restart: rest.NewRestartHandler(settingsService, authorizer, cfg, ds, applyLogLevel != nil, fileTelemetry).
 			WithFileSchedule(fileSchedule),
 		Update: rest.NewUpdateHandler(authorizer,
@@ -1041,26 +960,16 @@ func main() {
 			// application is not the thing granted it.
 			WithImageUpdater(imageupdate.New(os.Getenv("GTS_UPDATE_REQUESTS"))).
 			WithConnection(ds),
-		Timers:     rest.NewTimerHandler(timers, authorizer, instanceTimezone),
-		Schedules:  rest.NewScheduleHandler(workWeeks, authorizer),
-		Templates:  rest.NewTemplateHandler(templates, authorizer),
-		Absences:   rest.NewAbsenceHandler(absences, authorizer, instanceTimezone),
-		Holidays:   rest.NewHolidayHandler(sessions, settingsService, authorizer),
-		Vacation:   rest.NewVacationHandler(leave, authorizer, instanceTimezone),
-		Calendar:   rest.NewCalendarFeedHandler(calendarFeeds, authorizer),
-		WorkDays:   rest.NewWorkDayHandler(workDays, authorizer, instanceTimezone),
-		Statistics: rest.NewStatisticsHandler(statistics, authorizer, instanceTimezone),
-		Workbook:   rest.NewWorkbookHandler(workbook, authorizer),
-		Sheets:     rest.NewSheetHandler(projectSheets, userSheets, roleSheets, authorizer).WithTimezone(instanceTimezone),
+		Holidays: rest.NewHolidayHandler(settingsService, authorizer),
+		Sheets:   rest.NewSheetHandler(userSheets, roleSheets, authorizer),
 		Passkeys: rest.NewPasskeyHandler(passkeys, sessions, authorizer, instanceName).
 			WithMaintenance(maintenanceState).
 			WithTimezone(instanceTimezone),
 		OpenID: rest.NewOpenIDHandler(openIDSignIn, sessions, authorizer).
 			WithMaintenance(maintenanceState).
 			WithTimezone(instanceTimezone),
-		Documents: rest.NewDocumentHandler(authorizer, instanceName).WithTimezone(instanceTimezone),
-		Exports:   rest.NewExportHandler(appservice.NewAccountExportService(userRepo), authorizer),
-		AdminLog:  rest.NewAdminLogHandler(adminLog, authorizer),
+		Exports:  rest.NewExportHandler(appservice.NewAccountExportService(userRepo), authorizer),
+		AdminLog: rest.NewAdminLogHandler(adminLog, authorizer),
 		Settings: rest.NewSettingsHandler(settingsService, authorizer, limits,
 			cfg.Dialect, cfg.Telemetry, version,
 			ldapClient.Configure,
@@ -1088,27 +997,13 @@ func main() {
 		}
 	})
 
-	// Reminders pushed to browsers a minute at a time: each run pushes what fell
-	// due in the minute that has just ended, so a reminder goes once however early
-	// or late in its minute the run comes. Nothing goes while push is off.
-	app.AddCronJob("* * * * *", "web-push", func(ctx *gofr.Context) {
-		if err := push.PushDue(ctx, time.Now()); err != nil {
-			ctx.Logger.Errorf("pushing reminders: %v", err)
-		}
-	})
-
 	// Directory reconciliation. Off unless a schedule is configured, because a
-	// run deletes accounts the directory no longer holds together with their
-	// recorded hours.
+	// run deletes the accounts the directory no longer holds.
 	if cfg.LDAPSyncSchedule != "" {
 		app.Logger().Infof("directory reconciliation scheduled at %q", cfg.LDAPSyncSchedule)
 
 		app.AddCronJob(cfg.LDAPSyncSchedule, "ldap-sync", scheduledSync(stopping, ldapSync, app.Metrics()))
 	}
-
-	// The nightly sweep that moved stale open entries to submitted is gone with the
-	// review path it fed: an entry has no state any more, and there is nobody to
-	// submit it to.
 
 	if stop := startTLS(app, cfg); stop != nil {
 		httpsFrontEnd.Store(true)
@@ -1178,12 +1073,6 @@ func sayingWhy(all map[int64]gofrmigration.Migrate, console io.Writer) map[int64
 // is empty until the first event rather than flat at zero.
 func registerBusinessMetrics(app *gofr.App) {
 	m := app.Metrics()
-
-	// Buckets in hours, over the range a single entry can hold: the quarter and
-	// half hours people actually book, then the working day, then the rest.
-	m.NewHistogram(appservice.MetricHoursBooked,
-		"Hours recorded per time entry.",
-		0.25, 0.5, 1, 2, 4, 6, 8, 10, 12, 24)
 
 	m.NewCounter(appservice.MetricSignInFailures,
 		"Refused sign-ins, by reason.")

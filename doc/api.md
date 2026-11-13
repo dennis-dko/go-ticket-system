@@ -5,7 +5,7 @@ The full reference is at `/api-docs`; the highlights:
 
 ## Connecting an app
 
-An app that books through this API needs two values: the installation's
+An app that works through this API needs two values: the installation's
 address and a personal token. A token is made under *My account*, API tokens,
 and the card shows both once: as text, the token's value and the address, and
 together, as a QR code. The code holds a connection address:
@@ -26,7 +26,7 @@ The Android app in this repository, released as
 a camera screen of its own as well, and fills its connect form from the code
 however it was read, and connects only once whoever holds the phone has seen the
 address and agreed, because a code is a link any page could open - and an app
-that connected on its own would send what somebody books to wherever such a link
+that connected on its own would hand somebody's token to wherever such a link
 pointed.
 
 The answer that creates a token carries the same thing for a program that makes
@@ -70,7 +70,7 @@ paraphrase of a message that has since been reworded.
 | `ref` | internal failures | The same string as in the log line. This is how a screenshot and a log entry are matched up. |
 
 Two kinds of `code`. Specific ones are declared where the rule is enforced
-(`projectHasEntries`, `timesheetLocked`). The generic ones — the refusals that
+(`deletionNeedsConfirming`, `systemRoleUndeletable`). The generic ones — the refusals that
 belong to no single rule — are declared once in
 [`apperror/code.go`](../internal/support/apperror/code.go): `internal`, `probeFailed`,
 `unauthenticated`, `notFound`, `invalidFields`, `rateLimited`, `csrfRejected`,
@@ -88,25 +88,17 @@ running instance.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/v1/auth/login`, `/auth/logout` | Sign in and out |
+| `POST` | `/api/v1/auth/token` | Exchange a personal token for a session |
 | `GET` | `/api/v1/me` | Own identity and permissions |
-| `PUT` | `/api/v1/me/password`, `/me/language` | Own password, own language |
+| `PUT` | `/api/v1/me/password`, `/me/language`, `/me/timezone`, `/me/theme` | Own password, language, zone and appearance |
 | `POST/PUT/DELETE` | `/api/v1/me/totp` | Two-factor enrolment |
 | `GET/POST` | `/api/v1/me/tokens` | Personal API tokens |
-| `GET/POST/PUT/DELETE` | `/api/v1/users`, `/users/{id}` | User administration |
+| `GET` | `/api/v1/me/export` | Everything held about the own account |
+| `GET/POST/PUT/DELETE` | `/api/v1/users`, `/users/{id}` | User administration; deleting an account that owns unfinished tickets needs `?confirm=true` |
 | `PUT` | `/api/v1/users/{id}/role` | Role |
-| `PUT` | `/api/v1/users/{id}/working-times` | Your own daily target and maximum |
-| `GET` | `/api/v1/users/{id}/overtime` | An overtime balance — your own, unless you may read everybody's |
 | `GET/POST/PUT/DELETE` | `/api/v1/roles`, `/roles/{id}` | Roles |
 | `GET` | `/api/v1/permissions` | Every enforced permission |
-| `GET/POST/PUT/DELETE` | `/api/v1/projects`, `/projects/{id}` | Projects |
-| `POST` | `/api/v1/projects/{id}/archive` | Archive |
-| `GET` | `/api/v1/projects/{id}/report` | Report |
-| `GET/POST/PUT/DELETE` | `/api/v1/timesheets`, `/timesheets/{id}` | Time entries |
-| `GET/POST/DELETE` | `/api/v1/me/timer` | Own stopwatch: read, start, discard |
-| `POST` | `/api/v1/me/timer/stop` | Stop it and book the measured time |
-| `GET` | `/api/v1/me/statistics` | Own hours per day and per project |
-| `POST` | `/api/v1/timesheets/{id}/transfer` | Move to another project |
-| `GET/PUT` | `/api/v1/settings/...` | Branding, database, LDAP, metrics and tracing |
+| `GET/PUT` | `/api/v1/settings/...` | Branding, database, LDAP, sign-in provider, public holidays, metrics and tracing |
 
 ## What the metrics endpoint carries
 
@@ -117,18 +109,17 @@ the same: every request is traced by the framework's middleware, which is why
 tracing works here with no span code anywhere.
 
 What it cannot know is whether the application is doing its job. A deployment can
-serve every request in milliseconds while nobody has been able to book time since
+serve every request in milliseconds while nobody has been able to sign in since
 the directory changed. So these are recorded here as well, each because
 somebody would act on it:
 
 | Metric | Says |
 | --- | --- |
-| `gts_timesheet_hours_booked` | hours per entry — the sum is what was recorded, the count in how many pieces |
 | `gts_signin_failures_total` | refused sign-ins, by reason — `credentials` is somebody guessing, `totp` a second factor that did not take, `directory` a directory that stopped answering, `database` this installation's own database that did |
-| `gts_directory_accounts_total` | accounts the synchronisation created or deleted — the one operation that removes people together with their hours |
+| `gts_directory_accounts_total` | accounts the synchronisation created or deleted — the one operation that removes people |
 | `gts_directory_scheduled_runs_total` | what each scheduled synchronisation came to — `completed`, `refused` by a guard, or `failed`; GoFr's own `app_cron_job_success` counts all three as a success |
 
-None of them carries a user, an address or a project name as a label. A label is
+None of them carries a user, an address or a ticket as a label. A label is
 a time series: one per person is both a memory leak in the collector and a list
 of who works here, published on a port that asks for no password.
 

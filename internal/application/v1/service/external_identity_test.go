@@ -297,7 +297,7 @@ func newSessionFixture(t *testing.T, directoryUser *service.ExternalUser) (*fixt
 	f := newFixture(t)
 	sessions := service.NewSessionService(f.userRepo, f.roleRepo, newStubSessions(),
 		f.auth, time.Hour).
-		WithExternalAuth(&fakeAuthenticator{user: directoryUser}, model.RoleUser)
+		WithExternalAuth(&fakeAuthenticator{user: directoryUser}, model.RoleAgent)
 
 	return f, sessions
 }
@@ -507,7 +507,8 @@ func TestADirectoryEntryCannotClaimARoleEditorsAccount(t *testing.T) {
 		ID: "uuid-intruder", Email: "editor@example.com",
 	})
 
-	localUserWithRole(t, f, "editor@example.com", model.RoleUserAdmin)
+	customRole(t, f, "role-editor", model.PermRoleRead, model.PermRoleWrite)
+	localUserWithRole(t, f, "editor@example.com", "role-editor")
 
 	if _, err := sessions.Login(context.Background(), "editor@example.com", "anything", ""); err == nil {
 		t.Fatal("the directory signed in as somebody who can grant themselves the installation")
@@ -521,7 +522,7 @@ func TestAnOrdinaryLocalAccountIsStillAdoptedByTheDirectory(t *testing.T) {
 		ID: "uuid-staff", Email: "worker@example.com",
 	})
 
-	existing := localUserWithRole(t, f, "worker@example.com", model.RoleUser)
+	existing := localUserWithRole(t, f, "worker@example.com", model.RoleAgent)
 
 	if _, err := sessions.Login(context.Background(), "worker@example.com", "anything", ""); err != nil {
 		t.Fatalf("an ordinary account should migrate to the directory: %v", err)

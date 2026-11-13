@@ -264,7 +264,7 @@ func TestARoleChangeReachesTheStreamOfTheAccountItWasMadeTo(t *testing.T) {
 
 	app := start(t)
 	admin := app.signInAsAdmin("a-much-better-password")
-	worker := app.signInAsUser(admin, "Wera", "wera@example.com")
+	worker := app.signInAsAgent(admin, "Wera", "wera@example.com")
 
 	var before struct {
 		User                userResponse `json:"user"`
@@ -289,7 +289,7 @@ func TestARoleChangeReachesTheStreamOfTheAccountItWasMadeTo(t *testing.T) {
 	// does nothing at all - which is the whole point of the case.
 	admin.must(admin.api(http.MethodPut,
 		fmt.Sprintf("/users/%d/role", before.User.ID),
-		map[string]any{"role": "user-admin"}), http.StatusOK)
+		map[string]any{"role": "admin"}), http.StatusOK)
 
 	deadline := time.After(30 * time.Second)
 

@@ -12,12 +12,12 @@ import (
 //
 // The keys are the English words, which are also the fallback: a word nobody has
 // translated is still written, in English, rather than left blank. A dictionary
-// keys them the same way, behind workbook. - workbook.Time entries - because the
-// words travel through the code as English data, a table's own headings, and are
-// looked up as they arrive.
+// keys them the same way, behind workbook. - workbook.Users - because the words
+// travel through the code as English data, a table's own headings, and are looked
+// up as they arrive.
 //
-// Values are translated as well as headings - "archived" in a German export is
-// not much better than "Status: archived" - and the importer accepts both
+// Values are translated as well as headings - "yes" in a German export is no
+// better than a heading left in English - and the importer accepts both
 // spellings, which is what keeps a German export readable by the same
 // application that wrote it.
 var translations = workbookWords()
@@ -63,36 +63,22 @@ func translate(language, text string) string {
 	return text
 }
 
-// valueWords are the words that appear inside cells, as opposed to above them.
-//
-// Named explicitly because the reverse lookup must only consider these. The
-// dictionary holds headings and sheet names too, and there "Benutzer" is the
-// translation of both "User" and "Users" - harmless while writing, where the key
-// is known, and ambiguous while reading, where it is not. Restricting the reverse
-// direction to the words that can actually occur in a cell removes the ambiguity
-// rather than relying on map order not to expose it.
-var valueWords = []string{"active", "archived", "completed", "yes", "no"}
+// valueWords are the words that appear inside cells, as opposed to above them,
+// named so that a test can hold every dictionary to them. They are not looked up
+// on the way back in: a flag is read by ticked, which knows the spellings people
+// type, and a reverse lookup through the dictionary would be ambiguous wherever
+// two English words share one translation.
+var valueWords = []string{"yes", "no"}
 
-// untranslate turns a translated cell value back into the English one the
-// application works in.
-//
-// Every language is searched, not only the one the reader is currently using: a
-// file is imported by whoever has it, who may well not be the person who exported
-// it, and the language a workbook was written in is not recorded anywhere in it.
-// Searching all of them costs a handful of string comparisons per cell and removes
-// a whole class of "it exported fine but would not import".
-func untranslate(text string) string {
-	trimmed := strings.TrimSpace(text)
-
-	for _, dictionary := range translations {
-		for _, english := range valueWords {
-			if strings.EqualFold(dictionary[english], trimmed) {
-				return english
-			}
-		}
+// yesNo is how a flag is written, in words rather than as TRUE/FALSE: a
+// spreadsheet is read by a person, and Excel has its own opinions about what a
+// boolean cell looks like in each locale.
+func yesNo(on bool) string {
+	if on {
+		return "yes"
 	}
 
-	return trimmed
+	return "no"
 }
 
 // names are every name a sheet can carry, so the reader can find it whichever

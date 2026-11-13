@@ -50,26 +50,6 @@
         <path d="M9.6 23.4h12.8L16 16Z" fill="var(--accent-text)" opacity="0.55"/>
       </symbol>
 
-      <symbol id="icon-timesheets" viewBox="0 0 24 24">
-        <path d="M3 6h10M3 12h6.5M3 18h4.5"/>
-        <circle cx="16.5" cy="15.5" r="5.2"/><path d="M16.5 12.6v2.9l2 1.3"/>
-      </symbol>
-      <symbol id="icon-week" viewBox="0 0 24 24">
-        <rect x="3" y="5" width="18" height="14.5" rx="2.5"/>
-        <path d="M3 10.2h18M9 10.2v9.3M15 10.2v9.3"/>
-      </symbol>
-      <symbol id="icon-calendar" viewBox="0 0 24 24">
-        <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/>
-        <path d="M3.5 10h17M8 3v4M16 3v4"/>
-        <circle cx="12" cy="15.2" r="1.9" fill="currentColor" stroke="none"/>
-      </symbol>
-      <symbol id="icon-overtime" viewBox="0 0 24 24">
-        <circle cx="11" cy="14" r="6.8"/><path d="M11 10.4V14l2.4 1.5"/>
-        <path d="M18.5 3.6v4.8M16.1 6h4.8"/>
-      </symbol>
-      <symbol id="icon-projects" viewBox="0 0 24 24">
-        <path d="M3.5 7.6a2 2 0 0 1 2-2h3.4l2.1 2.7h7.5a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>
-      </symbol>
       <symbol id="icon-users" viewBox="0 0 24 24">
         <rect x="2.5" y="5" width="19" height="14" rx="2.6"/>
         <circle cx="8.2" cy="11" r="2.2"/>
@@ -79,10 +59,6 @@
       <symbol id="icon-roles" viewBox="0 0 24 24">
         <path d="M12 2.8 20 6v6.1c0 4.5-3.2 7.8-8 9.1-4.8-1.3-8-4.6-8-9.1V6z"/>
         <path d="m8.8 11.9 2.3 2.4 4.3-4.7"/>
-      </symbol>
-      <symbol id="icon-report" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="8.6"/>
-        <path d="M12 3.4V12h8.6"/>
       </symbol>
       <symbol id="icon-account" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="9"/>
@@ -208,25 +184,10 @@
     </div>
 
     <nav id="tabs">
-      <button class="tab" data-view="timesheets" data-perm="timesheets:read:own" data-i18n="nav.timesheets">Time entries<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-timesheets"/></svg></button>
-      <button class="tab" data-view="week" data-perm="timesheets:read:own" data-own-only data-i18n="nav.week">Week<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-week"/></svg></button>
-      <button class="tab" data-view="calendar" data-perm="timesheets:read:own" data-i18n="nav.calendar">Calendar<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-calendar"/></svg></button>
-      <button class="tab" data-view="overtime" data-perm="timesheets:read:own" data-i18n="nav.overtime">Overtime<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-overtime"/></svg></button>
-      <button class="tab" data-view="projects" data-perm="projects:read" data-i18n="nav.projects">Projects<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-projects"/></svg></button>
       <button class="tab" data-view="users" data-perm="users:read" data-i18n="nav.users">Users<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-users"/></svg></button>
       <button class="tab" data-view="roles" data-perm="roles:read" data-i18n="nav.roles">Roles<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-roles"/></svg></button>
-      <button class="tab" data-view="report" data-perm="reports:read:own" data-i18n="nav.report">Reports<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-report"/></svg></button>
       <button class="tab" data-view="settings" data-i18n="nav.settings">My account<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-account"/></svg></button>
       <button class="tab" data-view="admin" id="tab-admin" hidden data-perm="settings:manage" data-i18n="nav.admin">Settings<svg class="tab-icon" aria-hidden="true" focusable="false"><use href="#icon-admin"/></svg></button>
-      <!-- Whose time the screens show, for a manager: their own, or that of an
-           account an administrator assigned to them. Filled from /me/team and
-           shown only where that list has anybody on it, so it offers exactly the
-           accounts the server accepts and nobody else ever sees it. With the
-           navigation rather than on a form, because it decides every screen at
-           once: a form of its own would be a second place asking which person. -->
-      <label id="viewing-for" class="viewing-for" hidden><span data-i18n="team.viewingFor">Whose time</span>
-        <select id="viewing-for-picker"></select>
-      </label>
     </nav>
   </header>
 
@@ -267,24 +228,6 @@
        on its own: two things stuck to the same edge cover each other, and the
        one underneath is the one nobody knew was there. -->
   <div id="standing-notices">
-    <!-- What was booked without a connection and waits on this device, what the
-         installation refused of it, and that there is no connection at all while
-         there is none. A banner because each is a state: true until the bookings
-         are sent or corrected. Correcting is the way a refused one goes, so the
-         list offers that and nothing else. Filled by drawOutbox. -->
-    <div id="outbox-banner" class="banner" hidden>
-      <p id="outbox-text"></p>
-      <ul id="outbox-refused" hidden></ul>
-    </div>
-
-    <!-- Whose time is on screen, while it is not one's own. A banner because it is
-         a state: true for as long as the picker says somebody else, and gone the
-         moment it says one's own again - which is the way back, so there is
-         nothing here to press. Filled by showViewingFor. -->
-    <div id="viewing-banner" class="banner" hidden>
-      <p id="viewing-text"></p>
-    </div>
-
     <!-- The notice, and the way to the place it is acted on.
     
          It used to carry the whole thing: the list of waiting settings, the
@@ -344,32 +287,6 @@
       <div class="row row-apart">
         <button type="button" id="rights-reload" class="secondary" data-i18n="action.reload">Reload</button>
       </div>
-    </div>
-
-    <!-- A stopwatch past what one entry can hold, which is almost always one
-         somebody forgot - or, before that, past the hours its owner chose to be
-         told after under My account. A banner because it is a state: it stays
-         true on every screen until the clock is booked or discarded. It points at
-         the stopwatch rather than booking from here - one place to read it, one
-         place to act. Filled by drawTimerBanner. -->
-    <div id="timer-banner" class="banner" hidden>
-      <span id="timer-banner-text"></span>
-    </div>
-
-    <!-- The running balance past a bound its owner set under My account. A state:
-         it stays true on every screen until the balance is back inside, and goes
-         then. It points at the bounds rather than changing them here - one place
-         to read it, one place to act. Filled by drawBalanceBanner. -->
-    <div id="balance-banner" class="banner" hidden>
-      <span id="balance-banner-text"></span>
-    </div>
-
-    <!-- The last working day with nothing booked on it, until something is or its
-         owner switches the reminder off under My account. It leads to the booking
-         form with that day filled in rather than booking from here. Filled by
-         drawUnbookedBanner. -->
-    <div id="unbooked-banner" class="banner" hidden>
-      <span id="unbooked-banner-text"></span>
     </div>
   </div>
 
@@ -569,14 +486,13 @@
   <main>
     <!-- The greeting, as a screen rather than something that interrupts one.
          It used to be a modal on a first sign-in and a card wedged above the
-         time entries afterwards, which meant the only two ways to read it were
+         first screen afterwards, which meant the only two ways to read it were
          to be new or to have just arrived - and neither could be gone back to.
          A screen can: the title in the header leads here from anywhere. -->
     <section id="view-welcome" class="view" hidden>
       <div class="card">
         <h2 id="welcome-title"></h2>
         <p class="muted" id="welcome-text"></p>
-        <p class="muted" id="welcome-today"></p>
 
         <ul class="welcome-points" id="welcome-points"></ul>
         <div class="row welcome-actions">
@@ -584,640 +500,12 @@
           <button type="button" class="secondary" id="welcome-tour" data-i18n="welcome.tour">Show me around</button>
         </div>
       </div>
-
-      <!-- This week against what it asks, for somebody who books time here:
-           today with the running clock counted in, the week's total, and a bar
-           per day drawn against that day's own target. The question somebody
-           opening the application has most often, which the sentence about
-           today above only half answered. Hidden for an account that records
-           no time, like the entries below. -->
-      <section class="card welcome-week" id="welcome-week" hidden
-               aria-labelledby="welcome-week-title">
-        <div class="welcome-recent-head">
-          <h3 id="welcome-week-title" data-i18n="welcome.week">This week</h3>
-          <span class="muted" id="welcome-week-total"></span>
-        </div>
-        <p class="welcome-week-today" id="welcome-week-today"></p>
-        <div class="meter" id="welcome-today-meter"><span class="seg taken"></span></div>
-        <ol class="week-bars" id="welcome-week-bars"></ol>
-      </section>
-
-      <!-- The last few entries, for somebody who books time here. A greeting
-           that says nothing about the work is a greeting nobody reads twice;
-           this is the one thing the person in front of it already knows the
-           shape of, so it is the one thing worth showing back to them.
-
-           Hidden outright for an account that records no time - the built-in
-           administrator has no entries, and an empty panel explaining that is
-           worse than no panel. -->
-      <section class="card welcome-recent" id="welcome-recent" hidden
-               aria-labelledby="welcome-recent-title">
-        <div class="welcome-recent-head">
-          <h3 id="welcome-recent-title" data-i18n="welcome.recent">Your last entries</h3>
-          <button type="button" class="link" id="welcome-recent-all"
-                  data-i18n="welcome.recentAll">All time entries</button>
-        </div>
-        <ul class="welcome-recent-list" id="welcome-recent-list"></ul>
-        <p class="muted" id="welcome-recent-empty" hidden data-i18n="welcome.recentNone">Nothing recorded in the last 90 days.</p>
-      </section>
-    </section>
-
-    <!-- Time entries -->
-    <section id="view-timesheets" class="view">
-      <!-- The clock, above the form, because it is the shorter way to record the
-           day you are actually having: press start, work, press stop. The form
-           below is for a day that has already happened. -->
-      <div class="card" id="timer-card" data-perm="timesheets:write:own" data-own-only>
-        <div class="card-head">
-          <h2 data-i18n="timer.title">Stopwatch</h2>
-          <span class="timer-elapsed" id="timer-elapsed" aria-live="off"></span>
-        </div>
-        <p class="muted" data-i18n="timer.hint">Records the time actually measured, to the second — the entry lands on the day the clock was started, in your own timezone.</p>
-        <!-- When the running clock started, in the reader's zone, with the way to
-             correct it beside it: the clock somebody started late is the one
-             most often wrong, and the start is the thing that is wrong. -->
-        <p class="muted timer-since" id="timer-since" hidden>
-          <span id="timer-since-text"></span>
-          <button type="button" class="link" id="timer-adjust-open" data-i18n="timer.adjustOpen">correct the start</button>
-        </p>
-        <div class="grid">
-          <label data-i18n="field.projectOptional">Project (optional)
-            <select name="timerProjectId" id="timer-project" data-keep></select>
-          </label>
-          <label class="wide" data-i18n="field.description">Description
-            <input type="text" id="timer-description" data-keep maxlength="2000" data-i18n-placeholder="field.optional" placeholder="optional">
-          </label>
-        </div>
-        <div class="row">
-          <button type="button" id="timer-start" data-i18n="timer.start">Start</button>
-          <button type="button" id="timer-stop" hidden data-i18n="timer.stop">Stop and book</button>
-          <button type="button" class="secondary" id="timer-switch-open" hidden data-i18n="timer.switchOpen">Switch to …</button>
-          <button type="button" class="secondary" id="timer-discard" hidden data-i18n="timer.discard">Discard</button>
-          <button type="button" class="link" id="timer-end-open" hidden data-i18n="timer.endOpen">stopped earlier?</button>
-        </div>
-
-        <!-- Three small forms, one per correction, each shown on its own. Forms
-             rather than buttons because each asks for something before it acts,
-             and Enter in a field should do what the button beside it does. -->
-        <form method="post" id="form-timer-start" class="form timer-form" hidden>
-          <h3 data-i18n="timer.adjustTitle">When did the work start?</h3>
-          <div class="grid">
-            <label data-i18n="field.date">Date<input type="date" name="date" required></label>
-            <label data-i18n="timer.time">Time<input type="time" name="time" required></label>
-          </div>
-          <div class="form-actions">
-            <button type="submit" data-i18n="timer.adjustSave">Correct the start</button>
-            <button type="button" class="link" id="timer-start-cancel" data-i18n="action.cancel">Cancel</button>
-          </div>
-        </form>
-
-        <form method="post" id="form-timer-end" class="form timer-form" hidden>
-          <h3 data-i18n="timer.endTitle">When did the work end?</h3>
-          <!-- Only for a clock past what one entry can hold, which is almost
-               always one somebody forgot: then this form is the only way to book
-               it, and it says why it is open. -->
-          <p class="muted" id="timer-end-forgotten" hidden data-i18n="timer.endForgotten">The clock has been running for longer than one entry can hold - probably since it was forgotten. Say when the work ended and it is booked up to then, on the day it started.</p>
-          <div class="grid">
-            <label data-i18n="field.date">Date<input type="date" name="date" required></label>
-            <label data-i18n="timer.time">Time<input type="time" name="time" required></label>
-          </div>
-          <div class="form-actions">
-            <button type="submit" data-i18n="timer.endSave">Book up to then</button>
-            <button type="button" class="link" id="timer-end-cancel" data-i18n="action.cancel">Cancel</button>
-          </div>
-        </form>
-
-        <form method="post" id="form-timer-switch" class="form timer-form" hidden>
-          <h3 data-i18n="timer.switchTitle">Carry on with something else</h3>
-          <p class="muted" data-i18n="timer.switchHint">Books what has been measured so far, and keeps measuring from the same second for what comes next.</p>
-          <div class="grid">
-            <label data-i18n="field.projectOptional">Project (optional)
-              <select name="projectId" id="timer-switch-project"></select>
-            </label>
-            <label class="wide" data-i18n="field.description">Description
-              <input type="text" name="description" maxlength="2000" data-i18n-placeholder="field.optional" placeholder="optional">
-            </label>
-          </div>
-          <div class="form-actions">
-            <button type="submit" data-i18n="timer.switchSave">Book and carry on</button>
-            <button type="button" class="link" id="timer-switch-cancel" data-i18n="action.cancel">Cancel</button>
-          </div>
-        </form>
-      </div>
-
-      <form method="post" id="form-timesheet" class="card form" data-perm="timesheets:write:own">
-        <h2 id="timesheet-form-title" data-i18n="ts.book">Book time</h2>
-        <input type="hidden" name="id">
-        <!-- Shown once somebody has kept a template. Choosing one fills the
-             fields below and books nothing - that is still the button. Unnamed,
-             so it is never part of what the form sends or of its draft. -->
-        <div class="grid" id="ts-template-row" data-own-only hidden>
-          <label class="wide" data-i18n="tpl.fill">Fill in from a template<select id="ts-template"></select></label>
-        </div>
-        <div class="grid">
-          <label data-i18n="field.projectOptional">Project (optional)<select name="projectId"></select>
-          </label>
-          <label data-i18n="field.date">Date<input type="date" name="date" required>
-          </label>
-          <!-- step="any", because the point of recording time is recording the
-               time that was worked. step="0.25" did not round anything - it made
-               the browser refuse the submit outright, so 1.37 h could not be
-               entered at all while the API accepted it perfectly well from a
-               token client. min matches the API and the OpenAPI document. -->
-          <label data-i18n="field.hours">Hours<input type="number" name="durationHours" step="any" min="0.01" max="24" required>
-          </label>
-          <label class="wide" data-i18n="field.description">Description<input type="text" name="description" maxlength="2000" data-i18n-placeholder="field.optional" placeholder="optional">
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit" id="timesheet-submit" data-i18n="action.book">Book</button>
-          <button type="button" class="secondary" id="ts-template-save" data-own-only data-i18n="tpl.save">Save as template</button>
-          <button type="button" class="link" id="timesheet-cancel" data-i18n="action.cancelEdit" hidden>cancel editing</button>
-        </div>
-      </form>
-
-      <div class="card">
-        <div class="card-head">
-          <h2 data-i18n="ts.entries">Entries</h2>
-          <div class="filters">
-            <!-- The entries still waiting for a project: hours recorded first
-                 and given a project later. No data-i18n, because the script
-                 writes the count into it. Hidden while there are none, and
-                 while the list is already narrowed to them. -->
-            <button type="button" class="link" id="ts-unassigned" hidden></button>
-            <select id="filter-ts-project"><option value="" data-i18n="filter.allProjects">All projects</option></select>
-          </div>
-        </div>
-        <!-- The listing narrowed by when and by what was written. A form so that
-             signing out resets it with every other form: a search term is what
-             somebody was looking for, and none of the next person's business.
-             Searched on the server, so the count and the export agree with what
-             is found. -->
-        <form method="post" id="form-ts-filters" class="grid ts-filters">
-          <label data-i18n="field.from">From<input type="date" id="filter-ts-from" name="from"></label>
-          <label data-i18n="field.to">To<input type="date" id="filter-ts-to" name="to"></label>
-          <label class="wide" data-i18n="filter.search">Search in descriptions<input type="search" id="filter-ts-q" name="q" data-i18n-placeholder="filter.searchPlaceholder" placeholder="a word, a ticket number, #meeting"></label>
-        </form>
-        <div class="table-wrap">
-          <!-- data-assigns: the selection bar also offers to give the ticked
-               entries a project. -->
-          <table id="table-timesheets" data-assigns>
-            <thead>
-              <tr>
-                <th data-i18n="field.date">Date</th>
-                <th data-i18n="field.project">Project</th>
-                <th class="num" data-i18n="field.hours">Hours</th>
-                <th data-i18n="field.description">Description</th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="row" id="ts-more-row" hidden>
-          <button type="button" class="secondary" id="ts-more" data-i18n="ts.more">Show more</button>
-          <span class="muted" id="ts-shown"></span>
-        </div>
-      </div>
-      <div class="card" id="workbook-card" data-perm="timesheets:read:own">
-        <h2 data-i18n="wb.title">Spreadsheet</h2>
-        <p class="muted" data-i18n="wb.text">Exports what the filters above are showing. An import creates entries; it never changes or replaces the ones that are already there.</p>
-        <div class="row">
-          <button type="button" class="secondary" id="wb-export" data-i18n="wb.export">Export as .xlsx</button>
-          <label class="file-pick" data-perm="timesheets:write:own" data-own-only>
-            <span data-i18n="wb.choose">Choose a file…</span>
-            <input type="file" id="wb-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-          </label>
-          <button type="button" class="secondary" id="wb-preview" hidden data-i18n="wb.preview">Check the file</button>
-          <button type="button" id="wb-import" hidden data-i18n="wb.import">Import</button>
-          <button type="button" class="link" id="wb-clear" hidden data-i18n="wb.clear">cancel</button>
-        </div>
-        <p class="muted" id="wb-summary"></p>
-        <div class="table-wrap" id="wb-preview-wrap" hidden>
-          <table id="table-workbook">
-            <thead>
-              <tr>
-                <th data-i18n="wb.row">Row</th>
-                <th data-i18n="field.date">Date</th>
-                <th data-i18n="field.user">User</th>
-                <th data-i18n="field.project">Project</th>
-                <th class="num" data-i18n="field.hours">Hours</th>
-                <th data-i18n="field.description">Description</th>
-                <th data-i18n="wb.problem">Problem</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-      <!-- The templates kept from the booking form, listed to take them back.
-           Shown once there is one, like the picker in the form. -->
-      <div class="card" id="templates-card" data-perm="timesheets:write:own" data-own-only hidden>
-        <h2 data-i18n="tpl.title">Templates</h2>
-        <p class="muted" data-i18n="tpl.hint">Bookings you make often, kept with "Save as template" in the form above. A template only fills the form in: nothing is booked until you press Book.</p>
-        <div class="table-wrap">
-          <table id="table-templates">
-            <thead>
-              <tr>
-                <th data-i18n="field.project">Project</th>
-                <th class="num" data-i18n="field.hours">Hours</th>
-                <th data-i18n="field.description">Description</th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- The week -->
-    <section id="view-week" class="view" hidden>
-      <!-- A week on one surface: the projects as rows, the days as columns, the
-           hours typed straight into the cells. For the day that has already
-           happened - five of them, usually, on a Friday afternoon - which the
-           booking form makes one entry at a time.
-
-           A cell is the sum of the entries of its project and day. A number in
-           an empty one books it; in one with a single entry behind it, changes
-           that entry; emptied, takes the entry back after asking. Where several
-           entries make up the sum the cell is not a field, because there is no
-           way to tell which of them a new number means - it leads to that day's
-           entries instead. -->
-      <div class="card" id="week-card">
-        <div class="card-head">
-          <!-- No data-i18n: the script owns this text, as the calendar's, and
-               writes the week and its days into it. -->
-          <h2 id="week-title">Week</h2>
-          <div class="filters">
-            <button type="button" class="secondary" id="week-prev" aria-label="&#8592;">&#8592;</button>
-            <button type="button" class="secondary" id="week-today" data-i18n="week.thisWeek">This week</button>
-            <button type="button" class="secondary" id="week-next" aria-label="&#8594;">&#8594;</button>
-          </div>
-        </div>
-        <p class="muted" data-i18n="week.hint">Type the hours into the cells: a number in an empty cell books it, and a changed number corrects the entry behind it. Where several entries make up a cell, it leads to them instead.</p>
-        <div class="table-wrap">
-          <table id="table-week" class="week-grid">
-            <thead>
-              <tr>
-                <th data-i18n="field.project">Project</th>
-                <th class="num" data-day="0"></th>
-                <th class="num" data-day="1"></th>
-                <th class="num" data-day="2"></th>
-                <th class="num" data-day="3"></th>
-                <th class="num" data-day="4"></th>
-                <th class="num" data-day="5"></th>
-                <th class="num" data-day="6"></th>
-                <th class="num" data-i18n="week.sum">Total</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-            <tfoot></tfoot>
-          </table>
-        </div>
-        <div class="row row-apart" data-perm="timesheets:write:own">
-          <label class="week-add" data-i18n="week.addRow">Add a row for
-            <select id="week-add-project"></select>
-          </label>
-          <!-- Books entries rather than filling a form, so it asks first, and
-               it only fills days with nothing on them. -->
-          <button type="button" class="secondary" id="week-copy" data-i18n="week.copyLast">Copy last week</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Calendar -->
-    <section id="view-calendar" class="view" hidden>
-      <div class="card">
-        <div class="card-head">
-          <!-- No data-i18n: the script owns this text, and writes the month and
-               year into it. Carrying a key as well meant applyLanguage put the
-               static word "Kalender" over "August 2026" on every language change,
-               and only the calendar being reloaded afterwards put the month back -
-               so the heading was correct by luck of ordering. -->
-          <h2 id="calendar-title">Calendar</h2>
-          <div class="filters">
-            <button type="button" class="secondary" id="calendar-prev" aria-label="&#8592;">&#8592;</button>
-            <button type="button" class="secondary" id="calendar-today" data-i18n="cal.today">Today</button>
-            <button type="button" class="secondary" id="calendar-next" aria-label="&#8594;">&#8594;</button>
-          </div>
-        </div>
-        <div class="cal-grid" id="calendar-weekdays"></div>
-        <div class="cal-grid" id="calendar-days"></div>
-        <p class="muted" id="calendar-summary"></p>
-      </div>
-
-      <!-- When the days of the month shown above began and finished, and how long
-           their breaks were: the person's own record of their working time, beside
-           the hours they booked. Nobody else's screen shows it. -->
-      <div class="card" id="workday-card" data-perm="timesheets:read:own" data-own-only>
-        <div class="card-head">
-          <h2 data-i18n="work.title">Working time</h2>
-          <div class="filters">
-            <button type="button" class="secondary" id="workday-pdf" data-i18n="action.exportPdf">Export as PDF</button>
-          </div>
-        </div>
-        <p class="muted" data-i18n="work.hint">When you began, when you finished and how long your breaks were, day by day – your own record of your working time, beside the hours you booked on projects. Nobody else sees it.</p>
-        <form method="post" id="form-workday" class="form" data-perm="timesheets:write:own">
-          <div class="grid">
-            <label data-i18n="field.date">Date<input type="date" name="date" required></label>
-            <label data-i18n="field.start">Start<input type="time" name="start" required></label>
-            <label data-i18n="field.end">End<input type="time" name="end" required></label>
-            <label data-i18n="field.breakMinutes">Breaks (minutes)<input type="number" name="breakMinutes" min="0" max="1439" step="1" value="0" required></label>
-          </div>
-          <button type="submit" data-i18n="action.save">Save</button>
-        </form>
-        <div class="table-wrap">
-          <table id="table-workdays">
-            <thead>
-              <tr>
-                <th data-i18n="field.date">Date</th>
-                <th data-i18n="field.start">Start</th>
-                <th data-i18n="field.end">End</th>
-                <th class="num" data-i18n="field.breakMinutes">Breaks (minutes)</th>
-                <th class="num" data-i18n="work.worked">Worked</th>
-                <th class="num" data-i18n="work.booked">Booked</th>
-                <th data-i18n="work.act">Working Hours Act</th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <p class="muted" id="workday-total"></p>
-        <p class="muted" data-i18n="work.actHint">Days past a limit of the Working Hours Act are marked: more than ten hours, a break too short for the hours, or fewer than eleven hours of rest since the day before. They are notices; what happened is what is recorded.</p>
-      </div>
-
-      <div class="card" id="calendar-day-card" hidden>
-        <div class="card-head">
-          <h2 id="calendar-day-title"></h2>
-          <button type="button" class="link" id="calendar-day-close" data-i18n="cal.close">close</button>
-        </div>
-        <div class="table-wrap">
-          <table id="table-calendar-day">
-            <thead>
-              <tr>
-                <th data-i18n="field.project">Project</th>
-                <th class="num" data-i18n="field.hours">Hours</th>
-                <th data-i18n="field.description">Description</th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <p class="muted" data-i18n="cal.clickToEdit">Click an entry to edit it.</p>
-      </div>
-
-      <!-- A year's leave: what it gives, what the year before left over, what is
-           taken and what is planned - counted from the days of leave recorded
-           below. The script owns the heading, which names the year. -->
-      <div class="card" id="vacation-card" data-perm="timesheets:read:own" data-own-only>
-        <div class="card-head">
-          <h2 id="vacation-title">Leave</h2>
-          <div class="filters">
-            <button type="button" class="secondary" id="vacation-prev" aria-label="&#8592;">&#8592;</button>
-            <button type="button" class="secondary" id="vacation-next" aria-label="&#8594;">&#8594;</button>
-          </div>
-        </div>
-        <p class="vacation-left" id="vacation-left"></p>
-        <p class="muted" id="vacation-detail"></p>
-        <form method="post" id="form-vacation" class="form" data-perm="settings:write:own">
-          <div class="grid">
-            <label data-i18n="vacation.days">Days of leave a year<input type="number" name="days" min="0" max="366" step="any" required></label>
-            <label data-i18n="vacation.fromYear">From the year<input type="number" name="fromYear" min="1900" max="9999" step="1" required></label>
-          </div>
-          <button type="submit" data-i18n="action.save">Save</button>
-        </form>
-        <div class="table-wrap">
-          <table id="table-vacation">
-            <thead>
-              <tr>
-                <th data-i18n="vacation.fromYear">From the year</th>
-                <th class="num" data-i18n="vacation.days">Days of leave a year</th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- The days somebody is away, and why. Recorded over a range, but only on
-           the days their week asks something of; the calendar above marks them. -->
-      <div class="card" id="absence-card" data-perm="timesheets:write:own" data-own-only>
-        <h2 data-i18n="absence.title">Days away</h2>
-        <p class="muted" data-i18n="absence.hint">Leave, illness and days taken against overtime. Only the days your week asks something of are recorded, so a fortnight of leave is its ten working days.</p>
-        <form method="post" id="form-absence" class="form">
-          <div class="grid">
-            <label data-i18n="field.from">From<input type="date" name="from" required></label>
-            <label data-i18n="field.to">To<input type="date" name="to" required></label>
-            <label data-i18n="field.kind">Reason<select name="kind" required>
-                <option value="vacation" data-i18n="absence.vacation">Leave</option>
-                <option value="halfVacation" data-i18n="absence.halfVacation">Half a day of leave</option>
-                <option value="sick" data-i18n="absence.sick">Sick</option>
-                <option value="flexDay" data-i18n="absence.flexDay">Day off against overtime</option>
-                <option value="localHoliday" data-i18n="absence.localHoliday">Holiday where I work</option>
-              </select>
-            </label>
-          </div>
-          <button type="submit" data-i18n="absence.save">Record</button>
-        </form>
-        <div class="table-wrap">
-          <table id="table-absences">
-            <thead>
-              <tr>
-                <th data-i18n="field.day">Day</th>
-                <th data-i18n="field.kind">Reason</th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Overtime -->
-    <section id="view-overtime" class="view" hidden>
-      <!-- Your own hours, drawn. Here rather than under Reports because that screen
-           is keyed on one project id and cannot say "every project" or "no project" -
-           and because a chart of your own week should not depend on picking a project
-           first. Both are the caller's own either way. -->
-      <div class="card" id="statistics-card">
-        <div class="card-head">
-          <h2 data-i18n="stats.title">My hours</h2>
-          <span class="muted" id="statistics-total"></span>
-        </div>
-        <div class="grid">
-          <label data-i18n="field.from">From<input type="date" id="statistics-from"></label>
-          <label data-i18n="field.to">To<input type="date" id="statistics-to"></label>
-        </div>
-        <div class="row">
-          <button type="button" id="statistics-load" data-i18n="action.evaluate">Evaluate</button>
-        </div>
-
-        <h3 class="chart-title" data-i18n="stats.perDay">Hours per day</h3>
-        <div class="chart-wrap"><div id="chart-days"></div></div>
-
-        <h3 class="chart-title" data-i18n="stats.perProject">Hours per project</h3>
-        <div class="chart-wrap"><div id="chart-projects"></div></div>
-
-        <!-- The activities the descriptions name with a #, beside the projects as a
-             second way of sorting the same hours. -->
-        <h3 class="chart-title" data-i18n="stats.perActivity">Hours per activity</h3>
-        <p class="muted" data-i18n="stats.activityHint">Write an activity into a description with a # - #meeting, #review - and its hours are added up here. An entry naming two counts towards both, so these can add up to more than the total.</p>
-        <div class="chart-wrap"><div id="chart-activities"></div></div>
-
-        <p class="muted" id="statistics-empty" hidden data-i18n="stats.empty">Nothing was recorded in this period.</p>
-
-        <div class="row">
-          <button type="button" class="secondary" id="statistics-pdf"
-                  data-i18n="action.exportPdf">Export as PDF</button>
-        </div>
-      </div>
-
-      <!-- The year as tiles: a column a week, a row a weekday, each day as dark as
-           the hours booked on it, the public holidays and the days away told by
-           their outline rather than by colour alone. Beside it, the year before up
-           to the same day, and both month by month as figures. The script owns the
-           heading and the two year columns, which name the years. -->
-      <div class="card" id="year-card" data-perm="timesheets:read:own">
-        <div class="card-head">
-          <h2 id="year-title">Year</h2>
-          <div class="filters">
-            <button type="button" class="secondary" id="year-prev" aria-label="&#8592;">&#8592;</button>
-            <button type="button" class="secondary" id="year-next" aria-label="&#8594;">&#8594;</button>
-          </div>
-        </div>
-        <p class="muted" id="year-summary"></p>
-        <div class="year-wrap">
-          <div class="year-months" id="year-months" aria-hidden="true"></div>
-          <div class="year-tiles" id="year-tiles" role="img"></div>
-        </div>
-        <p class="year-legend" aria-hidden="true">
-          <span data-i18n="year.less">Less</span>
-          <span class="year-tile level-0"></span><span class="year-tile level-1"></span><span class="year-tile level-2"></span><span class="year-tile level-3"></span><span class="year-tile level-4"></span><span class="year-tile level-5"></span>
-          <span data-i18n="year.more">More</span>
-          <span class="year-tile level-0 holiday"></span><span data-i18n="year.holiday">Public holiday</span>
-          <span class="year-tile level-0 away"></span><span data-i18n="year.away">Away</span>
-        </p>
-        <div class="table-wrap">
-          <table id="table-year">
-            <thead>
-              <tr>
-                <th data-i18n="year.month">Month</th>
-                <th class="num" id="year-this"></th>
-                <th class="num" id="year-before"></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <form method="post" id="form-overtime" class="card form">
-        <h2 data-i18n="nav.overtime">Overtime</h2>
-        <div class="grid">
-          <label data-i18n="field.from">From<input type="date" name="from"></label>
-          <label data-i18n="field.to">To<input type="date" name="to"></label>
-        </div>
-        <button type="submit" data-i18n="action.calculate">Calculate</button>
-      </form>
-
-      <div class="card" id="overtime-result" hidden>
-        <div class="card-head">
-          <h2><span data-i18n="ot.balance">Balance</span> <span id="overtime-total" class="pill"></span></h2>
-          <span class="muted" id="overtime-meta"></span>
-        </div>
-        <!-- Which rule counted these days, because the same week reads differently
-             under each: written by the script, which knows the day. -->
-        <p class="muted" id="overtime-rule"></p>
-        <div class="table-wrap">
-          <table id="table-overtime">
-            <thead>
-              <tr>
-                <th data-i18n="field.date">Date</th>
-                <th class="num" data-i18n="ot.booked">Booked</th>
-                <th class="num" data-i18n="ot.target">Target</th>
-                <th class="num" data-i18n="ot.balance">Balance</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div class="row">
-          <button type="button" class="secondary" id="overtime-pdf"
-                  data-i18n="action.exportPdf">Export as PDF</button>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- Projects -->
-    <section id="view-projects" class="view" hidden>
-      <!-- One form for making a project and for correcting one, told apart by the
-           id - the same arrangement the booking form and the account form use.
-           Everything else on this screen could be changed except the three things
-           somebody actually mistypes: the name, the period and what it is for. -->
-      <form method="post" id="form-project" class="card form" data-perm="projects:write">
-        <h2 id="project-form-title" data-i18n="project.create">Create project</h2>
-        <input type="hidden" name="id">
-        <p class="muted" data-i18n="project.hint">Your projects are yours: only you see them and book on them - and a manager you are assigned to, where this installation has managers. Two people working on the same thing keep a project each.</p>
-        <div class="grid">
-          <label data-i18n="field.name">Name<input type="text" name="name" maxlength="255" required></label>
-          <!-- The start is filled in on arrival, like every other date this
-               application asks for: a project is being made today, and a field
-               somebody has to fill with today's date is a field asking them to
-               look at a calendar for no reason.
-
-               The end is left empty, and that is not an oversight - empty means
-               "no end planned", which is what most projects are. It is the one
-               that carries "optional"; they were the wrong way round, with the
-               required date labelled optional and the optional one unlabelled. -->
-          <label data-i18n="field.start">Start<input type="date" name="startDate"></label>
-          <label data-i18n="field.end">End<input type="date" name="endDate" data-i18n-placeholder="field.optional" placeholder="optional"></label>
-          <label class="wide" data-i18n="field.description">Description<input type="text" name="description" maxlength="2000" data-i18n-placeholder="field.optional" placeholder="optional"></label>
-          <!-- How many hours its owner means to spend on it: theirs to set, and
-               nobody's to sign off. Emptied, it takes the budget off again. -->
-          <label data-i18n="field.budgetHours">Hour budget<input type="number" name="budgetHours" step="any" min="0" max="100000" data-i18n-placeholder="field.optional" placeholder="optional"></label>
-          <!-- What its hours are charged at, for the statement of work under
-               Reports: a rate in whole units of the currency, kept to the
-               hundredth, and a currency that is euros where it is left empty. -->
-          <label class="switch"><input type="checkbox" name="billable"><span class="switch-track"></span><span class="switch-label" data-i18n="project.billable">Billable</span></label>
-          <label data-i18n="field.hourlyRate">Hourly rate<input type="number" name="hourlyRate" step="0.01" min="0" max="100000" data-i18n-placeholder="field.optional" placeholder="optional"></label>
-          <label data-i18n="field.currency">Currency<input type="text" name="currency" maxlength="3" pattern="[A-Za-z]{3}" placeholder="EUR" autocomplete="off"></label>
-        </div>
-        <div class="row">
-          <button type="submit" id="project-submit" data-i18n="action.create">Create</button>
-          <button type="button" class="link" id="project-cancel" data-i18n="action.cancelEdit" hidden>cancel editing</button>
-        </div>
-      </form>
-
-      <div class="card">
-        <h2 data-i18n="nav.projects">Projects</h2>
-        <div class="table-wrap">
-          <table id="table-projects">
-            <thead>
-              <tr>
-                <th data-i18n="field.name">Name</th>
-                <th data-i18n="field.period">Period</th>
-                <th data-i18n="field.description">Description</th>
-                <th data-i18n="field.status">Status</th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
     </section>
 
     <!-- Users -->
     <section id="view-users" class="view" hidden>
       <!-- One form for adding somebody and for correcting them, told apart by the
-           id: the same arrangement the booking form and the role form use.
+           id: the same arrangement the role form uses.
 
            Two of its fields belong only to a new account. The role has a control
            of its own in every row of the table below, and offering a second one
@@ -1256,8 +544,6 @@
                      from the entry on every synchronisation, and removing it here
                      removes a person the next run puts back. -->
                 <th data-i18n="field.source">Source</th>
-                <th class="num" data-i18n="field.targetPerDay">Target h/day</th>
-                <th class="num" data-i18n="field.maxPerDay">Max h/day</th>
                 <th class="actions" data-i18n="field.action">Action</th>
               </tr>
             </thead>
@@ -1329,196 +615,25 @@
       </div>
     </section>
 
-    <!-- Reports -->
-    <section id="view-report" class="view" hidden>
-      <form method="post" id="form-report" class="card form">
-        <h2 data-i18n="report.title">Report</h2>
-        <div class="grid">
-          <!-- Not required, and the first two options are not projects: an
-               evaluation is as often "what did I do at all" or "what is on
-               nothing yet" as it is about one project. -->
-          <label data-i18n="field.project">Project<select name="projectId"></select></label>
-          <label data-i18n="field.from">From<input type="date" name="from"></label>
-          <label data-i18n="field.to">To<input type="date" name="to"></label>
-        </div>
-        <button type="submit" data-i18n="action.evaluate">Evaluate</button>
-      </form>
-
-      <div class="card" id="report-result" hidden>
-        <h2><span data-i18n="report.result">Result</span> <span id="report-total" class="pill"></span></h2>
-        <p class="muted" id="report-budget"></p>
-
-        <!-- The same figures as the table below, as a picture. Which shape reads
-             best depends on the question: a share of a whole wants a pie, a
-             comparison of a few things wants columns, and a long list of names
-             wants bars, because a name fits beside a bar and not under a
-             column. -->
-        <div class="row chart-switch" id="report-chart-switch" role="group"
-             data-i18n-aria="report.chartKind" aria-label="Chart type">
-          <button type="button" class="secondary" data-chart="bars" data-i18n="report.bars">Bars</button>
-          <button type="button" class="secondary" data-chart="columns" data-i18n="report.columns">Columns</button>
-          <button type="button" class="secondary" data-chart="pie" data-i18n="report.pie">Pie</button>
-        </div>
-        <p class="muted" id="report-chart-caption"></p>
-        <div id="report-chart" class="chart chart-wrap"></div>
-
-        <div class="table-wrap">
-          <table id="table-report">
-            <thead>
-              <tr>
-                <th data-i18n="field.period">Period</th>
-                <th class="num" data-i18n="field.hours">Hours</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div class="row">
-          <button type="button" class="secondary" id="report-pdf"
-                  data-i18n="action.exportPdf">Export as PDF</button>
-        </div>
-      </div>
-
-      <!-- What the billable hours of a period come to, project by project, for
-           whoever charges for their time. Deliberately not an invoice - no number,
-           no tax, no customer - and a card of its own with a period of its own,
-           because it is asked for on its own: at the end of a month. -->
-      <form method="post" id="form-statement" class="card form" data-perm="reports:read:own">
-        <h2 data-i18n="statement.title">Statement of work</h2>
-        <p class="muted" data-i18n="statement.hint">The hours of your billable projects in a period, with their rate and what they come to, totalled per currency. Not an invoice: no number, no tax, no customer - that part you write your own way.</p>
-        <div class="grid">
-          <label data-i18n="field.from">From<input type="date" name="from"></label>
-          <label data-i18n="field.to">To<input type="date" name="to"></label>
-        </div>
-        <button type="submit" data-i18n="statement.create">Work it out</button>
-      </form>
-
-      <div class="card" id="statement-result" hidden>
-        <h2 data-i18n="statement.title">Statement of work</h2>
-        <p class="muted" id="statement-period"></p>
-        <div class="table-wrap">
-          <table id="table-statement">
-            <thead>
-              <tr>
-                <th data-i18n="field.project">Project</th>
-                <th class="num" data-i18n="field.hours">Hours</th>
-                <th class="num" data-i18n="field.hourlyRate">Hourly rate</th>
-                <th class="num" data-i18n="statement.amount">Amount</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-            <tfoot></tfoot>
-          </table>
-        </div>
-        <div class="row">
-          <button type="button" class="secondary" id="statement-pdf"
-                  data-i18n="action.exportPdf">Export as PDF</button>
-          <button type="button" class="secondary" id="statement-xlsx"
-                  data-i18n="wb.export">Export as .xlsx</button>
-        </div>
-      </div>
-    </section>
-
     <!-- My account -->
     <section id="view-settings" class="view" hidden>
-      <!-- Not for the account that records no time. The built-in administrator
-           has no working day, so a daily target and a daily ceiling are two
-           figures nothing would ever measure against - and settings:write:own
-           is exactly the right this screen writes. -->
-      <form method="post" id="form-working-times" class="card form" data-perm="settings:write:own">
-        <h2 data-i18n="settings.workingTimes">My working hours</h2>
-        <p class="muted" data-i18n="settings.workingTimesHint">The daily target is the basis for overtime, from Monday to Friday unless a weekly plan below says otherwise. The daily maximum limits how much may be booked on a single day.</p>
-        <div class="grid">
-          <label data-i18n="settings.targetHours">Target hours per day<input type="number" name="dailyTargetHours" step="any" min="0" max="24" placeholder="8">
-          </label>
-          <label data-i18n="settings.maxHours">Maximum hours per day<input type="number" name="maxDailyHours" step="any" min="0" max="24" data-i18n-placeholder="field.default" placeholder="default">
-          </label>
-          <label data-i18n="settings.everyDayCountsFrom">Every working day counts from<input type="date" name="everyDayCountsFrom">
-          </label>
-        </div>
-        <p class="muted" data-i18n="settings.everyDayCountsFromHint">Until you choose a day, only the days you booked on count towards your balance. From the day you choose, every working day up to today counts, booked or not, less what a public holiday or an absence takes off it. Empty it to go back.</p>
-        <button type="submit" data-i18n="action.save">Save</button>
-      </form>
-
-      <!-- The bounds of the running balance, with the balance itself beside them,
-           because a bound is chosen against a figure. Past one, a banner stands on
-           every screen until the balance is back inside: a state, not news. -->
-      <form method="post" id="form-balance-bounds" class="card form" data-perm="settings:write:own">
-        <h2 data-i18n="bounds.title">Bounds of my balance</h2>
-        <p class="muted" data-i18n="bounds.hint">Keep your running balance between two figures, as a flexitime account does. While it lies outside them, a banner says so on every screen until it is back inside. Empty means no bound.</p>
-        <div class="grid">
-          <label data-i18n="field.upperBound">Upper bound of the balance<input type="number" name="upperBound" step="any" min="0" max="10000" placeholder="40">
-          </label>
-          <label data-i18n="field.lowerBound">Lower bound of the balance<input type="number" name="lowerBound" step="any" min="-10000" max="0" placeholder="-20">
-          </label>
-        </div>
-        <p class="muted" id="balance-now"></p>
-        <button type="submit" data-i18n="action.save">Save</button>
-      </form>
-
-      <!-- What its owner is reminded of. Both reminders are banners, because both
-           are states - a day with nothing booked stays unbooked, a clock left
-           running stays running - and the stopwatch's may also be a notification,
-           where the browser allows one: the one thing a banner cannot do is reach
-           somebody looking at another window. -->
-      <form method="post" id="form-reminders" class="card form" data-perm="timesheets:write:own">
-        <h2 data-i18n="remind.title">Reminders</h2>
-        <div class="perm-grid switch-row">
-          <label class="switch"><input type="checkbox" name="unbookedDay"><span class="switch-track"></span><span class="switch-label" data-i18n="remind.unbookedDay">Mention the last working day when nothing is booked on it</span></label>
-        </div>
-        <div class="grid">
-          <label data-i18n="field.timerAlertHours">Mention the stopwatch after (hours)<input type="number" name="timerAlertHours" step="1" min="0" max="24" placeholder="10">
-          </label>
-        </div>
-        <p class="muted" data-i18n="remind.hint">Zero means the stopwatch is never mentioned. Past a day, it says by itself that it holds more than one entry can.</p>
+      <!-- What reaches somebody without their asking. The application says it on
+           the screen while a page is open; this card is about the two ways past
+           that - a notification of this browser, and a push where the
+           installation allows one - because a banner cannot reach somebody who is
+           looking at another window, and neither can reach a closed one. -->
+      <div class="card" id="notify-card">
+        <h2 data-i18n="notify.title">Notifications</h2>
+        <p class="muted" data-i18n="notify.hint">What happens to the tickets you look after is said on the screen while a page is open. This browser can also show it as a notification, so it reaches you while you are looking at another window.</p>
         <div class="row">
-          <button type="submit" data-i18n="action.save">Save</button>
-          <button type="button" class="secondary" id="notify-allow" hidden data-i18n="remind.allowNotifications">Allow notifications in this browser</button>
+          <button type="button" class="secondary" id="notify-allow" hidden data-i18n="notify.allow">Allow notifications in this browser</button>
         </div>
         <p class="muted" id="notify-state"></p>
         <div class="row" id="push-mine" hidden>
-          <button type="button" class="secondary" id="push-subscribe" data-i18n="push.subscribe">Push the reminders to this browser</button>
+          <button type="button" class="secondary" id="push-subscribe" data-i18n="push.subscribe">Push the notifications to this browser</button>
           <button type="button" class="secondary" id="push-unsubscribe" hidden data-i18n="push.unsubscribe">Stop pushing to this browser</button>
         </div>
-        <p class="muted" id="push-state" hidden data-i18n="push.pushed">The reminders are pushed to this browser, even while no page of it is open. On a computer the browser has to be running for that, in the background will do; one that was closed shows them when it is started again within the hour, as long as they still hold.</p>
-      </form>
-
-      <!-- The week the balance is measured against, a figure per weekday. A plan
-           starts on a day and leaves the weeks before it alone, so going part
-           time does not rewrite last month. Without one, the daily target above
-           applies from Monday to Friday and the weekend asks nothing. The seven
-           fields are drawn by the script, in the weekday names the calendar uses,
-           so the two cannot name a day differently. -->
-      <div class="card" id="schedule-card" data-perm="settings:write:own">
-        <h2 data-i18n="schedule.title">My week</h2>
-        <p class="muted" data-i18n="schedule.hint">How many hours each weekday asks of you, for the overtime balance. A plan applies from the day you choose; the weeks before it keep the plan that was in force then.</p>
-        <form method="post" id="form-schedule" class="form">
-          <div class="grid schedule-days" id="schedule-days"></div>
-          <div class="grid">
-            <label data-i18n="schedule.validFrom">Applies from<input type="date" name="validFrom" required></label>
-          </div>
-          <button type="submit" data-i18n="schedule.save">Save the plan</button>
-        </form>
-        <p class="muted" id="schedule-before"></p>
-        <div class="table-wrap">
-          <table id="table-schedules">
-            <thead>
-              <tr>
-                <th data-i18n="schedule.validFrom">Applies from</th>
-                <th class="num" data-weekday="0"></th>
-                <th class="num" data-weekday="1"></th>
-                <th class="num" data-weekday="2"></th>
-                <th class="num" data-weekday="3"></th>
-                <th class="num" data-weekday="4"></th>
-                <th class="num" data-weekday="5"></th>
-                <th class="num" data-weekday="6"></th>
-                <th class="actions" data-i18n="field.action">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <p class="muted" id="push-state" hidden data-i18n="push.pushed">The notifications are pushed to this browser, even while no page of it is open. On a computer the browser has to be running for that, in the background will do; one that was closed shows them when it is started again within the hour, as long as they still hold.</p>
       </div>
 
       <!-- Passkeys are not offered everywhere: not to the built-in administrator
@@ -1584,7 +699,7 @@
            card offers. -->
       <div class="card" id="install-card">
         <h2 data-i18n="install.title">Install the Android app</h2>
-        <p class="muted" data-i18n="install.text">On an Android phone the ticket system is also an app of its own: it shows this interface and reminds you with notifications. Scan the code with the phone's camera to download it, open the file, and allow the installation the one time Android asks.</p>
+        <p class="muted" data-i18n="install.text">On an Android phone the ticket system is also an app of its own: it shows this interface and tells you with notifications what happens to your tickets. Scan the code with the phone's camera to download it, open the file, and allow the installation the one time Android asks.</p>
         <img id="install-qr" class="qr" alt="" hidden>
         <p class="muted" data-i18n="install.connect">Once installed, the app connects by scanning the code a new token shows under API tokens.</p>
         <div class="row">
@@ -1595,31 +710,13 @@
 
       <form method="post" id="form-my-timezone" class="card form">
         <h2 data-i18n="tz.myTitle">My timezone</h2>
-        <p class="muted" data-i18n="tz.myHint">Decides which calendar day your bookings fall on. Leave it on "follow the instance" unless you work from another country.</p>
+        <p class="muted" data-i18n="tz.myHint">The zone moments are written in for you: when a ticket arrived, when a deadline falls. Leave it on "follow the instance" unless you work from another country.</p>
         <div class="grid">
           <label class="wide" data-i18n="tz.timezone">Timezone
             <select name="timezone" id="my-timezone"></select>
           </label>
         </div>
         <p class="muted" id="my-timezone-now"></p>
-        <button type="submit" data-i18n="action.save">Save</button>
-      </form>
-
-      <!-- Whose public holidays this person keeps, beside the zone because it is
-           the same arrangement: the installation's, unless they choose their own.
-           The second picker is for a country whose holidays differ by state,
-           nation or region, and is put away for any other. -->
-      <form method="post" id="form-my-holidays" class="card form">
-        <h2 data-i18n="holiday.myTitle">My public holidays</h2>
-        <p class="muted" data-i18n="holiday.myHint">The public holidays where you work: marked in the calendar and on the week, left out of the leave you record, and asking nothing from the day every working day counts from. Leave it on following the installation unless you work in another state or country.</p>
-        <div class="grid">
-          <label data-i18n="holiday.country">Country
-            <select name="country" id="my-holiday-country"></select>
-          </label>
-          <label data-i18n="holiday.region" hidden>State
-            <select name="region" id="my-holidays"></select>
-          </label>
-        </div>
         <button type="submit" data-i18n="action.save">Save</button>
       </form>
 
@@ -1651,26 +748,6 @@
             <button type="submit" id="totp-disable" class="secondary" hidden data-i18n="totp.disable">Disable</button>
           </div>
         </form>
-      </div>
-
-      <!-- The address a calendar program reads this person's recorded days from.
-           Its key is the address, so it is shown once, in the answer that made it,
-           as a token's value is - and taken off the screen the same way. -->
-      <div class="card" id="feed-card" data-perm="timesheets:read:own">
-        <h2 data-i18n="feed.title">Calendar subscription</h2>
-        <p class="muted" data-i18n="feed.hint">Your booked hours a day at a time, and the days you are away, in Outlook, Google or on your phone – beside your appointments. The address is a key to them: anybody who has it can read them. So it is shown only once, and a new address takes the old one back.</p>
-        <p class="muted" data-i18n="feed.reach">Google and Outlook on the web read the address from their own servers, so for them this installation has to be reachable from the internet. A calendar on your phone or computer reads it from wherever that device is.</p>
-        <p id="feed-state"></p>
-        <div id="feed-address" hidden>
-          <p class="muted plus" data-i18n="feed.copyNow">Add it to your calendar now – this address is never shown again:</p>
-          <pre class="secret" id="feed-address-value"></pre>
-          <p class="muted" id="feed-qr-hint" data-i18n="feed.qrHint" hidden>The same address as a code, to get it onto your phone without typing it. Add it there to your calendar as a subscribed calendar.</p>
-          <img id="feed-qr" class="qr" alt="" hidden>
-        </div>
-        <div class="row">
-          <button type="button" id="feed-create" data-i18n="feed.create">Create address</button>
-          <button type="button" id="feed-remove" class="secondary" hidden data-i18n="feed.remove">Remove address</button>
-        </div>
       </div>
 
       <div class="card" id="token-card">
@@ -1727,21 +804,12 @@
         <button type="submit" data-i18n="settings.changePassword">Change password</button>
       </form>
 
-      <!-- Who may see this account's time, by name and with what each may do with
-           it. For every account and never withheld: somebody whose hours a manager
-           reads is told so before they have to wonder. Filled by loadMyManagers. -->
-      <div class="card" id="managers-card">
-        <h2 data-i18n="team.mineTitle">Who may see your time</h2>
-        <p class="muted" id="managers-nobody" data-i18n="team.nobody">Nobody but you. An administrator can assign you managers, once the installation has them; you would see them here.</p>
-        <ul id="managers-list" hidden></ul>
-      </div>
-
       <!-- Everything this installation holds about the account, for anybody signed
            in whatever their role: the right of access is the person's, not a
            permission. Last on the screen, because it is about the whole of it. -->
       <div class="card" id="export-card">
         <h2 data-i18n="export.title">Everything about me</h2>
-        <p class="muted" data-i18n="export.hint">Everything this installation keeps about your account, as a ZIP with a JSON file for each part: your entries and their history, projects, templates, absences, leave, planned weeks, working times and the account itself. Passwords, second factors, tokens and keys are not in it – only when they were made and last used.</p>
+        <p class="muted" data-i18n="export.hint">Everything this installation keeps about your account, as a ZIP with a JSON file for each part: the account itself, the tickets you own, answer for and watch, what you were told about, and where and when you wrote in tickets. Passwords, second factors, tokens and keys are not in it – only when they were made and last used – and neither is the text of what you wrote, which quotes the customers you answered.</p>
         <button type="button" class="secondary" id="export-me" data-i18n="export.download">Download everything about me</button>
       </div>
     </section>
@@ -1785,7 +853,7 @@
 
       <form method="post" id="form-maintenance" class="card form">
         <h2 data-i18n="maint.title">Maintenance mode</h2>
-        <p class="muted" data-i18n="maint.hint">Turns everyone else away with a notice while the installation stays running. Use it before restoring or moving the database: time recorded during that window is lost when the snapshot goes back, and whoever recorded it has no way to know.</p>
+        <p class="muted" data-i18n="maint.hint">Turns everyone else away with a notice while the installation stays running. Use it before restoring or moving the database: what is written during that window is lost when the snapshot goes back, and whoever wrote it has no way to know.</p>
         <p class="muted minus" data-i18n="maint.who">While it is on, only people who may administer this installation can work: this built-in account and anyone holding the administrator role. Everyone else is turned away — that is the point.</p>
         <div class="grid">
           <label class="switch"><input type="checkbox" name="enabled"><span class="switch-track"></span><span class="switch-label" data-i18n="maint.enabled">Out of service</span></label>
@@ -1891,27 +959,15 @@
         <button type="submit" class="row-apart" data-i18n="action.save">Save</button>
       </form>
 
-      <!-- Whether anybody here may look after somebody else's time at all. Shipped
-           off: an installation that never chose managers behaves exactly as it did
-           before they existed. -->
-      <form method="post" id="form-managers" class="card form">
-        <h2 data-i18n="team.switchTitle">Managers</h2>
-        <p class="muted" data-i18n="team.switchHint">A manager looks after the time and projects of the accounts an administrator assigns to them under Users, beside their own. Whoever is looked after sees who, under My account, and every entry a manager books or changes carries the manager's name. A manager learns that a day was away, never why, and never sees anybody's working times.</p>
-        <div class="grid">
-          <label class="switch"><input type="checkbox" name="enabled"><span class="switch-track"></span><span class="switch-label" data-i18n="team.switchEnabled">This installation has managers</span></label>
-        </div>
-        <button type="submit" data-i18n="action.save">Save</button>
-      </form>
-
-      <!-- Whether the reminders are pushed to browsers at all. Shipped off, decided
-           by the maintainer on 2026-11-10: every push leaves through the push
-           service of the browser's maker, and whether this installation talks to
-           them is its administrator's to decide. -->
+      <!-- Whether notifications are pushed to browsers at all. Shipped off: every
+           push leaves through the push service of the browser's maker, and
+           whether this installation talks to them is its administrator's to
+           decide. -->
       <form method="post" id="form-push" class="card form">
         <h2 data-i18n="push.switchTitle">Push notifications</h2>
-        <p class="muted" data-i18n="push.switchHint">The reminders - a stopwatch past the hours its owner chose, the last working day with nothing booked - are pushed to the browsers people switch them on for under My account, even while no page is open. Each push leaves through the push service of the browser's maker: Google's for Chrome, Mozilla's for Firefox, Apple's for Safari. It is encrypted for that browser alone, so the push service carries it without reading it - but it learns that this installation sent something, and when.</p>
+        <p class="muted" data-i18n="push.switchHint">What somebody is told about their tickets - a customer's answer, a ticket handed to them, a deadline running out - is pushed to the browsers they switch it on for under My account, even while no page is open. Each push leaves through the push service of the browser's maker: Google's for Chrome, Mozilla's for Firefox, Apple's for Safari. It is encrypted for that browser alone, so the push service carries it without reading it - but it learns that this installation sent something, and when.</p>
         <div class="grid">
-          <label class="switch"><input type="checkbox" name="enabled"><span class="switch-track"></span><span class="switch-label" data-i18n="push.switchEnabled">This installation pushes reminders</span></label>
+          <label class="switch"><input type="checkbox" name="enabled"><span class="switch-track"></span><span class="switch-label" data-i18n="push.switchEnabled">This installation pushes notifications</span></label>
         </div>
         <button type="submit" data-i18n="action.save">Save</button>
       </form>
@@ -1930,9 +986,6 @@
                while they read. -->
           <label data-i18n="ops.sessionIdle">Sign out after inactivity (minutes, 0 = never)
             <input type="number" name="sessionIdleMinutes" step="1" min="0" max="1440">
-          </label>
-          <label data-i18n="ops.maxDailyHours">Maximum hours per day (instance-wide)
-            <input type="number" name="maxDailyHours" step="any" min="0.01" max="24">
           </label>
           <label data-i18n="ops.rateLimit">Rate limit (requests)
             <input type="number" name="rateLimit" step="1" min="5">
@@ -1954,7 +1007,7 @@
 
       <form method="post" id="form-timezone" class="card form">
         <h2 data-i18n="tz.title">Timezone</h2>
-        <p class="muted" data-i18n="tz.hint">Decides which calendar day a booking falls on, for everyone who has not set their own under "My account".</p>
+        <p class="muted" data-i18n="tz.hint">The zone a ticket's number takes its day from and the service hours are read in, and the one moments are written in for everyone who has not set their own under "My account".</p>
         <div class="grid">
           <label class="wide" data-i18n="tz.timezone">Timezone
             <select name="timezone" id="instance-timezone"></select>
@@ -1966,7 +1019,7 @@
 
       <form method="post" id="form-holidays" class="card form">
         <h2 data-i18n="holiday.title">Public holidays</h2>
-        <p class="muted" data-i18n="holiday.hint">The public holidays of everybody who has not chosen their own under "My account": a country and, where its holidays differ by state, nation or region, which one. Until a choice is saved, nobody keeps any.</p>
+        <p class="muted" data-i18n="holiday.hint">The public holidays the service hours leave out, so that no deadline runs on one: a country and, where its holidays differ by state, nation or region, which one. Until a choice is saved, none is kept.</p>
         <div class="grid">
           <label data-i18n="holiday.country">Country
             <select name="country" id="instance-holiday-country"></select>
@@ -2105,20 +1158,10 @@
         <p class="muted" id="ldap-test-result"></p>
       </form>
 
-      <!-- In place of the card below, for an account that administers and also
-           records time. The run is not theirs, and a card that is simply not
-           there cannot be told from a feature that has been removed - which is
-           the question this was written after. A sentence and nothing to
-           press: the server refuses this account the run. -->
-      <div class="card" id="sync-elsewhere" hidden>
-        <h2 data-i18n="sync.title">Directory synchronisation</h2>
-        <p class="muted" id="sync-elsewhere-text"></p>
-      </div>
-
       <div class="card" id="sync-card">
         <h2 data-i18n="sync.title">Directory synchronisation</h2>
         <p class="muted" data-i18n="sync.hint">Reconciles the users with the directory. LDAP is only ever read, never changed.</p>
-        <p class="muted minus" data-i18n="sync.warning">Careful: accounts missing from the directory are deleted here, together with their recorded time, own projects and tokens. This cannot be undone. Always run the preview first.</p>
+        <p class="muted minus" data-i18n="sync.warning">Careful: accounts missing from the directory are deleted here, together with their tokens and sessions, and the tickets they owned are left without an owner. This cannot be undone. Always run the preview first.</p>
 
         <form method="post" id="form-sync-schedule" class="form">
           <div class="grid">
@@ -2132,8 +1175,8 @@
         </form>
 
         <!-- Set apart from the Save above it on purpose. Save stores a schedule
-             and changes nothing today; Run deletes accounts and the hours on
-             them. Two buttons a few pixels apart, one harmless and one
+             and changes nothing today; Run deletes accounts. Two buttons a
+             few pixels apart, one harmless and one
              irreversible, is a layout that will eventually pick the wrong one
              for somebody. -->
         <div class="row row-apart">
@@ -2147,7 +1190,7 @@
               <tr>
                 <th data-i18n="field.name">Name</th>
                 <th data-i18n="field.email">Email</th>
-                <th class="num" data-i18n="sync.entries">Time entries</th>
+                <th class="num" data-i18n="sync.tickets">Unfinished tickets</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -2163,7 +1206,7 @@
                 <th data-i18n="sync.runAt">When</th>
                 <th data-i18n="sync.runStarted">Started by</th>
                 <th class="num" data-i18n="sync.runRemoved">Removed</th>
-                <th class="num" data-i18n="sync.runEntries">Time entries removed</th>
+                <th class="num" data-i18n="sync.runTickets">Tickets left without an owner</th>
                 <th class="num" data-i18n="sync.runAdded">Added</th>
               </tr>
             </thead>

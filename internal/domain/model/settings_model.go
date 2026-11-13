@@ -53,23 +53,23 @@ const (
 	// StorageZoneService for what a start in another one did to every day.
 	SettingStorageZone = "instance.storageZone"
 
-	// SettingTimezone is the instance-wide zone that decides which calendar day
-	// a booking belongs to, for everyone who has not set their own.
+	// SettingTimezone is the instance-wide zone: the one a ticket's number takes
+	// its day from and the service hours are read in, and the one a moment is
+	// written in for everyone who has not set their own.
 	SettingTimezone = "instance.timezone"
 
 	// SettingHolidayPlace is the installation's choice of public holidays, which
-	// everybody keeps who has not made their own: a place, NoHolidays, or empty
-	// where nobody has chosen. The key is older than countries and keeps its name,
-	// because installations already store it under that one.
-	SettingHolidayPlace = "instance.holidayRegion"
+	// the service hours leave out: a place, NoHolidays, or empty where nobody has
+	// chosen.
+	SettingHolidayPlace = "instance.holidayPlace"
 
 	// SettingOperational holds the limits an administrator may change from the
 	// Settings screen, layered over what the environment configured.
 	SettingOperational = "instance.operational"
 
 	// SettingMaintenance takes the installation out of service without stopping
-	// the process, so people cannot record time against a database that is about
-	// to be restored or moved.
+	// the process, so nobody writes into a database that is about to be restored
+	// or moved.
 	SettingMaintenance = "instance.maintenance"
 
 	// SettingTelemetry holds the metrics and tracing settings. Read before
@@ -81,12 +81,7 @@ const (
 	// Only that: which steps are done is worked out from what is configured.
 	SettingSetupCompleted = "instance.setupCompleted"
 
-	// SettingManagers is whether this installation has managers: "true" turns the
-	// team rights on, and anything else - nothing stored, which is how it ships -
-	// leaves them granting nothing.
-	SettingManagers = "instance.managers"
-
-	// SettingWebPush is whether this installation pushes the reminders to the
+	// SettingWebPush is whether this installation pushes its notifications to the
 	// browsers people subscribe: "true" turns it on. It ships off, because every
 	// push leaves through the push service of the browser's maker.
 	SettingWebPush = "instance.push"
@@ -279,7 +274,7 @@ type LDAPConfig struct {
 	// IDAttribute holds an identifier that never changes for the life of an
 	// account. Matching on the mail address instead would read a renamed
 	// mailbox as "this person left and a new one arrived", and the
-	// synchronisation would delete their recorded hours.
+	// synchronisation would remove their account and make another.
 	//
 	// OpenLDAP and most others: entryUUID. Active Directory: objectGUID,
 	// which is binary and is stored hex-encoded.
@@ -294,7 +289,7 @@ type LDAPConfig struct {
 	// SyncSchedule is when the reconciliation runs on its own, as a five-field
 	// cron expression. Empty means it only runs when somebody presses the button,
 	// which is the default: a run deletes the accounts the directory no longer
-	// holds, together with every hour recorded against them.
+	// holds, and the tickets they owned are left without an owner.
 	//
 	// Unlike the rest of this struct it takes effect at the next start, not at
 	// once - cron jobs are registered while the application starts and cannot be
@@ -312,7 +307,7 @@ func DefaultLDAPConfig() LDAPConfig {
 		NameAttribute:  "cn",
 		EmailAttribute: "mail",
 		IDAttribute:    "entryUUID",
-		DefaultRole:    RoleUser,
+		DefaultRole:    RoleAgent,
 	}
 }
 

@@ -33,7 +33,7 @@ ou: services
 # The account the application binds as before it searches. Kept outside
 # ou=people deliberately: it has no mail attribute, so the synchronisation
 # skips it either way, but a bind account sitting among the staff is one
-# careless base DN away from becoming a person with a timesheet.
+# careless base DN away from becoming an agent with tickets to answer.
 dn: cn=__BINDDN_CN__,ou=services,__SUFFIX__
 objectClass: inetOrgPerson
 cn: __BINDDN_CN__

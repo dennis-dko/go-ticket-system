@@ -38,7 +38,7 @@ type HolidayCountry struct {
 //
 // Worked out rather than looked up: every holiday kept here is a fixed date, a
 // fixed distance from Easter or a weekday counted in a month, so a calendar
-// service would be a dependency, and a network call under every balance, for
+// service would be a dependency, and a network call under every deadline, for
 // something the binary can compute. A country whose holidays are set by decree
 // every year, or follow the moon, is not kept here rather than kept wrongly.
 type holidayRules struct {
@@ -95,29 +95,6 @@ func SplitHolidayPlace(place string) (country, region string) {
 	return country, region
 }
 
-// LegacyHolidayPlace reads a choice as it was written before there were
-// countries: a German state's code alone, which was every place there was.
-// Anything else is returned as it is.
-func LegacyHolidayPlace(written string) string {
-	if slices.Contains(holidaysDE.regions, written) {
-		return HolidayPlace("DE", written)
-	}
-
-	return written
-}
-
-// LegacyHolidayRegion writes a choice the way it was written before there were
-// countries, for a client written then: a German state by its code alone, and
-// anything else as it is - a place such a client never offered, which it can only
-// show as its code.
-func LegacyHolidayRegion(choice string) string {
-	if country, region := SplitHolidayPlace(choice); country == "DE" && region != "" {
-		return region
-	}
-
-	return choice
-}
-
 // ValidHolidayPlace reports whether a place is one the rules know: a country,
 // with one of its regions where it has to have one.
 func ValidHolidayPlace(place string) bool {
@@ -136,9 +113,8 @@ func ValidHolidayPlace(place string) bool {
 }
 
 // NoHolidays is a choice to keep no public holidays at all, which an empty one
-// cannot say: a person's empty choice follows the installation, and the
-// installation's is one nobody has made yet. Both keep none where nothing else
-// decides, and they are kept apart so a screen can say which of the two it is.
+// cannot say: an empty choice is one nobody has made yet. Both keep none, and
+// they are kept apart so a screen can say which of the two it is.
 const NoHolidays = "none"
 
 // ValidHolidayChoice reports whether a choice of public holidays may be stored:
@@ -177,14 +153,9 @@ func HolidayChoiceFaultOf(choice string) HolidayChoiceFault {
 	return UnknownHolidayRegion
 }
 
-// HolidayPlaceOf returns where this person keeps public holidays, empty for
-// nowhere: their own choice, or the installation's where they made none.
-func (u *User) HolidayPlaceOf(installation string) string {
-	choice := u.HolidayPlace
-	if choice == "" {
-		choice = installation
-	}
-
+// HolidaysKeptAt returns the place whose public holidays a choice names, empty
+// for nowhere: a choice nobody has made, or NoHolidays.
+func HolidaysKeptAt(choice string) string {
 	if choice == NoHolidays {
 		return ""
 	}

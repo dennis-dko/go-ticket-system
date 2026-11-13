@@ -24,10 +24,6 @@ import (
 // and the application's first migration both land inside it - and because the
 // suite now runs several cases at once, where all of that happens on a machine
 // doing several times the work.
-//
-// The case that measures a stopwatch spends forty of these seconds deliberately
-// asleep, waiting out the smallest bookable duration; on a busy two-core runner
-// the rest of its work has to fit in what is left.
 const interactionTimeout = 150 * time.Second
 
 // waitPatience is how long the helpers below wait for something that is on its
@@ -270,6 +266,28 @@ func (p *page) evalJSON(expression string, into any) {
 	var raw string
 
 	p.run("read the page's answer", chromedp.Evaluate(expression, &raw))
+
+	if err := json.Unmarshal([]byte(raw), into); err != nil {
+		p.t.Fatalf("reading the page's answer: %v\n\n%.400s", err, raw)
+	}
+}
+
+// awaitJSON evaluates an expression that may be a promise, and unpacks its value.
+//
+// evalJSON's sibling for the cases that set up state through the page's own api():
+// that returns a promise, and an evaluation that does not wait for it hands back
+// the pending promise rather than what the server said.
+func (p *page) awaitJSON(expression string, into any) {
+	p.t.Helper()
+
+	var raw string
+
+	p.run("wait for the page's answer", chromedp.Evaluate(
+		`(async () => JSON.stringify(await (`+expression+`)) ?? 'null')()`, &raw, awaitPromise))
+
+	if into == nil {
+		return
+	}
 
 	if err := json.Unmarshal([]byte(raw), into); err != nil {
 		p.t.Fatalf("reading the page's answer: %v\n\n%.400s", err, raw)

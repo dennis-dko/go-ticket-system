@@ -92,7 +92,7 @@ type APITokenResponse struct {
 	Prefix string `json:"prefix"`
 
 	// Moments rather than this package's Date, which formats a day and throws the
-	// rest away. Right for the day a booking belongs to, wrong for a credential:
+	// rest away. Right for a calendar day, wrong for a credential:
 	// "last used" is the field somebody reads when they think a token has been
 	// taken, and a day tells them nothing they did not already know. A token used
 	// at three in the morning read exactly like one used at three in the

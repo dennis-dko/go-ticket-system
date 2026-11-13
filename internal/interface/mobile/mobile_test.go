@@ -554,35 +554,11 @@ func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
 	}
 }
 
-// The page asks the phone for the notifications the app shows its reminders as,
-// through the bridge the app registers for them - a WebView has no
-// Notification, and without the bridge the Reminders card says no browser can
-// show any. So the name the page asks for is the name Web.kt registers, and the
-// app declares the permission it asks the phone for.
-func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) {
-	code, _ := lexed(source(t, "Web.kt"))
-
-	registered := regexp.MustCompile(`\bconst\s+val\s+notificationsInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
-	if registered == nil {
-		t.Fatal("Web.kt names no notificationsInterface, so the page cannot ask the phone for notifications")
-	}
-
-	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]) {
-		t.Errorf("app.js does not ask for %s, the bridge the app registers, so in the app the "+
-			"Reminders card says that no browser can show notifications", registered[1])
-	}
-
-	if !strings.Contains(read(t, "src/main/AndroidManifest.xml"), `android:name="android.permission.POST_NOTIFICATIONS"`) {
-		t.Error("the app does not declare POST_NOTIFICATIONS, so the phone is never asked and no reminder is shown")
-	}
-}
-
 // The page tells the app when its session ended without its being signed out
 // of, through the bridge the app registers for it - the app cannot see that for
 // itself, and without it a token taken back left the app showing the page's own
-// sign-in form while it went on asking about the reminders with a token the
-// installation no longer knew. So the name the page tells is the name Web.kt
-// registers.
+// sign-in form, still holding a token the installation no longer knew. So the
+// name the page tells is the name Web.kt registers.
 func TestThePageTellsTheAppItsSessionEndedByTheBridgeItRegisters(t *testing.T) {
 	code, _ := lexed(source(t, "Web.kt"))
 
@@ -598,8 +574,9 @@ func TestThePageTellsTheAppItsSessionEndedByTheBridgeItRegisters(t *testing.T) {
 }
 
 // A receiver the manifest does not name is never called, and nothing says so:
-// the alarm a reminder is set for goes off, and nothing in the app hears it. So
-// every BroadcastReceiver in the app's sources is a receiver of its manifest.
+// the alarm or the broadcast it was written for arrives, and nothing in the app
+// hears it. So every BroadcastReceiver in the app's sources is a receiver of its
+// manifest.
 func TestEveryReceiverOfTheAppIsInItsManifest(t *testing.T) {
 	manifest := read(t, "src/main/AndroidManifest.xml")
 	receiver := regexp.MustCompile(`\bclass\s+([A-Z][A-Za-z0-9]*)\s*(?:\([^)]*\))?\s*:\s*BroadcastReceiver\(\)`)

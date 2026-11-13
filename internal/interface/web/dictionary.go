@@ -82,7 +82,7 @@ func RefusalValues() map[string]map[int]string {
 }
 
 // refusalValuesIn reads REFUSAL_VALUES out of the script, a code a line:
-// `  overDailyLimit: { 2: fmtDate },`.
+// `  notFound: { 0: entityName },`.
 func refusalValuesIn(script string) map[string]map[int]string {
 	named := map[string]map[int]string{}
 

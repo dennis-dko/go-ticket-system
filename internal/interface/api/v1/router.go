@@ -8,38 +8,24 @@ import (
 
 // Handlers bundles the handlers a route registration needs.
 type Handlers struct {
-	Auth       *rest.AuthHandler
-	Users      *rest.UserHandler
-	Roles      *rest.RoleHandler
-	Projects   *rest.ProjectHandler
-	Timesheets *rest.TimesheetHandler
-	Me         *rest.MeHandler
-	Settings   *rest.SettingsHandler
-	Tokens     *rest.APITokenHandler
-	LDAPSync   *rest.LDAPSyncHandler
-	Setup      *rest.SetupHandler
-	Passkeys   *rest.PasskeyHandler
-	Logs       *rest.LogHandler
-	Restart    *rest.RestartHandler
-	Update     *rest.UpdateHandler
-	Timers     *rest.TimerHandler
-	Schedules  *rest.ScheduleHandler
-	Templates  *rest.TemplateHandler
-	Absences   *rest.AbsenceHandler
-	Holidays   *rest.HolidayHandler
-	Vacation   *rest.VacationHandler
-	Calendar   *rest.CalendarFeedHandler
-	OpenID     *rest.OpenIDHandler
-	WorkDays   *rest.WorkDayHandler
-	Statistics *rest.StatisticsHandler
-	Workbook   *rest.WorkbookHandler
-	Sheets     *rest.SheetHandler
-	Documents  *rest.DocumentHandler
-	Exports    *rest.ExportHandler
-	AdminLog   *rest.AdminLogHandler
-	Team       *rest.TeamHandler
-	Push       *rest.PushHandler
-	Statements *rest.StatementHandler
+	Auth     *rest.AuthHandler
+	Users    *rest.UserHandler
+	Roles    *rest.RoleHandler
+	Me       *rest.MeHandler
+	Settings *rest.SettingsHandler
+	Tokens   *rest.APITokenHandler
+	LDAPSync *rest.LDAPSyncHandler
+	Setup    *rest.SetupHandler
+	Passkeys *rest.PasskeyHandler
+	Logs     *rest.LogHandler
+	Restart  *rest.RestartHandler
+	Update   *rest.UpdateHandler
+	Holidays *rest.HolidayHandler
+	OpenID   *rest.OpenIDHandler
+	Sheets   *rest.SheetHandler
+	Exports  *rest.ExportHandler
+	AdminLog *rest.AdminLogHandler
+	Push     *rest.PushHandler
 }
 
 // RegisterRoutes registers all v1 routes.
@@ -50,9 +36,9 @@ type Handlers struct {
 // project is built around.
 //
 // Authorization is likewise not attached here but inside each handler, because
-// several rules depend on the resource rather than the route: a project is
-// visible only to the person it belongs to, and an entry can be changed only by
-// the account that recorded it - neither is known until the record is read.
+// several rules depend on the resource rather than the route: a ticket is
+// reached through the queue it is in, and which queue that is is not known
+// until the ticket has been read.
 func RegisterRoutes(app *gofr.App, h Handlers) {
 	const base = "/api/v1"
 
@@ -119,11 +105,7 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.GET(base+"/settings/telemetry", h.Settings.Telemetry)
 	app.PUT(base+"/settings/telemetry", h.Settings.SaveTelemetry)
 
-	// Whether anybody may look after somebody else's time at all - shipped off.
-	app.GET(base+"/settings/managers", h.Team.Switch)
-	app.PUT(base+"/settings/managers", h.Team.SaveSwitch)
-
-	// Whether the reminders are pushed to browsers at all - shipped off, because
+	// Whether notifications are pushed to browsers at all - shipped off, because
 	// every push leaves through the push service of the browser's maker.
 	app.GET(base+"/settings/push", h.Push.Switch)
 	app.PUT(base+"/settings/push", h.Push.SaveSwitch)
@@ -142,8 +124,8 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.POST(base+"/settings/update/check", h.Update.Check)
 
 	// The process log. Under /admin rather than /settings because it changes
-	// nothing - and behind the built-in administrator, because it carries
-	// everything the process has written.
+	// nothing - and behind whoever administers the installation, because it
+	// carries everything the process has written.
 	app.GET(base+"/admin/logs", h.Logs.Logs)
 
 	// Who changed how the installation is run. Under /admin for the same reason,
@@ -155,83 +137,20 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.PUT(base+"/me/language", h.Auth.SetLanguage)
 	app.PUT(base+"/me/theme", h.Auth.SetTheme)
 	app.PUT(base+"/me/timezone", h.Auth.SetTimezone)
-	app.GET(base+"/me/holidays", h.Holidays.Mine)
-	app.PUT(base+"/me/holidays", h.Holidays.SetMine)
 	app.PUT(base+"/me/tour", h.Auth.SetTourSeen)
-	app.PUT(base+"/me/reminders", h.Auth.SetReminders)
-	// The clock, always the caller's own: starting somebody else's would record
-	// time nobody asked them about, so there is no user id in these routes and no
-	// permission for "other people's timers" to get wrong.
-	// What your own time adds up to, for charting it. Keyed on the caller, so it
-	// needs nothing beyond reading your own entries - unlike the project report,
-	// which needs reports:read and is the built-in administrator's alone.
-	app.GET(base+"/me/statistics", h.Statistics.Own)
-	// The same, a day at a time and with what each day asked - the empty days
-	// included, because a picture of a week has to show them.
-	app.GET(base+"/me/days", h.Me.Days)
-	// A week booked like another, into the days of it that have nothing on them.
-	app.POST(base+"/me/weeks/copy", h.Timesheets.CopyWeek)
-
-	app.GET(base+"/me/timer", h.Timers.Running)
-	app.POST(base+"/me/timer", h.Timers.Start)
-	app.PUT(base+"/me/timer", h.Timers.Adjust)
-	app.POST(base+"/me/timer/stop", h.Timers.Stop)
-	app.POST(base+"/me/timer/switch", h.Timers.Switch)
-	app.DELETE(base+"/me/timer", h.Timers.Discard)
-
-	// The weeks a balance is measured against, the caller's own like the clock.
-	app.GET(base+"/me/schedules", h.Schedules.List)
-	app.POST(base+"/me/schedules", h.Schedules.Save)
-	app.DELETE(base+"/me/schedules/{validFrom}", h.Schedules.Delete)
-
-	// The bookings somebody makes often, kept to fill the form with.
-	app.GET(base+"/me/templates", h.Templates.List)
-	app.POST(base+"/me/templates", h.Templates.Save)
-	app.DELETE(base+"/me/templates/{id}", h.Templates.Delete)
-
-	// The days somebody is away, and why - the caller's own, like their entries.
-	app.GET(base+"/me/absences", h.Absences.List)
-	app.POST(base+"/me/absences", h.Absences.Save)
-	app.DELETE(base+"/me/absences/{day}", h.Absences.Delete)
 
 	// Everything held about one's own account, for handing over.
 	app.GET(base+"/me/export", h.Exports.Account)
 
-	// The accounts the caller looks after as a manager, and who looks after the
-	// caller - the second one always answered, so nobody has to wonder.
-	app.GET(base+"/me/team", h.Team.Team)
-	app.GET(base+"/me/managers", h.Team.MyManagers)
-
-	// What about one's own time deserves a banner, worked out where the rules are.
-	app.GET(base+"/me/notices", h.Me.Notices)
 	app.GET(base+"/me/push", h.Push.State)
 	app.POST(base+"/me/push", h.Push.Subscribe)
 	app.DELETE(base+"/me/push", h.Push.Unsubscribe)
-	app.PUT(base+"/me/balance-limits", h.Me.SetBalanceLimits)
-
-	// When somebody worked, a day at a time - theirs, like their entries.
-	app.GET(base+"/me/workdays", h.WorkDays.List)
-	app.PUT(base+"/me/workdays/{date}", h.WorkDays.Record)
-	app.DELETE(base+"/me/workdays/{date}", h.WorkDays.Remove)
-
-	// A year's leave: what it gives, what was carried, taken and planned.
-	app.GET(base+"/me/vacation", h.Vacation.Year)
-	app.PUT(base+"/me/vacation", h.Vacation.Entitle)
-	app.DELETE(base+"/me/vacation/{fromYear}", h.Vacation.Withdraw)
 
 	app.GET(base+"/me/address", h.Auth.Address)
 
 	// Where the Android app of this installation's release is downloaded, and the
 	// same as a code for a phone's camera.
 	app.GET(base+"/me/android", h.Update.Android)
-
-	// The address somebody's calendar program reads their recorded days from: theirs
-	// to make, see and take back, and read with the key in the path and nothing else,
-	// because a calendar program has nothing else to send.
-	app.GET(base+"/me/calendar-feed", h.Calendar.Get)
-	app.POST(base+"/me/calendar-feed", h.Calendar.Create)
-	app.DELETE(base+"/me/calendar-feed", h.Calendar.Remove)
-	app.GET(base+"/calendar-feed/{key}", h.Calendar.Read)
 
 	app.GET(base+"/me/passkeys", h.Passkeys.List)
 	app.POST(base+"/me/passkeys/register", h.Passkeys.BeginRegistration)
@@ -244,8 +163,8 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.POST(base+"/me/tokens", h.Tokens.Create)
 	app.DELETE(base+"/me/tokens/{id}", h.Tokens.Revoke)
 
-	// Ahead of the {id} routes for the same reason the timesheet pair below is:
-	// "export" is not an id, and this router matches the first pattern that fits.
+	// Ahead of the {id} routes: "export" is not an id, and this router matches
+	// the first pattern that fits.
 	app.GET(base+"/users/export", h.Sheets.ExportUsers)
 	app.POST(base+"/users/import", h.Sheets.ImportUsers)
 
@@ -256,12 +175,6 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.DELETE(base+"/users/{id}", h.Users.Delete)
 	app.PUT(base+"/users/{id}/role", h.Users.AssignRole)
 	app.PUT(base+"/users/{id}/password", h.Users.SetPassword)
-	app.PUT(base+"/users/{id}/working-times", h.Users.UpdateWorkingTimes)
-	app.GET(base+"/users/{id}/overtime", h.Me.Overtime)
-
-	// Who looks after an account: an administrator's to decide, never a manager's.
-	app.GET(base+"/users/{id}/managers", h.Team.Managers)
-	app.PUT(base+"/users/{id}/managers", h.Team.SetManagers)
 
 	// Ahead of the {id} routes, for the same reason the others are: "export" is
 	// not an id.
@@ -274,48 +187,4 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.PUT(base+"/roles/{id}", h.Roles.Update)
 	app.DELETE(base+"/roles/{id}", h.Roles.Delete)
 	app.GET(base+"/permissions", h.Roles.Permissions)
-
-	app.GET(base+"/projects/export", h.Sheets.ExportProjects)
-	app.POST(base+"/projects/import", h.Sheets.ImportProjects)
-
-	app.GET(base+"/projects", h.Projects.List)
-	app.GET(base+"/projects/{id}", h.Projects.Get)
-	app.POST(base+"/projects", h.Projects.Create)
-	app.PUT(base+"/projects/{id}", h.Projects.Update)
-	app.DELETE(base+"/projects/{id}", h.Projects.Delete)
-	app.POST(base+"/projects/{id}/archive", h.Projects.Archive)
-	app.GET(base+"/projects/{id}/report", h.Timesheets.Report)
-
-	// The evaluation that is not about one project: every project at once, or only
-	// the hours that belong to none. Neither can be said with an id in a path, which
-	// is why it is a route of its own rather than a parameter on the one above.
-	app.GET(base+"/reports", h.Timesheets.OwnReport)
-
-	// What the billable hours of a period come to, project by project - a statement
-	// of work rather than an invoice - and the same as a workbook.
-	app.GET(base+"/reports/statement", h.Statements.Statement)
-	app.GET(base+"/reports/statement/export", h.Statements.Export)
-
-	// The evaluations as a document, which is a POST because the charts travel
-	// with it: they are drawn in the browser, and what leaves the screen is the
-	// picture that was on it. One route for all three screens - a report, the
-	// statistics and overtime - because by the time it gets here they are the
-	// same thing: headings, pictures, figures.
-	app.POST(base+"/exports/document", h.Documents.Export)
-
-	// Ahead of the {id} routes, which this router would otherwise match first:
-	// "export" is not an id, and the answer was 400 for a parameter nobody sent.
-	app.GET(base+"/timesheets/export", h.Workbook.Export)
-	app.POST(base+"/timesheets/import", h.Workbook.Import)
-
-	app.GET(base+"/timesheets", h.Timesheets.List)
-	app.GET(base+"/timesheets/{id}", h.Timesheets.Get)
-
-	// What an entry said before each correction - its owner's to read, like the entry.
-	app.GET(base+"/timesheets/{id}/revisions", h.Timesheets.Revisions)
-	app.POST(base+"/timesheets", h.Timesheets.Create)
-	app.PUT(base+"/timesheets/{id}", h.Timesheets.Update)
-	app.DELETE(base+"/timesheets/{id}", h.Timesheets.Delete)
-	app.POST(base+"/timesheets/{id}/transfer", h.Timesheets.Transfer)
-
 }

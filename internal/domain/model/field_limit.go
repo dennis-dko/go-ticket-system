@@ -16,7 +16,8 @@ import "strings"
 // than derived: a description is a description, and nothing good comes of one
 // large enough to slow every page that lists it.
 const (
-	// MaxNameLength covers users.name and projects.name, both VARCHAR(255).
+	// MaxNameLength covers the names kept in a VARCHAR(255): an account's, a
+	// queue's, an organisation's, a contact's.
 	MaxNameLength = 255
 
 	// MaxEmailLength covers users.email, VARCHAR(255).
@@ -28,9 +29,10 @@ const (
 	// MaxTokenLabelLength covers api_tokens.name, VARCHAR(120).
 	MaxTokenLabelLength = 120
 
-	// MaxDescriptionLength bounds the TEXT columns on projects and timesheets.
-	// Chosen, not derived: long enough for anything anybody types about a day's
-	// work, short enough that a listing stays a listing.
+	// MaxDescriptionLength bounds the TEXT columns that describe something - a
+	// role, a queue, a service level. Chosen, not derived: long enough for what
+	// anybody types to say what a thing is for, short enough that a listing stays
+	// a listing.
 	MaxDescriptionLength = 2000
 )
 

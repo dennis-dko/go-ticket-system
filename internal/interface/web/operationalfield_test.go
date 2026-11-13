@@ -58,9 +58,9 @@ func TestEveryOperationalLimitTravelsBothWays(t *testing.T) {
 	// Only against a pattern that has stopped matching. A short wire list is the
 	// defect this exists for, so counting it here would report the finding as a
 	// broken test - which is how the first version of this hid it.
-	if len(inForm) < 6 {
+	if len(inForm) < 5 {
 		t.Fatalf("read %d fields out of OPERATIONAL_FIELDS, which is fewer than the "+
-			"six limits this card has: %v", len(inForm), sorted(inForm))
+			"five limits this card has: %v", len(inForm), sorted(inForm))
 	}
 
 	if len(onWire) == 0 {

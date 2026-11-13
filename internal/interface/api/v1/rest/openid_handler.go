@@ -24,7 +24,7 @@ const OpenIDCallbackPath = "/sign-in/openid"
 // Without it a code is finished by whoever presents it: somebody who began a
 // round, signed in at the provider as themselves and sent the address they came
 // back with to somebody else would have that person's browser signed in as them -
-// and everything that person then booked would be booked in an account they do
+// and everything that person then wrote would be written in an account they do
 // not own.
 const openIDCookieName = "gts_openid"
 

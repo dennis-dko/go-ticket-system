@@ -183,7 +183,7 @@ func (s *UserWorkbookService) ApplyUsers(ctx context.Context, plan *UserPlan) (i
 
 		// Only the cells that were filled in. An empty cell means "leave this as
 		// it is": a spreadsheet with a column somebody deleted must not blank out
-		// forty people's working times.
+		// forty people's names.
 		if name := strings.TrimSpace(planned.row.Name); name != "" {
 			cmd.Name = &name
 		}

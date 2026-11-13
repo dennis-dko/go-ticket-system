@@ -68,19 +68,10 @@ func TestEveryTourStepTargetsSomethingThatExists(t *testing.T) {
 var notInTheTour = map[string]string{
 	"the card holding #welcome-title": "the welcome screen, which the first step - " +
 		"the title that leads there - describes",
-	"welcome-week":   "part of the welcome screen the first step describes",
-	"welcome-recent": "part of the welcome screen the first step describes",
-	"calendar-day-card": "the entries of the day picked in the month, which the month's " +
-		"step says a click opens",
-	"overtime-result":  "the answer to the balance form above it, hidden until it is asked",
-	"report-result":    "the answer to the report form above it, hidden until it is asked",
-	"statement-result": "the answer to the statement form above it, hidden until it is asked",
 	"the card holding #table-roles": "the roles the form above it makes, which that " +
 		"form's step describes",
 	"the card holding #tour-restart": "the walk through itself, started again from here",
-	"sync-elsewhere": "the directory's step says whose the run is, in the words that " +
-		"suit the account reading it",
-	"sync-card": "the directory's step describes the run below the directory",
+	"sync-card":                      "the directory's step describes the run below the directory",
 }
 
 // screenCard is a card on one of the screens, and every id inside it -
@@ -279,11 +270,11 @@ func TestSkippingTheTourCountsAsSeen(t *testing.T) {
 // Two things walking someone through the application at once is worse than
 // either alone, and the setup wizard is the one that has to happen first.
 //
-// The built-in administrator is left out of it as well. That account arrives at the
-// wizard, which is its own introduction and covers the screens it actually uses; a
-// walk through booking time and reading an overtime balance would be a walk through
-// somebody else's job. The card under My account still starts it on request.
-func TestTheGreetingYieldsToTheWizardAndSkipsTheAdministrator(t *testing.T) {
+// The built-in administrator is greeted like anybody else once the wizard is
+// done. It was left out while the walk was through booking time, which was
+// somebody else's job; an administrator works on tickets like an agent does, so
+// the walk is through its own work now.
+func TestTheGreetingYieldsToTheWizard(t *testing.T) {
 	js := asset(t, "/app.js")
 
 	start := strings.Index(js, "async function maybeWelcome()")
@@ -296,8 +287,6 @@ func TestTheGreetingYieldsToTheWizardAndSkipsTheAdministrator(t *testing.T) {
 	for _, guard := range []struct{ needle, why string }{
 		{"#setup-wizard", "the greeting must not appear while the setup wizard is showing"},
 		{"tourSeen", "the greeting must only be offered to someone who has not seen it"},
-		{"administersOnly()", "an account that only administers must not be greeted with " +
-			"a tour of booking time, which is a tour of somebody else's job"},
 		{"mustChangePassword", "the greeting must wait until the initial password is replaced"},
 	} {
 		if !strings.Contains(body, guard.needle) {

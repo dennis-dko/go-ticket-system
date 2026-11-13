@@ -94,7 +94,7 @@ func TestTheValuesOfARefusalAreReadAsThePageWritesThem(t *testing.T) {
 		t.Fatalf("REFUSAL_VALUES has %d codes and %d were read: %v", codes, len(named), named)
 	}
 
-	if kind := named["projectClosedForBooking"][1]; kind != "statusName" {
-		t.Errorf("the second value of projectClosedForBooking is read as written by %q, want statusName", kind)
+	if kind := named["notFound"][0]; kind != "entityName" {
+		t.Errorf("the first value of notFound is read as written by %q, want entityName", kind)
 	}
 }

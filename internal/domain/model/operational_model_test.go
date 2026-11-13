@@ -13,7 +13,7 @@ import (
 func envDefaults() model.Limits {
 	return model.Limits{
 		SessionLifetimeHours:   12,
-		MaxDailyHours:          24,
+		SessionIdleMinutes:     30,
 		RateLimit:              30,
 		RateLimitWindowSeconds: 60,
 		LDAPSyncMaxDeleteRatio: 0.5,
@@ -31,12 +31,12 @@ func TestEmptyOperationalKeepsTheEnvironment(t *testing.T) {
 
 func TestOverridesReplaceOnlyWhatIsSet(t *testing.T) {
 	got := model.Operational{
-		MaxDailyHours: new(10.0),
-		RateLimit:     new(100),
+		SessionIdleMinutes: new(10.0),
+		RateLimit:          new(100),
 	}.Resolve(envDefaults())
 
-	if got.MaxDailyHours != 10 {
-		t.Errorf("expected the override, got %v", got.MaxDailyHours)
+	if got.SessionIdleMinutes != 10 {
+		t.Errorf("expected the override, got %v", got.SessionIdleMinutes)
 	}
 
 	if got.RateLimit != 100 {
@@ -81,14 +81,6 @@ func TestValidationRejectsValuesThatWouldBreakTheInstance(t *testing.T) {
 			model.Operational{RateLimit: new(1)}, "rateLimit",
 		},
 		{
-			"more hours than a day has cannot be worked in one",
-			model.Operational{MaxDailyHours: new(48.0)}, "maxDailyHours",
-		},
-		{
-			"a daily cap of zero would refuse every booking",
-			model.Operational{MaxDailyHours: new(0.0)}, "maxDailyHours",
-		},
-		{
 			"a ratio above one cannot mean anything",
 			model.Operational{LDAPSyncMaxDeleteRatio: new(1.5)}, "ldapSyncMaxDeleteRatio",
 		},
@@ -120,7 +112,7 @@ func TestValidationRejectsValuesThatWouldBreakTheInstance(t *testing.T) {
 func TestValidationAcceptsReasonableValues(t *testing.T) {
 	given := model.Operational{
 		SessionLifetimeHours:   new(8.0),
-		MaxDailyHours:          new(10.0),
+		SessionIdleMinutes:     new(15.0),
 		RateLimit:              new(60),
 		RateLimitWindowSeconds: new(60),
 		LDAPSyncMaxDeleteRatio: new(0.25),

@@ -123,7 +123,7 @@ func TestTheLogIsOnlyReadableByTheBuiltInAdministrator(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Nosy", "email": "nosy@example.com",
-		"role": "user", "password": "nosy-password-1",
+		"role": "agent", "password": "nosy-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	user := a.newClient()
@@ -281,24 +281,23 @@ func TestSearchingTheLog(t *testing.T) {
 
 	// Not startWithWorker, because this case needs LOG_LEVEL on the instance and that
 	// helper starts a plain one.
-	worker := a.signInAsUser(admin, "Wera", "wera@example.com")
+	worker := a.signInAsAgent(admin, "Wera", "wera@example.com")
 
-	// A request whose path is distinctive enough to search for, made by somebody who
-	// works here: the built-in administrator holds nothing about projects, so it could
-	// only produce a refusal, and a refused request is a weaker thing to search for
-	// than one that was actually served.
-	worker.must(worker.api(http.MethodGet, "/projects", nil), http.StatusOK)
+	// A request whose path is distinctive enough to search for, served rather than
+	// refused - a refused request is a weaker thing to search for - and made from
+	// another session than the one that reads the log.
+	worker.must(worker.api(http.MethodGet, "/me/tokens", nil), http.StatusOK)
 
 	// The log stays the administrator's to read, so the search is made from the other
 	// session.
-	page := admin.logsContaining(t, "?search=/api/v1/projects&limit=500")
+	page := admin.logsContaining(t, "?search=/api/v1/me/tokens&limit=500")
 
 	if len(page.Records) == 0 {
 		t.Fatal("searching for a path that was definitely requested found nothing")
 	}
 
 	for _, record := range page.Records {
-		if !strings.Contains(strings.ToLower(record.Message), "/api/v1/projects") {
+		if !strings.Contains(strings.ToLower(record.Message), "/api/v1/me/tokens") {
 			t.Errorf("a record that does not match the search came back: %s", record.Message)
 		}
 	}
@@ -446,13 +445,13 @@ func TestAShippedRolesDescriptionCannotBeChanged(t *testing.T) {
 	}
 
 	for _, role := range roles.Items {
-		if role.Name == "user" {
+		if role.Name == "agent" {
 			shipped.ID, shipped.Name, shipped.Description = role.ID, role.Name, role.Description
 		}
 	}
 
 	if shipped.ID == 0 {
-		t.Fatal("the shipped user role is missing, so there is nothing to protect")
+		t.Fatal("the shipped agent role is missing, so there is nothing to protect")
 	}
 
 	res := c.api(http.MethodPut, fmt.Sprintf("/roles/%d", shipped.ID), map[string]any{
@@ -484,8 +483,8 @@ func TestAShippedRolesDescriptionCannotBeChanged(t *testing.T) {
 	// is a rule about the three that ship, not about descriptions.
 	made := c.must(c.api(http.MethodPost, "/roles", map[string]any{
 		"name":        "reviewer",
-		"description": "Reads what others booked",
-		"permissions": []string{"timesheets:read:own"},
+		"description": "Reads the tickets",
+		"permissions": []string{"tickets:read"},
 	}), http.StatusCreated)
 
 	var own struct {
@@ -580,7 +579,7 @@ func TestAnAdministratorResetsAForgottenPassword(t *testing.T) {
 
 	app := start(t)
 	admin := app.signInAsAdmin("a-much-better-password")
-	worker := app.signInAsUser(admin, "Wera", "wera@example.com")
+	worker := app.signInAsAgent(admin, "Wera", "wera@example.com")
 
 	var me struct {
 		User userResponse `json:"user"`
@@ -588,10 +587,9 @@ func TestAnAdministratorResetsAForgottenPassword(t *testing.T) {
 
 	worker.must(worker.api(http.MethodGet, "/me", nil), http.StatusOK).Data(t, &me)
 
-	// Something recorded, so a deletion would not have been an answer.
-	worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-03", "durationHours": 4,
-	}), http.StatusCreated, http.StatusOK)
+	// Something of its own, so a deletion would not have been an answer.
+	worker.must(worker.api(http.MethodPost, "/me/tokens", map[string]any{"name": "kept"}),
+		http.StatusCreated, http.StatusOK)
 
 	const chosen = "a-chosen-reset-password"
 
@@ -612,8 +610,8 @@ func TestAnAdministratorResetsAForgottenPassword(t *testing.T) {
 	returning := app.newClient()
 	returning.signIn("wera@example.com", chosen)
 
-	if got := returning.api(http.MethodGet, "/timesheets", nil).Status; got != http.StatusConflict {
-		t.Errorf("the reset account reads its entries with status %d; it must be made "+
+	if got := returning.api(http.MethodGet, fmt.Sprintf("/users/%d", me.User.ID), nil).Status; got != http.StatusConflict {
+		t.Errorf("the reset account reads its own account with status %d; it must be made "+
 			"to choose its own password first", got)
 	}
 
@@ -621,19 +619,19 @@ func TestAnAdministratorResetsAForgottenPassword(t *testing.T) {
 		"currentPassword": chosen, "newPassword": "wera-own-password-1",
 	}), http.StatusOK)
 
-	// And the hours are still there, which is the whole point of not deleting the
+	// And what it had is still there, which is the whole point of not deleting the
 	// account.
-	var entries struct {
+	var tokens struct {
 		Items []struct {
-			DurationHours float64 `json:"durationHours"`
+			Name string `json:"name"`
 		} `json:"items"`
 	}
 
-	returning.must(returning.api(http.MethodGet, "/timesheets", nil),
-		http.StatusOK).Data(t, &entries)
+	returning.must(returning.api(http.MethodGet, "/me/tokens", nil),
+		http.StatusOK).Data(t, &tokens)
 
-	if len(entries.Items) != 1 {
-		t.Errorf("the account came back with %d entries, want 1", len(entries.Items))
+	if len(tokens.Items) != 1 {
+		t.Errorf("the account came back with %d tokens, want 1", len(tokens.Items))
 	}
 }
 
@@ -660,7 +658,7 @@ func TestAPasswordResetIsRefusedWhereItWouldBeALie(t *testing.T) {
 	}
 
 	// Nobody who may not administer accounts.
-	worker := app.signInAsUser(admin, "Wera", "wera@example.com")
+	worker := app.signInAsAgent(admin, "Wera", "wera@example.com")
 
 	var hers struct {
 		User userResponse `json:"user"`

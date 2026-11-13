@@ -34,20 +34,17 @@ class InstallationTest {
 
     // A token the installation no longer knows - taken back, or run out - is told
     // apart from every other refusal, because the app answers it by disconnecting
-    // rather than by waiting to try again: whether it opens the web interface's
-    // session or asks about the reminders.
+    // rather than by waiting to try again.
     @Test
     fun aTokenTakenBackIsToldApartFromOtherRefusals() {
         answering(401) { address ->
             assertThrows(TokenRefused::class.java) { runBlocking { Installation(address, english).handOver("gts_gone") } }
-            assertThrows(TokenRefused::class.java) { runBlocking { Installation(address, english).reminders("gts_gone") } }
         }
 
         answering(500) { address ->
             val opening = assertThrows(Refused::class.java) { runBlocking { Installation(address, english).handOver("gts_kept") } }
-            val asking = assertThrows(Refused::class.java) { runBlocking { Installation(address, english).reminders("gts_kept") } }
 
-            assertFalse("a failing installation is taken for a token taken back", opening is TokenRefused || asking is TokenRefused)
+            assertFalse("a failing installation is taken for a token taken back", opening is TokenRefused)
         }
     }
 }

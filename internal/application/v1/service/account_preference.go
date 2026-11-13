@@ -61,27 +61,3 @@ func (s *SessionService) SetTimezone(ctx context.Context, userID uint, timezone 
 
 	return err
 }
-
-// SetHolidayPlace stores where this person keeps public holidays: a place,
-// empty to follow the installation, or model.NoHolidays for none.
-func (s *SessionService) SetHolidayPlace(ctx context.Context, userID uint, place string) error {
-	place = strings.TrimSpace(place)
-
-	if err := refuseHolidayChoice(place); err != nil {
-		return err
-	}
-
-	return s.users.SetPreference(ctx, userID, repository.PreferenceHolidayPlace, place)
-}
-
-// SetReminders keeps both of somebody's reminder choices together: whether the
-// last working day is mentioned when nothing is booked on it, and after how many
-// hours a running stopwatch is - zero for never, and at most a day, past which the
-// stopwatch already says it holds more than one entry can.
-func (s *SessionService) SetReminders(ctx context.Context, userID uint, unbookedDay bool, timerAlertHours int) error {
-	if timerAlertHours < 0 || timerAlertHours > model.MaxTimerAlertHours {
-		return apperror.InvalidFields("timerAlertHours")
-	}
-
-	return s.users.SetReminders(ctx, userID, !unbookedDay, &timerAlertHours)
-}

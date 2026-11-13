@@ -58,7 +58,7 @@ func TestEveryDictionaryIsWrittenTheOneWay(t *testing.T) {
 // lacks is a sentence that reader gets in English.
 func TestEveryDictionaryHasEveryKey(t *testing.T) {
 	german := i18n.Dictionary("de")
-	if len(german) < 1000 {
+	if len(german) < 800 {
 		t.Fatalf("the German dictionary has %d sentences; it is not being read", len(german))
 	}
 

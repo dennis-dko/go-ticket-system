@@ -20,14 +20,16 @@ func TestAFileChooserShowsWhereTheKeyboardIs(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	p.run("open the time entries", p.click(`.tab[data-view="timesheets"]`))
-	p.waitShown("#workbook-card")
+	const chooser = `#view-users .card:has(input[type="file"]) input[type="file"]`
+
+	p.run("open the people screen", p.click(`.tab[data-view="users"]`))
+	p.waitShown(`#view-users .card:has(input[type="file"])`)
 
 	// A key first, so the focus that follows counts as the keyboard's.
 	p.run("reach the file chooser from the keyboard", chromedp.KeyEvent(kb.Tab),
-		chromedp.Evaluate(`document.querySelector('#wb-file').focus()`, nil))
+		chromedp.Evaluate(`document.querySelector('`+chooser+`').focus()`, nil))
 
 	var state struct {
 		Keyboard bool   `json:"keyboard"`
@@ -35,7 +37,7 @@ func TestAFileChooserShowsWhereTheKeyboardIs(t *testing.T) {
 	}
 
 	p.evalJSON(`JSON.stringify((() => {
-		const input = document.querySelector('#wb-file');
+		const input = document.querySelector('`+chooser+`');
 		const drawn = getComputedStyle(input.closest('.file-pick'));
 
 		return { keyboard: input.matches(':focus-visible'), outline: drawn.outlineStyle + ' ' + drawn.outlineWidth };

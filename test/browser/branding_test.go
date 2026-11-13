@@ -188,7 +188,7 @@ func TestTheConfiguredTextsFollowTheReadersLanguage(t *testing.T) {
 
 	p.chooseLanguage("de")
 
-	p.waitForText(`.tab[data-view="timesheets"]`, "Zeiteinträge")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	// And the banner follows, without asking the server again or reloading.
 	p.waitForText("#instance-banner", "Betriebsausflug")
@@ -223,7 +223,7 @@ func TestALanguageWithNoTextsFallsBackRatherThanEmptying(t *testing.T) {
 
 	p.chooseLanguage("de")
 
-	p.waitForText(`.tab[data-view="timesheets"]`, "Zeiteinträge")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	if got := p.text("#instance-banner"); !strings.Contains(got, "One banner") {
 		t.Errorf("a German reader is shown %q where nothing German was written; "+

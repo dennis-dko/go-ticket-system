@@ -12,9 +12,9 @@ import (
 // The framework measures the machinery: a histogram per HTTP request, one per
 // SQL query, a gauge of goroutines. None of it says whether the application is
 // doing its job - a deployment can serve every request in milliseconds while
-// nobody has been able to book time since the directory changed.
+// nobody has been able to sign in since the directory changed.
 //
-// So these check the four this application records itself, on the endpoint an
+// So these check the three this application records itself, on the endpoint an
 // operator actually scrapes. Reading them back from there rather than asserting
 // on the call is the point: a metric that is recorded but never registered, or
 // registered under a name nothing exports, is indistinguishable from a working
@@ -67,31 +67,6 @@ func TestAMetricIsPublishedOnlyOnceItHasAValue(t *testing.T) {
 	}) {
 		t.Error("the counter is still absent after the event it counts")
 	}
-}
-
-// The one the installation exists to record.
-func TestBookingTimeIsCounted(t *testing.T) {
-	t.Parallel()
-
-	a, _, worker := startWithWorker(t)
-
-	worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-03", "durationHours": 6,
-	}), http.StatusCreated, http.StatusOK)
-
-	scraped := scrape(t, a)
-
-	// The histogram's sum carries the hours and its count carries the entries,
-	// so both questions - how much was recorded, and in how many pieces - are
-	// answered by the one metric.
-	if !declares(scraped, "gts_timesheet_hours_booked_sum") {
-		t.Fatalf("the hours histogram has no sum:\n%s", metricLines(scraped, "gts_timesheet"))
-	}
-
-	if !declares(scraped, "gts_timesheet_hours_booked_count") {
-		t.Errorf("the hours histogram has no count:\n%s", metricLines(scraped, "gts_timesheet"))
-	}
-
 }
 
 // Either somebody is working through a password list, or the directory has

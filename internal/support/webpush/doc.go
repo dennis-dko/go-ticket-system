@@ -6,8 +6,8 @@
 //
 // It is the standard library and nothing else. The protocol is small enough to
 // hold against the RFC's own worked example, which the tests do byte for byte,
-// and a dependency for it would be one more thing that sees every reminder.
+// and a dependency for it would be one more thing that sees every notification.
 //
-// What it does not decide is when to send, or to whom: that is the reminders',
-// and the installation's switch that allows it at all.
+// What it does not decide is when to send, or to whom: that is up to whatever has
+// news for an account, and to the installation's switch that allows it at all.
 package webpush

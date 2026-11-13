@@ -13,29 +13,28 @@ import (
 	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
-// A booking pressed twice is booked once.
+// A form pressed twice writes once.
 //
 // The form sends its write and resets itself when the answer comes, and nothing
 // stood between the two: a double click - or Enter pressed twice - sent the
-// second request before the first had been answered, and the same hours were
-// recorded twice, counted twice in the balance and shown as two rows the reader
-// had to notice and delete. Measured: two entries, created the same second.
-func TestABookingPressedTwiceIsBookedOnce(t *testing.T) {
+// second request before the first had been answered, and the same record was
+// written twice and shown as two rows the reader had to notice and delete.
+// Measured, with a booking: two entries, created the same second. A personal
+// token is the write here, because every account can make one.
+func TestATokenPressedTwiceIsMadeOnce(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
 	p.readyWorker()
 
-	p.run("open the entries view", p.click(`.tab[data-view="timesheets"]`),
-		chromedp.WaitVisible("#form-timesheet", chromedp.ByID))
+	p.showView("settings")
+	p.waitShown("#form-token")
 
-	p.run("fill in a booking",
-		chromedp.SendKeys(`#form-timesheet input[name="durationHours"]`, "1.5", chromedp.ByQuery),
-		chromedp.SendKeys(`#form-timesheet input[name="description"]`, "pressed twice",
-			chromedp.ByQuery))
+	p.run("fill in a token",
+		chromedp.SendKeys(`#form-token input[name="name"]`, "pressed twice", chromedp.ByQuery))
 
 	p.run("press it twice", chromedp.Evaluate(`(() => {
-		const button = document.querySelector('#form-timesheet button[type="submit"]');
+		const button = document.querySelector('#form-token button[type="submit"]');
 		button.click();
 		button.click();
 		return true;
@@ -47,8 +46,8 @@ func TestABookingPressedTwiceIsBookedOnce(t *testing.T) {
 	done := false
 
 	for deadline := time.Now().Add(waitPatience); !done && time.Now().Before(deadline); {
-		p.run("see whether the booking is answered", chromedp.Evaluate(`progress.inFlight === 0
-			&& document.querySelector('#form-timesheet input[name="durationHours"]').value === ''`, &done))
+		p.run("see whether the token is answered", chromedp.Evaluate(`progress.inFlight === 0
+			&& document.querySelector('#form-token input[name="name"]').value === ''`, &done))
 
 		if !done {
 			time.Sleep(50 * time.Millisecond)
@@ -56,35 +55,38 @@ func TestABookingPressedTwiceIsBookedOnce(t *testing.T) {
 	}
 
 	if !done {
-		t.Fatal("the booking was never answered")
+		t.Fatal("the token was never answered")
 	}
 
 	var count int
 
 	p.run("ask the server how many there are", chromedp.Evaluate(`(async () => {
-		const res = await fetch('/api/v1/timesheets', { credentials: 'same-origin' });
+		const res = await fetch('/api/v1/me/tokens', { credentials: 'same-origin' });
 		const body = await res.json();
-		return (body.data.items ?? []).filter((e) => e.description === 'pressed twice').length;
+		return (body.data.items ?? []).filter((e) => e.name === 'pressed twice').length;
 	})()`, &count, awaitPromise))
 
 	if count != 1 {
-		t.Errorf("one booking pressed twice was recorded %d times", count)
+		t.Errorf("one token pressed twice was made %d times", count)
 	}
 }
 
 // An import pressed twice imports once.
 //
-// The same hole as a booking, with every row of the file behind it: the import
-// asks fetch directly, with the file as its body, and a second press sent the
-// file again before the first had been answered.
+// The same hole as a form, with every row of the file behind it: the import asks
+// fetch directly, with the file as its body, and a second press sent the file
+// again before the first had been answered. A role import matches its rows by
+// name, so a second one would change nothing anybody could count in the roles -
+// which is why this counts what the administration log recorded instead: one
+// import is one entry there.
 func TestAnImportPressedTwiceImportsOnce(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	book, err := spreadsheet.Write([]spreadsheet.Row{
-		{Date: time.Now(), Hours: 2, Description: "imported once"},
+	book, err := spreadsheet.WriteRoles("", []string{"tickets:read"}, []spreadsheet.RoleRow{
+		{Name: "imported-once", Description: "imported once", Granted: []string{"tickets:read"}},
 	})
 	if err != nil {
 		t.Fatalf("building the workbook: %v", err)
@@ -95,18 +97,37 @@ func TestAnImportPressedTwiceImportsOnce(t *testing.T) {
 		t.Fatalf("writing the workbook: %v", err)
 	}
 
+	const card = `#view-roles .card:has(input[type="file"])`
+
+	p.showView("roles")
+	p.waitShown(card)
+
 	p.run("choose the file",
-		chromedp.Click(`.tab[data-view="timesheets"]`, chromedp.ByQuery),
-		chromedp.WaitVisible("#workbook-card", chromedp.ByID),
-		chromedp.SetUploadFiles("#wb-file", []string{path}, chromedp.ByQuery))
+		chromedp.SetUploadFiles(card+` input[type="file"]`, []string{path}, chromedp.ByQuery))
 
-	p.waitShown("#wb-preview")
+	p.waitShown(card + ` button[data-i18n="wb.preview"]`)
 
-	p.run("check it", p.click("#wb-preview"),
-		chromedp.WaitVisible("#wb-import", chromedp.ByID))
+	p.run("check it", p.click(card+` button[data-i18n="wb.preview"]`))
+	p.waitShown(card + ` button[data-i18n="wb.import"]`)
+
+	// Counted from here rather than from nothing, so that what the check left in
+	// the log is not taken for a second import.
+	imports := func() int {
+		var count int
+
+		p.run("ask the log how many imports there were", chromedp.Evaluate(`(async () => {
+			const res = await fetch('/api/v1/admin/changes', { credentials: 'same-origin' });
+			const body = await res.json();
+			return (body.data.entries ?? []).filter((e) => e.action === 'roles.imported').length;
+		})()`, &count, awaitPromise))
+
+		return count
+	}
+
+	before := imports()
 
 	p.run("import it twice", chromedp.Evaluate(`(() => {
-		const button = document.querySelector('#wb-import');
+		const button = document.querySelector('`+card+` button[data-i18n="wb.import"]');
 		button.click();
 		button.click();
 		return true;
@@ -117,7 +138,7 @@ func TestAnImportPressedTwiceImportsOnce(t *testing.T) {
 
 	for deadline := time.Now().Add(waitPatience); !done && time.Now().Before(deadline); {
 		p.run("see whether the import is answered", chromedp.Evaluate(
-			`progress.inFlight === 0 && document.querySelector('#wb-import').hidden`, &done))
+			`progress.inFlight === 0 && document.querySelector('`+card+` button[data-i18n="wb.import"]').hidden`, &done))
 
 		if !done {
 			time.Sleep(50 * time.Millisecond)
@@ -128,15 +149,7 @@ func TestAnImportPressedTwiceImportsOnce(t *testing.T) {
 		t.Fatal("the import was never answered")
 	}
 
-	var count int
-
-	p.run("ask the server how many there are", chromedp.Evaluate(`(async () => {
-		const res = await fetch('/api/v1/timesheets', { credentials: 'same-origin' });
-		const body = await res.json();
-		return (body.data.items ?? []).filter((e) => e.description === 'imported once').length;
-	})()`, &count, awaitPromise))
-
-	if count != 1 {
-		t.Errorf("one import pressed twice wrote its row %d times", count)
+	if made := imports() - before; made != 1 {
+		t.Errorf("one import pressed twice was made %d times", made)
 	}
 }

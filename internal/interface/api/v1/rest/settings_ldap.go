@@ -32,7 +32,7 @@ type LDAPRequest struct {
 
 	// IDAttribute is the identifier that survives a rename. Without it the
 	// synchronisation matches on the mail address, and a renamed mailbox reads
-	// as a departure that takes the person's recorded hours with it.
+	// as a departure that deletes the account.
 	IDAttribute string `json:"idAttribute"`
 
 	DefaultRole string `json:"defaultRole"`
@@ -73,10 +73,6 @@ func (h *SettingsHandler) SaveLDAP(c *gofr.Context) (any, error) {
 
 	config, err := h.bindLDAP(c)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := h.requireAdminForSchedule(c, config); err != nil {
 		return nil, err
 	}
 
@@ -162,43 +158,6 @@ func (h *SettingsHandler) bindLDAP(c *gofr.Context) (model.LDAPConfig, error) {
 	}
 
 	return config, nil
-}
-
-// requireAdminForSchedule keeps the automatic directory run with the account that
-// may perform one by hand.
-//
-// Running the synchronisation is the built-in administrator's alone, because it
-// deletes the accounts the directory no longer holds and everything they
-// recorded. Scheduling it is the same act performed later and unattended, and it
-// was open to anybody holding settings:manage - so the safety the button was
-// given could be walked around by typing five numbers into the field beside it.
-//
-// Only a change is refused. The schedule travels with the rest of the directory
-// settings, so somebody editing the connection sends the stored value back
-// unchanged, and refusing that would refuse them the connection form as well.
-func (h *SettingsHandler) requireAdminForSchedule(c *gofr.Context, wanted model.LDAPConfig) error {
-	principal, err := h.authz.Principal(c)
-	if err != nil {
-		return err
-	}
-
-	if h.authz.AdministersOnly(principal) {
-		return nil
-	}
-
-	stored, err := h.settings.LDAP(c)
-	if err != nil {
-		return toHTTPError(err)
-	}
-
-	if wanted.SyncSchedule == stored.SyncSchedule {
-		return nil
-	}
-
-	return forbiddenError{
-		msg: "only an administrator of this installation may schedule the directory " +
-			"synchronisation",
-	}.WithCode("onlyBuiltInAdminSchedules")
 }
 
 func newLDAPResponse(c model.LDAPConfig) LDAPResponse {

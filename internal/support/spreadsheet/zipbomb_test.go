@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 	"testing"
-	"time"
 )
 
 // An upload's size says nothing about what it unpacks to.
@@ -22,8 +21,9 @@ import (
 // held in memory, so the cost lands on the disk - and this is run on machines
 // whose disk is an SD card.
 //
-// The right to do it is the ordinary one: importing time entries needs
-// timesheets:write:own, which every account has.
+// The right to do it is an administrator's - importing accounts needs
+// users:write - which narrows who can send such a file without making it any
+// more trustworthy: a workbook is still something somebody was handed.
 //
 // The bomb is streamed into the zip writer rather than built in memory, so the
 // case that proves a 128 MB expansion is refused does not itself allocate 128 MB.
@@ -37,7 +37,7 @@ func TestAWorkbookThatUnpacksTooLargeIsRefused(t *testing.T) {
 			"size alone; this case has to get past that to mean anything", len(bomb))
 	}
 
-	_, _, err := Read(bytes.NewReader(bomb))
+	_, _, err := ReadUsers(bytes.NewReader(bomb))
 	if err == nil {
 		t.Fatal("a workbook that unpacks past the limit was accepted")
 	}
@@ -57,17 +57,14 @@ func TestAWorkbookThatUnpacksTooLargeIsRefused(t *testing.T) {
 // And an ordinary workbook still reads, so the bound is not simply refusing
 // everything.
 func TestAnOrdinaryWorkbookIsStillReadAfterTheBound(t *testing.T) {
-	book, err := Write([]Row{{
-		Date:        time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC),
-		User:        "Nils",
-		Hours:       2,
-		Description: "ordinary",
+	book, err := WriteUsers("", []UserRow{{
+		Name: "Nils", Email: "nils@example.test", Role: "agent",
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rows, problems, err := Read(bytes.NewReader(book))
+	rows, problems, err := ReadUsers(bytes.NewReader(book))
 	if err != nil {
 		t.Fatalf("an ordinary workbook was refused: %v", err)
 	}
@@ -85,8 +82,8 @@ func TestAnOrdinaryWorkbookIsStillReadAfterTheBound(t *testing.T) {
 func oversizedWorkbook(t *testing.T, unpacked int) []byte {
 	t.Helper()
 
-	genuine, err := Write([]Row{{
-		Date: time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC), Hours: 1,
+	genuine, err := WriteUsers("", []UserRow{{
+		Name: "Nils", Email: "nils@example.test", Role: "agent",
 	}})
 	if err != nil {
 		t.Fatal(err)

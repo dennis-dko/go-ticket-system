@@ -46,7 +46,7 @@ func TestAnAdoptedAccountIsTheDirectorysFromThenOn(t *testing.T) {
 	f := newFixture(t)
 
 	created, err := f.users.CreateUser(ctx, command.CreateUserCommand{
-		Name: "Worker", Email: "worker@example.com", Role: model.RoleUser,
+		Name: "Worker", Email: "worker@example.com", Role: model.RoleAgent,
 	})
 	if err != nil {
 		t.Fatalf("create the account: %v", err)
@@ -56,7 +56,7 @@ func TestAnAdoptedAccountIsTheDirectorysFromThenOn(t *testing.T) {
 		WithExternalAuth(&passwordDirectory{
 			user:     &service.ExternalUser{ID: "uuid-worker", Email: "worker@example.com"},
 			password: "the-directory-password",
-		}, model.RoleUser)
+		}, model.RoleAgent)
 
 	if _, err := sessions.Login(ctx, "worker@example.com", "the-directory-password", ""); err != nil {
 		t.Fatalf("the directory's own password was refused: %v", err)

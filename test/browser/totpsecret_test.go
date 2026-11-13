@@ -23,10 +23,9 @@ import (
 //
 // Signing out is the strongest form of leaving the screen, and it did not call
 // it. handBackTheScreen is the function that enumerates what must not be waiting
-// for whoever signs in next - the drafts, the forms, the loose fields, the
-// caches, the tables, the lists, the appearance, the language, the banners, the
-// walk through, the overlays, the stopwatch, the tally - and a shared secret is a
-// better reason than any of them.
+// for whoever signs in next - the drafts, the forms, the caches, the tables, the
+// lists, the appearance, the language, the banners, the walk through, the
+// overlays - and a shared secret is a better reason than any of them.
 //
 // The sign-out is also the only thing that clears it then: loadMe leaves an
 // enrolment under way alone, because a reload of its own screen must not close

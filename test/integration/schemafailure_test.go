@@ -44,10 +44,11 @@ func TestAMigrationThatFailsSaysWhyBeforeTheProcessEnds(t *testing.T) {
 	code, log := harness.StartExpectingExit(t, "DB_NAME="+shared)
 
 	if code == 0 {
-		t.Errorf("a start whose first migration failed exited 0")
+		t.Errorf("a start whose migration failed exited 0")
 	}
 
-	if !strings.Contains(log, "migration 20260730120000 could not be applied") {
+	// The migration that creates users, which meets the table already there.
+	if !strings.Contains(log, "migration 20261112010300 could not be applied") {
 		t.Errorf("the start ended without saying which migration could not be applied:\n%s",
 			truncate(log, 2000))
 	}

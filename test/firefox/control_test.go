@@ -119,10 +119,7 @@ func TestNoControlIsOnScreenAtNoSize(t *testing.T) {
 	b.goTo(app.BaseURL())
 	b.settle()
 
-	views := []string{
-		"timesheets", "calendar", "overtime", "projects",
-		"users", "roles", "report", "settings", "admin",
-	}
+	views := []string{"users", "roles", "settings", "admin"}
 
 	for _, view := range views {
 		b.eval(fmt.Sprintf(`(() => {
@@ -242,7 +239,7 @@ func createAccount(t *testing.T, b *browser, email string) {
 	t.Helper()
 
 	post(t, b, "/api/v1/users", fmt.Sprintf(
-		`{"name":"Sven","email":%q,"role":"user","password":"sven-password-1"}`, email))
+		`{"name":"Sven","email":%q,"role":"agent","password":"sven-password-1"}`, email))
 }
 
 // post sends one request from the page, so it carries the session and the token

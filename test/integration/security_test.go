@@ -23,8 +23,7 @@ func TestCSRFRejectsARequestFromAnotherSite(t *testing.T) {
 
 	// A real session and a real token - the only thing wrong is where the
 	// request claims to come from, which is exactly the attack.
-	req := rawRequest(t, http.MethodPost, a.BaseURL()+"/api/v1/projects",
-		`{"name":"Pwned","startDate":"2026-08-02"}`)
+	req := rawRequest(t, http.MethodPost, a.BaseURL()+"/api/v1/me/tokens", `{"name":"Pwned"}`)
 	req.Header.Set("Origin", "http://evil.example.net")
 	req.Header.Set("X-CSRF-Token", worker.csrfToken())
 
@@ -39,8 +38,7 @@ func TestCSRFRejectsAMissingToken(t *testing.T) {
 
 	a, _, worker := startWithWorker(t)
 
-	req := rawRequest(t, http.MethodPost, a.BaseURL()+"/api/v1/projects",
-		`{"name":"No token","startDate":"2026-08-02"}`)
+	req := rawRequest(t, http.MethodPost, a.BaseURL()+"/api/v1/me/tokens", `{"name":"No token"}`)
 	req.Header.Set("Origin", a.BaseURL())
 
 	if resp := send(t, worker, req); resp.Status != http.StatusForbidden {
@@ -75,7 +73,7 @@ func TestReadsNeedNoToken(t *testing.T) {
 
 	a, _, worker := startWithWorker(t)
 
-	req := rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/timesheets", "")
+	req := rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/me/tokens", "")
 
 	if resp := send(t, worker, req); resp.Status != http.StatusOK {
 		t.Errorf("a read must not require a CSRF token, got %d", resp.Status)
@@ -140,166 +138,13 @@ func TestAPIResponsesAreNotCached(t *testing.T) {
 
 	defer func() { _ = resp.Body.Close() }()
 
-	// These carry working time and personal data; a shared cache must not keep
-	// them.
+	// These carry tickets and personal data; a shared cache must not keep them.
 	if got := resp.Header.Get("Cache-Control"); !strings.Contains(got, "no-store") {
 		t.Errorf("expected no-store on an API response, got %q", got)
 	}
 }
 
 // -------------------------------------------------------------------- RBAC
-
-func TestAUserSeesOnlyTheirOwnEntries(t *testing.T) {
-	t.Parallel()
-
-	a, admin, colleague := startWithWorker(t)
-
-	// Somebody else's hours have to be recorded for "only their own" to mean
-	// anything, and the administrator can no longer record them: it administers the
-	// accounts and holds nothing about time. So a colleague books them, and the
-	// administrator only opens the second account.
-	var theirs timesheetResponse
-	colleague.must(colleague.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-02", "durationHours": 4, "description": "A colleague's work",
-	}), http.StatusCreated, http.StatusOK).Data(t, &theirs)
-
-	user := a.signInAsUser(admin, "Erika", "erika@example.com")
-
-	// Who the session belongs to, asked of the server rather than taken from the
-	// entry below - otherwise the check further down compares an answer with itself.
-	var me struct {
-		User userResponse `json:"user"`
-	}
-
-	user.must(user.api(http.MethodGet, "/me", nil), http.StatusOK).Data(t, &me)
-
-	user.must(user.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-02", "durationHours": 3, "description": "My work",
-	}), http.StatusCreated, http.StatusOK)
-
-	var list listOf[timesheetResponse]
-	user.must(user.api(http.MethodGet, "/timesheets", nil), http.StatusOK).Data(t, &list)
-
-	if len(list.Items) != 1 {
-		t.Fatalf("a user should see only their own entry, got %d", len(list.Items))
-	}
-
-	if list.Items[0].UserID != me.User.ID {
-		t.Errorf("the visible entry belongs to %d, not to them (%d)",
-			list.Items[0].UserID, me.User.ID)
-	}
-
-	// Asking for somebody else's is refused outright rather than filtered down
-	// to nothing. The stricter answer is the better one: an empty list would be
-	// indistinguishable from "that person has booked nothing", and would invite
-	// building a client that quietly relies on the filter being honoured. The id
-	// named is the colleague who really does have an entry, so a filter that was
-	// merely honoured instead of refused would be visible as the wrong answer.
-	refused := user.api(http.MethodGet, path("/timesheets?userId=", theirs.UserID), nil)
-	if refused.Status != http.StatusForbidden {
-		t.Errorf("a filter naming someone else must be refused, got %d", refused.Status)
-	}
-}
-
-// Reading somebody else's entry by its id must not be distinguishable from
-// reading one that was never there.
-//
-// This answered 403 for a colleague's entry and 404 for an id nobody holds,
-// which is a way to ask the server which ids are real: walk the numbers and the
-// status tells you where the entries are, how many there are and roughly when
-// they were made, without ever being allowed to read one.
-//
-// The application already takes the other reading everywhere it matters - a
-// private project answers not-found for exactly this reason - so this is the
-// same rule applied to the entries booked against them.
-func TestAnotherPersonsEntryIsIndistinguishableFromNoEntry(t *testing.T) {
-	t.Parallel()
-
-	a, admin, colleague := startWithWorker(t)
-
-	var theirs timesheetResponse
-	colleague.must(colleague.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-08-03", "durationHours": 4, "description": "A colleague's work",
-	}), http.StatusCreated, http.StatusOK).Data(t, &theirs)
-
-	user := a.signInAsUser(admin, "Rolf", "rolf@example.com")
-
-	theirEntry := user.api(http.MethodGet, path("/timesheets/", theirs.ID), nil)
-
-	// An id far past anything this test created, so the two answers being equal
-	// is the point rather than a coincidence of ordering.
-	noEntry := user.api(http.MethodGet, path("/timesheets/", theirs.ID+9000), nil)
-
-	if theirEntry.Status != noEntry.Status {
-		t.Errorf("an entry that exists answers %d and one that does not answers %d, "+
-			"which tells the caller which ids are real",
-			theirEntry.Status, noEntry.Status)
-	}
-
-	if theirEntry.Status != http.StatusNotFound {
-		t.Errorf("somebody else's entry should read as not being there, got %d", theirEntry.Status)
-	}
-}
-
-// And changing, deleting or transferring it answers the same way.
-//
-// Reading was made indistinguishable first, and the other three methods on the
-// same id went on refusing with onlyOwnEntriesWrite - so the walk above drew
-// the same map with PUT, DELETE or a transfer instead, one refused request at a
-// time, and changed nothing on the way.
-func TestAnotherPersonsEntryAnswersEveryMethodAsNotThere(t *testing.T) {
-	t.Parallel()
-
-	a, admin, wera := startWithWorker(t)
-	otto := a.signInAsUser(admin, "Otto", "otto@example.com")
-
-	var hers timesheetResponse
-	wera.must(wera.api(http.MethodPost, "/timesheets", map[string]any{
-		"date": "2026-07-03", "durationHours": 2,
-	}), http.StatusCreated, http.StatusOK).Data(t, &hers)
-
-	// A project of Otto's own, so a transfer gets past the checks on its body and
-	// reaches the entry - with no project named it stops at the body, for either id.
-	var his projectResponse
-	otto.must(otto.api(http.MethodPost, "/projects", map[string]any{
-		"name": "Otto's work", "startDate": "2026-07-01",
-	}), http.StatusCreated, http.StatusOK).Data(t, &his)
-
-	for _, probe := range []struct {
-		method, suffix string
-		body           map[string]any
-	}{
-		{http.MethodPut, "", map[string]any{"durationHours": 3}},
-		{http.MethodDelete, "", nil},
-		{http.MethodPost, "/transfer", map[string]any{"projectId": his.ID}},
-	} {
-		foreign := otto.api(probe.method, path("/timesheets/", hers.ID)+probe.suffix, probe.body)
-		absent := otto.api(probe.method, path("/timesheets/", hers.ID+9000)+probe.suffix, probe.body)
-
-		if foreign.Status != absent.Status {
-			t.Errorf("%s%s on somebody else's entry answers %d, and on one nobody holds %d - "+
-				"the difference says the first one exists",
-				probe.method, probe.suffix, foreign.Status, absent.Status)
-
-			continue
-		}
-
-		if got, want := errorCode(t, foreign), errorCode(t, absent); got != want {
-			t.Errorf("%s%s on somebody else's entry is coded %q, and on one nobody holds %q",
-				probe.method, probe.suffix, got, want)
-		}
-	}
-
-	// And nothing was changed or removed on the way.
-	var still timesheetResponse
-	wera.must(wera.api(http.MethodGet, path("/timesheets/", hers.ID), nil),
-		http.StatusOK).Data(t, &still)
-
-	if still.DurationHours != 2 || still.ProjectID != nil {
-		t.Errorf("the entry now holds %v hours on project %v, want 2 hours on none",
-			still.DurationHours, still.ProjectID)
-	}
-}
 
 func TestAUserCannotAdministerUsersOrRoles(t *testing.T) {
 	t.Parallel()
@@ -309,7 +154,7 @@ func TestAUserCannotAdministerUsersOrRoles(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Erika", "email": "erika@example.com",
-		"role": "user", "password": "erika-password-1",
+		"role": "agent", "password": "erika-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	user := a.newClient()
@@ -381,7 +226,7 @@ func TestAPITokenWorksAndCarriesTheOwnersRole(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Erika", "email": "erika@example.com",
-		"role": "user", "password": "erika-password-1",
+		"role": "agent", "password": "erika-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	user := a.newClient()
@@ -403,7 +248,7 @@ func TestAPITokenWorksAndCarriesTheOwnersRole(t *testing.T) {
 
 	// A token authenticates without a cookie and without a CSRF token: a
 	// browser never sends that header by itself, so there is nothing to forge.
-	req := rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/timesheets", "")
+	req := rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/me/tokens", "")
 	req.Header.Set("Authorization", "Bearer "+created.Secret)
 
 	if resp := sendPlain(t, req); resp.Status != http.StatusOK {
@@ -423,7 +268,7 @@ func TestAPITokenWorksAndCarriesTheOwnersRole(t *testing.T) {
 	user.must(user.api(http.MethodDelete, path("/me/tokens/", created.ID), nil),
 		http.StatusOK, http.StatusNoContent)
 
-	req = rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/timesheets", "")
+	req = rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/me/tokens", "")
 	req.Header.Set("Authorization", "Bearer "+created.Secret)
 
 	if resp := sendPlain(t, req); resp.Status == http.StatusOK {

@@ -119,7 +119,7 @@ func TestTelemetryNeedsTheRightToManageSettings(t *testing.T) {
 		{"name": "Second admin", "email": "admin2@example.com",
 			"role": "admin", "password": "admin2-password-1"},
 		{"name": "Worker", "email": "worker@example.com",
-			"role": "user", "password": "worker-password-1"},
+			"role": "agent", "password": "worker-password-1"},
 	} {
 		admin.must(admin.api(http.MethodPost, "/users", account),
 			http.StatusCreated, http.StatusOK)
@@ -523,33 +523,32 @@ func TestTheUpdateCheckAnswersAndIsGuarded(t *testing.T) {
 			"before any release has been looked at")
 	}
 
-	// Everybody who may configure this installation may also update it, including
-	// somebody who administers and books their own time.
+	// Everybody who may configure this installation may also update it, not only
+	// the built-in account.
 	//
-	// It was narrower once - the built-in administrator, or an account that
-	// administers and records nothing - on the argument that replacing the bytes
-	// that will be executed is a different kind of decision from changing a
-	// setting. What settled it the other way: the screen is reached by holding
-	// settings:manage, everything else on it belongs to whoever got there, and a
-	// card that appears for some of those people and not others is a rule nobody
-	// can hold in their head. Anyone who could reach it could tick the narrower
-	// right onto a role for themselves in any case.
-	both := a.signInAsWorkingAdmin(admin, "Bothe", "bothe@example.com")
+	// It was narrower once, on the argument that replacing the bytes that will be
+	// executed is a different kind of decision from changing a setting. What settled
+	// it the other way: the screen is reached by holding settings:manage, everything
+	// else on it belongs to whoever got there, and a card that appears for some of
+	// those people and not others is a rule nobody can hold in their head. Anyone
+	// who could reach it could tick the narrower right onto a role for themselves in
+	// any case.
+	granted := a.signInAsGrantedAdministrator(admin, "Gerd", "gerd@example.com")
 
-	if got := both.api(http.MethodGet, "/settings/update", nil).Status; got != http.StatusOK {
-		t.Errorf("somebody who administers and also books time cannot see the "+
-			"version: %d, want %d", got, http.StatusOK)
+	if got := granted.api(http.MethodGet, "/settings/update", nil).Status; got != http.StatusOK {
+		t.Errorf("somebody given the administration cannot see the version: %d, want %d",
+			got, http.StatusOK)
 	}
 
 	// Refused for want of anything to install rather than for who is asking:
 	// this feed publishes no binary for this platform.
-	if got := both.api(http.MethodPost, "/settings/update", nil).Status; got == http.StatusForbidden {
+	if got := granted.api(http.MethodPost, "/settings/update", nil).Status; got == http.StatusForbidden {
 		t.Error("the same account is refused the update it can see")
 	}
 
 	// Somebody who only works here is refused, which is the boundary that has
 	// not moved.
-	worker := a.signInAsUser(admin, "Wera", "wera@example.com")
+	worker := a.signInAsAgent(admin, "Wera", "wera@example.com")
 
 	if got := worker.api(http.MethodGet, "/settings/update", nil).Status; got != http.StatusForbidden {
 		t.Errorf("an ordinary account reached the update check: %d, want %d",
@@ -703,7 +702,7 @@ func TestAManualCheckNeedsToBeAnAdministrator(t *testing.T) {
 	t.Parallel()
 
 	a, admin, _ := startWithWorker(t)
-	worker := a.signInAsUser(admin, "Nina", "nina@example.com")
+	worker := a.signInAsAgent(admin, "Nina", "nina@example.com")
 
 	if got := worker.api(http.MethodPost, "/settings/update/check", nil).Status; got != http.StatusForbidden {
 		t.Errorf("somebody who books time may ask the release feed: got %d", got)

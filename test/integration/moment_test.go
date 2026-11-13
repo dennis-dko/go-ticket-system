@@ -16,10 +16,9 @@ import (
 // in the morning and one used at three in the afternoon read identically, and a
 // token used twice today read as used once.
 //
-// The same wire type is right for the day a booking belongs to - "which day did
-// you work" has no time of day in it - which is exactly why this went unnoticed:
-// the field was correct for the thing it was written for and wrong for the thing
-// it was reused for.
+// The same wire type is right for a calendar day - "which day" has no time of day
+// in it - which is exactly why this went unnoticed: the field was correct for the
+// thing it was written for and wrong for the thing it was reused for.
 //
 // Written as an assertion about the format rather than about a value, because a
 // value cannot show what is missing: 2026-08-31 is a perfectly good date, and the
@@ -60,7 +59,7 @@ func TestATokenSaysWhenItWasMadeAndWhenItWasLastUsed(t *testing.T) {
 
 	a := start(t)
 	admin := a.signInAsAdmin("a-much-better-password")
-	anna := a.signInAsUser(admin, "Anna", "anna@example.com")
+	anna := a.signInAsAgent(admin, "Anna", "anna@example.com")
 
 	var created tokenResponse
 
@@ -77,7 +76,7 @@ func TestATokenSaysWhenItWasMadeAndWhenItWasLastUsed(t *testing.T) {
 	carriesATimeOfDay(t, "the token's expiresAt", *created.ExpiresAt)
 
 	// Used once, so there is a last-used moment to report.
-	req := rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/timesheets", "")
+	req := rawRequest(t, http.MethodGet, a.BaseURL()+"/api/v1/me/tokens", "")
 	req.Header.Set("Authorization", "Bearer "+created.Secret)
 
 	if resp := sendPlain(t, req); resp.Status != http.StatusOK {

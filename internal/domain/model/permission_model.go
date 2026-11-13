@@ -14,102 +14,65 @@ const (
 	PermRoleWrite = "roles:write"
 
 	// PermSettingsManage opens the installation itself: the database connection,
-	// the directory bind, appearance, maintenance mode, telemetry, the process log
-	// and the restart.
+	// the directory bind, the mailboxes tickets arrive through, appearance,
+	// maintenance mode, telemetry, the process log and the restart.
 	//
-	// This was deliberately not a permission for a long time, and the argument
-	// against it is still true - see Authorizer.RequireInstallationAdmin, which
-	// records what granting it costs. It exists because somebody who administers
-	// an installation has to be able to administer it without signing in as the
-	// built-in account, and holding the accounts but not the configuration is half
-	// a job.
+	// Granting it costs what Authorizer.RequireInstallationAdmin records: whoever
+	// holds roles:write can tick it on a role and assign that role, so the two are
+	// the installation between them. It exists because somebody who administers an
+	// installation has to be able to do so without signing in as the built-in
+	// account, which is the one account whose actions cannot be attributed to a
+	// person.
 	PermSettingsManage = "settings:manage"
 
-	PermProjectRead    = "projects:read"
-	PermProjectWrite   = "projects:write"
-	PermProjectDelete  = "projects:delete"
-	PermProjectArchive = "projects:archive"
-
-	// There is no projects:write:own. It allowed creating and managing a private
-	// category, as opposed to projects:write for a shared project - two rights for two
-	// kinds of project.
+	// PermQueueWrite sets up how tickets are sorted and answered: the queues and
+	// which role reaches each, the ticket types, the service levels and the answer
+	// templates.
 	//
-	// There is one kind now: every project belongs to one person, so every project is
-	// what the "own" right used to be about. Keeping both would have meant one of them
-	// granting nothing, and which one would have depended on where you looked.
+	// Whoever holds it reaches every queue. A separate lock on the queues
+	// themselves would be decoration: the holder can grant their own role access to
+	// any of them in one request, so the rule says what is true rather than
+	// pretending otherwise.
+	PermQueueWrite = "queues:write"
 
-	// Everything about time is the person's own, so there is no "all" to contrast
-	// "own" with. The suffix stays on the names because the database and every
-	// installation's roles already spell them this way, and renaming a right to say
-	// the same thing is a migration that buys nothing.
-	PermTimesheetReadOwn  = "timesheets:read:own"
-	PermTimesheetWriteOwn = "timesheets:write:own"
-	PermTimesheetTransfer = "timesheets:transfer"
-	PermReportReadOwn     = "reports:read:own"
-	PermSettingsWriteOwn  = "settings:write:own"
-
-	// The three rights of a manager, and the one way across accounts there is.
+	// The four rights on tickets. Each reaches only the queues the holder's role
+	// was given - reading where the role may read a queue, the other three where it
+	// may work in it - and a ticket in a queue the role does not reach is not found
+	// rather than refused; see service.TicketAccess.
 	//
-	// Each reaches only the accounts an administrator assigned to the holder, and
-	// only while the installation's manager switch is on - which it is not until
-	// somebody turns it on under Settings. Reading somebody's time is the entries,
-	// the balance and the evaluation; it is never their working times or why they
-	// were away, which are their own record and, for a day off sick, a health
-	// datum. Writing is booking and correcting in their name, which leaves the
-	// manager's name on the entry and in its history. Projects are creating,
-	// changing and archiving the projects of the people assigned.
-	PermTimesheetReadTeam  = "timesheets:read:team"
-	PermTimesheetWriteTeam = "timesheets:write:team"
-	PermProjectWriteTeam   = "projects:write:team"
+	// Creating is separate from working because the two are different jobs in a
+	// service desk: the person at the telephone opens tickets all day and may not
+	// be the one who answers them. Deleting is separate because it is the one thing
+	// done to a ticket that cannot be taken back - a ticket that is finished is
+	// closed, and deleting is for what should never have been one.
+	PermTicketRead   = "tickets:read"
+	PermTicketCreate = "tickets:create"
+	PermTicketWrite  = "tickets:write"
+	PermTicketDelete = "tickets:delete"
+
+	// PermCustomerRead and PermCustomerWrite are the organisations and the contacts
+	// tickets come from. They are not narrowed by queue: a customer is the same
+	// customer whichever queue their ticket landed in, and an agent who could not
+	// look one up could not open a ticket for them.
+	PermCustomerRead  = "customers:read"
+	PermCustomerWrite = "customers:write"
+
+	// PermFAQRead and PermFAQWrite are the knowledge base as an agent has it:
+	// reading includes the articles marked internal, and writing decides who may
+	// read each. A customer reads the published ones with PermPortalUse instead.
+	PermFAQRead  = "faq:read"
+	PermFAQWrite = "faq:write"
+
+	// PermReportRead is the figures over tickets, narrowed to the queues the role
+	// may read like the tickets they count.
+	PermReportRead = "reports:read"
+
+	// PermPortalUse is the customer's side: opening tickets, reading and answering
+	// their own, and the published knowledge base. It belongs to an account linked
+	// to a contact, and reaches that contact's tickets and nobody else's - an
+	// account holding it without such a link reaches none at all.
+	PermPortalUse = "portal:use"
 )
-
-// TeamPermissions are the rights that reach other people's accounts.
-func TeamPermissions() []string {
-	return []string{PermTimesheetReadTeam, PermTimesheetWriteTeam, PermProjectWriteTeam}
-}
-
-// There is no settings:write:other. A daily target and a daily ceiling are time
-// figures, and everything to do with time is the person's own.
-//
-// It existed so the administrator could set them for somebody else, and the reason
-// that does not work is in this same file: the administrator cannot read that
-// person's entries, their balance or their figures. Setting a number whose effect is
-// invisible to you is not administration, it is guessing - and the number's only
-// consumer is the overtime balance, which nobody but its owner may see anyway.
-//
-// It was also not the lock it looked like. The same two fields were writable through
-// PUT /users/{id} and through the spreadsheet import, both of which check only
-// users:write, so the right guarded one of three doors.
-//
-// What stays with the administrator is the installation's daily ceiling under
-// Settings. A new account's target is the built-in default until its owner decides
-// otherwise; there is no administered default for it.
-
-// There is no timesheets:read:all, and no timesheets:write:all.
-//
-// They were the last of the manager: one right that opened everybody's entries,
-// balances, totals and exports, and one that let somebody book or change time in
-// another person's name. Both survived the removal of the role that used them,
-// because a right outlives whoever held it, and no default role held either.
-//
-// A right nobody holds is not the same as a right nobody can hold. These two stayed
-// tickable in the role editor, and ticking one changed nothing anybody could see -
-// the screens that offered a "which person" choice were gone by then - while the API
-// answered every question about every colleague. A capability with no screen is a
-// capability nobody audits.
-//
-// What replaced them for two months was the arrangement itself: whose entry it is
-// decided who may read or change it. On 2026-10-21 the maintainer decided that an
-// installation may have managers after all, and the team rights above are the
-// answer to everything that went wrong with these two: they reach the accounts an
-// administrator assigned and no others, they grant nothing until the installation
-// switches managers on, they have screens - one choice of whose time is shown,
-// which every screen that can show somebody else's honours - and whatever a manager
-// changes carries their name where the person it belongs to can read it. Without
-// the switch the question "may this person see somebody else's time" still has one
-// answer, no. Somebody who should administer the installation as well as record
-// their own hours is given the combined role, which grants the accounts and the
-// configuration - never a colleague's time.
 
 // AllPermissions lists every permission the application enforces. The role
 // administration UI offers exactly these, so a typo cannot create a permission
@@ -119,65 +82,63 @@ func AllPermissions() []string {
 		PermUserRead, PermUserWrite, PermUserDelete,
 		PermRoleRead, PermRoleWrite,
 		PermSettingsManage,
-		PermProjectRead, PermProjectWrite, PermProjectDelete, PermProjectArchive,
-		PermTimesheetReadOwn, PermTimesheetWriteOwn,
-		PermTimesheetTransfer,
-		PermReportReadOwn,
-		PermSettingsWriteOwn,
-		PermTimesheetReadTeam, PermTimesheetWriteTeam, PermProjectWriteTeam,
+		PermQueueWrite,
+		PermTicketRead, PermTicketCreate, PermTicketWrite, PermTicketDelete,
+		PermCustomerRead, PermCustomerWrite,
+		PermFAQRead, PermFAQWrite,
+		PermReportRead,
+		PermPortalUse,
 	}
 }
 
-// SystemAdminPermissions is what the built-in administrator holds.
+// AdminPermissions is what the built-in administrator holds: everything an
+// account on the staff side can hold.
 //
-// Administration, and nothing else. It sets up the installation and it keeps the
-// accounts and their roles - that is the whole job, and it does not record time.
+// Administration and the work itself, on purpose. A ticket is the
+// organisation's record rather than one person's, so there is nothing in it the
+// account that runs the installation must be kept from - and whoever sets up
+// queues, mailboxes and templates has to be able to open a ticket to see that
+// what they set up works.
 //
-// It used to book and read its own hours "like anybody else who works here", and that
-// was the wrong shape. The account exists on every installation before anybody has
-// chosen anything: it is how you get in, not somebody's working day. Whoever does work
-// here has an account of their own, and if that person also administers, they are given
-// the role below rather than made to sign in twice.
-//
-// So no time, no projects, no figures, no working times. This is not a hint - the
-// rights are enforced per endpoint, so the administrator is refused these by the same
-// code that refuses anybody else.
-func SystemAdminPermissions() []string {
+// Not PermPortalUse. That is the customer's side, and it means something only
+// for an account linked to a contact.
+func AdminPermissions() []string {
 	return []string{
 		PermUserRead, PermUserWrite, PermUserDelete,
 		PermRoleRead, PermRoleWrite,
 		PermSettingsManage,
+		PermQueueWrite,
+		PermTicketRead, PermTicketCreate, PermTicketWrite, PermTicketDelete,
+		PermCustomerRead, PermCustomerWrite,
+		PermFAQRead, PermFAQWrite,
+		PermReportRead,
 	}
 }
 
-// UserAdminPermissions is what somebody who works here and also administers holds.
-//
-// The one arrangement that reaches across the two jobs, and it is granted rather than
-// assumed: the built-in administrator hands it out. It is a user's own rights plus the
-// administration, which means an ordinary account gaining a second job - not the
-// built-in account gaining a working day.
-//
-// Assembled from the two lists rather than written out, so a right added to either one
-// cannot be forgotten here.
-func UserAdminPermissions() []string {
-	return append(UserPermissions(), SystemAdminPermissions()...)
-}
-
-// UserPermissions is what an ordinary account holds: everything about its own work and
-// nothing about anybody else's.
-func UserPermissions() []string {
+// AgentPermissions is what somebody who works on tickets holds: the tickets of
+// the queues their role reaches, the customers, the knowledge base and the
+// figures - and nothing that changes how the installation is set up.
+func AgentPermissions() []string {
 	return []string{
-		PermProjectRead, PermProjectWrite, PermProjectArchive, PermProjectDelete,
-		PermTimesheetReadOwn, PermTimesheetWriteOwn, PermTimesheetTransfer,
-		PermReportReadOwn, PermSettingsWriteOwn,
+		PermTicketRead, PermTicketCreate, PermTicketWrite,
+		PermCustomerRead, PermCustomerWrite,
+		PermFAQRead, PermFAQWrite,
+		PermReportRead,
 	}
 }
 
-// ManagerPermissions is what a manager holds: their own work, as anybody's, and the
-// three team rights - which reach the accounts assigned to them while the
-// installation's manager switch is on, and nothing otherwise.
-func ManagerPermissions() []string {
-	return append(UserPermissions(), TeamPermissions()...)
+// CustomerPermissions is what a customer's account holds: the portal, and
+// through it their own tickets.
+func CustomerPermissions() []string {
+	return []string{PermPortalUse}
+}
+
+// AdministeringPermissions are the rights that amount to the installation: the
+// two that can change what anybody may do, and the one that opens its
+// configuration. A role holding any of them is not handed to accounts nobody
+// chose one by one - the directory's default role, a customer's account.
+func AdministeringPermissions() []string {
+	return []string{PermSettingsManage, PermRoleWrite, PermUserWrite}
 }
 
 // IsPermission reports whether name is a permission this application enforces.
@@ -187,33 +148,23 @@ func IsPermission(name string) bool {
 
 // Default role names created on first start.
 //
-// The ordinary role was called employee, and its combined one employee-admin. The word
-// said more than this application knows: it holds accounts, and whether the person
-// behind one is employed here, contracted, a volunteer or the only person in the
-// company is not something it records or needs. What it does know is that they use it.
-//
-// These are identifiers, and the interface does not show them raw - each is translated
-// where it is displayed, so a German reader chooses "Benutzer" rather than a lowercase
-// English word. An installation that renamed a role sees whatever it typed, which is
-// the only sensible answer for words this application has never seen.
+// These are identifiers, and the interface does not show them raw - each is
+// translated where it is displayed, so a German reader chooses "Agent" rather
+// than a lowercase English word. An installation that renamed a role sees
+// whatever it typed, which is the only sensible answer for words this
+// application has never seen.
 const (
 	RoleAdmin = "admin"
-	RoleUser  = "user"
 
-	// RoleUserAdmin is somebody who works here and also administers.
-	//
-	// Seeded rather than left to be assembled by hand, because the alternative is an
-	// administrator building a role out of two lists of rights and getting one of them
-	// slightly wrong - which nobody notices until somebody is refused something, or
-	// allowed something.
-	RoleUserAdmin = "user-admin"
+	// RoleAgent is somebody who works on tickets. It is what an account is given
+	// when nobody says otherwise, and what the directory hands out by default.
+	RoleAgent = "agent"
 
-	// RoleManager is somebody who keeps their own time and looks after the time and
-	// projects of the accounts an administrator assigned to them. Shipped, so its
-	// rights are not assembled by hand, and undeletable like the other shipped roles -
-	// though it grants nothing beyond an ordinary account's until the installation
-	// switches managers on.
-	RoleManager = "manager"
+	// RoleCustomer is the role of a contact's own account, which reaches the
+	// customer portal and nothing on the staff side. Shipped, and undeletable like
+	// the other two, because giving a contact access to the portal has to have a
+	// role to give them.
+	RoleCustomer = "customer"
 )
 
 // DefaultRoles is the role set seeded on first start. Admin is marked as a
@@ -223,38 +174,19 @@ func DefaultRoles() []Role {
 	return []Role{
 		{
 			Name:        RoleAdmin,
-			Description: "Administers the installation, its users and their roles",
+			Description: "Administers the installation and may do everything in it",
 			IsSystem:    true,
-			Permissions: SystemAdminPermissions(),
+			Permissions: AdminPermissions(),
 		},
 		{
-			Name:        RoleUser,
-			Description: "Keeps their own time, projects and calendar",
-			// Everything about their own work, and nothing about anybody else's -
-			// there is no role that reads across accounts, because there is nothing
-			// to read across. Projects included: one belongs to this person, so
-			// creating, finishing, archiving and removing it is theirs to do.
-			Permissions: UserPermissions(),
+			Name:        RoleAgent,
+			Description: "Works on the tickets of the queues the role was given",
+			Permissions: AgentPermissions(),
 		},
 		{
-			Name: RoleUserAdmin,
-			Description: "Keeps their own time and projects, and administers the " +
-				"installation",
-			// The one role that spans both jobs, and the answer to "somebody here
-			// needs to administer as well". Given out by the built-in administrator,
-			// which is what makes it a decision rather than an accident.
-			//
-			// Not a system role: an installation that does not want it can remove it,
-			// and its rights are visible in the role editor like any other. What must
-			// not be removable is the built-in administrator's own role, and that one
-			// is marked above.
-			Permissions: UserAdminPermissions(),
-		},
-		{
-			Name: RoleManager,
-			Description: "Keeps their own time, and the time and projects of the accounts " +
-				"assigned to them",
-			Permissions: ManagerPermissions(),
+			Name:        RoleCustomer,
+			Description: "A customer: opens tickets in the portal and follows their own",
+			Permissions: CustomerPermissions(),
 		},
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
 )
 
-// PushSubscriptionRepository keeps the browsers people asked for the reminders
+// PushSubscriptionRepository keeps the browsers people asked for notifications
 // to be pushed to.
 type PushSubscriptionRepository interface {
 	// Save keeps a subscription in place of any with the same endpoint, whoever's
@@ -15,10 +15,6 @@ type PushSubscriptionRepository interface {
 
 	// ForUser returns somebody's subscriptions, one a browser.
 	ForUser(ctx context.Context, userID uint) ([]model.PushSubscription, error)
-
-	// Subscribed returns everybody with a subscription: whom the reminders are
-	// pushed to at all.
-	Subscribed(ctx context.Context) ([]uint, error)
 
 	// Delete forgets one of somebody's subscriptions by its endpoint, and reports
 	// whether there was one.

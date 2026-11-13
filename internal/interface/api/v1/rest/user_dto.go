@@ -2,7 +2,6 @@ package rest
 
 import (
 	"context"
-	"time"
 
 	"github.com/dennis-dko/go-ticket-system/internal/application/v1/common"
 	"github.com/dennis-dko/go-ticket-system/internal/domain/model"
@@ -19,14 +18,6 @@ type UserResponse struct {
 
 	IsSystem           bool `json:"isSystem"`
 	MustChangePassword bool `json:"mustChangePassword"`
-
-	// Configured values; 0 means "instance default".
-	DailyTargetHours float64 `json:"dailyTargetHours"`
-	MaxDailyHours    float64 `json:"maxDailyHours"`
-
-	// EveryDayCountsFrom is the day from which every working day counts towards
-	// the overtime balance, null while only the days booked on do.
-	EveryDayCountsFrom *Date `json:"everyDayCountsFrom"`
 
 	TOTPEnabled bool `json:"totpEnabled"`
 
@@ -60,8 +51,8 @@ type UserResponse struct {
 	TourSeen bool `json:"tourSeen"`
 
 	// EffectiveTimezone is what actually applies once the fallback has been
-	// worked out. Every date the client computes - which day "today" is, where
-	// a calendar month starts - has to use this, not the browser's own zone.
+	// worked out. Every date the client computes - which day "today" is, how a
+	// deadline is written - has to use this, not the browser's own zone.
 	EffectiveTimezone string `json:"effectiveTimezone"`
 
 	// InstanceTimezone is the zone this account would follow if it chose none.
@@ -85,9 +76,6 @@ type CreateUserRequest struct {
 	// Password may be omitted; the account then starts with the initial
 	// password and has to change it before it can be used.
 	Password string `json:"password"`
-
-	DailyTargetHours float64 `json:"dailyTargetHours"`
-	MaxDailyHours    float64 `json:"maxDailyHours"`
 }
 
 // UpdateUserRequest is the payload for a partial update: an omitted field is
@@ -96,9 +84,6 @@ type UpdateUserRequest struct {
 	Name  *string `json:"name"`
 	Email *string `json:"email"`
 	Role  *string `json:"role"`
-
-	DailyTargetHours *float64 `json:"dailyTargetHours"`
-	MaxDailyHours    *float64 `json:"maxDailyHours"`
 }
 
 // AssignRoleRequest moves a user to another role.
@@ -111,17 +96,6 @@ type AssignRoleRequest struct {
 // that nobody has one.
 type SetPasswordRequest struct {
 	Password string `json:"password"`
-}
-
-// WorkingTimesRequest sets a user's daily target and cap.
-type WorkingTimesRequest struct {
-	DailyTargetHours *float64 `json:"dailyTargetHours"`
-	MaxDailyHours    *float64 `json:"maxDailyHours"`
-
-	// EveryDayCountsFrom is the day from which every working day counts. Absent
-	// leaves it alone and present but empty takes it off again, which is how a
-	// date field that has been cleared arrives.
-	EveryDayCountsFrom *Date `json:"everyDayCountsFrom"`
 }
 
 // ChangePasswordRequest changes the caller's own password.
@@ -143,31 +117,6 @@ type MeResponse struct {
 	// Every response carries the current one in a header; this is the baseline to
 	// compare it against. See PermissionRevision.
 	PermissionsRevision string `json:"permissionsRevision"`
-
-	// Reminders are this account's own reminder choices. Here rather than on
-	// UserResponse, which also describes other people's accounts to an
-	// administrator: these say nothing to anybody but their owner.
-	Reminders RemindersResponse `json:"reminders"`
-
-	// ManagersEnabled says whether the installation has managers, so the role
-	// editor offers the team rights and the accounts table the assignment only
-	// where they would do something.
-	ManagersEnabled bool `json:"managersEnabled"`
-}
-
-// RemindersResponse is what somebody chose to be reminded of: whether the last
-// working day is mentioned when nothing is booked on it, and after how many hours
-// a running stopwatch is, with the default worked out and zero for never.
-type RemindersResponse struct {
-	UnbookedDay     bool `json:"unbookedDay"`
-	TimerAlertHours int  `json:"timerAlertHours"`
-}
-
-// RemindersRequest sets both reminder choices at once; the hours are an explicit
-// choice, from zero for never to a day.
-type RemindersRequest struct {
-	UnbookedDay     bool `json:"unbookedDay"`
-	TimerAlertHours int  `json:"timerAlertHours"`
 }
 
 func newUserResponse(r *common.UserResult, instanceTimezone string) UserResponse {
@@ -188,20 +137,7 @@ func newUserResponse(r *common.UserResult, instanceTimezone string) UserResponse
 		TourSeen:           r.TourSeen,
 		EffectiveTimezone:  model.EffectiveTimezoneName(r.Timezone, instanceTimezone),
 		InstanceTimezone:   model.EffectiveTimezoneName("", instanceTimezone),
-		DailyTargetHours:   r.DailyTargetHours,
-		MaxDailyHours:      r.MaxDailyHours,
-		EveryDayCountsFrom: optionalDate(r.EveryDayCountsFrom),
 	}
-}
-
-// optionalDate is a day that may be absent, as the wire carries one: null rather
-// than the zero date.
-func optionalDate(day *time.Time) *Date {
-	if day == nil {
-		return nil
-	}
-
-	return &Date{Time: *day}
 }
 
 // InstanceTimezoneFunc reports the instance-wide zone.
@@ -232,8 +168,6 @@ func newUserResponseFromModel(u *model.User, instanceTimezone string) UserRespon
 		Role:               u.RoleName,
 		IsSystem:           u.IsSystem,
 		MustChangePassword: u.MustChangePassword,
-		DailyTargetHours:   u.DailyTargetHours,
-		MaxDailyHours:      u.MaxDailyHours,
 		TOTPEnabled:        u.TOTPEnabled,
 		Language:           u.Language,
 		EffectiveLanguage:  u.EffectiveLanguage(),
@@ -243,7 +177,6 @@ func newUserResponseFromModel(u *model.User, instanceTimezone string) UserRespon
 		TourSeen:           u.TourSeen,
 		EffectiveTimezone:  model.EffectiveTimezoneName(u.Timezone, instanceTimezone),
 		InstanceTimezone:   model.EffectiveTimezoneName("", instanceTimezone),
-		EveryDayCountsFrom: optionalDate(u.EveryDayCountsFrom),
 	}
 }
 
@@ -292,38 +225,4 @@ func newRoleResponse(r *model.Role) RoleResponse {
 		IsDefault:   r.IsDefault(),
 		Permissions: permissions,
 	}
-}
-
-// OvertimeDayResponse is one day of an overtime balance.
-type OvertimeDayResponse struct {
-	Date    Date    `json:"date"`
-	Booked  float64 `json:"booked"`
-	Target  float64 `json:"target"`
-	Balance float64 `json:"balance"`
-
-	// Absence and Holiday say why the day asks less than its week plans, where
-	// something does, and HolidaySubstitute that the holiday fell on a weekend
-	// and is kept on this day instead.
-	Absence           string `json:"absence,omitempty"`
-	Holiday           string `json:"holiday,omitempty"`
-	HolidaySubstitute bool   `json:"holidaySubstitute,omitempty"`
-}
-
-// OvertimeResponse is a user's overtime balance over a period.
-type OvertimeResponse struct {
-	UserID   uint   `json:"userId"`
-	UserName string `json:"userName"`
-	From     Date   `json:"from"`
-	To       Date   `json:"to"`
-
-	DailyTarget float64               `json:"dailyTarget"`
-	Days        []OvertimeDayResponse `json:"days"`
-
-	// EveryDayCountsFrom is the day from which every working day counts, null
-	// while only the days booked on do.
-	EveryDayCountsFrom *Date `json:"everyDayCountsFrom"`
-
-	TotalBooked  float64 `json:"totalBooked"`
-	TotalTarget  float64 `json:"totalTarget"`
-	TotalBalance float64 `json:"totalBalance"`
 }

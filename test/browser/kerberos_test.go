@@ -78,7 +78,7 @@ func ticketsReady(t *testing.T) *page {
 					bindDn: 'cn=admin,dc=example,dc=com', bindPassword: 'gts-test-password',
 					baseDn: 'dc=example,dc=com', userFilter: '(|(uid=%%s)(mail=%%s))',
 					nameAttribute: 'cn', emailAttribute: 'mail', idAttribute: 'entryUUID',
-					defaultRole: 'user',
+					defaultRole: 'agent',
 				}),
 			});
 

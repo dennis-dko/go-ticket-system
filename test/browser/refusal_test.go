@@ -41,7 +41,7 @@ func TestAFailedConnectionSaysSoInGermanAndKeepsTheDetail(t *testing.T) {
 
 	p.chooseLanguage("de")
 
-	p.waitForText(`.tab[data-view="timesheets"]`, "Zeiteinträge")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	var protected bool
 

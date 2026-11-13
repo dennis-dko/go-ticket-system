@@ -114,7 +114,7 @@ func TestAnAnnouncementBecomesABannerNobodyCanMiss(t *testing.T) {
 	// account and only then redraws, and a case that announces before that
 	// finishes gets the old language and reads as a translation fault.
 	//
-	p.waitForText(`.tab[data-view="timesheets"]`, "Zeiteinträge")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	// The banner that was already up changed language with the page. It used to
 	// go blank instead, which is the worst of the three possible outcomes: this is
@@ -194,7 +194,7 @@ func TestAChangeOfRightsArrivesOnTheStreamAndStays(t *testing.T) {
 	// German, because whoever is being told their screen has stopped being true is
 	// owed that in their own language.
 	p.chooseLanguage("de")
-	p.waitForText(`.tab[data-view="timesheets"]`, "Zeiteinträge")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	if standing := p.text("#rights-banner"); !strings.Contains(standing, "Berechtigungen") {
 		t.Errorf("the standing notice reads %q after switching to German", standing)

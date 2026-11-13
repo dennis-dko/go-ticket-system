@@ -44,7 +44,7 @@ func TestConcurrentWritesAreServedRatherThanRefused(t *testing.T) {
 
 		admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 			"name": fmt.Sprintf("Writer %d", i), "email": email,
-			"role": "user", "password": "writer-password-1",
+			"role": "agent", "password": "writer-password-1",
 		}), http.StatusCreated, http.StatusOK)
 
 		c := a.newClient()
@@ -52,7 +52,9 @@ func TestConcurrentWritesAreServedRatherThanRefused(t *testing.T) {
 		clients = append(clients, c)
 	}
 
-	// All of them book at once, twice over, which is the shape that used to fail.
+	// All of them write at once, three times over, which is the shape that used to
+	// fail. A personal token is the write: a row of their own that every account may
+	// add.
 	const each = 3
 
 	var (
@@ -68,9 +70,8 @@ func TestConcurrentWritesAreServedRatherThanRefused(t *testing.T) {
 			go func(c *client, person, attempt int) {
 				defer wg.Done()
 
-				r := c.api(http.MethodPost, "/timesheets", map[string]any{
-					"date": "2026-08-03", "durationHours": 1,
-					"description": fmt.Sprintf("writer %d, booking %d", person, attempt),
+				r := c.api(http.MethodPost, "/me/tokens", map[string]any{
+					"name": fmt.Sprintf("writer %d, token %d", person, attempt),
 				})
 
 				if r.Status == http.StatusCreated || r.Status == http.StatusOK {
@@ -79,7 +80,7 @@ func TestConcurrentWritesAreServedRatherThanRefused(t *testing.T) {
 
 				mu.Lock()
 				refused = append(refused,
-					fmt.Sprintf("writer %d booking %d: %d %s", person, attempt, r.Status, r.Body))
+					fmt.Sprintf("writer %d token %d: %d %s", person, attempt, r.Status, r.Body))
 				mu.Unlock()
 			}(c, i, attempt)
 		}
@@ -88,24 +89,25 @@ func TestConcurrentWritesAreServedRatherThanRefused(t *testing.T) {
 	wg.Wait()
 
 	if len(refused) > 0 {
-		t.Errorf("%d of %d concurrent bookings were refused:\n%v\n\napplication log:\n%s",
+		t.Errorf("%d of %d concurrent writes were refused:\n%v\n\napplication log:\n%s",
 			len(refused), people*each, refused, a.log())
 	}
 
-	// And every one of them is really there: a booking that answered 201 and then
+	// And every one of them is really there: a write that answered 201 and then
 	// lost the row would be worse than a refusal.
 	//
 	// Asked of each person about their own, because that is all anybody can ask. It
 	// also checks the arithmetic per account rather than in one total, so three rows
 	// landing under the wrong writer would show up here instead of cancelling out.
 	for i, c := range clients {
-		var listed listOf[timesheetResponse]
+		var listed listOf[struct {
+			Name string `json:"name"`
+		}]
 
-		c.must(c.api(http.MethodGet, "/timesheets?from=2026-08-03&to=2026-08-03", nil),
-			http.StatusOK).Data(t, &listed)
+		c.must(c.api(http.MethodGet, "/me/tokens", nil), http.StatusOK).Data(t, &listed)
 
 		if len(listed.Items) != each {
-			t.Errorf("writer %d sees %d of its %d bookings", i, len(listed.Items), each)
+			t.Errorf("writer %d sees %d of its %d tokens", i, len(listed.Items), each)
 		}
 	}
 }
@@ -121,7 +123,7 @@ func TestAWriteRightAfterSigningInIsServed(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Tarek", "email": "tarek@example.com",
-		"role": "user", "password": "tarek-password-1",
+		"role": "agent", "password": "tarek-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	for attempt := 0; attempt < 5; attempt++ {
@@ -130,7 +132,7 @@ func TestAWriteRightAfterSigningInIsServed(t *testing.T) {
 
 		var wg sync.WaitGroup
 
-		var tourStatus, bookStatus int
+		var tourStatus, writeStatus int
 
 		wg.Add(2)
 
@@ -146,8 +148,8 @@ func TestAWriteRightAfterSigningInIsServed(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			bookStatus = c.api(http.MethodPost, "/timesheets", map[string]any{
-				"date": "2026-08-04", "durationHours": 1,
+			writeStatus = c.api(http.MethodPost, "/me/tokens", map[string]any{
+				"name": fmt.Sprintf("attempt %d", attempt),
 			}).Status
 		}()
 
@@ -157,9 +159,9 @@ func TestAWriteRightAfterSigningInIsServed(t *testing.T) {
 			t.Errorf("attempt %d: recording the tour answered %d", attempt, tourStatus)
 		}
 
-		if bookStatus != http.StatusCreated && bookStatus != http.StatusOK {
-			t.Errorf("attempt %d: the booking beside it answered %d\n\napplication log:\n%s",
-				attempt, bookStatus, a.log())
+		if writeStatus != http.StatusCreated && writeStatus != http.StatusOK {
+			t.Errorf("attempt %d: the write beside it answered %d\n\napplication log:\n%s",
+				attempt, writeStatus, a.log())
 		}
 	}
 }
@@ -183,7 +185,7 @@ func TestASettingWrittenInPassingDoesNotRevertAnother(t *testing.T) {
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
 		"name": "Yusuf", "email": "yusuf@example.com",
-		"role": "user", "password": "yusuf-password-1",
+		"role": "agent", "password": "yusuf-password-1",
 	}), http.StatusCreated, http.StatusOK)
 
 	// Repeated, because the order of two concurrent writes is not fixed and the
@@ -264,64 +266,5 @@ func TestASettingWrittenInPassingDoesNotRevertAnother(t *testing.T) {
 
 		c.must(c.api(http.MethodDelete, "/me/totp?code="+off, nil),
 			http.StatusOK, http.StatusNoContent)
-	}
-}
-
-// Starting one's own clock twice at once is served both times, and leaves one clock.
-//
-// A start replaces whatever was running, so two at once - a double press, or a
-// second device - both asked for something that can be done: one of them wins
-// and the other is replaced. The replacement was a delete followed by an insert,
-// which on PostgreSQL lets both deletes find nothing and both inserts reach the
-// primary key: measured, 65 of 80 such starts answered 500 with "duplicate key
-// value violates unique constraint running_timers_pkey". SQLite queues its
-// writers and MySQL's delete locks the row, so both of those served every one -
-// which is why this is only red on the one dialect.
-func TestStartingTheSameClockTwiceAtOnceIsServedBothTimes(t *testing.T) {
-	t.Parallel()
-
-	a, _, worker := startWithWorker(t)
-
-	const rounds, each = 4, 16
-
-	var (
-		mu      sync.Mutex
-		refused []string
-	)
-
-	for round := 0; round < rounds; round++ {
-		var wg sync.WaitGroup
-
-		for attempt := 0; attempt < each; attempt++ {
-			wg.Add(1)
-
-			go func(attempt int) {
-				defer wg.Done()
-
-				r := worker.api(http.MethodPost, "/me/timer", map[string]any{
-					"description": fmt.Sprintf("round %d, start %d", round, attempt),
-				})
-
-				if r.Status == http.StatusCreated || r.Status == http.StatusOK {
-					return
-				}
-
-				mu.Lock()
-				refused = append(refused, fmt.Sprintf("round %d start %d: %d %.200s",
-					round, attempt, r.Status, r.Body))
-				mu.Unlock()
-			}(attempt)
-		}
-
-		wg.Wait()
-	}
-
-	if len(refused) > 0 {
-		t.Errorf("%d of %d concurrent starts were refused, first: %v\n\napplication log:\n%.2000s",
-			len(refused), rounds*each, refused[0], a.log())
-	}
-
-	if timer := runningTimer(t, worker); !timer.Running {
-		t.Error("no clock is running after all those starts")
 	}
 }

@@ -9,8 +9,8 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-// pickHoliday chooses a value in one of a holiday card's pickers the way a person
-// does, with the change event the card listens for - chooseOption sets the value
+// pickHoliday chooses a value in one of the holiday card's pickers the way a
+// person does, with the change event the card listens for - chooseOption sets the value
 // once it is there to set, which fires nothing.
 func (p *page) pickHoliday(selector, value string) chromedp.Action {
 	return chromedp.Tasks{
@@ -41,48 +41,6 @@ func (p *page) regionPicker(selector string) regionPicker {
 	})()`, selector), &picker))
 
 	return picker
-}
-
-// A state chosen under "My account" puts its holidays in the calendar, by name:
-// Germany first, and then Bavaria from the second picker Germany brings out.
-func TestAChosenStatesHolidaysAreMarkedInTheCalendar(t *testing.T) {
-	t.Parallel()
-
-	p := open(t)
-	p.readyWorker()
-
-	p.run("open my account", p.click(`.tab[data-view="settings"]`),
-		chromedp.WaitVisible("#form-my-holidays", chromedp.ByID))
-
-	p.waitForNode(`#my-holiday-country option[value="DE"]`)
-
-	if picker := p.regionPicker("#my-holidays"); picker.Shown {
-		t.Errorf("following the installation shows a second picker: %+v", picker)
-	}
-
-	p.run("choose Germany", p.pickHoliday("#my-holiday-country", "DE"))
-
-	if picker := p.regionPicker("#my-holidays"); !picker.Shown || picker.Label != "State" || !picker.Required {
-		t.Errorf("Germany brings out %+v, want a state that has to be chosen", picker)
-	}
-
-	p.run("choose Bavaria", p.pickHoliday("#my-holidays", "BY"))
-	p.run("save it", p.click(`#form-my-holidays button[type="submit"]`))
-
-	p.waitFor("Bavaria to be in effect", func() bool {
-		var place string
-
-		p.awaitJSON(`api('/me/holidays').then((mine) => mine.effectivePlace)`, &place)
-
-		return place == "DE-BY"
-	})
-
-	p.run("open December", p.click(`.tab[data-view="calendar"]`),
-		chromedp.WaitVisible("#calendar-days", chromedp.ByID),
-		chromedp.Evaluate(`calendarMonth = monthOf('2026-12-01'); void loadCalendar()`, nil))
-
-	p.waitForText("#calendar-days", "Christmas Day")
-	p.waitForText("#calendar-days", "Boxing Day")
 }
 
 // The installation's card starts on Germany with the state still to choose,
@@ -136,22 +94,4 @@ func TestTheInstallationsHolidaysStartOnGermany(t *testing.T) {
 
 		return place == "AT"
 	})
-}
-
-// A holiday a country keeps on a weekday because it fell on a weekend says so in
-// the calendar: Christmas 2027 is a Saturday, and Scotland keeps it on the
-// Monday.
-func TestADayKeptInPlaceOfAHolidaySaysSoInTheCalendar(t *testing.T) {
-	t.Parallel()
-
-	p := open(t)
-	p.readyWorker()
-
-	p.awaitJSON(`api('/me/holidays', { method: 'PUT', body: JSON.stringify({ place: 'GB-SCT' }) })`, nil)
-
-	p.run("open December 2027", p.click(`.tab[data-view="calendar"]`),
-		chromedp.WaitVisible("#calendar-days", chromedp.ByID),
-		chromedp.Evaluate(`calendarMonth = monthOf('2027-12-01'); void loadCalendar()`, nil))
-
-	p.waitForText("#calendar-days", "Christmas Day (substitute day)")
 }

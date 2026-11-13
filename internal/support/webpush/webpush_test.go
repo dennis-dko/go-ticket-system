@@ -111,7 +111,7 @@ func opened(t *testing.T, body []byte) []byte {
 
 // What Encrypt writes with a key and a salt of its own, the receiver reads.
 func TestAMessageIsReadByTheBrowserItIsFor(t *testing.T) {
-	plain := []byte(`{"title":"The stopwatch is still running"}`)
+	plain := []byte(`{"title":"A customer answered"}`)
 
 	body, err := Encrypt(plain, Subscription{P256dh: receiverPublic, Auth: receiverSecret})
 	if err != nil {
@@ -244,14 +244,14 @@ func TestSendPostsWhatAPushServiceAsksFor(t *testing.T) {
 	defer service.Close()
 
 	sub := Subscription{Endpoint: service.URL + "/push/abc", P256dh: receiverPublic, Auth: receiverSecret, Origin: "https://tickets.example.com"}
-	message := Message{Title: "The stopwatch is still running", Body: "Since 08:15", Tag: "gts-stopwatch",
+	message := Message{Title: "A customer answered", Body: "Ticket 2026111000042", Tag: "gts-ticket-42",
 		At: "2026-11-10T09:15:00Z", About: "2026-11-10T07:15:00Z"}
 
 	if err := keys.Send(t.Context(), service.Client(), sub, message, time.Minute); err != nil {
 		t.Fatal(err)
 	}
 
-	// A reminder is about a moment: high, which a push service hands to a dozing
+	// News is about a moment: high, which a push service hands to a dozing
 	// phone at once rather than when it next wakes.
 	for header, want := range map[string]string{"Content-Encoding": "aes128gcm", "TTL": "60", "Urgency": "high"} {
 		if got.Header.Get(header) != want {

@@ -11,138 +11,62 @@ interface: create them, set their permissions, delete them.
 
 | Role | Purpose |
 | --- | --- |
-| `admin` | The installation, its accounts and their roles — and nothing else. A system role: it cannot be deleted or stripped of permissions |
-| `user` | Keeps their own time, projects and calendar |
-| `user-admin` | Both: somebody who works here and also administers |
-| `manager` | Keeps their own time, and the time and projects of the accounts assigned to them — see [Managers](#managers) |
-
-The third one is the answer to "somebody here needs to administer as well". It is
-handed out by the built-in administrator, so holding both jobs is a decision somebody
-made rather than something an account arrived with — and it is an ordinary account
-gaining administration, never the built-in account gaining a working day.
-
-The everyday role was called `employee`, and its combined one `employee-admin`. The word
-said more than this application knows: it holds accounts, and whether the person behind
-one is employed here, contracted, a volunteer or the only person in the company is not
-something it records, checks or needs. Renamed on upgrade, in the database as well as in
-the code — every account points at its role by id, so nobody is moved and nobody loses
-anything, and the role name stored in the directory configuration is brought along. An
-installation that already had a role of its own called `user` keeps it, moved aside as
-`user-2` with its rights and its people intact: the shipped name has to win because the
-application looks this role up by it, and merging two roles would change who may do what.
+| `admin` | Administers the installation and may do everything on the staff side, tickets included. A system role: it cannot be deleted |
+| `agent` | Works on tickets, contacts and the knowledge base, and changes nothing about how the installation is set up. What an account is given when nobody says otherwise, and what the directory hands out by default |
+| `customer` | A contact's own account: opens tickets in the customer portal and follows their own, and reaches nothing on the staff side |
 
 What you see is not the identifier. Those names are lowercase, hyphenated and English
 because that is what the API takes, what the directory configuration stores and what the
 role editor edits — and none of that is something to put in front of somebody deciding
 what a colleague may do. Each role is shown by a translated title with its description
-beside it, so a German reader chooses *Benutzer & Administrator* rather than
-`user-admin`. The screen that administers roles keeps the identifier visible next to the
-title, because that screen is where it matters. A role an installation named itself
-shows whatever was typed, which is the only sensible answer for words this application
-has never seen.
+beside it, so a German reader chooses *Kunde* rather than `customer`. The screen that
+administers roles keeps the identifier visible next to the title, because that screen is
+where it matters. A role an installation named itself shows whatever was typed, which is
+the only sensible answer for words this application has never seen.
 
-Permissions are fine grained — reading separately from writing, projects separately
-from time — and every one of them is scoped to the person holding it. A filter naming
-somebody else is refused rather than quietly answered with your own rows.
-
-There is no wider variant. `timesheets:read:all` and `timesheets:write:all` used to
-exist beside the `:own` ones, and they were the last of the manager: one opened
-everybody's entries, balances, totals and exports, the other let an account book time
-in a colleague's name. No role held either by the end, and the four screens that asked
-"which person" had been narrowed to a dropdown with a single entry — so ticking one in
-the role editor changed nothing anybody could see, while the API answered every
-question about every colleague. A capability with no screen is a capability nobody
-audits, so both are gone. What exists instead is narrower and visible to the people it
-concerns: the [team rights](#managers), which reach only the accounts an administrator
-assigned, and only while the installation has managers switched on.
-
-Permissions are Go constants, not database rows: each one is checked by a
-specific line of code, and a permission that existed only in the database would
-grant nothing. The role editor therefore offers exactly the permissions that
-are actually enforced.
+Permissions are fine grained — reading separately from writing, tickets separately
+from contacts and from the knowledge base — and they are Go constants, not database
+rows: each one is checked by a specific line of code, and a permission that existed
+only in the database would grant nothing. The role editor therefore offers exactly
+the permissions that are actually enforced.
 
 One of them is the whole administration: `settings:manage` opens the *Settings*
-screen and everything on it — the branding, the operational limits, the instance
-timezone, the database connection, the telemetry, the maintenance notice, the
-log and the restart. It is what the `user-admin` role holds that `user` does
-not, and it is why that role is handed out deliberately rather than assembled
-out of smaller rights. Two things stay outside it and belong to an account that
-administers and has no working day of its own - the built-in administrator, or
-one holding the `admin` role: the setup wizard, and running or scheduling a
-directory synchronisation. On the *Settings* screen of a `user-admin` account the
-synchronisation card is replaced by a sentence saying so.
+screen and everything on it — the setup wizard, the branding, the operational
+limits, the instance timezone, the database connection, the directory and its
+synchronisation, the telemetry, the maintenance notice, the log and the restart.
+Two others amount to the same in the end, and that is said rather than hidden:
+whoever holds `roles:write` can tick `settings:manage` on a role, and whoever
+holds `users:write` can hand that role out. None of the three is given to an
+account nobody chose one by one — the directory's default role, a customer's
+account.
 
-### The administrator does not work here
+### The built-in administrator
 
-Running an installation and recording time in it are two different jobs, and the
-`admin` role does only the first: accounts, roles, the database, the directory, the
-log. It has **no** working day at all — it cannot book an hour, keep a project, read
-a figure or set a daily target, its own included.
+Every installation has the built-in administrator before anybody has chosen
+anything: it is how you get in. Its role, `admin`, holds every right on the staff
+side, tickets included — a ticket is the organisation's record rather than one
+person's, so there is nothing in it the account that runs the installation must be
+kept from, and whoever sets up queues has to be able to open a ticket to see that
+what they set up works. It does not hold `portal:use`, which means something only
+for an account linked to a contact.
 
-Backups used to be in that list and are not a thing this application does: there is
-no permission for them, no endpoint and no screen. They are external, and
+Backups are not a thing this application does: there is no permission for them, no
+endpoint and no screen. They are external, and
 [`deploy/OPERATION.md`](../deploy/OPERATION.md) says what to copy for each dialect.
 
-That is deliberate, and the reason is the account itself. Every installation has the
-built-in administrator before anybody has chosen anything: it is how you get in, not
-somebody's working day. Whoever does work here has an account of their own, and if
-that person also administers, they are given the `user-admin` role rather than
-made to sign in twice.
+**The three roles the application ships with are shown, not edited** — not their
+name, not their description, not their rights — and none of them can be deleted.
+They are the answer to questions asked elsewhere: the role every new account gets,
+the one the directory synchronisation assigns, the one a customer's account is
+given, and the words the interface translates for them. A role that should grant
+something different is a new role, which is a minute's work and says what it is.
 
-It used to book and read its own hours "like anybody who works here", and that was
-the wrong shape — an account nobody chose, quietly holding a working day nobody asked
-it to have.
+**The rights are listed in words**, grouped by area, with the identifier beside
+each — the identifier is what the API takes and what a directory configuration
+stores, so it stays readable — and a legend under them saying what each one
+actually allows.
 
-What it does own is the installation's daily ceiling under *Settings*, which bounds
-every account's day. A new account's target is the built-in eight hours; each person
-changes their own from there, and nobody changes anybody else's.
-
-On upgrade, the working day is taken off the `admin` role and the combined role is
-created first, so an installation that had been using the built-in account for
-both jobs has somewhere to move that person. Nobody is moved automatically: who works
-here is not something a database can work out, and guessing would either invent a
-colleague or take an administrator's hours away. The entries stay in the tables and
-become reachable again the moment the combined role is assigned.
-
-It is a wall rather than a default. The `admin` role's permissions cannot be changed
-at all — neither given nor taken — and the role editor shows them as unavailable rather
-than letting them be ticked and refusing the save.
-
-It was the other way round: whoever may manage roles could widen the role they hold, on
-the reasoning that somebody who administers roles can reach anything anyway. That
-reasoning does not survive this arrangement. The built-in administrator configures the
-installation and records no time, so a right added to its role would hand a working day
-to the one account nobody chose — quietly, from the screen that administers roles.
-
-The way past the wall is a decision about a colleague: give a person the `user-admin`
-role. Note what that does *not* buy them — it is a user's own rights plus the
-administration, so they keep their own hours and still nobody else's.
-
-### Reports
-
-A project's report totals **your own** hours on it. Everyone sees their own figures
-there and through **My statistics**, and nobody sees anybody else's — except a
-manager, for the accounts assigned to them.
-
-**Every screen that evaluates a period arrives with one filled in** — the month
-so far — rather than waiting to be told. The alternative was worse in both
-directions: the hours card used to fill its fields *when Evaluate was pressed*,
-so the answer arrived for a period nobody had seen until the fields changed under
-it, and the report and overtime forms sent nothing at all and quietly evaluated
-the whole history. Refusing to evaluate until a date is typed would be worse
-still — there is an obvious right answer here, and demanding it be typed is
-make-work. Clear a field and it stays clear; the period is yours once you have
-touched it.
-
-The picture beside the table is the same figures in whichever shape answers the
-question: **bars** for a long list of names, because a name fits beside a bar and
-not under a column; **columns** for comparing a few things; a **pie** for a share of
-a whole. **Each project keeps its own colour** across all three shapes and
-between visits, because the colour comes from the project rather than from its
-place in the list — a colour that means something different on every visit is
-decoration rather than information. It follows the filter the table follows, so scoping the evaluation to one
-project scopes both — a chart totalling everything next to a table totalling one
-project is two answers on one screen, and no way to tell which was asked for.
+### The interface
 
 **Everything you press on a small screen is at least 44px tall** — the size a
 finger needs, and the number both platform guidelines settled on. Measured on a
@@ -150,24 +74,12 @@ finger needs, and the number both platform guidelines settled on. Measured on a
 a permission switch 22, the one that reveals a password 26, the fields 38.
 Height only; nothing is enlarged to read, there is simply more of it to hit.
 
-**The navigation folds into one control below 900px.** Nine points do not fit
-beside anything on a telephone: as a row that scrolled sideways they showed
-three and hid six, with nothing on screen to say the others were there — and
-because the bar was as wide as the row, the *window* scrolled in its place, so
-the page could be dragged sideways. Measured at 50px too wide on a 390px screen
-and 80px on a 360px one, on every screen in the application. Behind the burger
-they are a list, one per line, which says how many there are. It closes on
-choosing a point, on Escape, and on a press anywhere else.
-
-**The greeting shows this week** to somebody who books time: today's hours
-against today's target with a running clock counted in, the week's total, and a
-bar per day drawn against that day's own target - the days come from
-`/me/days`, which answers every day of a range, the empty ones included.
-
-**The greeting shows the last few entries** to somebody who books time — a
-bounded ninety-day window rather than a whole history, because a greeting has no
-business downloading three years of a working life to show five lines of it. The
-account that records no time is shown no panel at all rather than an empty one.
+**The navigation folds into one control below 900px.** As a row that scrolled
+sideways on a telephone it showed three points and hid the rest, with nothing on
+screen to say the others were there — and because the bar was as wide as the
+row, the *window* scrolled in its place, so the page could be dragged sideways.
+Behind the burger they are a list, one per line, which says how many there are.
+It closes on choosing a point, on Escape, and on a press anywhere else.
 
 **Appearance belongs to the person, not to the machine.** Light or dark is
 stored on the account, like the language, and applied when that account signs
@@ -177,18 +89,11 @@ person with one laptop and wrong everywhere else: the next person at a shared
 machine arrived to the last one's dark mode.
 
 Everything else this interface keeps in a browser is keyed by account id and so
-cannot reach anybody else: the screen each account was last on, whether it has
-been greeted, whether the browser's zone and language have been offered, and
-which release it has dismissed. The two exceptions are impersonal — the
-instance's own name and mark, cached so the first paint is not generic, and a
-scroll position kept for the length of one reload.
-
-**The three roles the application ships with are shown, not edited** — not their
-name, not their description, not their rights. They are the answer to questions
-asked elsewhere: the role every new account gets, the one the directory
-synchronisation assigns, and the pair the interface names in its own words. A
-role that should grant something different is a new role, which is a minute's
-work and says what it is.
+cannot reach anybody else: the screen each account was last on, whether the
+browser's zone and language have been offered, and, for the length of one tab, a
+form somebody had half filled in. The exceptions are impersonal — the instance's
+own name and mark, and the appearance last applied, cached so the first paint is
+not generic.
 
 **The release feed is asked at most four times a day**, however many
 administrators are looking at the screen. It used to be asked once a minute at
@@ -201,82 +106,14 @@ good answer either: the card shows the version it knows, with the trouble noted
 beside it. An installation that sets `UPDATE_TOKEN` gets five thousand an hour
 and never comes near either number.
 
-**The rights are listed in words**, grouped by area, with the identifier beside
-each — the identifier is what the API takes and what a directory configuration
-stores, so it stays readable — and a legend under them saying what each one
-actually allows.
-
-Whether somebody may see another person's recorded time is not a permission question,
-because no permission answers yes — not for a list of entries, not for the spreadsheet
-export, not for a project's total and not for an overtime balance. Whose entry it is
-decides, and that is not a choice anybody can be granted.
-
-Two rights used to answer it, which is how two answers come to disagree. `reports:read`
-covered the totals and belonged to the role that reviewed other people's hours; when
-that role went, the right stayed, held by nobody and gating a whole screen, so the
-report was unreachable on every installation while appearing to be somebody else's
-business. `timesheets:read:all` covered everything else and outlived it by one release.
-Both are withdrawn on upgrade, and a role that held one keeps the half of it that is
-still a right — whoever could read everybody's time can read their own.
-
-### Managers
-
-An installation can have managers: accounts that look after the time of the
-people an administrator assigns to them. It is switched off as shipped, and only
-whoever holds `settings:manage` switches it on, in the *Managers* card under
-**Settings**. Until then every assignment waits, kept, the team rights reach
-nobody, and the role editor does not offer them.
-
-| Right | What it gives over an account assigned to its holder |
-| --- | --- |
-| `timesheets:read:team` | Its entries, calendar, balance, statistics and reports, and the history of its corrections |
-| `timesheets:write:team` | Booking, correcting, moving and deleting its time, on its own projects |
-| `projects:write:team` | Making and changing its projects, and archiving or deleting them as far as the role allows that for one's own |
-
-The shipped `manager` role holds all three beside everything `user` holds: a
-manager keeps their own time like anybody else. Like every shipped role it
-cannot be deleted or edited, so a role that should grant less — somebody who
-reads a team's time but does not book it — is a role of the installation's own,
-with only the rights it should have. A team right carries further what the
-matching own right already does and never stands in for it: a role holding
-`timesheets:read:team` without `timesheets:read:own` reaches nobody.
-
-A manager works for somebody by choosing them under *Whose time*, at the end of
-the navigation. Every screen of time then shows that account's — its entries,
-calendar, overtime, evaluations and projects — and a banner says whose, until
-*Mine* is chosen again. What is always one's own is put away meanwhile: the
-stopwatch, templates, an import, the week grid, working time, leave and days away.
-
-A manager does everything as the account they are working for. A booking goes on
-that account's own projects and counts against its daily maximum; a report covers
-that account's projects; a project made for it is its own. Nothing a manager does
-widens what the account itself could have done.
-
-Three things hold whatever an installation configures:
-
-- **Only an administrator assigns**, holding `users:write`: under **Users**, each
-  account's row offers *managers* while the installation has them. Only an account
-  whose role holds a team right can be assigned — never to itself. A manager
-  cannot assign anybody: choosing whose time you see would be deciding what you
-  are allowed to know.
-- **Nothing is hidden from the person looked after.** *Who may see your time*,
-  under **My account**, names each of them and what they may do with it. An entry
-  a manager booked or last changed says *booked by* or *changed by* under its
-  description, and every version a manager's correction replaced names them in
-  its history.
-- **Some things stay the person's own.** A manager learns that a day was away and
-  never why — a day off sick reads exactly like a day of leave — and has no view of
-  anybody's working times, the start, end and breaks of a day, at all. There is no
-  approval either: a manager looks after the hours, and nobody signs them off.
-
 ## API access with personal tokens
 
 Every user can issue their own tokens under **My account**:
 
 ```bash
-curl -H "Authorization: Bearer gts_xxxxx" https://your-host/api/v1/timesheets
+curl -H "Authorization: Bearer gts_xxxxx" https://your-host/api/v1/me
 # or
-curl -H "X-API-Token: gts_xxxxx" https://your-host/api/v1/timesheets
+curl -H "X-API-Token: gts_xxxxx" https://your-host/api/v1/me
 ```
 
 A token carries **no rights of its own**. Every request is evaluated against
@@ -311,7 +148,7 @@ directory decides *who you are*, this application decides *what you may do*.
 
 An account created here under the same address — by an administrator, or by an
 import — is taken over the first time its owner signs in through the directory,
-hours and all. From then on it is a directory account: it keeps no local
+with everything it already had. From then on it is a directory account: it keeps no local
 password, so it is no longer asked for a new one and the initial password no
 longer opens it, and a synchronisation treats it like any other. An account that
 administers this installation is never taken over.
@@ -319,7 +156,7 @@ administers this installation is never taken over.
 Nor is one that already belongs to another directory entry. A directory account
 remembers its entry by the identifier the card names — `entryUUID`, or
 `objectGUID` in Active Directory — so somebody given an address another entry
-had before is not handed that entry's account and its hours: the sign-in is
+had before is not handed that entry's account and what it holds: the sign-in is
 refused as vaguely as a wrong password, and the log says at WARN which entry the
 account belongs to. It stays the predecessor's until a synchronisation removes
 it, which happens once their entry has left the directory; the next sign-in then
@@ -345,28 +182,24 @@ reconciled with the local accounts:
 
 - Accounts the directory has and this installation does not are **created**.
 - Accounts the directory no longer holds are **deleted**, together with their
-  time entries, projects, API tokens and sessions.
+  API tokens, passkeys and sessions. The tickets they owned or were responsible
+  for stay, with nobody in that place.
 
 **The directory is only ever read.** Nothing is written back to LDAP.
 
-**A run is the built-in administrator's alone** — the preview, the button and
-the schedule beside them. Not because of the connection: anybody holding
-`settings:manage` may edit the directory card, test it and save it, because
-that is configuration. Deleting every account the directory no longer holds,
-along with everything those people recorded, is not, and the card is not shown
-to an account that would be refused it.
-
-The schedule is part of that. It was open to anybody who could reach *Settings*
-while the buttons above it were not, so the caution the buttons were given
-could be walked around by typing five numbers into the field between them.
+**A run takes `settings:manage`**, like the card it is configured on — the
+preview, the button and the schedule beside them. The schedule goes with the
+buttons rather than with the fields, because it is the same deletion performed
+later and unattended: a field open to more people than the button above it would
+let the caution the button was given be walked around by typing five numbers.
 
 Set the schedule under *Settings*, or `LDAP_SYNC_SCHEDULE` for a starting value
-in the environment; it is empty by default because a run destroys recorded work
-irreversibly, and an automatic one destroys it with nobody looking. It runs on
+in the environment; it is empty by default because a run deletes accounts
+irreversibly, and an automatic one deletes them with nobody looking. It runs on
 the server's clock - UTC in the shipped container, which sets no `TZ` - and not
 in the instance timezone, so `0 4 * * *` is four in the morning in Greenwich. Use
 **Preview** first, which reports exactly which accounts would go and how many
-time entries each one would take with it. The real run asks for confirmation
+unfinished tickets each one would leave without an owner. The real run asks for confirmation
 naming those numbers.
 
 Four guards make a broken directory answer non-destructive:
@@ -384,7 +217,8 @@ page has left".
 
 Every run that removes or adds an account is listed under **Recent runs** on
 the card: when it ran, whether somebody confirmed it against a preview, and how
-many accounts and time entries it took or brought. It names nobody — the people
+many accounts it took or brought, and how many tickets were left without an
+owner. It names nobody — the people
 a run removed are the people the deletion erased — and the log, which does name
 them, can be switched off by its level; this list cannot.
 
@@ -432,9 +266,8 @@ What holds the round trip together:
 Under **Settings**, *Changes to the installation* lists who changed how the
 installation is run, newest first: an account created, corrected, given another
 role, given a new password or deleted; a role created, changed or deleted;
-accounts or roles imported; each settings card saved; maintenance mode or
-managers switched on or off; an account's managers assigned; the directory
-synchronised; the application restarted, updated or set up. Everybody holding `settings:manage` can read it, and nobody else.
+accounts or roles imported; each settings card saved; maintenance mode
+switched on or off; the directory synchronised; the application restarted, updated or set up. Everybody holding `settings:manage` can read it, and nobody else.
 
 A change is recorded once it has gone through - a refused request changed
 nothing and is not there - by a middleware working from one table of routes, so
@@ -443,7 +276,7 @@ no screen and no API client can change accounts, roles or settings past it.
 It keeps ids and reads the names when it is shown. An account renamed since
 appears under its new name; an account erased since appears by its number alone,
 because the log outlives the people it named without keeping their names. That is
-also why it is the one table referring to accounts that erasing an account leaves
-alone: the record of what an administrator did to everybody else's accounts is
+also why erasing an account leaves it alone, as it leaves what somebody wrote in
+a ticket: the record of what an administrator did to everybody else's accounts is
 not theirs to take with them. Unlike the live log beside it, it survives a
 restart.

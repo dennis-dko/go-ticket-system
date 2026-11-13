@@ -74,83 +74,19 @@ func TestCreatingAnAccountRefusesWhatCannotBeStored(t *testing.T) {
 
 	checkRefusals(t, admin, []badRequest{
 		{"an account with no name", http.MethodPost, "/users",
-			map[string]any{"name": "", "email": "a@example.com", "role": "user", "password": "a-password-1"}},
+			map[string]any{"name": "", "email": "a@example.com", "role": "agent", "password": "a-password-1"}},
 		{"an account with no address", http.MethodPost, "/users",
-			map[string]any{"name": "A", "email": "", "role": "user", "password": "a-password-1"}},
+			map[string]any{"name": "A", "email": "", "role": "agent", "password": "a-password-1"}},
 		{"an address that is not one", http.MethodPost, "/users",
-			map[string]any{"name": "A", "email": "not-an-address", "role": "user", "password": "a-password-1"}},
+			map[string]any{"name": "A", "email": "not-an-address", "role": "agent", "password": "a-password-1"}},
 		{"an address with a space in it", http.MethodPost, "/users",
-			map[string]any{"name": "A", "email": "a b@example.com", "role": "user", "password": "a-password-1"}},
+			map[string]any{"name": "A", "email": "a b@example.com", "role": "agent", "password": "a-password-1"}},
 		{"a role nobody has", http.MethodPost, "/users",
 			map[string]any{"name": "A", "email": "b@example.com", "role": "sorcerer", "password": "a-password-1"}},
 		{"a password too short to be one", http.MethodPost, "/users",
-			map[string]any{"name": "A", "email": "c@example.com", "role": "user", "password": "x"}},
+			map[string]any{"name": "A", "email": "c@example.com", "role": "agent", "password": "x"}},
 		{"a name longer than any column", http.MethodPost, "/users",
-			map[string]any{"name": tooLong, "email": "d@example.com", "role": "user", "password": "a-password-1"}},
-	})
-
-	// The working times moved out of account creation: they belong to the person they
-	// are about, so they are no longer part of the body that creates an account and
-	// sending them there changes nothing. The rule that a target must be a possible
-	// number of hours did not move - it lives at the door that still sets them, and
-	// this is where it is checked.
-	var me struct {
-		User userResponse `json:"user"`
-	}
-
-	admin.must(admin.api(http.MethodGet, "/me", nil), http.StatusOK).Data(t, &me)
-
-	own := path("/users/", me.User.ID, "/working-times")
-
-	checkRefusals(t, admin, []badRequest{
-		{"a negative daily target", http.MethodPut, own,
-			map[string]any{"dailyTargetHours": -8}},
-		{"a daily target longer than a day", http.MethodPut, own,
-			map[string]any{"dailyTargetHours": 48}},
-		{"a negative daily maximum", http.MethodPut, own,
-			map[string]any{"maxDailyHours": -1}},
-	})
-}
-
-func TestBookingTimeRefusesWhatCannotBeStored(t *testing.T) {
-	t.Parallel()
-
-	_, _, worker := startWithWorker(t)
-
-	checkRefusals(t, worker, []badRequest{
-		{"no date at all", http.MethodPost, "/timesheets",
-			map[string]any{"durationHours": 2}},
-		{"a date the American way", http.MethodPost, "/timesheets",
-			map[string]any{"date": "08/01/2026", "durationHours": 2}},
-		{"a date that is not one", http.MethodPost, "/timesheets",
-			map[string]any{"date": "yesterday", "durationHours": 2}},
-		{"a day that does not exist", http.MethodPost, "/timesheets",
-			map[string]any{"date": "2026-02-31", "durationHours": 2}},
-		{"negative hours", http.MethodPost, "/timesheets",
-			map[string]any{"date": "2026-08-01", "durationHours": -2}},
-		{"more hours than a day has", http.MethodPost, "/timesheets",
-			map[string]any{"date": "2026-08-01", "durationHours": 25}},
-		{"a project that does not exist", http.MethodPost, "/timesheets",
-			map[string]any{"date": "2026-08-01", "durationHours": 2, "projectId": 99999}},
-		{"a description longer than any column", http.MethodPost, "/timesheets",
-			map[string]any{"date": "2026-08-01", "durationHours": 2, "description": tooLong}},
-	})
-}
-
-func TestCreatingAProjectRefusesWhatCannotBeStored(t *testing.T) {
-	t.Parallel()
-
-	_, _, worker := startWithWorker(t)
-
-	checkRefusals(t, worker, []badRequest{
-		{"a project with no name", http.MethodPost, "/projects",
-			map[string]any{"name": "", "startDate": "2026-01-01"}},
-		{"a name longer than any column", http.MethodPost, "/projects",
-			map[string]any{"name": tooLong, "startDate": "2026-01-01"}},
-		{"a start date that is not one", http.MethodPost, "/projects",
-			map[string]any{"name": "P", "startDate": "whenever"}},
-		{"an end date before the start", http.MethodPost, "/projects",
-			map[string]any{"name": "P", "startDate": "2026-06-01", "endDate": "2026-01-01"}},
+			map[string]any{"name": tooLong, "email": "d@example.com", "role": "agent", "password": "a-password-1"}},
 	})
 }
 
@@ -211,13 +147,13 @@ func TestAdministeringTheInstanceRefusesWhatCannotBeStored(t *testing.T) {
 			map[string]any{"dialect": "postgres", "name": "gts", "host": "db", "user": "u", "port": "prod"}},
 		{"a directory enabled with no host", http.MethodPut, "/settings/ldap",
 			map[string]any{"enabled": true, "baseDn": "dc=example,dc=com",
-				"userFilter": "(uid=%s)", "port": 389, "defaultRole": "user"}},
+				"userFilter": "(uid=%s)", "port": 389, "defaultRole": "agent"}},
 		{"a user filter with nothing to substitute", http.MethodPut, "/settings/ldap",
 			map[string]any{"enabled": true, "host": "ldap", "baseDn": "dc=example,dc=com",
-				"userFilter": "(uid=fixed)", "port": 389, "defaultRole": "user"}},
+				"userFilter": "(uid=fixed)", "port": 389, "defaultRole": "agent"}},
 		{"a directory port outside the range", http.MethodPut, "/settings/ldap",
 			map[string]any{"enabled": true, "host": "ldap", "baseDn": "dc=example,dc=com",
-				"userFilter": "(uid=%s)", "port": 70000, "defaultRole": "user"}},
+				"userFilter": "(uid=%s)", "port": 70000, "defaultRole": "agent"}},
 		{"a default role nobody has", http.MethodPut, "/settings/ldap",
 			map[string]any{"enabled": true, "host": "ldap", "baseDn": "dc=example,dc=com",
 				"userFilter": "(uid=%s)", "port": 389, "defaultRole": "sorcerer"}},

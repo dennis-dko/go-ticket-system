@@ -3,10 +3,14 @@
 package browser
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/chromedp/chromedp"
+
+	"github.com/dennis-dko/go-ticket-system/internal/support/spreadsheet"
 )
 
 // The language switcher decides, and the browser decides when it has not.
@@ -87,72 +91,59 @@ func TestTheChosenLanguageWinsAndTheBrowserDecidesOtherwise(t *testing.T) {
 //
 // Most of the interface is markup, and applyLanguage translates that. What it did
 // not reach was everything the script had already written into the page - and
-// those are precisely the screens somebody has to ask for: an evaluation, an
-// overtime balance, an import preview. Drawn once, from an answer that arrived
-// once, and never looked up again.
+// those are precisely the screens somebody has to ask for: an import preview, a
+// synchronisation's preview, an evaluation as there once was. Drawn once, from an
+// answer that arrived once, and never looked up again.
 //
 // So a screen ended up half translated in a way that reads as a bug in the
-// translations rather than in the redrawing: the table heading said "Zeitraum"
-// above a cell saying 07/14/2026, beside a total reading "5.01 h in total". Every
-// key involved had a German entry. None of them was asked for a second time.
+// translations rather than in the redrawing: a German heading above a total still
+// reading "5.01 h in total". Every key involved had a German entry. None of them
+// was asked for a second time.
 //
 // Only a browser can show this. It is not what the strings are, it is when they
 // were looked up.
 func TestSwitchingLanguageRedrawsWhatIsAlreadyOnScreen(t *testing.T) {
 	t.Parallel()
 
+	book, err := spreadsheet.WriteUsers("en", []spreadsheet.UserRow{
+		{Name: "Nobody here", Email: "nobody@example.com", Role: "agent"},
+	})
+	if err != nil {
+		t.Fatalf("building the workbook: %v", err)
+	}
+
+	file := filepath.Join(t.TempDir(), "people.xlsx")
+	if err := os.WriteFile(file, book, 0o600); err != nil {
+		t.Fatalf("writing the workbook: %v", err)
+	}
+
 	p := open(t)
-	p.readyWorker()
+	p.readyAdmin()
 
-	p.run("book an hour", p.click(`.tab[data-view="timesheets"]`),
-		chromedp.WaitVisible("#form-timesheet", chromedp.ByID),
-		chromedp.SetValue(`#form-timesheet input[name="durationHours"]`, "5.01",
-			chromedp.ByQuery),
-		p.click(`#form-timesheet button[type="submit"]`))
+	const card = `#view-users .card:has(input[type="file"])`
 
-	p.waitForText("#table-timesheets tbody", "5.01")
-
-	p.run("evaluate", p.click(`.tab[data-view="report"]`),
-		chromedp.WaitVisible("#form-report", chromedp.ByID),
-		p.click(`#form-report button[type="submit"]`),
-		chromedp.WaitVisible("#report-result", chromedp.ByID))
+	p.run("check a file of people", p.click(`.tab[data-view="users"]`),
+		chromedp.WaitVisible(card, chromedp.ByQuery),
+		chromedp.SetUploadFiles(card+` input[type="file"]`, []string{file}, chromedp.ByQuery),
+		p.click(card+` button[data-i18n="wb.preview"]`))
+	p.waitShown(card + " .table-wrap")
 
 	// English first, so the change below is a change rather than the starting
 	// state. The suite pins the browser to en-US and this account has chosen
 	// nothing, so this is what it renders in.
-	if total := p.text("#report-total"); !strings.Contains(total, "in total") {
-		t.Fatalf("the total reads %q before the switch, which is not English - this "+
-			"case cannot tell a redraw from the starting state", total)
+	if said := p.text(card + " > p.muted:not([data-i18n])"); !strings.Contains(said, "can be imported") {
+		t.Fatalf("the verdict reads %q before the switch, which is not English - this "+
+			"case cannot tell a redraw from the starting state", said)
 	}
 
 	p.chooseLanguage("de")
 
-	// The heading is markup and was always translated; the total is the script's
-	// and was not. Both are checked, so a redraw that somehow lost the markup
-	// would not pass either.
-	p.waitForText("#table-report thead", "Zeitraum")
+	// The row heading and the verdict are the script's, written when the answer
+	// arrived; both have to be German now.
+	p.waitForText(card+" thead", "Zeile")
 
-	if total := p.text("#report-total"); !strings.Contains(total, "gesamt") {
-		t.Errorf("the total still reads %q after switching to German", total)
-	}
-
-	// The figure with it: a German reader writes 5,01 rather than 5.01, and that
-	// is drawn by the same call that writes the words around it.
-	if total := p.text("#report-total"); !strings.Contains(total, "5,01") {
-		t.Errorf("the total reads %q, which is not a German figure", total)
-	}
-
-	// The date in the table, which was showing the American order on a German
-	// screen.
-	if period := p.text("#table-report tbody td"); strings.Contains(period, "/") {
-		t.Errorf("the period reads %q, which is still not written the German way",
-			period)
-	}
-
-	// And the chart beside it, whose caption and labels were translated when the
-	// answer arrived rather than when it is drawn.
-	if caption := p.text("#report-chart-caption"); !strings.Contains(caption, "Stunden") {
-		t.Errorf("the chart caption still reads %q", caption)
+	if said := p.text(card + " > p.muted:not([data-i18n])"); !strings.Contains(said, "importiert werden") {
+		t.Errorf("the verdict still reads %q after switching to German", said)
 	}
 }
 
@@ -171,21 +162,23 @@ func TestSwitchingLanguageRedrawsWhatIsAlreadyOnScreen(t *testing.T) {
 func TestNothingOnScreenKeepsItsEnglishWhenGermanIsChosen(t *testing.T) {
 	t.Parallel()
 
-	// Both kinds of account, because they see different halves of the application
-	// and neither half is the whole of it: the administrator has the settings and
-	// the spreadsheet cards, and somebody who works here has the time, the
-	// calendar, the evaluation and the overtime balance - which is where this was
-	// reported.
+	// Both kinds of account, because they see different parts of the application
+	// and neither is the whole of it: the administrator has the settings and the
+	// spreadsheet cards, and an agent has its own screens - which is where this was
+	// reported, on the screens of somebody who works here.
 	t.Run("administrator", func(t *testing.T) {
-		checkGermanEverywhere(t, func(p *page) { p.readyAdmin() })
+		checkGermanEverywhere(t, func(p *page) { p.readyAdmin() }, 3)
 	})
 
 	t.Run("works here", func(t *testing.T) {
-		checkGermanEverywhere(t, func(p *page) { p.readyWorker() })
+		checkGermanEverywhere(t, func(p *page) { p.readyWorker() }, 1)
 	})
 }
 
-func checkGermanEverywhere(t *testing.T, signIn func(*page)) {
+// checkGermanEverywhere opens every tab the account signed in by signIn may open -
+// at least atLeast of them, or the check proves little - and fails on anything
+// on screen still in English where German has the words.
+func checkGermanEverywhere(t *testing.T, signIn func(*page), atLeast int) {
 	t.Helper()
 
 	p := open(t)
@@ -193,7 +186,7 @@ func checkGermanEverywhere(t *testing.T, signIn func(*page)) {
 
 	p.chooseLanguage("de")
 
-	p.waitForText("#tabs", "Einstellungen")
+	p.waitForText("#tabs", "Mein Konto")
 
 	// Every view, because a tab nobody opened is a tab nobody looked at - and the
 	// spreadsheet cards in particular are built by the script rather than written
@@ -204,7 +197,7 @@ func checkGermanEverywhere(t *testing.T, signIn func(*page)) {
 		`Array.from(document.querySelectorAll('.tab[data-view]'))
 			.filter(t => !t.hidden).map(t => t.dataset.view)`, &views))
 
-	if len(views) < 3 {
+	if len(views) < atLeast {
 		t.Fatalf("only %d tabs are open to this account; this proves little", len(views))
 	}
 
@@ -290,17 +283,17 @@ func TestTheMarkedTabsKeepTheirMarksInEveryLanguage(t *testing.T) {
 
 	// And the label is still the label. This is what breaks if a mark is put
 	// before the words rather than after them.
-	before := strings.TrimSpace(p.text(`.tab[data-view="calendar"]`))
+	before := strings.TrimSpace(p.text(`.tab[data-view="settings"]`))
 
 	p.chooseLanguage("de")
-	p.waitForText(`.tab[data-view="calendar"]`, "Kalender")
+	p.waitForText(`.tab[data-view="settings"]`, "Mein Konto")
 
 	if bare := unmarked(); bare != "" {
 		t.Errorf("after switching language these tabs lost their mark: %s", bare)
 	}
 
-	if after := strings.TrimSpace(p.text(`.tab[data-view="calendar"]`)); after == before {
-		t.Errorf("the calendar tab still says %q in German", after)
+	if after := strings.TrimSpace(p.text(`.tab[data-view="settings"]`)); after == before {
+		t.Errorf("the My account tab still says %q in German", after)
 	}
 }
 

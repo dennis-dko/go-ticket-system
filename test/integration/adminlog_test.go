@@ -37,10 +37,10 @@ func TestTheAdministrationLogRecordsWhoChangedWhat(t *testing.T) {
 	}
 
 	admin.must(admin.api(http.MethodPost, "/users", map[string]any{
-		"name": "Bea", "email": "bea@example.com", "role": "user", "password": "bea-password-1",
+		"name": "Bea", "email": "bea@example.com", "role": "agent", "password": "bea-password-1",
 	}), http.StatusCreated, http.StatusOK).Data(t, &made)
 
-	admin.must(admin.api(http.MethodPut, path("/users/", made.ID, "/role"), map[string]any{"role": "user-admin"}),
+	admin.must(admin.api(http.MethodPut, path("/users/", made.ID, "/role"), map[string]any{"role": "admin"}),
 		http.StatusOK)
 	admin.must(admin.api(http.MethodDelete, path("/users/", made.ID), nil), http.StatusOK, http.StatusNoContent)
 
@@ -67,8 +67,8 @@ func TestTheAdministrationLogRecordsWhoChangedWhat(t *testing.T) {
 		t.Errorf("the creation reads %+v, want the administrator named and the erased account kept by id alone", created)
 	}
 
-	if role.Detail != "user-admin" {
-		t.Errorf("the role change keeps %q, want user-admin", role.Detail)
+	if role.Detail != "admin" {
+		t.Errorf("the role change keeps %q, want admin", role.Detail)
 	}
 
 	if refused := worker.api(http.MethodGet, "/admin/changes", nil); refused.Status != http.StatusForbidden {

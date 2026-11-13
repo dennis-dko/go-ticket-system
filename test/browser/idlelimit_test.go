@@ -16,11 +16,11 @@ import (
 // carried "so the screen can show what a blank field means instead of leaving
 // the reader to guess."
 //
-// Five of the six do. OperationalLimits - which is both the effective values and
+// Four of the five did. OperationalLimits - which is both the effective values and
 // the defaults on the wire - has no sessionIdleMinutes, although model.Limits
 // does and the form has a box for it. So the idle timeout is the one field that
 // leaves the reader to guess, and it is also missing from the "Currently in
-// force" line above, where the other five are named.
+// force" line above, where the other four are named.
 //
 // It is not a minor field to be quiet about: it ends a session that has gone
 // unused, whatever is left of its lifetime, and zero switches it off.
@@ -46,8 +46,8 @@ func TestEveryOperationalFieldSaysWhatEmptyMeans(t *testing.T) {
 		t.Fatalf("reading the placeholders (%q): %v", out, err)
 	}
 
-	if len(shown) < 6 {
-		t.Fatalf("found %d fields on the card, which is fewer than the six it has: %v",
+	if len(shown) < 5 {
+		t.Fatalf("found %d fields on the card, which is fewer than the five it has: %v",
 			len(shown), shown)
 	}
 

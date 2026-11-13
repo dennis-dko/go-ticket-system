@@ -17,7 +17,7 @@ func TestTheSettingsScreenShowsWhoChangedWhat(t *testing.T) {
 
 	p := open(t)
 	p.readyAdmin()
-	p.createAccount(t, "erika@example.com", "erika-password-1", "user")
+	p.createAccount(t, "erika@example.com", "erika-password-1", "agent")
 
 	// Made past the interface, which reloads what a save of its own changed and
 	// nothing else; the log is read again as the account screen's save would.

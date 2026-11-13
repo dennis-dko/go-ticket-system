@@ -70,7 +70,7 @@ func (c *cachedMaintenance) State(ctx context.Context) model.Maintenance {
 //
 // Called when the switch is flipped, so it takes effect on the next request
 // rather than within the cache interval. An administrator who turns maintenance
-// on and watches somebody book time for another two seconds has been told a lie
+// on and watches somebody work on for another two seconds has been told a lie
 // by their own interface - and the same interval on the way out means work stays
 // refused after they said it should not be.
 func (c *cachedMaintenance) Invalidate() {

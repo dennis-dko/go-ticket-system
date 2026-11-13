@@ -35,7 +35,7 @@ func kerberosSessions(t *testing.T, entries map[string]*service.ExternalUser) (*
 	f := newFixture(t)
 
 	return f, service.NewSessionService(f.userRepo, f.roleRepo, newStubSessions(), f.auth, time.Hour).
-		WithExternalAuth(&lookupDirectory{entries: entries}, model.RoleUser)
+		WithExternalAuth(&lookupDirectory{entries: entries}, model.RoleAgent)
 }
 
 // A Kerberos sign-in reaches the account a directory password sign-in reaches,

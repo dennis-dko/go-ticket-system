@@ -11,35 +11,31 @@ import (
 
 // Nothing marked as a secret is still on screen when the session ends.
 //
-// The markup names them: four elements carry class="secret" - the enrolment's
-// shared key, the otpauth URI that carries it with the account's address, a
-// token's value, and a calendar feed's address, which is its key. The first three
-// were found separately, and each was left behind by a sign-out for its own
-// reason.
+// The markup names them: three elements carry class="secret" - the enrolment's
+// shared key, the otpauth URI that carries it with the account's address, and a
+// token's value. Each was found separately, and each was left behind by a
+// sign-out for its own reason.
 //
-// This checks the class rather than the ids, so the fourth was covered by being
+// This checks the class rather than the ids, so a fourth is covered by being
 // marked rather than by somebody remembering this case exists. That is the whole
 // reason the class is worth having: it is the markup saying which text on the
 // page must not be handed on. A QR code carries its secret in its picture rather
 // than as text, so every img.qr is asked for its address the same way - the
-// enrolment's, the one a new token is shown with for an app to scan, and the
-// calendar address's.
+// enrolment's and the one a new token is shown with for an app to scan.
 func TestNothingMarkedSecretSurvivesTheSignOut(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
 	p.readyWorker()
 
-	p.run("start an enrolment, make a token and a calendar address",
+	p.run("start an enrolment and make a token",
 		p.click(`.tab[data-view="settings"]`),
 		chromedp.WaitVisible("#totp-card", chromedp.ByID),
 		p.click("#totp-begin"),
 		chromedp.WaitVisible("#totp-setup", chromedp.ByID),
 		chromedp.SendKeys(`#form-token input[name="name"]`, "Reader", chromedp.ByQuery),
 		p.click(`#form-token button[type="submit"]`),
-		chromedp.WaitVisible("#token-secret", chromedp.ByID),
-		p.click("#feed-create"),
-		chromedp.WaitVisible("#feed-address", chromedp.ByID))
+		chromedp.WaitVisible("#token-secret", chromedp.ByID))
 
 	filled := func(when string) map[string]string {
 		t.Helper()
@@ -76,7 +72,7 @@ func TestNothingMarkedSecretSurvivesTheSignOut(t *testing.T) {
 		}
 	}
 
-	if held < 8 {
+	if held < 5 {
 		t.Fatalf("only %d of %d marked elements are holding anything, so this case "+
 			"is not covering what it means to: %v", held, len(before), before)
 	}

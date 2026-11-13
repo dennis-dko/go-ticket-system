@@ -39,7 +39,7 @@ func TestATableWithOrdinaryDataFitsItsCard(t *testing.T) {
 		const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
 		const out = [];
 
-		for (const [name, email, role] of [['`+long+`', 'long@example.com', 'user-admin'], ['Bo', 'bo@example.com', 'user']]) {
+		for (const [name, email, role] of [['`+long+`', 'long@example.com', 'admin'], ['Bo', 'bo@example.com', 'agent']]) {
 			const r = await fetch('/api/v1/users', { method: 'POST', credentials: 'same-origin', headers,
 				body: JSON.stringify({ name, email, role, password: 'a-long-enough-password' }) });
 			out.push(r.status);
@@ -111,23 +111,20 @@ func TestATableWithOrdinaryDataFitsItsCard(t *testing.T) {
 		check(fmt.Sprintf("the accounts at %dpx", width), "#table-users")
 	}
 
-	// And somebody's own entries, with a description as long as the ones people
-	// write.
+	// And somebody's own tokens, with a label as long as the ones people write.
 	p.run("sign out", chromedp.Click("#logout", chromedp.ByID),
 		chromedp.WaitVisible("#form-login", chromedp.ByID))
 	p.signIn("bo@example.com", "a-long-enough-password")
 	p.waitGone("#login-screen")
 	p.settleWelcome()
 
-	p.run("book with a long description", chromedp.Evaluate(`(async () => {
+	p.run("make a token with a long label", chromedp.Evaluate(`(async () => {
 		const csrf = document.cookie.split(';').map(c => c.trim())
 			.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
-		const now = new Date();
-		const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
-		await fetch('/api/v1/timesheets', { method: 'POST', credentials: 'same-origin',
+		await fetch('/api/v1/me/tokens', { method: 'POST', credentials: 'same-origin',
 			headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-			body: JSON.stringify({ date: today, durationHours: 2.5, description: '`+description+`' }) });
+			body: JSON.stringify({ name: '`+description+`' }) });
 
 		await refreshAll();
 		return 1;
@@ -137,10 +134,10 @@ func TestATableWithOrdinaryDataFitsItsCard(t *testing.T) {
 
 	for _, width := range []int64{1600, 1280, 1024} {
 		p.run(fmt.Sprintf("%dpx", width), chromedp.EmulateViewport(width, 900))
-		p.run("open the entries", p.click(`.tab[data-view="timesheets"]`))
-		p.waitShown("#table-timesheets tbody td.actions")
+		p.run("open My account", p.click(`.tab[data-view="settings"]`))
+		p.waitShown("#table-tokens tbody td.actions")
 
-		check(fmt.Sprintf("the entries at %dpx", width), "#table-timesheets")
+		check(fmt.Sprintf("the tokens at %dpx", width), "#table-tokens")
 	}
 }
 
@@ -148,7 +145,7 @@ func TestATableWithOrdinaryDataFitsItsCard(t *testing.T) {
 //
 // A table too wide for a telephone scrolls inside its card, and every table with
 // actions was: edit, delete and reset a password lay past the right-hand edge of
-// the timesheets, the projects, the accounts and the roles at 360 and 430 pixels,
+// the tables of entries, projects, accounts and roles at 360 and 430 pixels,
 // and of the accounts on a tablet held upright, reached only by a swipe nothing
 // announced. The actions now stay at the card's right-hand edge while the other
 // columns pass beneath them, and text keeps a width of its own rather than
@@ -169,7 +166,7 @@ func TestOnAPhoneATableKeepsItsActionsInSight(t *testing.T) {
 			.find(c => c.startsWith('gts_csrf='))?.slice('gts_csrf='.length) ?? '';
 		const r = await fetch('/api/v1/users', { method: 'POST', credentials: 'same-origin',
 			headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-			body: JSON.stringify({ name: '`+long+`', email: 'lang@example.com', role: 'user', password: 'a-long-enough-password' }) });
+			body: JSON.stringify({ name: '`+long+`', email: 'lang@example.com', role: 'agent', password: 'a-long-enough-password' }) });
 		return String(r.status);
 	})()`, &status, awaitPromise))
 

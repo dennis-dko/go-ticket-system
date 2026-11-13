@@ -14,8 +14,8 @@
 //
 // One rule reaches past this package and is easy to miss from inside it: a new
 // table with a foreign key to users has to be added to sqldb.PurgeUser in the
-// same commit. An account and the hours recorded against it go together, and a
-// missing entry does not fail loudly - on PostgreSQL it makes the final delete
+// same commit. What is an account's own goes with it and what is the
+// organisation's is taken off it, and a missing entry does not fail loudly - on PostgreSQL it makes the final delete
 // impossible, and on SQLite and MySQL, neither of which enforces the keys this
 // schema declares, it silently leaves rows pointing at an account that no
 // longer exists. That has already happened once, with passkeys, which is why
