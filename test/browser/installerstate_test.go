@@ -73,7 +73,7 @@ func whatTheInstallerSays(button string, into *string) chromedp.Action {
 func installerInGerman(t *testing.T, app *harness.App) (context.Context, func()) {
 	t.Helper()
 
-	alloc, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch("de-DE")...)
+	alloc, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch(t, "de-DE")...)
 	ctx, cancel := chromedp.NewContext(alloc)
 	ctx, cancelTimeout := context.WithTimeout(ctx, 90*time.Second)
 

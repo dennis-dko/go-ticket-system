@@ -30,7 +30,7 @@ func TestTheInstallerFillsInTheEnvironmentsAnswersOnceItHasTheToken(t *testing.T
 	app := harness.StartUnconfigured(t,
 		"SETUP_TOKEN="+token, "DB_HOST=db.internal", "DB_NAME=hours", "DB_USER=gtr")
 
-	alloc, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch("en-US")...)
+	alloc, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch(t, "en-US")...)
 	defer cancelAlloc()
 
 	ctx, cancel := chromedp.NewContext(alloc)
