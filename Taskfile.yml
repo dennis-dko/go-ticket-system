@@ -709,8 +709,15 @@ tasks:
       file open, so removing the directory fails with "Device or resource busy"
       and the next build inherits the mess.
 
+      The same run leaves its share in the system's temporary directory too,
+      where nothing else ever looks: the harness's build of the application
+      (gtr-harness-*, eighty-odd megabytes each) and the Chrome profiles
+      chromedp makes for itself (chromedp-runner*). This machine had six of the
+      first and 17,745 of the second when somebody finally looked.
+
       Usage:
         task clean        build output, containers, volumes, stray processes
+                          and what a run left in the temporary directory
         task clean:images ...and the images built locally
     cmds:
       # Processes first: they are what holds the files the next step deletes.
@@ -718,6 +725,7 @@ tasks:
       - task: env:down
       - rm -rf {{.BIN_DIR}}
       - rm -f coverage.out
+      - task: clean:temp
       - echo "Clean. Locally built images are kept - task clean:images removes those too."
 
   clean:processes:
@@ -745,6 +753,21 @@ tasks:
       # Children are left to go with their parent. Killing the root is what
       # chromedp and the Firefox harness do themselves on a clean exit.
       - cmd: "{{if eq OS \"windows\"}}powershell -NoProfile -Command 'Get-CimInstance Win32_Process | Where-Object { ($_.Name -eq \"chrome.exe\" -or $_.Name -eq \"firefox.exe\") -and $_.CommandLine -like \"*--headless*\" -and $_.CommandLine -like \"*--remote-debugging-port*\" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }'{{else}}pkill -f -- '(firefox|chrome|chromium).*--headless' || true{{end}}"
+        ignore_error: true
+
+  clean:temp:
+    internal: true
+    # After clean:processes, and on Windows that order is the whole point: a
+    # running instance holds its binary and a running browser its profile, and
+    # neither can be removed while it is held.
+    #
+    # By name, and only the two names a run here leaves: test/harness names its
+    # directory, and chromedp names the profile it makes when it is given none.
+    # Anything else in the temporary directory is somebody else's. The directory
+    # is the one Go's os.TempDir resolves to - GetTempPath on Windows, TMPDIR
+    # elsewhere - because that is where both were written.
+    cmds:
+      - cmd: "{{if eq OS \"windows\"}}powershell -NoProfile -Command 'Get-ChildItem -Path ([System.IO.Path]::GetTempPath()) -Directory | Where-Object { $_.Name -like \"gtr-harness-*\" -or $_.Name -like \"chromedp-runner*\" } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue'{{else}}rm -rf \"${TMPDIR:-/tmp}\"/gtr-harness-* \"${TMPDIR:-/tmp}\"/chromedp-runner*{{end}}"
         ignore_error: true
 
   clean:images:
