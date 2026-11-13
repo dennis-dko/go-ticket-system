@@ -270,7 +270,8 @@ accounts or roles imported; each settings card saved; maintenance mode
 switched on or off; the directory synchronised; the application restarted, updated or set up. Everybody holding `settings:manage` can read it, and nobody else.
 
 A change is recorded once it has gone through - a refused request changed
-nothing and is not there - by a middleware working from one table of routes, so
+nothing and is not there, and neither is *Check the file* before an import,
+which is the import's own request told not to write - by a middleware working from one table of routes, so
 no screen and no API client can change accounts, roles or settings past it.
 
 It keeps ids and reads the names when it is shown. An account renamed since
