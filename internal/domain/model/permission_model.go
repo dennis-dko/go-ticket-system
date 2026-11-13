@@ -18,8 +18,9 @@ const (
 	// maintenance mode, telemetry, the process log and the restart.
 	//
 	// Granting it costs what Authorizer.RequireInstallationAdmin records: whoever
-	// holds roles:write can tick it on a role and assign that role, so the two are
-	// the installation between them. It exists because somebody who administers an
+	// holds roles:write can tick it on a role, and whoever holds users:write can
+	// assign that role, so the three are the installation between them - see
+	// AdministeringPermissions. It exists because somebody who administers an
 	// installation has to be able to do so without signing in as the built-in
 	// account, which is the one account whose actions cannot be attributed to a
 	// person.
