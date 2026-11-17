@@ -14,4 +14,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "go-time-recording-mobile"
+rootProject.name = "timepulse-mobile"

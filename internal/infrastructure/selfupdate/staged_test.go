@@ -26,7 +26,7 @@ func TestAnInstallThatCannotSwapLeavesNoDownloadBehind(t *testing.T) {
 
 	source, release, _ := stagedRelease(t, version, hex.EncodeToString(sum[:]), body)
 
-	self := filepath.Join(tempdir.New(t), "go-time-recording"+exeSuffix())
+	self := filepath.Join(tempdir.New(t), "timepulse"+exeSuffix())
 	running := []byte("the running version")
 
 	if err := os.WriteFile(self, running, 0o755); err != nil {

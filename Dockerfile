@@ -33,7 +33,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
     -trimpath \
     -ldflags "-s -w -X main.version=${VERSION}" \
-    -o /out/go-time-recording-web ./cmd
+    -o /out/timepulse-web ./cmd
 
 FROM alpine:3.24
 
@@ -52,7 +52,7 @@ ARG VERSION=dev
 LABEL org.opencontainers.image.source="https://github.com/dennis-dko/timepulse" \
       org.opencontainers.image.url="https://github.com/dennis-dko/timepulse" \
       org.opencontainers.image.documentation="https://github.com/dennis-dko/timepulse#readme" \
-      org.opencontainers.image.title="go-time-recording" \
+      org.opencontainers.image.title="timepulse" \
       org.opencontainers.image.description="Project time tracking as a single self-contained binary: REST API, embedded web interface, SQLite, PostgreSQL or MySQL." \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${VERSION}"
@@ -62,7 +62,7 @@ RUN apk add --no-cache ca-certificates tzdata \
 
 WORKDIR /app
 
-COPY --from=build /out/go-time-recording-web /app/go-time-recording-web
+COPY --from=build /out/timepulse-web /app/timepulse-web
 # GoFr reads its configuration from ./configs relative to the working directory.
 COPY --from=build /src/cmd/configs /app/configs
 
@@ -95,6 +95,11 @@ VOLUME /data
 # `docker run -e HTTP_PORT=...` still wins over that.
 #
 # Set DB_DIALECT to skip the installer, which is what deploy/compose.yaml does.
+#
+# The file keeps the project's old name. A container started with DB_DIALECT
+# alone reads its database from exactly this path, and the installer offers it
+# to one started without, so a new name would start an installation that is
+# already running on an empty file beside its own.
 ENV DB_NAME=/data/go-time-recording
 
 USER app
@@ -105,4 +110,4 @@ EXPOSE 8000 2121
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
     CMD wget -qO- http://127.0.0.1:8000/.well-known/alive >/dev/null 2>&1 || exit 1
 
-ENTRYPOINT ["/app/go-time-recording-web"]
+ENTRYPOINT ["/app/timepulse-web"]

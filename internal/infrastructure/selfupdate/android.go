@@ -22,7 +22,7 @@ func AndroidApp(version string) (page, download string) {
 
 // androidAssetName is what the Android app of version is called in its release.
 func androidAssetName(version string) string {
-	return "go-time-recording-mobile_" + version + ".apk"
+	return "timepulse-mobile_" + version + ".apk"
 }
 
 // isRelease says whether version is the tag a release is named by and nothing

@@ -15,9 +15,9 @@ version: '3'
 vars:
   # The project's name, which the image is tagged with and a local SQLite file
   # is called by; the program carries it in a name of its own.
-  APP_NAME: go-time-recording
+  APP_NAME: timepulse
   # The installation: the server and its web interface.
-  WEB_NAME: go-time-recording-web
+  WEB_NAME: timepulse-web
   BIN_DIR: bin
   CONFIG_SRC: cmd/configs
 
@@ -548,7 +548,7 @@ tasks:
       describes. So a machine needs Docker and nothing of Android's, and a build
       here uses the JDK, the Gradle and the SDK CI uses. The image is rebuilt
       from its Dockerfile every time, which costs a second while nothing in it
-      has changed; Gradle's downloads are kept in the gtr-gradle volume.
+      has changed; Gradle's downloads are kept in the timepulse-gradle volume.
 
       What it runs is what CI's Android job runs: the unit tests, Android lint,
       and a release build shrunk by R8 - unsigned, because the key a release is
@@ -557,8 +557,8 @@ tasks:
       than this checkout's version, so it does not tell whoever runs it that
       their installation is another release.
     cmds:
-      - docker build -q -t gtr-android:latest - < internal/interface/mobile/Dockerfile
-      - docker run --rm -v "{{.ROOT_DIR}}:/src" -w /src/internal/interface/mobile -v gtr-gradle:/root/.gradle gtr-android:latest gradle --no-daemon --console=plain testDebugUnitTest assembleRelease lintRelease
+      - docker build -q -t timepulse-android:latest - < internal/interface/mobile/Dockerfile
+      - docker run --rm -v "{{.ROOT_DIR}}:/src" -w /src/internal/interface/mobile -v timepulse-gradle:/root/.gradle timepulse-android:latest gradle --no-daemon --console=plain testDebugUnitTest assembleRelease lintRelease
 
   image:
     desc: 'Ship: build the deployment image, tagged with the version and "latest".'
@@ -738,6 +738,11 @@ tasks:
       - cmd: '{{if eq OS "windows"}}taskkill /F /IM {{.WEB_NAME}}.exe{{else}}pkill -f {{.WEB_NAME}}{{end}}'
         ignore_error: true
 
+      # And under the name it was built with before the project was TimePulse,
+      # which a run from before the rename can still have left behind.
+      - cmd: '{{if eq OS "windows"}}taskkill /F /IM go-time-recording-web.exe{{else}}pkill -f go-time-recording-web{{end}}'
+        ignore_error: true
+
       # And the browsers the suites drive, which outlive an interrupted run the
       # same way and are not cheap to leave lying about: three days after a
       # cancelled run, this machine still had two headless Chromes and a
@@ -781,7 +786,7 @@ tasks:
     cmds:
       - cmd: docker rmi {{.APP_NAME}}:{{.VERSION}} {{.APP_NAME}}:latest
         ignore_error: true
-      - cmd: docker rmi gtr-test-app:latest gtr-test-probe:latest gtr-test-openldap:latest gtr-android:latest
+      - cmd: docker rmi gtr-test-app:latest gtr-test-probe:latest gtr-test-openldap:latest timepulse-android:latest
         ignore_error: true
       - docker image prune -f
       - echo "Locally built images removed."

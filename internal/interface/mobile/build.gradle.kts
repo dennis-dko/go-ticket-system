@@ -28,7 +28,7 @@ fun versionCodeOf(version: String): Int {
 // key, so it is one key for every release, kept where the workflow can reach it
 // and nowhere in the repository. A build without it - every pull request's -
 // makes an unsigned release APK, which proves everything but the signature.
-val keystore: String? = providers.environmentVariable("GTR_ANDROID_KEYSTORE").orNull
+val keystore: String? = providers.environmentVariable("TIMEPULSE_ANDROID_KEYSTORE").orNull
 
 android {
     namespace = "io.github.dennisdko.gotimerecording"
@@ -53,9 +53,9 @@ android {
         if (keystore != null) {
             create("release") {
                 storeFile = file(keystore)
-                storePassword = providers.environmentVariable("GTR_ANDROID_KEYSTORE_PASSWORD").get()
-                keyAlias = providers.environmentVariable("GTR_ANDROID_KEY_ALIAS").get()
-                keyPassword = providers.environmentVariable("GTR_ANDROID_KEY_PASSWORD").get()
+                storePassword = providers.environmentVariable("TIMEPULSE_ANDROID_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("TIMEPULSE_ANDROID_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("TIMEPULSE_ANDROID_KEY_PASSWORD").get()
             }
         }
     }

@@ -164,7 +164,7 @@ func Build() (cleanup func(), err error) {
 		return nil, fmt.Errorf("cannot create a temporary directory: %w", err)
 	}
 
-	path := filepath.Join(dir, "go-time-recording-web"+exeSuffix())
+	path := filepath.Join(dir, "timepulse-web"+exeSuffix())
 
 	args := []string{"build", "-o", path}
 
