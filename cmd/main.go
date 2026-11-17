@@ -1172,7 +1172,7 @@ func sayingWhy(all map[int64]gofrmigration.Migrate, console io.Writer) map[int64
 // Declaring is not publishing, which is worth knowing before writing an alert
 // against one of these. The registration creates the instrument; the exporter
 // emits a series only once it has a value, so a fresh installation that has had
-// no refused sign-in publishes no gtr_signin_failures_total at all rather than
+// no refused sign-in publishes no timepulse_signin_failures_total at all rather than
 // publishing it as zero.
 //
 // So "nothing has gone wrong yet" and "this metric does not exist" are the same

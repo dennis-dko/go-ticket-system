@@ -796,7 +796,7 @@ Two caveats that decide whether your alerting is worth anything:
   `version` field — that is the application and nothing else.
 
 A metric is published only once it has a value. An installation that has had no
-refused sign-in publishes no `gtr_signin_failures_total` at all, rather than
+refused sign-in publishes no `timepulse_signin_failures_total` at all, rather than
 publishing zero. Treat an absent series as absent — `absent()` — not as a healthy
 zero.
 
