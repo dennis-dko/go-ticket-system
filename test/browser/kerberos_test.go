@@ -31,7 +31,7 @@ import (
 // the browser's business, and what the page does with the answer is this file's.
 //
 // Three of the four need the seeded directory, because a ticket's owner is looked
-// up there, and skip without GTR_TEST_LDAP. CI runs them in the job that starts
+// up there, and skip without TIMEPULSE_TEST_LDAP. CI runs them in the job that starts
 // one, and fails that job when they skip.
 
 // kerberosSecret derives the test keytab's key, and seals every ticket here.
@@ -43,19 +43,19 @@ const kerberosSecret = "the-service-secret"
 func ticketsReady(t *testing.T) *page {
 	t.Helper()
 
-	address := os.Getenv("GTR_TEST_LDAP")
+	address := os.Getenv("TIMEPULSE_TEST_LDAP")
 	if address == "" {
-		t.Skip("GTR_TEST_LDAP is not set; start test/docker-compose.yml's ldap profile to run this")
+		t.Skip("TIMEPULSE_TEST_LDAP is not set; start test/docker-compose.yml's ldap profile to run this")
 	}
 
 	host, rawPort, err := net.SplitHostPort(address)
 	if err != nil {
-		t.Fatalf("GTR_TEST_LDAP must be host:port, got %q: %v", address, err)
+		t.Fatalf("TIMEPULSE_TEST_LDAP must be host:port, got %q: %v", address, err)
 	}
 
 	port, err := strconv.Atoi(rawPort)
 	if err != nil {
-		t.Fatalf("GTR_TEST_LDAP has a port that is not a number: %q", rawPort)
+		t.Fatalf("TIMEPULSE_TEST_LDAP has a port that is not a number: %q", rawPort)
 	}
 
 	p := openWith(t, "KERBEROS_KEYTAB="+kerberostest.KeytabFile(t, tempdir.New(t), kerberosSecret))
@@ -75,7 +75,7 @@ func ticketsReady(t *testing.T) *page {
 				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
 				body: JSON.stringify({
 					enabled: true, host: %q, port: %d, startTls: false, useTls: false,
-					bindDn: 'cn=admin,dc=example,dc=com', bindPassword: 'gtr-test-password',
+					bindDn: 'cn=admin,dc=example,dc=com', bindPassword: 'timepulse-test-password',
 					baseDn: 'dc=example,dc=com', userFilter: '(|(uid=%%s)(mail=%%s))',
 					nameAttribute: 'cn', emailAttribute: 'mail', idAttribute: 'entryUUID',
 					defaultRole: 'user',

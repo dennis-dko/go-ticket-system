@@ -167,7 +167,7 @@ func imageUpdateUnderTest(t *testing.T) (*UpdateHandler, *announce.Hub, string) 
 
 	// A connection that answers, as the running one does: an update asks the
 	// next start's connection first, and nothing is stored where these run.
-	running := appconfig.Datasource{Dialect: "sqlite", Name: filepath.Join(dir, "gtr.db")}
+	running := appconfig.Datasource{Dialect: "sqlite", Name: filepath.Join(dir, "timepulse.db")}
 
 	return &UpdateHandler{hub: hub, images: imageupdate.New(dir), running: running}, hub, dir
 }

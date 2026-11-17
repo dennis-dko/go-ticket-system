@@ -113,7 +113,7 @@ func TestAnInternalFailureThatNamesItselfKeepsItsName(t *testing.T) {
 // driver's English on the one screen where the values being complained about are
 // sitting in the fields above it.
 func TestAFailedConnectionTestIsGenericWithTheDriversWordsKept(t *testing.T) {
-	out := probeFailure(errors.New(`pq: password authentication failed for user "gtr"`))
+	out := probeFailure(errors.New(`pq: password authentication failed for user "timepulse"`))
 
 	if got := out["code"]; got != apperror.CodeProbeFailed {
 		t.Errorf("a failed probe carries code %v, want %q", got, apperror.CodeProbeFailed)

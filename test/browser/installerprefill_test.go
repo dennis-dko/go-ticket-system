@@ -28,7 +28,7 @@ func TestTheInstallerFillsInTheEnvironmentsAnswersOnceItHasTheToken(t *testing.T
 	const token = "a-token-chosen-for-this-case"
 
 	app := harness.StartUnconfigured(t,
-		"SETUP_TOKEN="+token, "DB_HOST=db.internal", "DB_NAME=hours", "DB_USER=gtr")
+		"SETUP_TOKEN="+token, "DB_HOST=db.internal", "DB_NAME=hours", "DB_USER=timepulse")
 
 	alloc, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch(t, "en-US")...)
 	defer cancelAlloc()
@@ -56,7 +56,7 @@ func TestTheInstallerFillsInTheEnvironmentsAnswersOnceItHasTheToken(t *testing.T
 					return err
 				}
 
-				if *into == "db.internal|hours|gtr" || time.Now().After(deadline) {
+				if *into == "db.internal|hours|timepulse" || time.Now().After(deadline) {
 					return nil
 				}
 
@@ -89,11 +89,11 @@ func TestTheInstallerFillsInTheEnvironmentsAnswersOnceItHasTheToken(t *testing.T
 		t.Errorf("before any token was given the form already held %q of the connection", before)
 	}
 
-	if after != "db.internal|hours|gtr" {
+	if after != "db.internal|hours|timepulse" {
 		t.Errorf("with the token typed the form holds %q; want what the environment supplied", after)
 	}
 
-	if byLink != "db.internal|hours|gtr" {
+	if byLink != "db.internal|hours|timepulse" {
 		t.Errorf("opened by the link in the log the form holds %q; want what the environment supplied", byLink)
 	}
 }

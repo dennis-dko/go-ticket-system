@@ -32,15 +32,15 @@ func TestARestartIntoADatabaseThatDoesNotAnswerIsRefused(t *testing.T) {
 
 	// Nothing listens on port 1, so the probe is refused at once.
 	stored := appconfig.Datasource{
-		Dialect: "postgres", Name: "gtr", Host: "127.0.0.1", Port: "1",
-		User: "gtr", Password: "a-password", SSLMode: "disable",
+		Dialect: "postgres", Name: "timepulse", Host: "127.0.0.1", Port: "1",
+		User: "timepulse", Password: "a-password", SSLMode: "disable",
 	}
 
 	if err := appconfig.SaveDatasource(appconfig.DatasourceFile, stored); err != nil {
 		t.Fatal(err)
 	}
 
-	running := appconfig.Datasource{Dialect: "sqlite", Name: "gtr.db"}
+	running := appconfig.Datasource{Dialect: "sqlite", Name: "timepulse.db"}
 	h := NewRestartHandler(nil, NewAuthorizer(false), appconfig.Config{}, running, false, appconfig.Telemetry{})
 
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/settings/restart", nil)

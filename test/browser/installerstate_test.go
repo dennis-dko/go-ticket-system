@@ -117,10 +117,10 @@ func TestTheInstallerSaysInTheReadersLanguageThatAConnectionFailed(t *testing.T)
 			`document.querySelector('#token').value = '`+setupToken(t, app)+`';`+
 				`document.querySelector('#dialect').value = 'postgres';`+
 				`document.querySelector('#dialect').dispatchEvent(new Event('change'));`+
-				`document.querySelector('#name').value = 'gtr';`+
+				`document.querySelector('#name').value = 'timepulse';`+
 				`document.querySelector('#host').value = '127.0.0.1';`+
 				`document.querySelector('#port').value = '`+closed+`';`+
-				`document.querySelector('#user').value = 'gtr';`+
+				`document.querySelector('#user').value = 'timepulse';`+
 				`document.querySelector('#password').value = 'not-used'`, nil),
 		whatTheInstallerSays("#test", &said),
 	); err != nil {

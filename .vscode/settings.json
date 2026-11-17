@@ -1,6 +1,6 @@
 {
   // ===========================================================================
-  // Go-Time-Recording - VS Code workspace settings
+  // TimePulse - VS Code workspace settings
   //
   // Written against what this repository actually is rather than against a
   // generic Go setup: three build-tagged test suites, web assets served byte

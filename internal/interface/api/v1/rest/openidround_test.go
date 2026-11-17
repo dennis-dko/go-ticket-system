@@ -11,7 +11,7 @@ import (
 // is still recognised, or somebody signing in at that moment would be sent back
 // to start again for no reason they could see.
 func TestARoundBegunBeforeTheRenameIsStillRecognised(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "http://gtr.example.com/api/v1/auth/openid/finish", nil)
+	r := httptest.NewRequest(http.MethodGet, "http://timepulse.example.com/api/v1/auth/openid/finish", nil)
 	r.AddCookie(&http.Cookie{Name: "gtr_openid", Value: "the-state"})
 
 	if !sameRound(r, "the-state") {

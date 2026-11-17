@@ -27,7 +27,7 @@ func TestTheInstallerNamesTheConnectionOnlyToWhoeverHoldsTheToken(t *testing.T) 
 		Token:   "the-token-from-the-log",
 		Prefill: config.Datasource{
 			Dialect: "postgres", Host: "db.internal", Port: "5432",
-			Name: "hours", User: "gtr", Password: "never-sent", SSLMode: "require",
+			Name: "hours", User: "timepulse", Password: "never-sent", SSLMode: "require",
 		},
 	}}
 
@@ -59,7 +59,7 @@ func TestTheInstallerNamesTheConnectionOnlyToWhoeverHoldsTheToken(t *testing.T) 
 			t.Errorf("with the token %q the page is not told what it is setting up: %s", token, body)
 		}
 
-		for _, part := range []string{"db.internal", "hours", "gtr", "5432", "postgres"} {
+		for _, part := range []string{"db.internal", "hours", "timepulse", "5432", "postgres"} {
 			if strings.Contains(body, part) {
 				t.Errorf("with the token %q the state names %q of the connection: %s", token, part, body)
 			}
@@ -68,7 +68,7 @@ func TestTheInstallerNamesTheConnectionOnlyToWhoeverHoldsTheToken(t *testing.T) 
 
 	body, state := ask("the-token-from-the-log")
 
-	if state.Datasource == nil || state.Datasource.Host != "db.internal" || state.Datasource.User != "gtr" ||
+	if state.Datasource == nil || state.Datasource.Host != "db.internal" || state.Datasource.User != "timepulse" ||
 		state.Datasource.Name != "hours" {
 		t.Errorf("the token's holder is not offered what the environment supplied: %s", body)
 	}

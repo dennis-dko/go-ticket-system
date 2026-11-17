@@ -195,7 +195,7 @@ func TestAProviderOverPlainHTTPIsRefused(t *testing.T) {
 	_, admin, _ := startWithWorker(t)
 
 	refused := admin.api(http.MethodPut, "/settings/openid", map[string]any{
-		"enabled": true, "issuer": "http://id.example.com/realms/acme", "clientId": "gtr",
+		"enabled": true, "issuer": "http://id.example.com/realms/acme", "clientId": "timepulse",
 	})
 
 	if refused.Status != http.StatusBadRequest || !strings.Contains(string(refused.Body), "openidNeedsHttps") {

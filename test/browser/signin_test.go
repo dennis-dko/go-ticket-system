@@ -466,7 +466,7 @@ func TestASessionTheServerNoLongerAcceptsTakesTheScreenWithIt(t *testing.T) {
 	p.waitForFilled("#datasource-active")
 
 	p.run("type something", chromedp.SendKeys(
-		`#form-datasource [name="name"]`, "gtr_live", chromedp.ByQuery))
+		`#form-datasource [name="name"]`, "timepulse_live", chromedp.ByQuery))
 
 	// The session ends underneath the page, which the page has no way of knowing.
 	p.run("end the session behind its back", chromedp.Evaluate(`

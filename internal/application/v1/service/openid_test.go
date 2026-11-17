@@ -69,7 +69,7 @@ func newOpenIDFixture(t *testing.T) *openIDFixture {
 	f := &openIDFixture{
 		fixture:  newFixture(t),
 		provider: &fakeProvider{who: model.OpenIDClaims{Subject: "dennis-at-the-provider", Email: "dennis@example.com"}},
-		config:   model.OpenIDConfig{Enabled: true, Issuer: "https://id.example.com", ClientID: "gtr"},
+		config:   model.OpenIDConfig{Enabled: true, Issuer: "https://id.example.com", ClientID: "timepulse"},
 	}
 
 	source := service.OpenIDConfigSource(func(context.Context) (model.OpenIDConfig, error) { return f.config, nil })

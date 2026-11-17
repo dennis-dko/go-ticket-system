@@ -36,7 +36,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 			chromedp.ByQuery))
 
 	typed := map[string]string{
-		"host": "db.example.invalid", "name": "gtr_live", "user": "gtr_admin",
+		"host": "db.example.invalid", "name": "timepulse_live", "user": "timepulse_admin",
 	}
 
 	// Emptied first, the way a person empties a box - with the input event that
@@ -185,7 +185,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 
 	// What this version writes is stamped, or the next update repeats all of it.
 	p.run("type something", chromedp.SendKeys(
-		`#form-datasource [name="name"]`, "gtr_live", chromedp.ByQuery))
+		`#form-datasource [name="name"]`, "timepulse_live", chromedp.ByQuery))
 
 	var stamped string
 

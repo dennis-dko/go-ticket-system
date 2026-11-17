@@ -10,8 +10,8 @@ import (
 // decide that - an empty port is the default port, as it is when connecting.
 func TestAKeptPasswordFollowsItsAccountAndNothingElse(t *testing.T) {
 	stored := appconfig.Datasource{
-		Dialect: "postgres", Name: "gtr", Host: "db.example", Port: "5432",
-		User: "gtr", Password: "secret",
+		Dialect: "postgres", Name: "timepulse", Host: "db.example", Port: "5432",
+		User: "timepulse", Password: "secret",
 	}
 
 	for _, tc := range []struct {

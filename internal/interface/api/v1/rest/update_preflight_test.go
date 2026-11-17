@@ -30,8 +30,8 @@ func TestAnImageUpdateIntoADatabaseThatDoesNotAnswerIsRefused(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	stored := appconfig.Datasource{
-		Dialect: "postgres", Name: "gtr", Host: "127.0.0.1", Port: "1",
-		User: "gtr", Password: "a-password", SSLMode: "disable",
+		Dialect: "postgres", Name: "timepulse", Host: "127.0.0.1", Port: "1",
+		User: "timepulse", Password: "a-password", SSLMode: "disable",
 	}
 
 	if err := appconfig.SaveDatasource(appconfig.DatasourceFile, stored); err != nil {
@@ -78,8 +78,8 @@ func TestABinaryUpdateIntoADatabaseThatDoesNotAnswerIsRefusedBeforeItIsAnnounced
 	t.Chdir(t.TempDir())
 
 	stored := appconfig.Datasource{
-		Dialect: "postgres", Name: "gtr", Host: "127.0.0.1", Port: "1",
-		User: "gtr", Password: "a-password", SSLMode: "disable",
+		Dialect: "postgres", Name: "timepulse", Host: "127.0.0.1", Port: "1",
+		User: "timepulse", Password: "a-password", SSLMode: "disable",
 	}
 
 	if err := appconfig.SaveDatasource(appconfig.DatasourceFile, stored); err != nil {
@@ -104,7 +104,7 @@ func TestABinaryUpdateIntoADatabaseThatDoesNotAnswerIsRefusedBeforeItIsAnnounced
 
 	hub := announce.New()
 	h := NewUpdateHandler(NewAuthorizer(false), selfupdate.New(feed.URL, ""), hub, "v1.0.0", true).
-		WithConnection(appconfig.Datasource{Dialect: "sqlite", Name: "gtr.db"})
+		WithConnection(appconfig.Datasource{Dialect: "sqlite", Name: "timepulse.db"})
 
 	_, err := h.Apply(requestContext())
 

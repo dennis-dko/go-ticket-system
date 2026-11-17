@@ -174,9 +174,9 @@ func TestAFailureFromUnderneathIsGenericAndKeepsItsDetail(t *testing.T) {
 		"dialect":  "postgres",
 		"host":     "127.0.0.1",
 		"port":     "1",
-		"name":     "gtr",
-		"user":     "gtr",
-		"password": "gtr",
+		"name":     "timepulse",
+		"user":     "timepulse",
+		"password": "timepulse",
 	})
 
 	// A probe answers successfully with the reason inside it: a database that

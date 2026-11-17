@@ -98,9 +98,9 @@ func TestAFailedConnectionSaysSoInGermanAndKeepsTheDetail(t *testing.T) {
 			// rather than a complaint about a field.
 			typed(form.elements.host, '127.0.0.1');
 			typed(form.elements.port, '1');
-			typed(form.elements.name, 'gtr');
-			typed(form.elements.user, 'gtr');
-			typed(form.elements.password, 'gtr');
+			typed(form.elements.name, 'timepulse');
+			typed(form.elements.user, 'timepulse');
+			typed(form.elements.password, 'timepulse');
 
 			return form.dataset.editing === 'yes';
 		})()`, &protected))

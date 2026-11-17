@@ -21,7 +21,7 @@ import (
 )
 
 // readmePictures names the directory the README's pictures are written to.
-const readmePictures = "GTR_README_PICTURES"
+const readmePictures = "TIMEPULSE_README_PICTURES"
 
 // defaultName is what cmd/configs/.env calls an installation, in place of the
 // name the harness gives each instance to tell it from the others.

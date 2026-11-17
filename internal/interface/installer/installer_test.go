@@ -340,8 +340,8 @@ func TestTheConnectionHandedOverIsTheOneTheNextStartReads(t *testing.T) {
 		done: make(chan config.Datasource, 1),
 	}
 
-	body := fmt.Sprintf(`{"dialect":"sqlite","name":%q,"host":"db","port":"5432","user":"gtr",`+
-		`"password":"left-over","sslMode":"disable"}`, filepath.ToSlash(filepath.Join(dir, "gtr")))
+	body := fmt.Sprintf(`{"dialect":"sqlite","name":%q,"host":"db","port":"5432","user":"timepulse",`+
+		`"password":"left-over","sslMode":"disable"}`, filepath.ToSlash(filepath.Join(dir, "timepulse")))
 	req := httptest.NewRequest(http.MethodPost, "/install/save", strings.NewReader(body))
 	req.Header.Set("X-Setup-Token", "the-token")
 

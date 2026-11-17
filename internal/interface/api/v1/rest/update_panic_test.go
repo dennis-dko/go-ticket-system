@@ -60,7 +60,7 @@ func TestAnInstallThatPanicsTakesItsAnnouncementBack(t *testing.T) {
 
 	hub := announce.New()
 	h := NewUpdateHandler(NewAuthorizer(false), source, hub, "v1.0.0", true).
-		WithConnection(appconfig.Datasource{Dialect: "sqlite", Name: "gtr.db"})
+		WithConnection(appconfig.Datasource{Dialect: "sqlite", Name: "timepulse.db"})
 
 	fell := func() (fell any) {
 		defer func() { fell = recover() }()

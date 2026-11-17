@@ -36,7 +36,7 @@ import (
 func TestASaveThatCannotFinishLeavesTheWorkingConnection(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "configs")
 	path := filepath.Join(dir, "datasource.json")
-	working := config.Datasource{Dialect: "postgres", Name: "gtr", Host: "db", User: "gtr", Password: "secret"}
+	working := config.Datasource{Dialect: "postgres", Name: "timepulse", Host: "db", User: "timepulse", Password: "secret"}
 
 	if err := config.SaveDatasource(path, working); err != nil {
 		t.Fatal(err)

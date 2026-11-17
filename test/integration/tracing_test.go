@@ -25,7 +25,7 @@ import (
 // So this one exports to a real Jaeger and reads the trace back out of it.
 //
 //	docker compose --profile traces up -d --wait      (from test/)
-//	GTR_TEST_JAEGER=localhost:54317 go test -tags integration ./test/integration
+//	TIMEPULSE_TEST_JAEGER=localhost:54317 go test -tags integration ./test/integration
 //
 // Or `task test:traces`, which does both.
 
@@ -33,11 +33,11 @@ const (
 	// jaegerEnv holds the collector as host:port - what the application dials.
 	// Empty skips, like the database DSN: a collector is not something every
 	// checkout has running.
-	jaegerEnv = "GTR_TEST_JAEGER"
+	jaegerEnv = "TIMEPULSE_TEST_JAEGER"
 
 	// jaegerQueryEnv overrides where the trace is read back from. It has a
 	// default because test/docker-compose.yml fixes the port.
-	jaegerQueryEnv     = "GTR_TEST_JAEGER_QUERY"
+	jaegerQueryEnv     = "TIMEPULSE_TEST_JAEGER_QUERY"
 	defaultJaegerQuery = "http://localhost:51686"
 )
 
