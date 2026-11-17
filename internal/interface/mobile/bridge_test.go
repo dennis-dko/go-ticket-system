@@ -83,23 +83,3 @@ func TestThePageTellsTheAppItsSessionEndedByTheBridgeItRegisters(t *testing.T) {
 			"token taken back leaves the app on the page's own sign-in form", registered[1])
 	}
 }
-
-// Every bridge the app registers is put on the page under the name a page from
-// before the rename to TimePulse looks for as well. The app is updated apart from
-// the installation whose page it shows, and an older page that finds no bridge
-// takes the app for a browser: it offers to install itself, and a token taken
-// back leaves it on its own sign-in form.
-func TestTheAppPutsEveryBridgeOnThePageUnderTheOldNameToo(t *testing.T) {
-	code, _ := lexed(source(t, "Web.kt"))
-
-	for _, bridge := range []string{"filesInterface", "notificationsInterface", "sessionInterface"} {
-		put := regexp.MustCompile(`\bbridgeNames\(\s*` + bridge + `\s*\)\.forEach\s*\{\s*(?:view\.)?addJavascriptInterface\(`)
-		if !put.MatchString(code) {
-			t.Errorf("Web.kt does not put %s on the page through bridgeNames, so a page from before the rename does not find it", bridge)
-		}
-	}
-
-	if !regexp.MustCompile(`"GoTimeRecording"\s*\+\s*name\.removePrefix\("TimePulse"\)`).MatchString(code) {
-		t.Error("bridgeNames no longer gives a bridge the name a page from before the rename looks for")
-	}
-}

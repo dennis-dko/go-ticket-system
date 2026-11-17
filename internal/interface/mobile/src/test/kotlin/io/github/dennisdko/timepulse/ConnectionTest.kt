@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.timepulse
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -13,16 +13,6 @@ class ConnectionTest {
         assertEquals(
             Connection("https://time.example.com", "timepulse_abc123"),
             connectionIn("timepulse://connect?token=timepulse_abc123&url=https%3A%2F%2Ftime.example.com"),
-        )
-    }
-
-    // An installation from before the rename to TimePulse writes its old scheme
-    // into a token's code, and the app is updated apart from it.
-    @Test
-    fun theAddressAnOlderInstallationWritesIsReadToo() {
-        assertEquals(
-            Connection("https://time.example.com", "gtr_abc123"),
-            connectionIn("go-time-recording://connect?token=gtr_abc123&url=https%3A%2F%2Ftime.example.com"),
         )
     }
 

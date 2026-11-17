@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.timepulse
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -105,14 +105,15 @@ fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> U
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
 
-            val files = Files { name, bytes ->
-                saving.put(bytes)
-                save.launch(name)
-            }
-            val session = Session { Handler(Looper.getMainLooper()).post(onSessionEnded) }
+            addJavascriptInterface(
+                Files { name, bytes ->
+                    saving.put(bytes)
+                    save.launch(name)
+                },
+                filesInterface,
+            )
 
-            bridgeNames(filesInterface).forEach { addJavascriptInterface(files, it) }
-            bridgeNames(sessionInterface).forEach { addJavascriptInterface(session, it) }
+            addJavascriptInterface(Session { Handler(Looper.getMainLooper()).post(onSessionEnded) }, sessionInterface)
 
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -177,11 +178,12 @@ fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> U
     // one below that loads the page, so the page has it from its start. Below
     // Android 13 there is nothing to ask: notifications are on unless switched off.
     DisposableEffect(view) {
-        val notifications = Notifications(context) {
-            if (Build.VERSION.SDK_INT >= 33) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-
-        bridgeNames(notificationsInterface).forEach { view.addJavascriptInterface(notifications, it) }
+        view.addJavascriptInterface(
+            Notifications(context) {
+                if (Build.VERSION.SDK_INT >= 33) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+            },
+            notificationsInterface,
+        )
 
         onDispose { }
     }
@@ -220,14 +222,6 @@ private class Files(private val onSave: (String, ByteArray) -> Unit) {
         Handler(Looper.getMainLooper()).post { onSave(downloadName(name), bytes) }
     }
 }
-
-/**
- * bridgeNames are the names a bridge is put on the page's window under: its own,
- * and the one a page from before the rename to TimePulse looks for it by. The
- * app is updated apart from the installation whose page it shows, so that page
- * may be the older of the two for a while.
- */
-fun bridgeNames(name: String): List<String> = listOf(name, "GoTimeRecording" + name.removePrefix("TimePulse"))
 
 /** filesInterface is the name the page reaches [Files] by, which res/raw/keep_download.js calls. */
 private const val filesInterface = "TimePulseFiles"

@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.timepulse
 
 import java.time.Duration
 import java.time.Instant

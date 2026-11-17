@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.timepulse
 
 import android.app.Application
 import android.content.res.AssetManager

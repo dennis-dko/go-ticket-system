@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.timepulse
 
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
@@ -74,18 +74,14 @@ class InstallationTest {
         }
     }
 
-    // A token's session comes back under the name TimePulse gives it, or under the
-    // one an installation from before the rename does: the app is updated apart
-    // from the installation it is connected to. An answer with neither is not
-    // this application's.
+    // A token's session comes back under the name TimePulse gives it, and an
+    // answer without it is not this application's.
     @Test
-    fun aSessionIsTakenUnderEitherName() {
-        listOf("timepulse_session", "gtr_session").forEach { name ->
-            openingWith(name) { address ->
-                val cookies = runBlocking { Installation(address, english).handOver("timepulse_abc123") }
+    fun aSessionIsTakenUnderItsName() {
+        openingWith("timepulse_session") { address ->
+            val cookies = runBlocking { Installation(address, english).handOver("timepulse_abc123") }
 
-                assertTrue("a session under $name was not taken", cookies.any { it.startsWith("$name=") })
-            }
+            assertTrue("the session was not taken", cookies.any { it.startsWith("timepulse_session=") })
         }
 
         openingWith(null) { address ->

@@ -500,26 +500,6 @@ func TestTheAppAnswersToTheAddressATokensCodeHolds(t *testing.T) {
 	if body := source(t, "Connection.kt"); !strings.Contains(body, `const val connectScheme = "`+scheme+`"`) || !strings.Contains(body, `uri.host != "connect"`) {
 		t.Errorf("the app does not read %s://connect as the address of a connection", scheme)
 	}
-
-	// And the scheme an installation from before the rename to TimePulse writes,
-	// because the app is updated apart from the installation it is connected to:
-	// a phone given a new app goes on being connected to an older installation.
-	const before = "go-time-recording"
-
-	registered = false
-
-	for _, data := range regexp.MustCompile(`<data\b[^>]*/>`).FindAllString(read(t, "src/main/AndroidManifest.xml"), -1) {
-		registered = registered || strings.Contains(data, `android:scheme="`+before+`"`) && strings.Contains(data, `android:host="connect"`)
-	}
-
-	if !registered {
-		t.Errorf("the manifest no longer registers %s://connect, which an older installation writes", before)
-	}
-
-	if body := source(t, "Connection.kt"); !strings.Contains(body, `const val connectSchemeBeforeTheRename = "`+before+`"`) ||
-		!strings.Contains(body, `uri.scheme != connectSchemeBeforeTheRename`) {
-		t.Errorf("the app no longer reads %s://connect, which an older installation writes", before)
-	}
 }
 
 // The web interface is laid out in a WebView exactly as tall as its place. One
