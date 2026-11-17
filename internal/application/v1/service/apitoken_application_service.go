@@ -15,12 +15,6 @@ import (
 // string is recognisable in a log or a repository scan.
 const APITokenPrefix = "timepulse_"
 
-// apiTokenPrefixBeforeTheRename is what tokens were issued with while the
-// project was called Go-Time-Recording. A token keeps its value for as long as
-// it lives, and one that never expires is held by scripts and by the Android
-// app, which signs in with nothing else - so it is still accepted.
-const apiTokenPrefixBeforeTheRename = "gtr_"
-
 // maxTokensPerUser bounds how many tokens one account can accumulate.
 const maxTokensPerUser = 20
 
@@ -146,7 +140,7 @@ func (s *APITokenService) Resolve(ctx context.Context, secret string) (*Principa
 func (s *APITokenService) ResolveToken(ctx context.Context, secret string) (*model.APIToken, *Principal, error) {
 	invalid := apperror.Invalidf("invalid token").WithCode("invalidToken")
 
-	if !strings.HasPrefix(secret, APITokenPrefix) && !strings.HasPrefix(secret, apiTokenPrefixBeforeTheRename) {
+	if !strings.HasPrefix(secret, APITokenPrefix) {
 		return nil, nil, invalid
 	}
 
