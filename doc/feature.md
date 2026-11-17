@@ -262,7 +262,7 @@ address, and that decides the rest:
   to the calendar there as a subscribed one. The code is the key as much as the
   text is, and leaves the screen with it.
 - **It is hidden in the log.** Every reading is logged under its address, so the
-  process log writes `gtrcal_[hidden]` in place of the key - on the console as
+  process log writes `timepulsecal_[hidden]` in place of the key - on the console as
   well as in the log viewer - and whoever reads the log learns that a calendar
   was read, not how to read it. Traces and metrics name the route, never the
   address.

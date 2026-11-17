@@ -36,7 +36,7 @@ func TestACalendarAddressIsShownOnceAndTakenBack(t *testing.T) {
 		chromedp.WaitVisible("#feed-address", chromedp.ByID))
 
 	first := strings.TrimSpace(p.text("#feed-address-value"))
-	if !strings.Contains(first, "/api/v1/calendar-feed/gtrcal_") || !strings.HasSuffix(first, ".ics") {
+	if !strings.Contains(first, "/api/v1/calendar-feed/timepulsecal_") || !strings.HasSuffix(first, ".ics") {
 		t.Fatalf("the address on screen is %q, want a feed's", first)
 	}
 
@@ -74,7 +74,7 @@ func TestACalendarAddressIsShownOnceAndTakenBack(t *testing.T) {
 		t.Errorf("the address answered %d without the booked day:\n%s", status, body)
 	}
 
-	p.waitForText("#feed-state", "gtrcal_")
+	p.waitForText("#feed-state", "timepulsecal_")
 
 	if label := p.text("#feed-create"); label != "New address" {
 		t.Errorf("with an address the button says %q, want New address", label)
@@ -139,7 +139,7 @@ func TestASignOutTakesTheCalendarCardWithIt(t *testing.T) {
 		p.click("#feed-create"),
 		chromedp.WaitVisible("#feed-address", chromedp.ByID))
 
-	p.waitForText("#feed-state", "gtrcal_")
+	p.waitForText("#feed-state", "timepulsecal_")
 
 	p.run("sign out", p.click("#logout"), chromedp.WaitVisible("#form-login", chromedp.ByID))
 

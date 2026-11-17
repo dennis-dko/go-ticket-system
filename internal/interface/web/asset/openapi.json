@@ -2279,7 +2279,7 @@
           "me"
         ],
         "summary": "Your calendar feed, without its key",
-        "description": "Answers {\"active\": true, \"prefix\": \"gtrcal_AbC123\", \"createdAt\": \"2026-10-20T09:30:00Z\", \"lastReadAt\": \"2026-10-20T10:00:00Z\"}, or {\"active\": false} without one. prefix is the start of the key, to recognise which address your calendar was given; lastReadAt says whether anything is reading it. Needs the right to read your own entries, which is what the feed hands out.",
+        "description": "Answers {\"active\": true, \"prefix\": \"timepulsecal_AbC123\", \"createdAt\": \"2026-10-20T09:30:00Z\", \"lastReadAt\": \"2026-10-20T10:00:00Z\"}, or {\"active\": false} without one. prefix is the start of the key, to recognise which address your calendar was given; lastReadAt says whether anything is reading it. Needs the right to read your own entries, which is what the feed hands out.",
         "responses": {
           "200": {
             "description": "OK"

@@ -286,8 +286,11 @@ func main() {
 	logs.QuietRequestsTo("/api/v1/admin/logs")
 
 	// And no line carries a calendar feed's key, which is the whole of the address
-	// a reading of it is logged under; see Conceal.
-	logs.Conceal(appservice.CalendarFeedKeyPrefix)
+	// a reading of it is logged under; see Conceal. Every shape a key is read
+	// with, the one from before the rename included.
+	for _, prefix := range appservice.CalendarFeedKeyPrefixes() {
+		logs.Conceal(prefix)
+	}
 
 	if terminal {
 		// Interception makes the output a pipe, and GoFr prints JSON when its

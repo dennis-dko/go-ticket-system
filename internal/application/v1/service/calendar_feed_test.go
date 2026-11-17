@@ -11,13 +11,15 @@ import (
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/memory"
 	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 // feedFixture is the planned fixture with somebody's calendar feed beside it.
 type feedFixture struct {
 	*plannedFixture
 
-	feeds *service.CalendarFeedService
+	feeds    *service.CalendarFeedService
+	feedRepo *memory.CalendarFeedRepository
 }
 
 func newFeedFixture(t *testing.T) *feedFixture {
@@ -43,10 +45,33 @@ func newFeedFixture(t *testing.T) *feedFixture {
 		return "Zeiterfassung (" + language + ")"
 	})
 
+	feedRepo := memory.NewCalendarFeedRepository()
+
 	return &feedFixture{
 		plannedFixture: f,
-		feeds: service.NewCalendarFeedService(memory.NewCalendarFeedRepository(), f.userRepo,
+		feeds: service.NewCalendarFeedService(feedRepo, f.userRepo,
 			f.timesheetRepo, f.absenceRepo, f.projectRepo, f.auth, clock, name),
+		feedRepo: feedRepo,
+	}
+}
+
+// A key issued before the project was called TimePulse begins gtrcal_, and a
+// calendar that was given one goes on asking with it until its owner makes a new
+// address - which nothing tells them to do. So it still reads the feed it was
+// made for, as a key of today's shape does.
+func TestAKeyIssuedBeforeTheRenameStillReadsItsFeed(t *testing.T) {
+	f := newFeedFixture(t)
+
+	const key = "gtrcal_a2V5IGlzc3VlZCBiZWZvcmUgdGhlIHJlbmFtZQ"
+
+	if err := f.feedRepo.Replace(context.Background(), &model.CalendarFeed{
+		UserID: f.userID, KeyHash: security.HashToken(key), Prefix: key[:13], CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("keep the feed: %v", err)
+	}
+
+	if written := f.read(t, key); !strings.Contains(written, "BEGIN:VCALENDAR") {
+		t.Errorf("the feed read with a key from before the rename is %q", written)
 	}
 }
 
@@ -190,7 +215,7 @@ func TestAFeedReadsNothingTheOwnerCouldNotReadThemselves(t *testing.T) {
 	key := f.subscribe(t)
 	f.read(t, key)
 
-	f.unread(t, "gtrcal_somethingnobodywasgiven", "a key nobody was given")
+	f.unread(t, "timepulsecal_somethingnobodywasgiven", "a key nobody was given")
 	f.unread(t, strings.TrimPrefix(key, service.CalendarFeedKeyPrefix), "the key without its prefix")
 
 	role, err := f.roles.CreateRole(ctx, "auditor", "", []string{model.PermUserRead})

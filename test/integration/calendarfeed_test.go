@@ -38,7 +38,7 @@ func TestACalendarFeedIsReadAtItsAddressAlone(t *testing.T) {
 	worker.must(worker.api(http.MethodPost, "/me/calendar-feed", nil),
 		http.StatusCreated, http.StatusOK).Data(t, &made)
 
-	if !made.Active || !strings.HasPrefix(made.Path, "/api/v1/calendar-feed/gtrcal_") || !strings.HasSuffix(made.Path, ".ics") {
+	if !made.Active || !strings.HasPrefix(made.Path, "/api/v1/calendar-feed/timepulsecal_") || !strings.HasSuffix(made.Path, ".ics") {
 		t.Fatalf("a new feed reads %+v, want one with its address", made)
 	}
 
@@ -131,9 +131,9 @@ func TestTheProcessLogDoesNotCarryAFeedsKey(t *testing.T) {
 
 	readFeed(a, made.Path)
 
-	key := strings.TrimSuffix(strings.TrimPrefix(made.Path, "/api/v1/calendar-feed/gtrcal_"), ".ics")
+	key := strings.TrimSuffix(strings.TrimPrefix(made.Path, "/api/v1/calendar-feed/timepulsecal_"), ".ics")
 
-	if !a.logShows(20*time.Second, "/api/v1/calendar-feed/gtrcal_[hidden].ics") {
+	if !a.logShows(20*time.Second, "/api/v1/calendar-feed/timepulsecal_[hidden].ics") {
 		t.Fatalf("the console never said a feed was read:\n%s", a.log())
 	}
 
@@ -141,7 +141,7 @@ func TestTheProcessLogDoesNotCarryAFeedsKey(t *testing.T) {
 		t.Errorf("the console carries the feed's key")
 	}
 
-	page := admin.logsContaining(t, "?search=calendar-feed/gtrcal_&limit=500")
+	page := admin.logsContaining(t, "?search=calendar-feed/timepulsecal_&limit=500")
 	if len(page.Records) == 0 {
 		t.Fatalf("the viewer never said a feed was read")
 	}
@@ -150,5 +150,28 @@ func TestTheProcessLogDoesNotCarryAFeedsKey(t *testing.T) {
 		if strings.Contains(record.Message, key) {
 			t.Errorf("the viewer shows the feed's key: %s", record.Message)
 		}
+	}
+}
+
+// A key issued before the project was called TimePulse is still read, so it is
+// still hidden. A calendar asks with the address it was given, and the log writes
+// that address down whether or not a feed answers it - so the key is asked for
+// here without one, and must not reach the log either way.
+func TestTheProcessLogDoesNotCarryAKeyFromBeforeTheRename(t *testing.T) {
+	t.Parallel()
+
+	// INFO for the reason the case above gives.
+	a := start(t, "LOG_LEVEL=INFO")
+
+	const key = "a2V5IGZyb20gYmVmb3JlIHRoZSByZW5hbWU"
+
+	readFeed(a, "/api/v1/calendar-feed/gtrcal_"+key+".ics")
+
+	if !a.logShows(20*time.Second, "/api/v1/calendar-feed/gtrcal_[hidden].ics") {
+		t.Fatalf("the console never said a feed was asked for, or said it with the key:\n%s", a.log())
+	}
+
+	if strings.Contains(a.log(), key) {
+		t.Errorf("the console carries the key")
 	}
 }

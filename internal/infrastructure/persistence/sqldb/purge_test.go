@@ -112,7 +112,7 @@ func TestPurgeUserRemovesEveryReference(t *testing.T) {
 	}
 
 	if _, err := tokens.Save(ctx, &model.APIToken{
-		UserID: leaving.ID, Name: "ci", TokenHash: "hash", Prefix: "gtr_x", CreatedAt: time.Now(),
+		UserID: leaving.ID, Name: "ci", TokenHash: "hash", Prefix: "timepulse_x", CreatedAt: time.Now(),
 	}); err != nil {
 		t.Fatalf("create token: %v", err)
 	}

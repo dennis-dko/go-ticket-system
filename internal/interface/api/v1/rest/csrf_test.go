@@ -173,8 +173,8 @@ func TestPostWithAMismatchedTokenIsRefused(t *testing.T) {
 // is nothing to forge and nothing to demand.
 func TestAPITokenRequestsAreExempt(t *testing.T) {
 	for _, header := range []struct{ name, value string }{
-		{rest.APITokenHeader, "gtr_something"},
-		{"Authorization", "Bearer gtr_something"},
+		{rest.APITokenHeader, "timepulse_something"},
+		{"Authorization", "Bearer timepulse_something"},
 	} {
 		t.Run(header.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "http://gtr.example.com/api/v1/timesheets", nil)

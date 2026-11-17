@@ -21,7 +21,21 @@ import (
 // recognisable wherever it turns up - and so that the process log can hide what
 // follows it, because a subscription's address is written into the request log of
 // everything it passes through.
-const CalendarFeedKeyPrefix = "gtrcal_"
+const CalendarFeedKeyPrefix = "timepulsecal_"
+
+// calendarFeedKeyPrefixBeforeTheRename is what keys were issued with while the
+// project was called Go-Time-Recording. A calendar keeps asking with the address
+// it was given until its owner makes a new one, so a key of that shape still
+// reads its feed.
+const calendarFeedKeyPrefixBeforeTheRename = "gtrcal_"
+
+// CalendarFeedKeyPrefixes are the prefixes of every key a feed is read with:
+// today's and the one from before the rename. The process log hides what follows
+// each of them, so one list decides both which keys are read and which are kept
+// out of the log, and a key cannot come to be accepted without being hidden.
+func CalendarFeedKeyPrefixes() []string {
+	return []string{CalendarFeedKeyPrefix, calendarFeedKeyPrefixBeforeTheRename}
+}
 
 // calendarFeedYears is how far a feed reaches on each side of today: the year
 // behind, as far back as anybody looks for a day they forgot to book, and the year
@@ -211,7 +225,9 @@ func (s *CalendarFeedService) owner(ctx context.Context, key string) (*model.Cal
 	gone := apperror.NotFound("feed", "")
 
 	key = strings.TrimSuffix(key, ".ics")
-	if !strings.HasPrefix(key, CalendarFeedKeyPrefix) {
+	if !slices.ContainsFunc(CalendarFeedKeyPrefixes(), func(prefix string) bool {
+		return strings.HasPrefix(key, prefix)
+	}) {
 		return nil, nil, gone
 	}
 
