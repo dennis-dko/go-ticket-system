@@ -67,18 +67,6 @@ function readCookie(name) {
   return '';
 }
 
-/**
- * The token the server checks a change against, from the cookie it handed out.
- *
- * Under the name from before the rename to TimePulse when today's is missing:
- * a browser that has heard only from an older version holds that one alone, and
- * the first thing this page sends after coming back online can be a booking the
- * outbox kept - a change, before any answer has handed out the new name.
- */
-function csrfToken() {
-  return readCookie('timepulse_csrf') || readCookie('gtr_csrf');
-}
-
 /** Requests that cannot change anything need no token. */
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -370,7 +358,7 @@ async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers ?? {}) };
 
   if (!SAFE_METHODS.has(method)) {
-    headers['X-CSRF-Token'] = csrfToken();
+    headers['X-CSRF-Token'] = readCookie('timepulse_csrf');
   }
 
   // A request this page makes by itself - a check on a timer - says so, and the
@@ -14320,7 +14308,7 @@ async function downloadDocument(doc, name) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRF-Token': csrfToken(),
+      'X-CSRF-Token': readCookie('timepulse_csrf'),
     },
     body: JSON.stringify(doc),
   });
@@ -14344,7 +14332,7 @@ async function sendWorkbook(dryRun) {
   const res = await reach(`${API}/timesheets/import`, {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'X-CSRF-Token': csrfToken() },
+    headers: { 'X-CSRF-Token': readCookie('timepulse_csrf') },
     body,
   });
 
@@ -15053,7 +15041,7 @@ function buildSheetCard(spec) {
       + `?lang=${encodeURIComponent(activeLanguage())}`, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'X-CSRF-Token': csrfToken() },
+      headers: { 'X-CSRF-Token': readCookie('timepulse_csrf') },
       body: form,
     });
 
