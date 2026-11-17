@@ -319,11 +319,10 @@ jobs:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
           TIMEPULSE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           TIMEPULSE_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          # The alias the key was stored under when it was made, which lives in
-          # the keystore inside the secret rather than in this repository. A new
-          # alias would mean a new keystore in the secret, for no change in what
-          # signs the app, so it keeps the project's old name.
-          TIMEPULSE_ANDROID_KEY_ALIAS: go-time-recording
+          # The name the key has inside the keystore in the secret, not in this
+          # repository: Gradle asks the keystore for exactly this entry, so the
+          # line and the secret change together.
+          TIMEPULSE_ANDROID_KEY_ALIAS: timepulse
           TIMEPULSE_ANDROID_KEYSTORE: /key/release.jks
           SIGNER_SHA256: b38ca23d7cc1ea62dcab31096dea87c5c6e98c8c197d8af084309adafb770050
         run: |
