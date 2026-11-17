@@ -21,11 +21,6 @@ import (
 // manual promised that the card would say so. Nothing read the file, so the card
 // said nothing, and whoever pressed the button was left to find the updater's
 // own log.
-//
-// The directory is named under TIMEPULSE_UPDATE_REQUESTS by this release's
-// compose file and under GTR_UPDATE_REQUESTS by one from before the rename to
-// TimePulse - which an installation goes on running when only its image is
-// updated, so both have to be heard.
 func TestTheUpdateCardSaysWhatTheLastImageUpdateCameTo(t *testing.T) {
 	t.Parallel()
 
@@ -35,40 +30,33 @@ func TestTheUpdateCardSaysWhatTheLastImageUpdateCameTo(t *testing.T) {
 		_, _ = w.Write([]byte(`{"tag_name":"v99.0.0","body":"",` +
 			`"html_url":"https://example.invalid/release","assets":[]}`))
 	}))
-	t.Cleanup(feed.Close)
+	defer feed.Close()
 
-	for _, named := range []string{"TIMEPULSE_UPDATE_REQUESTS", "GTR_UPDATE_REQUESTS"} {
-		t.Run(named, func(t *testing.T) {
-			t.Parallel()
+	dir := t.TempDir()
 
-			dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "result"), []byte("none"), 0o600); err != nil {
+		t.Fatalf("cannot leave the updater's answer: %v", err)
+	}
 
-			if err := os.WriteFile(filepath.Join(dir, "result"), []byte("none"), 0o600); err != nil {
-				t.Fatalf("cannot leave the updater's answer: %v", err)
-			}
+	// The updater's sign of life, on a round of an hour so it stays fresh for
+	// as long as the case runs: without it the card names the command instead.
+	if err := os.WriteFile(filepath.Join(dir, "alive"), []byte("3600\n"), 0o600); err != nil {
+		t.Fatalf("cannot leave the updater's sign of life: %v", err)
+	}
 
-			// The updater's sign of life, on a round of an hour so it stays fresh
-			// for as long as the case runs: without it the card names the command
-			// instead.
-			if err := os.WriteFile(filepath.Join(dir, "alive"), []byte("3600\n"), 0o600); err != nil {
-				t.Fatalf("cannot leave the updater's sign of life: %v", err)
-			}
+	p := openWith(t, "UPDATE_FEED="+feed.URL, "TIMEPULSE_UPDATE_REQUESTS="+dir)
+	p.readyAdmin()
 
-			p := openWith(t, "UPDATE_FEED="+feed.URL, named+"="+dir)
-			p.readyAdmin()
+	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		chromedp.WaitVisible("#update-card", chromedp.ByID))
 
-			p.run("open Settings", p.click(`.tab[data-view="admin"]`),
-				chromedp.WaitVisible("#update-card", chromedp.ByID))
+	if !p.visible("#update-image") {
+		t.Fatal("the card says nothing about the last image update, which found " +
+			"nothing newer")
+	}
 
-			if !p.visible("#update-image") {
-				t.Fatal("the card says nothing about the last image update, which found " +
-					"nothing newer")
-			}
-
-			if said := p.text("#update-image"); !strings.Contains(said, "nothing newer") {
-				t.Errorf("the card says %q about an update that found nothing newer", said)
-			}
-		})
+	if said := p.text("#update-image"); !strings.Contains(said, "nothing newer") {
+		t.Errorf("the card says %q about an update that found nothing newer", said)
 	}
 }
 

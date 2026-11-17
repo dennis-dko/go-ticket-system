@@ -1301,7 +1301,7 @@
   "update.downloading": "Die neue Version wird heruntergeladen und geprüft …",
   "update.found": "{0} ist verfügbar. Diese Installation läuft mit {1}.",
   "update.imageFailed": "Die letzte Aktualisierung des Abbilds hat nicht funktioniert, und es wurde nichts geändert.",
-  "update.imageNothingNewer": "Die letzte Aktualisierung des Abbilds fand nichts Neueres als das laufende Abbild, daher wurde nichts geändert. Legt GTR_VERSION eine Version fest, folgt das Abbild dieser Einstellung und nicht dieser Karte.",
+  "update.imageNothingNewer": "Die letzte Aktualisierung des Abbilds fand nichts Neueres als das laufende Abbild, daher wurde nichts geändert. Legt TIMEPULSE_VERSION eine Version fest, folgt das Abbild dieser Einstellung und nicht dieser Karte.",
   "update.inContainer": "Dies läuft in einem Container. Ein ausgetauschtes Programm wäre beim nächsten Neuaufbau wieder weg — stattdessen das Abbild aktualisieren: docker compose pull && docker compose up -d",
   "update.install": "Herunterladen und installieren",
   "update.installedRestart": "Die neue Version liegt bereit. Zum Verwenden die Anwendung neu starten.",

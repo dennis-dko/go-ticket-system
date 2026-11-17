@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -1039,11 +1038,8 @@ func main() {
 			selfupdate.New(cfg.UpdateFeed, cfg.UpdateToken), hub, version, cfg.UpdateCheck).
 			// Present only where the deployment added the overlay that runs it;
 			// see deploy/compose.update.yaml for what that grants and why the
-			// application is not the thing granted it. Under the name a compose file
-			// from before the rename to TimePulse gives it as well, which an
-			// installation updated by its image alone goes on running.
-			WithImageUpdater(imageupdate.New(cmp.Or(os.Getenv("TIMEPULSE_UPDATE_REQUESTS"),
-				os.Getenv("GTR_UPDATE_REQUESTS")))).
+			// application is not the thing granted it.
+			WithImageUpdater(imageupdate.New(os.Getenv("TIMEPULSE_UPDATE_REQUESTS"))).
 			WithConnection(ds),
 		Timers:     rest.NewTimerHandler(timers, authorizer, instanceTimezone),
 		Schedules:  rest.NewScheduleHandler(workWeeks, authorizer),

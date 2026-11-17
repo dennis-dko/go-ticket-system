@@ -12542,7 +12542,7 @@ function renderUpdate(state) {
   if (state.imageOutcome === 'none') {
     image.textContent = t('update.imageNothingNewer',
       'The last image update found nothing newer than the image this runs, so '
-      + 'nothing was changed. Where GTR_VERSION names a version, the image follows '
+      + 'nothing was changed. Where TIMEPULSE_VERSION names a version, the image follows '
       + 'that setting rather than this card.');
   } else if (state.imageOutcome) {
     showRefusal(image, {

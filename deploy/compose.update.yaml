@@ -45,8 +45,7 @@
 #
 # TIMEPULSE_PROJECT_DIR is the absolute path of the directory the compose files
 # are in, and it is required - see the volume below for what goes wrong without
-# it. A .env written before the rename to TimePulse calls it GTR_PROJECT_DIR,
-# which is read as well. Put it in .env beside the rest:
+# it. Put it in .env beside the rest:
 #
 #   TIMEPULSE_PROJECT_DIR=/home/you/timepulse
 #
@@ -69,7 +68,7 @@ services:
       # A shared volume rather than a socket or a port: there is no listener to
       # find, nothing to authenticate, and no way to reach the updater from
       # anywhere but inside this deployment.
-      - update-requests:/var/lib/gtr/update
+      - update-requests:/var/lib/timepulse/update
 
     environment:
       # Tells the application where to ask, so the version card offers the image
@@ -77,12 +76,7 @@ services:
       # and the channel are the same thing, so they cannot disagree - and offered
       # only while the updater below says it is there, by rewriting a file in it
       # on every round: the volume outlives a stopped updater.
-      #
-      # The directory keeps the project's old name. The application and the
-      # updater meet there, and an installation's own copies of this file and of
-      # update/updater.sh are replaced by hand, apart from the image: a path
-      # renamed in one of the three would leave the others waiting elsewhere.
-      TIMEPULSE_UPDATE_REQUESTS: /var/lib/gtr/update
+      TIMEPULSE_UPDATE_REQUESTS: /var/lib/timepulse/update
 
   updater:
     # The official Docker CLI image, which carries the compose plugin as well.
@@ -121,11 +115,11 @@ services:
       # meant a container with no certificates, serving plain HTTP, reporting
       # itself healthy. Mounting the project at its own path is what makes the
       # two agree, and the script refuses to run if they do not.
-      - ${TIMEPULSE_PROJECT_DIR:-${GTR_PROJECT_DIR:?set TIMEPULSE_PROJECT_DIR in .env to the absolute path of this directory}}:${TIMEPULSE_PROJECT_DIR:-${GTR_PROJECT_DIR}}:ro
+      - ${TIMEPULSE_PROJECT_DIR:?set TIMEPULSE_PROJECT_DIR in .env to the absolute path of this directory}:${TIMEPULSE_PROJECT_DIR}:ro
 
-      - update-requests:/var/lib/gtr/update
+      - update-requests:/var/lib/timepulse/update
 
-    working_dir: ${TIMEPULSE_PROJECT_DIR:-${GTR_PROJECT_DIR}}
+    working_dir: ${TIMEPULSE_PROJECT_DIR}
 
     environment:
       # The same set of overlays the operator uses. Compose resolves this
@@ -150,7 +144,7 @@ services:
 
       # Where the project is, inside and outside. Read by the script to check
       # that those two are the same thing before it touches anything.
-      TIMEPULSE_PROJECT_DIR: ${TIMEPULSE_PROJECT_DIR:-${GTR_PROJECT_DIR}}
+      TIMEPULSE_PROJECT_DIR: ${TIMEPULSE_PROJECT_DIR}
 
     # No network at all. It talks to the daemon through the socket, and the
     # daemon does the pulling - so the updater itself never needs to reach the

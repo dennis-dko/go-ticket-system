@@ -30,14 +30,10 @@
 
 set -eu
 
-# Each under its TIMEPULSE_ name, or the GTR_ name a compose file from before
-# the rename to TimePulse sets: an installation replaces its own copy of that
-# file by hand, whenever it does. The directory keeps the old name for the same
-# reason - see compose.update.yaml.
-REQUESTS="${TIMEPULSE_UPDATE_REQUESTS:-${GTR_UPDATE_REQUESTS:-/var/lib/gtr/update}}"
-SERVICE="${TIMEPULSE_UPDATE_SERVICE:-${GTR_UPDATE_SERVICE:-app}}"
-POLL="${TIMEPULSE_UPDATE_POLL:-${GTR_UPDATE_POLL:-3}}"
-OWNER="${TIMEPULSE_UPDATE_OWNER:-${GTR_UPDATE_OWNER:-10001}}"
+REQUESTS="${TIMEPULSE_UPDATE_REQUESTS:-/var/lib/timepulse/update}"
+SERVICE="${TIMEPULSE_UPDATE_SERVICE:-app}"
+POLL="${TIMEPULSE_UPDATE_POLL:-3}"
+OWNER="${TIMEPULSE_UPDATE_OWNER:-10001}"
 
 log() { echo "[updater] $*"; }
 

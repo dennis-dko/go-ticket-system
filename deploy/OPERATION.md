@@ -83,9 +83,6 @@ unplanned upgrade:
 TIMEPULSE_VERSION=v1.2.3
 ```
 
-A `.env` written before the project was called TimePulse names it `GTR_VERSION`,
-as it names the image `GTR_IMAGE`; the compose files read those too.
-
 ## B · Compose with TLS
 
 ```bash
@@ -235,16 +232,12 @@ still the tidier arrangement and nothing here argues against it.
 ## D · Bare container
 
 ```bash
-docker run -d -p 8000:8000 -v gtr-data:/data --stop-timeout 45 \
+docker run -d -p 8000:8000 -v timepulse-data:/data --stop-timeout 45 \
   ghcr.io/dennis-dko/timepulse:v1.2.3
 ```
 
 With no `DB_DIALECT` this serves its **installer** and waits — that is on
 purpose. Setting `DB_DIALECT` skips it, which is what Compose does.
-
-The volume keeps the name it had before the project was called TimePulse, and
-so does the database file in it, `/data/go-time-recording.db`: the same command
-run again to upgrade has to find the data the previous container left.
 
 `--stop-timeout` is how long `docker stop` waits before it kills the process,
 and it has to be longer than the application takes to stop: it waits for the
@@ -257,7 +250,7 @@ the two together.
 The image bakes in exactly one variable:
 
 ```ini
-DB_NAME=/data/go-time-recording
+DB_NAME=/data/timepulse
 ```
 
 That is the path already filled in if you pick SQLite in the installer, which is
@@ -1280,18 +1273,11 @@ a manual download says which version it is in its own name. An update installed
 from the interface does not rename anything: the new version is written to the
 path the running one already occupies, whatever that path is called.
 
-A version from before the project was called TimePulse asks the release for
-`go-time-recording-web_v1.2.3_windows_amd64.exe`. Releases attach every binary
-under that name as well, so such a version still updates itself from the
-interface - once, after which it asks for the new name. Its file keeps the name
-it had, for the reason below.
-
-A version from before the binary was called `-web` cannot update itself from
-the interface to one that is: it asks the release for
-`go-time-recording_v1.2.3_windows_amd64.exe`, and releases no longer carry that
-name. Replace it by hand once - stop it, put the new file where the old one
-was, under the name the old one had, start it - and from then on it updates
-itself again.
+A version up to v0.4.11 cannot update itself from the interface to this one:
+it asks the release for its binary under a name from before the project was
+called TimePulse, and releases no longer carry that name. Replace it by hand
+once - stop it, put the new file where the old one was, under the name the old
+one had, start it - and from then on it updates itself again.
 
 That is deliberate and not negotiable. The path is the installation - a systemd
 unit, a Windows service, a shortcut, a scheduled task and whatever scripts exist
@@ -1394,13 +1380,13 @@ docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > timepu
 ```
 
 **SQLite** — the file is `<DB_NAME>.db`, with a trailing `.db` in `DB_NAME`
-trimmed first. In the image that is `/data/go-time-recording.db` on the `/data`
+trimmed first. In the image that is `/data/timepulse.db` on the `/data`
 volume; for a binary it is relative to the working directory. The application
 runs SQLite in write-ahead logging mode, so a copy taken while the process runs
 must include the `-wal` and `-shm` sidecars, or use SQLite's own backup:
 
 ```bash
-sqlite3 /data/go-time-recording.db ".backup '/backup/timepulse-$(date +%F).db'"
+sqlite3 /data/timepulse.db ".backup '/backup/timepulse-$(date +%F).db'"
 ```
 
 **Two paths matter whatever the dialect:**
@@ -1428,8 +1414,7 @@ systemctl stop timepulse && cp timepulse-web_v1.3.0_linux_amd64 /opt/timepulse/t
 The schema migrates itself on the way up. There is no separate command, and
 nothing to run afterwards.
 
-Releases up to v0.4.2 carried a terminal client, `go-time-recording-client`,
-beside this binary. None does since: booking is the web interface's and the
+Releases up to v0.4.2 carried a terminal client beside this binary. None does since: booking is the web interface's and the
 Android app's. An update neither replaces nor removes a client already handed
 out, and it knows only its own release's API, so take it out of use once the
 installation runs a later version. Asked for its old `track` command, this
