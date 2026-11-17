@@ -18,9 +18,10 @@ What is below was raised and is not recorded as decided anywhere.
 
 ## Decisions waiting on the maintainer
 
+None today: the last was decided on 2026-11-17. The table stays for the next.
+
 | | Question |
 | --- | --- |
-| R1 | When do the rename's bridges come down? Since the rename to TimePulse (2026-11-17) every release also attaches its binary as `go-time-recording-web_*` and publishes its image as `ghcr.io/dennis-dko/go-time-recording`, the session and CSRF cookies are written under their `gtr_` names too, and the Android app registers its bridges and dispatches its event under the old names as well - each for a reader older than the writer. Taking them down leaves a binary installation that has not updated since then unable to update itself, a compose file still naming the old image pulling nothing new, and an Android app from before the rename unable to open a session. The old names that are only *read* - token prefixes, the sealed marker, the `GTR_*` variables, the page's storage keys - cost nothing to keep and can stay. CLAUDE.md, section 7, lists all of them. |
 
 ## Measurements reading cannot make
 

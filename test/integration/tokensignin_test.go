@@ -254,7 +254,7 @@ func TestWhatIsNoUsableTokenOpensNoSession(t *testing.T) {
 		status      int
 	}{
 		{"no token at all", "", http.StatusForbidden},
-		{"a token nobody made", "gtr_" + "0123456789abcdef0123456789abcdef", http.StatusUnauthorized},
+		{"a token nobody made", "timepulse_" + "0123456789abcdef0123456789abcdef", http.StatusUnauthorized},
 	} {
 		answer := tokenSignIn(t, a.BaseURL(), tc.token)
 		if answer.Status != tc.status || sessionCookieOf(answer) != "" {

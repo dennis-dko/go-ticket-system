@@ -192,6 +192,9 @@ func All(dialect string) map[int64]migration.Migrate {
 		20261110010000: {UP: func(d migration.Datasource) error {
 			return keepPushSubscriptions(d, dialect)
 		}},
+		20261117010000: {UP: func(d migration.Datasource) error {
+			return sealUnderTheNewMarker(d)
+		}},
 	}
 }
 
@@ -2051,4 +2054,25 @@ func keepPushSubscriptions(d migration.Datasource, dialect string) error {
 // tokens before its sessions.
 func rememberWhichTokenOpenedASession(d migration.Datasource, dialect string) error {
 	return execAll(d, fmt.Sprintf("ALTER TABLE sessions ADD COLUMN api_token_id %s", foreignKeyID(dialect)))
+}
+
+// sealUnderTheNewMarker moves every value sealed while the project had its old
+// name - a second factor, the key check and the push key as they are kept, the
+// directory's and the sign-in provider's passwords inside their settings - to
+// the marker sealing writes now. The body after the marker is the same under
+// either, and neither marker's dots and colon can occur inside base64, so a
+// replace moves the marker and nothing else.
+//
+// Once, here, rather than read both ways from now on, as the holiday places
+// were: what this converts is what was stored then, and the program that wrote
+// the old marker is gone.
+func sealUnderTheNewMarker(d migration.Datasource) error {
+	return execAll(d,
+		"UPDATE users SET totp_secret = REPLACE(totp_secret, 'gtr.v1:', 'timepulse.v1:') "+
+			"WHERE totp_secret LIKE 'gtr.v1:%'",
+		"UPDATE settings SET value = REPLACE(value, 'gtr.v1:', 'timepulse.v1:') "+
+			"WHERE value LIKE 'gtr.v1:%'",
+		`UPDATE settings SET value = REPLACE(value, '"gtr.v1:', '"timepulse.v1:') `+
+			`WHERE value LIKE '%"gtr.v1:%'`,
+	)
 }

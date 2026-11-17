@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.timepulse
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

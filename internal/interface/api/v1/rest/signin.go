@@ -42,12 +42,14 @@ func completeSignIn(
 	}
 
 	request := requestOf(c)
-	setCookie(c, sessionCookies(request, result.Token, result.ExpiresAt)...)
+	setCookie(c, sessionCookie(request, result.Token, result.ExpiresAt))
 
 	// A token handed to an anonymous visitor must not follow them into a
 	// signed-in session: if someone else planted the one they arrived with,
 	// they would know the value protecting the new session.
-	setCookie(c, RotateCSRFToken(request)...)
+	if rotated := RotateCSRFToken(request); rotated != nil {
+		setCookie(c, rotated)
+	}
 
 	user := newUserResponseFromModel(result.Principal.User, zone)
 

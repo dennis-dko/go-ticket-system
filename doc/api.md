@@ -19,9 +19,7 @@ was made, scheme and host without a path, and `token` is the token itself.
 Both are query-encoded, and the order of the two is not to be relied on. An
 app registers the scheme `timepulse`, so that scanning the code with the
 phone's camera opens it, and from then on asks the API with
-`Authorization: Bearer <token>`. An installation from before the project was
-called TimePulse writes `go-time-recording://connect` instead, which the
-Android app still answers to.
+`Authorization: Bearer <token>`.
 
 The Android app in this repository, released as
 `timepulse-mobile_<version>.apk`, is such an app. It scans the code with

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -287,11 +286,8 @@ func main() {
 	logs.QuietRequestsTo("/api/v1/admin/logs")
 
 	// And no line carries a calendar feed's key, which is the whole of the address
-	// a reading of it is logged under; see Conceal. Every shape a key is read
-	// with, the one from before the rename included.
-	for _, prefix := range appservice.CalendarFeedKeyPrefixes() {
-		logs.Conceal(prefix)
-	}
+	// a reading of it is logged under; see Conceal.
+	logs.Conceal(appservice.CalendarFeedKeyPrefix)
 
 	if terminal {
 		// Interception makes the output a pipe, and GoFr prints JSON when its
@@ -1042,11 +1038,8 @@ func main() {
 			selfupdate.New(cfg.UpdateFeed, cfg.UpdateToken), hub, version, cfg.UpdateCheck).
 			// Present only where the deployment added the overlay that runs it;
 			// see deploy/compose.update.yaml for what that grants and why the
-			// application is not the thing granted it. Under the name a compose file
-			// from before the rename to TimePulse gives it as well, which an
-			// installation updated by its image alone goes on running.
-			WithImageUpdater(imageupdate.New(cmp.Or(os.Getenv("TIMEPULSE_UPDATE_REQUESTS"),
-				os.Getenv("GTR_UPDATE_REQUESTS")))).
+			// application is not the thing granted it.
+			WithImageUpdater(imageupdate.New(os.Getenv("TIMEPULSE_UPDATE_REQUESTS"))).
 			WithConnection(ds),
 		Timers:     rest.NewTimerHandler(timers, authorizer, instanceTimezone),
 		Schedules:  rest.NewScheduleHandler(workWeeks, authorizer),

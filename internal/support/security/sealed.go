@@ -42,23 +42,6 @@ type Sealer struct {
 // secret.
 const sealedPrefix = "timepulse.v1:"
 
-// sealedPrefixBeforeTheRename marked what this package wrote while the project
-// was called Go-Time-Recording, over the same body. An installation keeps the
-// rows it wrote then, so it is read as sealed: taken for plain text, its
-// ciphertext would be handed back as though it were the secret, and the pass
-// that seals what an installation already had would seal it a second time.
-const sealedPrefixBeforeTheRename = "gtr.v1:"
-
-// sealedBody is what follows the marker of a value Seal wrote, under either
-// marker it has written.
-func sealedBody(stored string) (string, bool) {
-	if body, found := strings.CutPrefix(stored, sealedPrefix); found {
-		return body, true
-	}
-
-	return strings.CutPrefix(stored, sealedPrefixBeforeTheRename)
-}
-
 // KeyBytes is the key length, in bytes: AES-256.
 const KeyBytes = 32
 
@@ -131,8 +114,7 @@ func (s *Sealer) Seal(plain string) (string, error) {
 // application would then trust, because a value without it was never trusted for
 // anything except being itself.
 func (s *Sealer) Open(stored string) (string, error) {
-	encoded, sealed := sealedBody(stored)
-	if !sealed {
+	if !strings.HasPrefix(stored, sealedPrefix) {
 		return stored, nil
 	}
 
@@ -140,7 +122,7 @@ func (s *Sealer) Open(stored string) (string, error) {
 		return "", ErrNoKey
 	}
 
-	raw, err := base64.StdEncoding.DecodeString(encoded)
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(stored, sealedPrefix))
 	if err != nil {
 		return "", fmt.Errorf("the stored value is not valid base64: %w", err)
 	}
@@ -164,8 +146,4 @@ func (s *Sealer) Open(stored string) (string, error) {
 
 // IsSealed reports whether a stored value was written by Seal. For the one-off
 // pass that encrypts what an installation already had.
-func IsSealed(stored string) bool {
-	_, sealed := sealedBody(stored)
-
-	return sealed
-}
+func IsSealed(stored string) bool { return strings.HasPrefix(stored, sealedPrefix) }

@@ -40,11 +40,11 @@ func TestNothingStuttersAndTheLayeringHolds(t *testing.T) {
 		// longer be tested or reused without one.
 		//
 		// The module's path is read from go.mod rather than written here. It was
-		// written here once, as go-time-recording/internal/..., and when the module
-		// moved to github.com/dennis-dko/timepulse those prefixes matched no import
-		// any more: the case went on passing over every violation it was written to
-		// report. So it also refuses to pass without having seen the module's own
-		// packages imported at all.
+		// written here once, as the project's name before TimePulse, and when the
+		// module moved to github.com/dennis-dko/timepulse that prefix matched no
+		// import any more: the case went on passing over every violation it was
+		// written to report. So it also refuses to pass without having seen the
+		// module's own packages imported at all.
 		module := modulePath(t)
 
 		forbidden := map[string][]string{

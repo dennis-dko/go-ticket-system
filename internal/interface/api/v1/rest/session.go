@@ -18,31 +18,6 @@ import (
 // SessionCookieName is the cookie carrying the session token.
 const SessionCookieName = "timepulse_session"
 
-// sessionCookieBeforeTheRename is what the session cookie was called while the
-// project was Go-Time-Recording. It is still read, because a browser that signed
-// in then holds only that one, and still written beside the new one, because an
-// Android app from then opens its session by looking for exactly that name in
-// the answer - and one that does not find it tells its owner the installation is
-// not theirs.
-const sessionCookieBeforeTheRename = "gtr_session"
-
-// presented is the value of the first of names the request carries a cookie
-// under, empty where it carries none of them.
-func presented(r *http.Request, names ...string) string {
-	for _, name := range names {
-		if cookie, err := r.Cookie(name); err == nil && cookie.Value != "" {
-			return cookie.Value
-		}
-	}
-
-	return ""
-}
-
-// sessionToken is the session a request presents, under either name.
-func sessionToken(r *http.Request) string {
-	return presented(r, SessionCookieName, sessionCookieBeforeTheRename)
-}
-
 // sessionContextKey types the context value so it cannot collide with a key
 // from another package.
 type sessionContextKey struct{}
@@ -61,8 +36,8 @@ type uncheckedCallerKey struct{}
 func SessionMiddleware(sessions *service.SessionService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := sessionToken(r)
-			if token == "" {
+			cookie, err := r.Cookie(SessionCookieName)
+			if err != nil || cookie.Value == "" {
 				next.ServeHTTP(w, r)
 
 				return
@@ -73,7 +48,7 @@ func SessionMiddleware(sessions *service.SessionService) func(http.Handler) http
 				resolve = sessions.ResolveUnattended
 			}
 
-			principal, err := resolve(r.Context(), token)
+			principal, err := resolve(r.Context(), cookie.Value)
 			if err != nil {
 				// A session that could not be read keeps its cookie, and the
 				// handlers are told so they say the caller could not be checked
@@ -86,10 +61,7 @@ func SessionMiddleware(sessions *service.SessionService) func(http.Handler) http
 				}
 
 				// A stale cookie is cleared so the browser stops sending it.
-				for _, cookie := range expiredCookies(r) {
-					http.SetCookie(w, cookie)
-				}
-
+				http.SetCookie(w, expiredCookie(r))
 				next.ServeHTTP(w, r)
 
 				return
@@ -158,19 +130,10 @@ func principalFromContext(ctx context.Context) (*service.Principal, bool) {
 	return principal, ok
 }
 
-// sessionCookies are the cookies for a newly opened session: the same token under
-// each name, so whatever reads the session from before the rename finds it too.
-func sessionCookies(r *http.Request, token string, expires time.Time) []*http.Cookie {
-	return []*http.Cookie{
-		sessionCookie(r, SessionCookieName, token, expires),
-		sessionCookie(r, sessionCookieBeforeTheRename, token, expires),
-	}
-}
-
-// sessionCookie builds one cookie for a newly opened session.
-func sessionCookie(r *http.Request, name, token string, expires time.Time) *http.Cookie {
+// sessionCookie builds the cookie for a newly opened session.
+func sessionCookie(r *http.Request, token string, expires time.Time) *http.Cookie {
 	return &http.Cookie{
-		Name:  name,
+		Name:  SessionCookieName,
 		Value: token,
 		Path:  "/",
 		// HttpOnly keeps the token away from JavaScript, so an injected script
@@ -183,18 +146,10 @@ func sessionCookie(r *http.Request, name, token string, expires time.Time) *http
 	}
 }
 
-// expiredCookies clear the session cookie under both its names.
-func expiredCookies(r *http.Request) []*http.Cookie {
-	return []*http.Cookie{
-		expiredCookie(r, SessionCookieName),
-		expiredCookie(r, sessionCookieBeforeTheRename),
-	}
-}
-
-// expiredCookie clears the session cookie of one name.
-func expiredCookie(r *http.Request, name string) *http.Cookie {
+// expiredCookie clears the session cookie.
+func expiredCookie(r *http.Request) *http.Cookie {
 	return &http.Cookie{
-		Name:     name,
+		Name:     SessionCookieName,
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
@@ -215,15 +170,13 @@ func isTLS(r *http.Request) bool {
 	return strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 }
 
-// setCookie writes cookies on the response behind a GoFr context.
+// setCookie writes a cookie on the response behind a GoFr context.
 //
-// GoFr hides the ResponseWriter from handlers, so the cookies are queued on the
+// GoFr hides the ResponseWriter from handlers, so the cookie is queued on the
 // request context and written by the middleware that wraps every response.
-func setCookie(c *gofr.Context, cookies ...*http.Cookie) {
+func setCookie(c *gofr.Context, cookie *http.Cookie) {
 	if queue, ok := c.Request.Context().Value(cookieQueueKey{}).(*cookieQueue); ok {
-		for _, cookie := range cookies {
-			queue.add(cookie)
-		}
+		queue.add(cookie)
 	}
 }
 

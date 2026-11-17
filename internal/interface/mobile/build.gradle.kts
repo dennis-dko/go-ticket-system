@@ -31,17 +31,7 @@ fun versionCodeOf(version: String): Int {
 val keystore: String? = providers.environmentVariable("TIMEPULSE_ANDROID_KEYSTORE").orNull
 
 android {
-    // The project's old name, kept here and in applicationId below on purpose.
-    // The application id is what Android installs an update over: a new one is a
-    // second app beside the first, and everybody's phone would have to be
-    // connected again. The namespace is the package the activity, the receiver and
-    // the worker are named by, and an installed app is held to those names from
-    // outside: the reminders are periodic work WorkManager keeps under the
-    // worker's class name and keeps across an update, the next alarm is an intent
-    // for the receiver's, and a launcher's icon points at the activity's - so a
-    // new package leaves each pointing at a class that is no longer there, which
-    // fails without a word.
-    namespace = "io.github.dennisdko.gotimerecording"
+    namespace = "io.github.dennisdko.timepulse"
 
     // The androidx libraries are compiled against 37 and ask the app to be too.
     // It targets 36 on purpose: an app targeting 37 needs a runtime permission to
@@ -52,7 +42,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.dennisdko.gotimerecording"
+        applicationId = "io.github.dennisdko.timepulse"
         minSdk = 26
         targetSdk = 36
         versionCode = versionCodeOf(release)

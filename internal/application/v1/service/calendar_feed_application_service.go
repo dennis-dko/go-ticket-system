@@ -23,20 +23,6 @@ import (
 // everything it passes through.
 const CalendarFeedKeyPrefix = "timepulsecal_"
 
-// calendarFeedKeyPrefixBeforeTheRename is what keys were issued with while the
-// project was called Go-Time-Recording. A calendar keeps asking with the address
-// it was given until its owner makes a new one, so a key of that shape still
-// reads its feed.
-const calendarFeedKeyPrefixBeforeTheRename = "gtrcal_"
-
-// CalendarFeedKeyPrefixes are the prefixes of every key a feed is read with:
-// today's and the one from before the rename. The process log hides what follows
-// each of them, so one list decides both which keys are read and which are kept
-// out of the log, and a key cannot come to be accepted without being hidden.
-func CalendarFeedKeyPrefixes() []string {
-	return []string{CalendarFeedKeyPrefix, calendarFeedKeyPrefixBeforeTheRename}
-}
-
 // calendarFeedYears is how far a feed reaches on each side of today: the year
 // behind, as far back as anybody looks for a day they forgot to book, and the year
 // ahead, where leave is planned.
@@ -180,9 +166,7 @@ func (s *CalendarFeedService) Read(ctx context.Context, key string) ([]byte, err
 	}
 
 	// The part after the @ names the program, which the format asks of an id
-	// meant to be unique everywhere. Before the rename it was go-time-recording,
-	// and a calendar reading the feed after the update replaces each event once:
-	// a subscription is read whole every time, so that is all it does.
+	// meant to be unique everywhere.
 	uid := func(day time.Time, what string) string {
 		return day.Format("20060102") + "-" + what + "-" + feed.Prefix + "@timepulse"
 	}
@@ -229,9 +213,7 @@ func (s *CalendarFeedService) owner(ctx context.Context, key string) (*model.Cal
 	gone := apperror.NotFound("feed", "")
 
 	key = strings.TrimSuffix(key, ".ics")
-	if !slices.ContainsFunc(CalendarFeedKeyPrefixes(), func(prefix string) bool {
-		return strings.HasPrefix(key, prefix)
-	}) {
+	if !strings.HasPrefix(key, CalendarFeedKeyPrefix) {
 		return nil, nil, gone
 	}
 

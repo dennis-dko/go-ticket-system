@@ -19,7 +19,7 @@ set -euo pipefail
 sdk=${ANDROID_SDK_ROOT:-$HOME/android/sdk}
 jdk=${JAVA_HOME:-$HOME/android/jdk}
 port=${TIMEPULSE_CAMERA_PORT:-8091}
-package=io.github.dennisdko.gotimerecording
+package=io.github.dennisdko.timepulse
 apk=bin/mobile/outputs/apk/release/timepulse-mobile-release-unsigned.apk
 into=doc/image
 

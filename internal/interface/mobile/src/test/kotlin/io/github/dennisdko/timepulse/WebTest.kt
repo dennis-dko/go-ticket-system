@@ -1,4 +1,4 @@
-package io.github.dennisdko.gotimerecording
+package io.github.dennisdko.timepulse
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,11 +40,11 @@ class WebTest {
     // the one the installation compares the header against.
     @Test
     fun theSignOutCarriesTheTokenOfTheCookieBesideIt() {
-        val held = "x_gtr_csrf=other; gtr_session=s3ss10n; gtr_csrf=c5rf"
+        val held = "x_timepulse_csrf=other; timepulse_session=s3ss10n; timepulse_csrf=c5rf"
 
-        assertEquals("c5rf", cookieValue(held, "gtr_csrf"))
-        assertEquals("s3ss10n", cookieValue(held, "gtr_session"))
-        assertEquals(null, cookieValue("gtr_session=s3ss10n", "gtr_csrf"))
+        assertEquals("c5rf", cookieValue(held, "timepulse_csrf"))
+        assertEquals("s3ss10n", cookieValue(held, "timepulse_session"))
+        assertEquals(null, cookieValue("timepulse_session=s3ss10n", "timepulse_csrf"))
     }
 
     // A file is saved under the page's name for it, and never under one that
@@ -55,14 +55,5 @@ class WebTest {
         assertEquals("report.pdf", downloadName("../../report.pdf"))
         assertEquals("report.pdf", downloadName("..\\report.pdf"))
         assertEquals("download", downloadName("  "))
-    }
-
-    // A bridge is put on the page under its own name and under the one a page from
-    // before the rename to TimePulse looks for it by, because the app is updated
-    // apart from the installation whose page it shows.
-    @Test
-    fun aBridgeIsPutOnThePageUnderBothNames() {
-        assertEquals(listOf("TimePulseFiles", "GoTimeRecordingFiles"), bridgeNames("TimePulseFiles"))
-        assertEquals(listOf("TimePulseSession", "GoTimeRecordingSession"), bridgeNames("TimePulseSession"))
     }
 }

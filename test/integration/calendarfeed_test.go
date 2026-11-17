@@ -152,26 +152,3 @@ func TestTheProcessLogDoesNotCarryAFeedsKey(t *testing.T) {
 		}
 	}
 }
-
-// A key issued before the project was called TimePulse is still read, so it is
-// still hidden. A calendar asks with the address it was given, and the log writes
-// that address down whether or not a feed answers it - so the key is asked for
-// here without one, and must not reach the log either way.
-func TestTheProcessLogDoesNotCarryAKeyFromBeforeTheRename(t *testing.T) {
-	t.Parallel()
-
-	// INFO for the reason the case above gives.
-	a := start(t, "LOG_LEVEL=INFO")
-
-	const key = "a2V5IGZyb20gYmVmb3JlIHRoZSByZW5hbWU"
-
-	readFeed(a, "/api/v1/calendar-feed/gtrcal_"+key+".ics")
-
-	if !a.logShows(20*time.Second, "/api/v1/calendar-feed/gtrcal_[hidden].ics") {
-		t.Fatalf("the console never said a feed was asked for, or said it with the key:\n%s", a.log())
-	}
-
-	if strings.Contains(a.log(), key) {
-		t.Errorf("the console carries the key")
-	}
-}

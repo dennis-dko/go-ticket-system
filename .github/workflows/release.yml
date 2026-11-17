@@ -302,18 +302,6 @@ jobs:
 
           build darwin  arm64
 
-          # The same files again under the name every version from before the
-          # rename asks for. A running version cannot be told a new name: it
-          # looks for go-time-recording-web_<version>_<os>_<arch> and nothing
-          # else, so without these it would stay where it is for good. One
-          # update over this bridge makes it a version that asks for
-          # timepulse-web_..., which is why the bridge can come down once nothing
-          # older is left to update. SHA256SUMS is made from dist/ below, so it
-          # lists both names.
-          for binary in dist/timepulse-web_*; do
-            cp "${binary}" "dist/go-time-recording-web_${binary#dist/timepulse-web_}"
-          done
-
       # The Android app, from the same commit with the same version, which is the
       # version it compares with the installation it is connected to.
       #
@@ -512,25 +500,15 @@ jobs:
         env:
           IMAGE: ${{ steps.image.outputs.name }}
           VERSION: ${{ needs.version.outputs.version }}
-          OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
-          # And under the name every compose file from before the rename pulls.
-          # The installation cannot change that name itself - its operator does,
-          # in the compose file - so until then an update asked for from the
-          # interface looks for its version here, and has to find it.
-          legacy="ghcr.io/$(echo "${OWNER}" | tr '[:upper:]' '[:lower:]')/go-time-recording"
-          tags=(--tag "${IMAGE}:${VERSION}" --tag "${IMAGE}:latest")
-
-          if [ "${legacy}" != "${IMAGE}" ]; then
-            tags+=(--tag "${legacy}:${VERSION}" --tag "${legacy}:latest")
-          fi
-
-          docker buildx imagetools create "${tags[@]}" "$STAGED_IMAGE"
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${VERSION}" \
+            --tag "${IMAGE}:latest" \
+            "$STAGED_IMAGE"
 
           docker buildx imagetools inspect "${IMAGE}:${VERSION}"
-          docker buildx imagetools inspect "${legacy}:${VERSION}"
 
       # Last, because this step creates the tag: everything a release consists of -
       # the binaries and the image - already exists by now, and a tag with nothing
@@ -555,7 +533,6 @@ jobs:
           files: |
             dist/timepulse-web_*
             dist/timepulse-mobile_*
-            dist/go-time-recording-web_*
             dist/SHA256SUMS
           # append_body puts this below the generated notes, which is where it
           # belongs: the changelog is what a returning reader came for, and this
@@ -580,21 +557,11 @@ jobs:
             use it with an installation that runs this version. It is connected by
             scanning the code a new personal token is shown with.
 
-            The project was called Go-Time-Recording before it was called TimePulse.
-            The same binaries are attached as `go-time-recording-web_*` as well,
-            the name every version from before the rename updates itself by, so such
-            an installation still updates itself from the interface - once, after
-            which it asks for the new name. The image is published as
-            `ghcr.io/dennis-dko/timepulse` and, for compose files written before the
-            rename, still as `ghcr.io/dennis-dko/go-time-recording`. The compose
-            files of this release pull the new name; with older ones, set
-            `GTR_IMAGE=ghcr.io/dennis-dko/timepulse` in `.env` to do the same.
-
-            An installation running a version from before the binary was called
-            `go-time-recording-web` cannot update itself to this one from the
-            interface: it asks the release for a file under its old name, which
-            releases no longer carry. Replace it by hand once; from then on it
-            updates itself again.
+            An installation running v0.4.11 or earlier cannot update itself to
+            this one from the interface: it asks the release for a file under a
+            name from before the project was called TimePulse, which releases no
+            longer carry. Replace it by hand once; from then on it updates itself
+            again.
 
             With **no database configured** it serves an installer on its own port
             and waits, so the first start needs nothing but the binary.

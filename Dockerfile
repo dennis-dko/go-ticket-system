@@ -95,12 +95,7 @@ VOLUME /data
 # `docker run -e HTTP_PORT=...` still wins over that.
 #
 # Set DB_DIALECT to skip the installer, which is what deploy/compose.yaml does.
-#
-# The file keeps the project's old name. A container started with DB_DIALECT
-# alone reads its database from exactly this path, and the installer offers it
-# to one started without, so a new name would start an installation that is
-# already running on an empty file beside its own.
-ENV DB_NAME=/data/go-time-recording
+ENV DB_NAME=/data/timepulse
 
 USER app
 

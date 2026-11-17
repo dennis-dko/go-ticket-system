@@ -28,11 +28,6 @@ const OpenIDCallbackPath = "/sign-in/openid"
 // not own.
 const openIDCookieName = "timepulse_openid"
 
-// openIDCookieBeforeTheRename is what a round's cookie was called while the
-// project was Go-Time-Recording, which a round begun before an update and
-// finished after it still carries.
-const openIDCookieBeforeTheRename = "gtr_openid"
-
 // openIDCookiePath confines the cookie to the one request that reads it.
 const openIDCookiePath = "/api/v1/auth/openid"
 
@@ -119,7 +114,7 @@ func (h *OpenIDHandler) BeginSignIn(c *gofr.Context) (any, error) {
 		return nil, h.refusal(c, err)
 	}
 
-	setCookie(c, openIDCookie(requestOf(c), openIDCookieName, state, int(openIDCookieLifetime/time.Second)))
+	setCookie(c, openIDCookie(requestOf(c), state, int(openIDCookieLifetime/time.Second)))
 
 	return OpenIDBeginResponse{Address: address}, nil
 }
@@ -142,7 +137,7 @@ func (h *OpenIDHandler) BeginLink(c *gofr.Context) (any, error) {
 		return nil, h.refusal(c, err)
 	}
 
-	setCookie(c, openIDCookie(requestOf(c), openIDCookieName, state, int(openIDCookieLifetime/time.Second)))
+	setCookie(c, openIDCookie(requestOf(c), state, int(openIDCookieLifetime/time.Second)))
 
 	return OpenIDBeginResponse{Address: address}, nil
 }
@@ -158,10 +153,8 @@ func (h *OpenIDHandler) Finish(c *gofr.Context) (any, error) {
 
 	request := requestOf(c)
 
-	// Whatever happens next, the round is over for this browser, under the name
-	// it may have begun with before the rename as well.
-	setCookie(c, openIDCookie(request, openIDCookieName, "", -1),
-		openIDCookie(request, openIDCookieBeforeTheRename, "", -1))
+	// Whatever happens next, the round is over for this browser.
+	setCookie(c, openIDCookie(request, "", -1))
 
 	if !sameRound(request, req.State) {
 		return nil, toHTTPError(apperror.Invalidf("this attempt has expired, please try again").
@@ -248,22 +241,22 @@ func sameRound(r *http.Request, state string) bool {
 		return false
 	}
 
-	carried := presented(r, openIDCookieName, openIDCookieBeforeTheRename)
-	if carried == "" {
+	cookie, err := r.Cookie(openIDCookieName)
+	if err != nil {
 		return false
 	}
 
-	return subtle.ConstantTimeCompare([]byte(carried), []byte(state)) == 1
+	return subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(state)) == 1
 }
 
-// openIDCookie carries a round's state under name for maxAge seconds, or clears it.
+// openIDCookie carries a round's state for maxAge seconds, or clears it.
 //
 // Lax rather than Strict, which is what the provider's way back is: a top-level
 // navigation from another site, and the request that reads the cookie is made by
 // the page that navigation loaded.
-func openIDCookie(r *http.Request, name, state string, maxAge int) *http.Cookie {
+func openIDCookie(r *http.Request, state string, maxAge int) *http.Cookie {
 	return &http.Cookie{
-		Name: name, Value: state, Path: openIDCookiePath, MaxAge: maxAge,
+		Name: openIDCookieName, Value: state, Path: openIDCookiePath, MaxAge: maxAge,
 		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: isTLS(r),
 	}
 }

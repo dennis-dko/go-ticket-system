@@ -255,36 +255,3 @@ func TestTokensAreUnique(t *testing.T) {
 		seen[token] = true
 	}
 }
-
-// A page still running from before the project was called TimePulse - a tab
-// left open across the update, a service worker's copy - holds the token under
-// the old name and echoes that one. It is accepted, or that page could change
-// nothing until it was reloaded, and an Android app from then could not sign out.
-func TestATokenUnderTheNameFromBeforeTheRenameIsAccepted(t *testing.T) {
-	token := tokenFor(t)
-
-	r := httptest.NewRequest(http.MethodPost, "http://timepulse.example.com/api/v1/timesheets", nil)
-	r.Header.Set("Origin", "http://timepulse.example.com")
-	r.Header.Set(rest.CSRFHeaderName, token)
-	r.AddCookie(&http.Cookie{Name: "gtr_csrf", Value: token})
-
-	if rec := send(r); rec.Code != http.StatusOK {
-		t.Fatalf("a token under the old name was refused: %d %s", rec.Code, rec.Body.String())
-	}
-}
-
-// Every answer that hands out a token hands it out under both names, the same
-// token under each, so a page from either side of the rename finds the one it
-// reads.
-func TestTheTokenIsHandedOutUnderBothNames(t *testing.T) {
-	rec := send(httptest.NewRequest(http.MethodGet, "http://timepulse.example.com/", nil))
-
-	handed := map[string]string{}
-	for _, cookie := range rec.Result().Cookies() {
-		handed[cookie.Name] = cookie.Value
-	}
-
-	if handed[rest.CSRFCookieName] == "" || handed["gtr_csrf"] != handed[rest.CSRFCookieName] {
-		t.Errorf("a first visit was handed %v, want one token under %s and gtr_csrf", handed, rest.CSRFCookieName)
-	}
-}
