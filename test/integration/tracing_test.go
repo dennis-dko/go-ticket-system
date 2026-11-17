@@ -131,7 +131,7 @@ func exportsSpansConfiguredAs(t *testing.T, tracerURL, collector string) {
 
 	// A name of this test's own, so the trace read back cannot be one left in
 	// the collector by an earlier run or by the staging profile.
-	service := fmt.Sprintf("gtr-integration-%d", time.Now().UnixNano())
+	service := fmt.Sprintf("timepulse-integration-%d", time.Now().UnixNano())
 
 	first := start(t, "DB_NAME="+shared, "APP_NAME="+service)
 	admin := first.signInAsAdmin("a-much-better-password")
@@ -182,7 +182,7 @@ func TestSwitchingTracingOffStopsSpansReachingTheCollector(t *testing.T) {
 	}
 
 	shared := harness.SharedDatabase(t)
-	service := fmt.Sprintf("gtr-off-%d", time.Now().UnixNano())
+	service := fmt.Sprintf("timepulse-off-%d", time.Now().UnixNano())
 
 	// This instance traces because its environment says so, the way a deployment
 	// configured in a file would.

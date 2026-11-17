@@ -18,7 +18,7 @@ set -euo pipefail
 
 sdk=${ANDROID_SDK_ROOT:-$HOME/android/sdk}
 jdk=${JAVA_HOME:-$HOME/android/jdk}
-port=${GTR_CAMERA_PORT:-8091}
+port=${TIMEPULSE_CAMERA_PORT:-8091}
 package=io.github.dennisdko.gotimerecording
 apk=bin/mobile/outputs/apk/release/timepulse-mobile-release-unsigned.apk
 into=doc/image
@@ -84,7 +84,7 @@ cp bin/linux/timepulse-web "$work/"
 chmod +x "$work/timepulse-web"
 tr -d '\r' < cmd/configs/.env > "$work/configs/.env"
 
-(cd "$work" && exec env APP_ENV= DB_DIALECT=sqlite DB_NAME="$work/gtr.db" HTTP_PORT="$port" \
+(cd "$work" && exec env APP_ENV= DB_DIALECT=sqlite DB_NAME="$work/timepulse.db" HTTP_PORT="$port" \
   METRICS_PORT=$((port + 1)) LOG_LEVEL=WARN ./timepulse-web > "$work/log" 2>&1) &
 server=$!
 

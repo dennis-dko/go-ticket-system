@@ -19,8 +19,8 @@ import (
 func TestValidateAcceptsWhatEachDialectActuallyNeeds(t *testing.T) {
 	valid := []config.Datasource{
 		// SQLite is a file. There is no server, so there is nothing else to ask.
-		{Dialect: "sqlite", Name: "go-time-recording"},
-		{Dialect: "SQLite", Name: "go-time-recording"},
+		{Dialect: "sqlite", Name: "timepulse"},
+		{Dialect: "SQLite", Name: "timepulse"},
 		{Dialect: "postgres", Name: "timepulse", Host: "db", User: "timepulse"},
 		{Dialect: "postgres", Name: "timepulse", Host: "db", User: "timepulse", Port: "5432"},
 		{Dialect: "mysql", Name: "timepulse", Host: "db", User: "root"},

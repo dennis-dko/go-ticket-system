@@ -427,7 +427,7 @@ func driverDSN(ds Datasource) (driver, dsn string, err error) {
 // compared with what went in.
 //
 // Measured, and the reason this exists: with no password a PostgreSQL connection
-// reads "password= dbname=gtr", the driver takes "dbname=gtr" for the password,
+// reads "password= dbname=timepulse", the driver takes "dbname=timepulse" for the password,
 // and the server opens the database named after the account. Against a server
 // that asks for no password the probe and GoFr both succeeded - and the
 // application created its tables in "postgres" while its log named the database
