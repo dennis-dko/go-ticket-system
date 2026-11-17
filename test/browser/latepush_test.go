@@ -60,13 +60,6 @@ func TestAReminderPushedLateIsShownOnlyWhileItStillHolds(t *testing.T) {
 	push.once("late, about the stopwatch running", "timepulse-stopwatch", "running", late, started.UTC().Format(time.RFC3339))
 	p.waitForNotification("timepulse-stopwatch", "running")
 
-	// Under the tag a reminder carried before the rename to TimePulse, which the
-	// push service can still be holding when the installation is updated: asked
-	// about the same way, rather than dropped as a reminder nobody knows.
-	push.once("late, about the stopwatch running, sent before the rename", "gtr-stopwatch", "running still",
-		late, started.UTC().Format(time.RFC3339))
-	p.waitForNotification("gtr-stopwatch", "running still")
-
 	push.until("on time, about a day", "timepulse-unbooked", "unbooked", onTime, "2026-01-02")
 	push.once("late, about a day since booked", "timepulse-unbooked", "booked", late, "2000-01-03")
 	p.waitForNoNotification("timepulse-unbooked", "a late reminder of a day that is no longer unbooked")

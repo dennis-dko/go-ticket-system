@@ -265,7 +265,7 @@ function refusalFrom(res, body) {
     // token is still good, and asks for a new token where it was taken back. Not
     // on signing out, which the app sees in the requests and answers by
     // disconnecting - told then too, it would sign straight back in.
-    appBridge('Session')?.ended();
+    window.TimePulseSession?.ended();
   }
 
   return err;
@@ -4306,13 +4306,6 @@ function keepTheShell() {
 const OUTBOX_PREFIX = 'timepulse_outbox_';
 
 /**
- * Where they waited while the project was called Go-Time-Recording, and where a
- * page still running from then - another tab, open across the update - goes on
- * keeping them. adoptOutboxFromBeforeTheRename takes them over.
- */
-const OUTBOX_PREFIX_BEFORE_THE_RENAME = 'gtr_outbox_';
-
-/**
  * Whose outbox this page reads, or none before anybody is signed in.
  *
  * Per account, as drafts are, so another account signing in on the same device
@@ -4399,53 +4392,6 @@ async function alreadyBooked(kept) {
 
 /** The name the outbox is sent under, one page at a time across every tab. */
 const OUTBOX_LOCK = 'timepulse-outbox';
-
-/** The name a page from before the rename sends its outbox under. */
-const OUTBOX_LOCK_BEFORE_THE_RENAME = 'gtr-outbox';
-
-/**
- * Moves the bookings a page from before the rename kept on this device into the
- * outbox this page sends.
- *
- * Only under both locks: a tab from before the update may be halfway through
- * sending them, and a booking moved from under it would be sent by both and
- * booked twice. Holding its lock waits that round out. One it marked as on its
- * way keeps the mark, so alreadyBooked is asked about it here too, and anything
- * it keeps there afterwards it sends itself, or the next page to load takes over.
- */
-async function adoptOutboxFromBeforeTheRename() {
-  const who = me.user?.id;
-  if (!who) return;
-
-  const before = `${OUTBOX_PREFIX_BEFORE_THE_RENAME}${who}`;
-
-  const adopt = () => {
-    try {
-      const kept = localStorage.getItem(before);
-      if (kept === null) return;
-
-      const waiting = readOutbox();
-      const adopted = JSON.parse(kept).filter((item) => !waiting.some((one) => one.id === item.id));
-
-      writeOutbox([...adopted, ...waiting]);
-
-      // Only what was read: a booking that tab kept in the moment between is
-      // taken over by the next page to load rather than lost.
-      if (localStorage.getItem(before) === kept) localStorage.removeItem(before);
-    } catch {
-      // Storage refused, or what is there cannot be read: it stays where it is.
-    }
-  };
-
-  if (navigator.locks) {
-    await navigator.locks.request(OUTBOX_LOCK_BEFORE_THE_RENAME,
-      () => navigator.locks.request(OUTBOX_LOCK, adopt));
-
-    return;
-  }
-
-  adopt();
-}
 
 /** Whether this page is sending the outbox now, where tabs cannot be asked. */
 let sendingOutbox = false;
@@ -15620,19 +15566,6 @@ function fillReminders() {
 }
 
 /**
- * A bridge the Android app puts on the window - Files, Notifications, Session -
- * or null where the page is not shown in the app.
- *
- * Under the name an app from before the rename to TimePulse gives it, too. The
- * page is updated with the installation and the app by its owner, so for a while
- * either may be the older of the two; the app registers both names for an older
- * page, and this reads both for an older app.
- */
-function appBridge(name) {
-  return window[`TimePulse${name}`] ?? window[`GoTimeRecording${name}`] ?? null;
-}
-
-/**
  * The Android app's notifications, where the page is shown in it. The app's
  * WebView has no Notification of its own, so the app registers
  * TimePulseNotifications instead: state() answers in the words of the
@@ -15642,7 +15575,7 @@ function appBridge(name) {
  * notifications of its own, open or closed, asking the installation itself.
  */
 function appNotifications() {
-  return appBridge('Notifications');
+  return window.TimePulseNotifications ?? null;
 }
 
 /**
@@ -15986,7 +15919,7 @@ function wireInstall() {
   // Inside the Android app there is nothing left to offer: it is the app the card
   // is about. The app is known by the bridge it registers for saving files, which
   // its WebView puts on the window before any script of the page runs.
-  if (appBridge('Files')) {
+  if ('TimePulseFiles' in window) {
     const card = $('#install-card');
     if (card) card.hidden = true;
   }
@@ -16521,7 +16454,7 @@ function passkeysWithheldBecause() {
       + 'in through the directory: the one place that can end its sign-in.');
   }
 
-  if (appBridge('Files')) {
+  if ('TimePulseFiles' in window) {
     return t('passkey.elsewhereApp', 'The app signs in with the token it was connected with, and '
       + 'needs no passkey. Passkeys are set up and used in a browser.');
   }
@@ -17877,8 +17810,7 @@ async function refreshAll() {
   await loadMyManagers();
 
   // What was booked without a connection, now that there is one - and the banner
-  // for whoever is signed in now, with what a page from before the rename kept.
-  await adoptOutboxFromBeforeTheRename();
+  // for whoever is signed in now.
   drawOutbox();
   await sendOutbox();
   fillSettingsForm();
@@ -18289,9 +18221,7 @@ function wireForms() {
     drawNotifyState();
   });
 
-  // And under the name an app from before the rename dispatches it by.
   window.addEventListener('timepulse-notifications', drawNotifyState);
-  window.addEventListener('gtr-notifications', drawNotifyState);
 
   $('#export-me').addEventListener('click', () => mutate(
     () => downloadFile(`${API}/me/export`, t('export.filename', 'everything-about-me'), 'zip'),

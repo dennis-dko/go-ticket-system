@@ -20,7 +20,6 @@ func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
 	}
 
 	script := read(t, "../web/asset/app.js")
-	bridge := bridgeName(t, registered[1])
 
 	// Each place the page behaves differently inside the app, and what it does
 	// there when it no longer recognises the app.
@@ -28,53 +27,18 @@ func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
 		"wireInstall":             "shows a card about installing the page as an app",
 		"passkeysWithheldBecause": "says the phone's browser cannot use passkeys, where the app signs in with its token",
 	} {
-		if !strings.Contains(functionIn(t, script, function+"()"), "appBridge('"+bridge+"')") {
+		start := strings.Index(script, "function "+function+"()")
+		if start < 0 {
+			t.Fatalf("app.js has no %s", function)
+		}
+
+		body := script[start:]
+		body = body[:strings.Index(body, "\n}\n")]
+
+		if !strings.Contains(body, "'"+registered[1]+"' in window") {
 			t.Errorf("%s does not ask for %s, the bridge the app registers, so the app %s", function, registered[1], otherwise)
 		}
 	}
-}
-
-// bridgeName is what the page hands appBridge for the bridge the app registers
-// as registered.
-//
-// The page and the app are updated apart, so for a while either may be from
-// before the rename to TimePulse: appBridge looks a bridge up under today's
-// prefix and under the one from before, and a name the app registers has to be
-// one of the two.
-func bridgeName(t *testing.T, registered string) string {
-	t.Helper()
-
-	body := functionIn(t, read(t, "../web/asset/app.js"), "appBridge(name)")
-
-	for _, prefix := range []string{"TimePulse", "GoTimeRecording"} {
-		if !strings.Contains(body, "window[`"+prefix+"${name}`]") {
-			t.Errorf("appBridge does not look a bridge up under %s..., so an app registering it so is not found", prefix)
-		}
-	}
-
-	for _, prefix := range []string{"TimePulse", "GoTimeRecording"} {
-		if name, found := strings.CutPrefix(registered, prefix); found && name != "" {
-			return name
-		}
-	}
-
-	t.Fatalf("the app registers %s, which appBridge finds under neither prefix", registered)
-
-	return ""
-}
-
-// functionIn is the body of the function app.js declares with signature.
-func functionIn(t *testing.T, script, signature string) string {
-	t.Helper()
-
-	start := strings.Index(script, "function "+signature)
-	if start < 0 {
-		t.Fatalf("app.js has no function %s", signature)
-	}
-
-	body := script[start:]
-
-	return body[:strings.Index(body, "\n}\n")]
 }
 
 // The page asks the phone for the notifications the app shows its reminders as,
@@ -90,7 +54,7 @@ func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) 
 		t.Fatal("Web.kt names no notificationsInterface, so the page cannot ask the phone for notifications")
 	}
 
-	if !strings.Contains(read(t, "../web/asset/app.js"), "appBridge('"+bridgeName(t, registered[1])+"')") {
+	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]) {
 		t.Errorf("app.js does not ask for %s, the bridge the app registers, so in the app the "+
 			"Reminders card says that no browser can show notifications", registered[1])
 	}
@@ -114,7 +78,7 @@ func TestThePageTellsTheAppItsSessionEndedByTheBridgeItRegisters(t *testing.T) {
 		t.Fatal("Web.kt names no sessionInterface, so the page cannot tell the app its session ended")
 	}
 
-	if !strings.Contains(read(t, "../web/asset/app.js"), "appBridge('"+bridgeName(t, registered[1])+"')?.ended()") {
+	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]+"?.ended()") {
 		t.Errorf("app.js does not tell %s, the bridge the app registers, that its session ended, so a "+
 			"token taken back leaves the app on the page's own sign-in form", registered[1])
 	}

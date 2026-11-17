@@ -75,12 +75,6 @@ const ASKED_AGAIN = {
   'timepulse-unbooked': ['/api/v1/me/notices', (answer, about) => answer?.unbookedDay === about],
 };
 
-// A reminder sent before the rename to TimePulse carries the tag of that time, and
-// the push service holds one for a closed browser for up to the hour it is sent
-// to live - long enough to arrive after the update. It is asked about the same way.
-ASKED_AGAIN['gtr-stopwatch'] = ASKED_AGAIN['timepulse-stopwatch'];
-ASKED_AGAIN['gtr-unbooked'] = ASKED_AGAIN['timepulse-unbooked'];
-
 /** Whether a pushed reminder still holds: at once where it is fresh, and otherwise as the installation answers now. */
 async function stillHolds(message) {
   const at = Date.parse(message.at);

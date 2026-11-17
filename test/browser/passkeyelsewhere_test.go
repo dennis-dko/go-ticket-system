@@ -22,9 +22,6 @@ func TestAPasskeyCardKeptBackSaysWhy(t *testing.T) {
 
 	for _, place := range []struct{ name, script, says string }{
 		{"the Android app", `window.TimePulseFiles = {};`, "The app signs in with the token"},
-		// An app from before the rename to TimePulse registers its bridge under the
-		// old name, and is still known for the app it is.
-		{"an Android app from before the rename", `window.GoTimeRecordingFiles = {};`, "The app signs in with the token"},
 		{"a browser without passkeys", `delete window.PublicKeyCredential;`, "This browser cannot use passkeys here"},
 	} {
 		t.Run(place.name, func(t *testing.T) {
