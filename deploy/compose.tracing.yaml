@@ -123,7 +123,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
 # No `depends_on` on the application on purpose. Ordering the two would mean a
-# collector that fails its health check keeps the time recording from starting,
+# collector that fails its health check keeps TimePulse from starting,
 # and a debugging aid must never be able to do that. The cost is that spans
 # exported in the seconds before Jaeger is ready are lost, which nobody is
 # reading anyway.

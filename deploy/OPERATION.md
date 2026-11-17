@@ -31,7 +31,7 @@ private interface, firewall it, or switch it off under *Settings*.
 | --- | --- | --- | --- |
 | **A** Compose | `docker compose up -d` | PostgreSQL, in the stack | `127.0.0.1:8000` |
 | **B** Compose + TLS | `docker compose -f compose.yaml -f compose.tls.yaml up -d` | PostgreSQL, in the stack | `:80` and `:443` |
-| **C** Single binary | `./go-time-recording-web` | your choice, asked on first start | `:8000` |
+| **C** Single binary | `./timepulse-web` | your choice, asked on first start | `:8000` |
 | **D** Bare container | `docker run …` | asked on first start | `:8000` |
 
 A is the normal answer. B if nothing else terminates TLS. C for a small
@@ -121,16 +121,16 @@ out. Two certificates for one name means one renewal that quietly stops working.
 
 ## C · Single binary
 
-Download `go-time-recording-web` for your platform from the release, check it
+Download `timepulse-web` for your platform from the release, check it
 against `SHA256SUMS`, and run it.
 
 ```bash
-mkdir -p /opt/gtr/configs
-cd /opt/gtr
+mkdir -p /opt/timepulse/configs
+cd /opt/timepulse
 cp /path/to/.env.binary.example configs/.env
 $EDITOR configs/.env
 chmod 600 configs/.env
-./go-time-recording-web
+./timepulse-web
 ```
 
 **The working directory matters.** It is what `configs/` is resolved against, so
@@ -145,8 +145,8 @@ download against `SHA256SUMS`, then either press through the dialog or clear the
 download mark first:
 
 ```powershell
-Get-FileHash .\go-time-recording-web_v1.2.3_windows_amd64.exe -Algorithm SHA256
-Unblock-File .\go-time-recording-web_v1.2.3_windows_amd64.exe
+Get-FileHash .\timepulse-web_v1.2.3_windows_amd64.exe -Algorithm SHA256
+Unblock-File .\timepulse-web_v1.2.3_windows_amd64.exe
 ```
 
 Rolling this out to more than a handful of machines is the point at which a
@@ -165,10 +165,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=gtr
-Group=gtr
-WorkingDirectory=/opt/gtr
-ExecStart=/opt/gtr/go-time-recording-web
+User=timepulse
+Group=timepulse
+WorkingDirectory=/opt/timepulse
+ExecStart=/opt/timepulse/timepulse-web
 Restart=on-failure
 RestartSec=5s
 
@@ -181,7 +181,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/gtr
+ReadWritePaths=/opt/timepulse
 
 # Only needed when this process terminates TLS itself. Without it an
 # unprivileged user cannot bind 443 or 80 - see below, because the way that
@@ -202,7 +202,7 @@ the certificate cache — all under its working directory and nowhere else.
 Two things to know before you switch `TLS_ENABLED=true` on a host.
 
 **Uncomment the two capability lines.** A container gets low ports for free; a
-host does not. As written, the unit runs as `gtr` with `NoNewPrivileges=true`, so
+host does not. As written, the unit runs as `timepulse` with `NoNewPrivileges=true`, so
 binding 443 and 80 fails with "permission denied".
 
 In the unit, and not with `setcap` on the binary. An update from the interface
@@ -241,6 +241,10 @@ docker run -d -p 8000:8000 -v gtr-data:/data --stop-timeout 45 \
 
 With no `DB_DIALECT` this serves its **installer** and waits — that is on
 purpose. Setting `DB_DIALECT` skips it, which is what Compose does.
+
+The volume keeps the name it had before the project was called TimePulse, and
+so does the database file in it, `/data/go-time-recording.db`: the same command
+run again to upgrade has to find the data the previous container left.
 
 `--stop-timeout` is how long `docker stop` waits before it kills the process,
 and it has to be longer than the application takes to stop: it waits for the
@@ -436,8 +440,8 @@ already have:
 
 ```bash
 TLS_ENABLED=true
-TLS_CERT_FILE=/etc/gtr/fullchain.pem
-TLS_KEY_FILE=/etc/gtr/privkey.pem
+TLS_CERT_FILE=/etc/timepulse/fullchain.pem
+TLS_KEY_FILE=/etc/timepulse/privkey.pem
 ```
 
 Nothing is requested from anybody: no domain, no challenge, no authority, so
@@ -450,7 +454,7 @@ the certificate for you, `HSTS_MAX_AGE=0` keeps one that lapses from locking
 those browsers out, and tells the ones that stored it to forget it:
 
 ```bash
-openssl req -x509 -newkey rsa:2048 -nodes -days 825   -keyout privkey.pem -out fullchain.pem   -subj "/CN=zeiterfassung.intern"   -addext "subjectAltName=DNS:zeiterfassung.intern"
+openssl req -x509 -newkey rsa:2048 -nodes -days 825   -keyout privkey.pem -out fullchain.pem   -subj "/CN=timepulse.intern"   -addext "subjectAltName=DNS:timepulse.intern"
 ```
 
 A certificate that cannot be read stops the start rather than being discovered by
@@ -484,7 +488,7 @@ proxy passes to its plain port.
 
 ### It needs a name of its own, not a path
 
-`https://firma.example.com/zeiterfassung/` does not work, and cannot be made to
+`https://firma.example.com/timepulse/` does not work, and cannot be made to
 work from the proxy side. The interface asks for `/app.js`, `/app.css`,
 `/theme.js` and `/favicon.ico`, and the script's API base is `/api/v1` - all
 absolute, and there is no setting that moves them. Under a sub-path the browser
@@ -520,12 +524,12 @@ Anything that reaches the port can also claim to be a proxy: set its own
 
 ### The whole configuration
 
-`/etc/apache2/sites-available/zeiterfassung.conf`:
+`/etc/apache2/sites-available/timepulse.conf`:
 
 ```apache
 # Port 80 exists for the redirect and for certbot's challenge.
 <VirtualHost *:80>
-    ServerName zeiterfassung.firma.example.com
+    ServerName timepulse.firma.example.com
 
     RewriteEngine On
     RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
@@ -533,11 +537,11 @@ Anything that reaches the port can also claim to be a proxy: set its own
 </VirtualHost>
 
 <VirtualHost *:443>
-    ServerName zeiterfassung.firma.example.com
+    ServerName timepulse.firma.example.com
 
     SSLEngine on
-    SSLCertificateFile    /etc/letsencrypt/live/zeiterfassung.firma.example.com/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/zeiterfassung.firma.example.com/privkey.pem
+    SSLCertificateFile    /etc/letsencrypt/live/timepulse.firma.example.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/timepulse.firma.example.com/privkey.pem
 
     # Whatever a caller sent for itself goes, before Apache sets its own. The
     # sign-in rate limit counts per address and reads these; left alone, the
@@ -562,14 +566,14 @@ Anything that reaches the port can also claim to be a proxy: set its own
     # than delivered.
     SetEnvIfNoCase Request_URI "^/api/v1/events" no-gzip dont-vary
 
-    ErrorLog  ${APACHE_LOG_DIR}/zeiterfassung-error.log
-    CustomLog ${APACHE_LOG_DIR}/zeiterfassung-access.log combined
+    ErrorLog  ${APACHE_LOG_DIR}/timepulse-error.log
+    CustomLog ${APACHE_LOG_DIR}/timepulse-access.log combined
 </VirtualHost>
 ```
 
 ```bash
 sudo a2enmod proxy proxy_http headers ssl rewrite
-sudo a2ensite zeiterfassung
+sudo a2ensite timepulse
 sudo apache2ctl configtest
 sudo systemctl reload apache2
 ```
@@ -607,19 +611,19 @@ holding it for the rest of its life to use it once.
 
 ```sql
 -- PostgreSQL
-CREATE DATABASE "go-time-recording";
-CREATE USER gtr WITH PASSWORD 'choose-something';
-GRANT ALL PRIVILEGES ON DATABASE "go-time-recording" TO gtr;
+CREATE DATABASE "timepulse";
+CREATE USER timepulse WITH PASSWORD 'choose-something';
+GRANT ALL PRIVILEGES ON DATABASE "timepulse" TO timepulse;
 -- PostgreSQL 15 and later also need the schema itself:
-\connect "go-time-recording"
-GRANT ALL ON SCHEMA public TO gtr;
+\connect "timepulse"
+GRANT ALL ON SCHEMA public TO timepulse;
 ```
 
 ```sql
 -- MySQL / MariaDB
-CREATE DATABASE `go-time-recording` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'gtr'@'%' IDENTIFIED BY 'choose-something';
-GRANT ALL PRIVILEGES ON `go-time-recording`.* TO 'gtr'@'%';
+CREATE DATABASE `timepulse` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'timepulse'@'%' IDENTIFIED BY 'choose-something';
+GRANT ALL PRIVILEGES ON `timepulse`.* TO 'timepulse'@'%';
 ```
 
 `utf8mb4` matters on MySQL: names, project titles and the notice on the sign-in
@@ -726,7 +730,7 @@ the grounds that a changed host is a change to the same connection — which
 describes what the card *says* and answers the wrong question, because the
 connection is opened once while the application starts. Moving the database to
 another host is exactly as pending as moving it to another dialect, and it now
-reads as one line: `postgres app@db:5432/gtr` → `postgres app@db2:5432/gtr`. A default port and an omitted one are the same connection here as they
+reads as one line: `postgres app@db:5432/timepulse` → `postgres app@db2:5432/timepulse`. A default port and an omitted one are the same connection here as they
 are in fact, so spelling out `5432` is not reported as a change.
 
 A changed password appears as *Database password* with nothing beside it. The
@@ -856,7 +860,7 @@ plan that disk the way it plans the database's.
 
 Two deliberate omissions: the OTLP port is not published, so nothing outside the
 compose network can write spans; and Jaeger is **not** a startup dependency of
-the application, so a broken collector can never keep the time recording from
+the application, so a broken collector can never keep TimePulse from
 starting. The price of the second is that spans exported before Jaeger is ready
 are dropped.
 
@@ -904,7 +908,7 @@ Three things differ from the other overlays:
   `LDAP_BIND_PASSWORD` is the read-only account typed into the Settings card.
   They are hashed before they reach any file inside the container.
 - **It comes up empty.** A suffix, an `ou=people`, and the bind account —
-  no people. Invented ones would arrive in the time recording on the first
+  no people. Invented ones would arrive in TimePulse on the first
   synchronisation, named after nobody and awkward to remove once entries hang
   off them. The header has the `ldapadd` for a real one; a `mail` attribute is
   required, because that is what an account is keyed on.
@@ -1024,7 +1028,7 @@ a restart.
 - **C · single binary:** `KERBEROS_KEYTAB` in the environment file — the
   keytab's path, readable by the service's user.
 - **D · bare container:** mount it and name it:
-  `-v /etc/go-time-recording/http.keytab:/run/secrets/http.keytab:ro -e KERBEROS_KEYTAB=/run/secrets/http.keytab`.
+  `-v /etc/timepulse/http.keytab:/run/secrets/http.keytab:ro -e KERBEROS_KEYTAB=/run/secrets/http.keytab`.
 
 `KERBEROS_SERVICE_PRINCIPAL` is only needed when the keytab holds keys for more
 than one service: it names the one to use, `HTTP/time.example.com`, with or
@@ -1271,10 +1275,16 @@ application not coming back.
 
 ### The file keeps its name
 
-A release is published as `go-time-recording-web_v1.2.3_windows_amd64.exe`, so
+A release is published as `timepulse-web_v1.2.3_windows_amd64.exe`, so
 a manual download says which version it is in its own name. An update installed
 from the interface does not rename anything: the new version is written to the
 path the running one already occupies, whatever that path is called.
+
+A version from before the project was called TimePulse asks the release for
+`go-time-recording-web_v1.2.3_windows_amd64.exe`. Releases attach every binary
+under that name as well, so such a version still updates itself from the
+interface - once, after which it asks for the new name. Its file keeps the name
+it had, for the reason below.
 
 A version from before the binary was called `-web` cannot update itself from
 the interface to one that is: it asks the release for
@@ -1291,7 +1301,7 @@ application offline and leaves no obvious reason why.
 Which version a file is stays answerable three ways:
 
 ```bash
-./go-time-recording-web --version
+./timepulse-web --version
 ```
 
 On Windows, right-click → *Properties* → *Details*: the published binaries carry
@@ -1301,7 +1311,7 @@ being asked. And the footer of the interface names it beside the platform.
 ### Going back
 
 The version being replaced is kept, on both platforms, beside the binary as
-`go-time-recording-web.old`. It stays there until the *next* update, which removes it
+`timepulse-web.old`. It stays there until the *next* update, which removes it
 as its first act - so there is always exactly one version to go back to, and
 never two.
 
@@ -1311,12 +1321,12 @@ taken, or a certificate it cannot read. At that point there is no interface to
 press anything in, which is why the way back is a flag rather than a button:
 
 ```bash
-./go-time-recording-web --rollback
+./timepulse-web --rollback
 # the previous version is back in place; start it again
 ```
 
 It moves two files: the version that would not serve becomes
-`go-time-recording-web.failed`, kept so it can be looked at, and `.old` takes its
+`timepulse-web.failed`, kept so it can be looked at, and `.old` takes its
 name back. No database, no configuration, nothing else touched. Start it as you
 normally would.
 
@@ -1380,7 +1390,7 @@ instance timezone, the directory configuration *including its bind password*,
 telemetry and the operational limits. A server-side dump is the backup.
 
 ```bash
-docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > gtr-$(date +%F).sql.gz
+docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > timepulse-$(date +%F).sql.gz
 ```
 
 **SQLite** — the file is `<DB_NAME>.db`, with a trailing `.db` in `DB_NAME`
@@ -1390,7 +1400,7 @@ runs SQLite in write-ahead logging mode, so a copy taken while the process runs
 must include the `-wal` and `-shm` sidecars, or use SQLite's own backup:
 
 ```bash
-sqlite3 /data/go-time-recording.db ".backup '/backup/gtr-$(date +%F).db'"
+sqlite3 /data/go-time-recording.db ".backup '/backup/timepulse-$(date +%F).db'"
 ```
 
 **Two paths matter whatever the dialect:**
@@ -1412,7 +1422,7 @@ only.
 TIMEPULSE_VERSION=v1.3.0 docker compose up -d      # after a dump
 
 # C
-systemctl stop gtr && cp go-time-recording-web_v1.3.0_linux_amd64 /opt/gtr/go-time-recording-web && systemctl start gtr
+systemctl stop timepulse && cp timepulse-web_v1.3.0_linux_amd64 /opt/timepulse/timepulse-web && systemctl start timepulse
 ```
 
 The schema migrates itself on the way up. There is no separate command, and
