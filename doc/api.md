@@ -11,7 +11,7 @@ and the card shows both once: as text, the token's value and the address, and
 together, as a QR code. The code holds a connection address:
 
 ```text
-go-time-recording://connect?token=gtr_...&url=https%3A%2F%2Ftime.example.com
+timepulse://connect?token=timepulse_...&url=https%3A%2F%2Ftime.example.com
 ```
 
 `url` is the address the browser reached the installation at when the token

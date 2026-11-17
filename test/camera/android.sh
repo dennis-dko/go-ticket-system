@@ -255,7 +255,7 @@ tap 'Cancel'
 
 # The code's link, the way the phone's camera hands it over; the app offers it
 # and connects only once Connect is pressed.
-adb shell "am start -a android.intent.action.VIEW -d 'go-time-recording://connect?url=http%3A%2F%2F10.0.2.2%3A$port&token=$token'" > /dev/null
+adb shell "am start -a android.intent.action.VIEW -d 'timepulse://connect?url=http%3A%2F%2F10.0.2.2%3A$port&token=$token'" > /dev/null
 tap 'Connect'
 tap 'Menu'
 tap 'Time entries'

@@ -30,7 +30,7 @@
     const name = this.download;
     const reader = new FileReader();
 
-    reader.onload = () => GoTimeRecordingFiles.save(String(reader.result).split(',')[1] || '', name);
+    reader.onload = () => TimePulseFiles.save(String(reader.result).split(',')[1] || '', name);
     reader.readAsDataURL(blob);
   };
 })();

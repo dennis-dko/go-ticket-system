@@ -17,17 +17,25 @@ import javax.crypto.spec.GCMParameterSpec
 data class Connection(val address: String, val token: String)
 
 /** connectScheme is the scheme of the address a token's code holds, which the app is registered for. */
-const val connectScheme = "go-time-recording"
+const val connectScheme = "timepulse"
+
+/**
+ * connectSchemeBeforeTheRename is the scheme an installation from before the
+ * rename to TimePulse writes into a token's code. The app is updated apart from
+ * the installation it is connected to, so it goes on answering to that one too.
+ */
+const val connectSchemeBeforeTheRename = "go-time-recording"
 
 /**
  * connectionIn reads the address a token's code holds -
- * go-time-recording://connect?url=…&token=… - and answers null for anything
- * else. The order of the two values is not to be relied on, and both are
- * query-encoded.
+ * timepulse://connect?url=…&token=…, or go-time-recording:// from an older
+ * installation - and answers null for anything else. The order of the two
+ * values is not to be relied on, and both are query-encoded.
  */
 fun connectionIn(link: String): Connection? {
     val uri = runCatching { URI(link) }.getOrNull() ?: return null
-    if (uri.scheme != connectScheme || uri.host != "connect") return null
+    if (uri.scheme != connectScheme && uri.scheme != connectSchemeBeforeTheRename) return null
+    if (uri.host != "connect") return null
 
     val values = uri.rawQuery.orEmpty().split('&').mapNotNull { pair ->
         val name = pair.substringBefore('=', "")

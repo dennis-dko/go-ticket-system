@@ -56,4 +56,13 @@ class WebTest {
         assertEquals("report.pdf", downloadName("..\\report.pdf"))
         assertEquals("download", downloadName("  "))
     }
+
+    // A bridge is put on the page under its own name and under the one a page from
+    // before the rename to TimePulse looks for it by, because the app is updated
+    // apart from the installation whose page it shows.
+    @Test
+    fun aBridgeIsPutOnThePageUnderBothNames() {
+        assertEquals(listOf("TimePulseFiles", "GoTimeRecordingFiles"), bridgeNames("TimePulseFiles"))
+        assertEquals(listOf("TimePulseSession", "GoTimeRecordingSession"), bridgeNames("TimePulseSession"))
+    }
 }

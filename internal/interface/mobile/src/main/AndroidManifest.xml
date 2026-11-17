@@ -55,6 +55,9 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:host="connect" android:scheme="timepulse" />
+                <!-- What an installation from before the rename to TimePulse writes
+                     into a token's code, which the app is still opened by. -->
                 <data android:host="connect" android:scheme="go-time-recording" />
             </intent-filter>
         </activity>
