@@ -56,8 +56,8 @@ func TestOnlyTheKeyIsConcealed(t *testing.T) {
 
 	for line, want := range map[string]string{
 		"two: timepulsecal_abc/timepulsecal_DEF-1_x and the rest": "two: timepulsecal_[hidden]/timepulsecal_[hidden] and the rest",
-		"a prefix with nothing after it: timepulsecal_ ":    "a prefix with nothing after it: timepulsecal_ ",
-		"nothing to hide here":                        "nothing to hide here",
+		"a prefix with nothing after it: timepulsecal_ ":          "a prefix with nothing after it: timepulsecal_ ",
+		"nothing to hide here":                                    "nothing to hide here",
 	} {
 		if got := s.concealed(line); got != want {
 			t.Errorf("%q was written %q, want %q", line, got, want)
