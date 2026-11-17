@@ -562,7 +562,7 @@ func TestALanguageAdoptionThatWasMissedIsTriedAgain(t *testing.T) {
 
 			try {
 				// Both of the conditions the old arrangement gave up on.
-				localStorage.setItem('gtr.adopted.' + me.user.id, '1');
+				localStorage.setItem('timepulse.adopted.' + me.user.id, '1');
 				me.user.language = '';
 
 				await adoptBrowserDefaults();

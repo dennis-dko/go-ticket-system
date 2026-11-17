@@ -501,7 +501,7 @@ func TestASessionTheServerNoLongerAcceptsTakesTheScreenWithIt(t *testing.T) {
 
 	p.run("look behind it", chromedp.Evaluate(`
 		JSON.stringify({
-			drafts: Object.keys(sessionStorage).filter((k) => k.startsWith('gtr.draft.')).length,
+			drafts: Object.keys(sessionStorage).filter((k) => k.startsWith('timepulse.draft.')).length,
 			account: Boolean(me.user),
 		})`, &left))
 

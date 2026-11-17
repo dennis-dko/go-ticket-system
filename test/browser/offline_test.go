@@ -163,3 +163,40 @@ func TestABookingAPageDidNotLiveToClearIsNotSentTwice(t *testing.T) {
 		t.Errorf("the booking is on the server %d times, want once", n)
 	}
 }
+
+// A booking a page from before the rename to TimePulse kept on this device waits
+// under the outbox's old name, which nothing reads any more. The page after the
+// update takes it over and sends it, once, and leaves nothing under the old name
+// - so hours booked offline the day the installation was updated are not lost.
+func TestABookingKeptBeforeTheRenameIsSentAfterTheUpdate(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyWorker()
+
+	var left struct {
+		Before int `json:"before"`
+		Now    int `json:"now"`
+	}
+
+	p.awaitJSON(`(async () => {
+		const body = { date: todayISO(), durationHours: 2, description: 'kept before the rename' };
+		const keptAt = new Date(Date.now() - 60000).toISOString();
+		localStorage.setItem('gtr_outbox_' + me.user.id, JSON.stringify([{ id: 'b', body, keptAt }]));
+		await adoptOutboxFromBeforeTheRename();
+		await sendOutbox();
+		return {
+			before: JSON.parse(localStorage.getItem('gtr_outbox_' + me.user.id) ?? '[]').length,
+			now: readOutbox().length,
+		};
+	})()`, &left)
+
+	if left.Before != 0 || left.Now != 0 {
+		t.Errorf("after the round %d booking(s) wait under the old name and %d under the new, want none",
+			left.Before, left.Now)
+	}
+
+	if n := p.app.Rows(t, "timesheets", "description = ?", "kept before the rename"); n != 1 {
+		t.Errorf("the booking is on the server %d times, want once", n)
+	}
+}

@@ -57,7 +57,7 @@ func TestTheInstallCardIsNotInTheAndroidApp(t *testing.T) {
 	p.readyWorker()
 
 	p.run("load the page as the app shows it", chromedp.ActionFunc(func(ctx context.Context) error {
-		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.GoTimeRecordingFiles = {};`).Do(ctx)
+		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.TimePulseFiles = {};`).Do(ctx)
 
 		return err
 	}), chromedp.Reload())

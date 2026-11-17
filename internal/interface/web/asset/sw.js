@@ -14,7 +14,7 @@
  * because a figure from an hour ago shown as if it were now is worse than none.
  * Bookings made meanwhile wait in the page itself - see keepForLater in app.js.
  */
-const SHELL = 'gtr-shell-v1';
+const SHELL = 'timepulse-shell-v1';
 
 /** What a page needs to draw itself at all, kept from the first visit. */
 const ESSENTIALS = ['/', '/app.js', '/app.css', '/theme.js', '/favicon.svg'];
@@ -70,10 +70,16 @@ const PUSHED_FRESH = 5 * 60 * 1000;
  * zone's offset than the push does - and the day with nothing booked.
  */
 const ASKED_AGAIN = {
-  'gtr-stopwatch': ['/api/v1/me/timer', (answer, about) => Boolean(answer?.running)
+  'timepulse-stopwatch': ['/api/v1/me/timer', (answer, about) => Boolean(answer?.running)
     && Date.parse(answer.startedAt) === Date.parse(about)],
-  'gtr-unbooked': ['/api/v1/me/notices', (answer, about) => answer?.unbookedDay === about],
+  'timepulse-unbooked': ['/api/v1/me/notices', (answer, about) => answer?.unbookedDay === about],
 };
+
+// A reminder sent before the rename to TimePulse carries the tag of that time, and
+// the push service holds one for a closed browser for up to the hour it is sent
+// to live - long enough to arrive after the update. It is asked about the same way.
+ASKED_AGAIN['gtr-stopwatch'] = ASKED_AGAIN['timepulse-stopwatch'];
+ASKED_AGAIN['gtr-unbooked'] = ASKED_AGAIN['timepulse-unbooked'];
 
 /** Whether a pushed reminder still holds: at once where it is fresh, and otherwise as the installation answers now. */
 async function stillHolds(message) {

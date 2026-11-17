@@ -16,7 +16,44 @@
    * account: someone who wants dark on a laptop at night wants it whoever is
    * signed in.
    */
-  var STORAGE_KEY = 'gtr.theme';
+  var STORAGE_KEY = 'timepulse.theme';
+
+  /**
+   * Moves what this page kept on the device while the project was called
+   * Go-Time-Recording to the names it reads now - an appearance chosen, a form
+   * half filled in, the screen last open - or the first load after the update
+   * would leave all of it under names nothing reads any more.
+   *
+   * Here because this is the first script on the page and the first to read one
+   * of them. A value already kept under today's name wins, because it was written
+   * later. The bookings kept without a connection are not moved here: another tab
+   * may be sending them as this runs, so app.js takes them over under the lock
+   * the sending is done under.
+   * @param {Storage} storage
+   */
+  function adoptWhatWasKeptBeforeTheRename(storage) {
+    var keys = [];
+    var i;
+
+    for (i = 0; i < storage.length; i++) keys.push(storage.key(i));
+
+    for (i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (!/^gtr[._]/.test(key) || key.indexOf('gtr_outbox_') === 0) continue;
+
+      var renamed = 'timepulse' + key.slice('gtr'.length);
+      if (storage.getItem(renamed) === null) storage.setItem(renamed, storage.getItem(key));
+
+      storage.removeItem(key);
+    }
+  }
+
+  try {
+    adoptWhatWasKeptBeforeTheRename(localStorage);
+    adoptWhatWasKeptBeforeTheRename(sessionStorage);
+  } catch (e) {
+    // Private browsing can refuse storage entirely, and then nothing was kept.
+  }
 
   /**
    * Dark from dusk to dawn, in local time - that is what "evening" means to the
@@ -79,7 +116,7 @@
     var stored;
 
     try {
-      stored = JSON.parse(localStorage.getItem('gtr.branding') || 'null');
+      stored = JSON.parse(localStorage.getItem('timepulse.branding') || 'null');
     } catch (e) {
       return;
     }
@@ -92,7 +129,7 @@
   }
 
   // Exposed so app.js reuses these rules rather than restating them.
-  window.gtrTheme = {
+  window.timePulseTheme = {
     STORAGE_KEY: STORAGE_KEY,
     DARK_FROM_HOUR: DARK_FROM_HOUR,
     DARK_UNTIL_HOUR: DARK_UNTIL_HOUR,

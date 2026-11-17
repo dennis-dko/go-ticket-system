@@ -90,7 +90,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 
 	p.run("read what was written down", chromedp.Evaluate(`
 		JSON.stringify(Object.keys(sessionStorage)
-			.filter((key) => key.startsWith('gtr.draft.'))
+			.filter((key) => key.startsWith('timepulse.draft.'))
 			.map((key) => sessionStorage.getItem(key)))`, &kept))
 
 	if strings.Contains(kept, secret) {
@@ -105,7 +105,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 	var after string
 
 	p.run("read them again", chromedp.Evaluate(`
-		JSON.stringify(Object.keys(sessionStorage).filter((key) => key.startsWith('gtr.draft.')))`,
+		JSON.stringify(Object.keys(sessionStorage).filter((key) => key.startsWith('timepulse.draft.')))`,
 		&after))
 
 	if after != "[]" {
@@ -149,7 +149,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 			// Under this account's own prefix: a draft belongs to whoever wrote
 			// it, and one filed under anybody else is not found at all - which
 			// would make this case pass without proving anything.
-			sessionStorage.setItem('gtr.draft.' + me.user.id + '.form-datasource',
+			sessionStorage.setItem('timepulse.draft.' + me.user.id + '.form-datasource',
 				JSON.stringify({
 				version: 'v0.0.1-before',
 				values: { dialect: '', name: '', host: '', port: '', user: '', sslMode: '' },
@@ -176,7 +176,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 	var left string
 
 	p.run("look for the draft", chromedp.Evaluate(
-		`String(sessionStorage.getItem('gtr.draft.' + me.user.id + '.form-datasource') ?? '')`,
+		`String(sessionStorage.getItem('timepulse.draft.' + me.user.id + '.form-datasource') ?? '')`,
 		&left))
 
 	if left != "" {
@@ -190,7 +190,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 	var stamped string
 
 	p.run("read what was written down", chromedp.Evaluate(
-		`String(sessionStorage.getItem('gtr.draft.' + me.user.id + '.form-datasource') ?? '')`,
+		`String(sessionStorage.getItem('timepulse.draft.' + me.user.id + '.form-datasource') ?? '')`,
 		&stamped))
 
 	if !strings.Contains(stamped, `"version":"`) || strings.Contains(stamped, `"version":""`) {

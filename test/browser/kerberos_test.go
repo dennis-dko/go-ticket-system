@@ -323,7 +323,7 @@ func TestWithoutATicketThePageIsLeftAtTheForm(t *testing.T) {
 	var held bool
 
 	p.run("read what the tab remembers", chromedp.Evaluate(
-		`sessionStorage.getItem('gtr.kerberos.heldBack') === '1'`, &held))
+		`sessionStorage.getItem('timepulse.kerberos.heldBack') === '1'`, &held))
 
 	if !held {
 		t.Error("a ticket the browser could not present will be tried again at every reload")

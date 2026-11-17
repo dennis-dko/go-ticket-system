@@ -26,7 +26,7 @@ func TestThePageTellsTheAppItsSessionEnded(t *testing.T) {
 	// The bridge the app registers, stood in for: it counts in the tab's storage,
 	// which outlives a document loaded afresh.
 	p.run("load the page as the app shows it", chromedp.ActionFunc(func(ctx context.Context) error {
-		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.GoTimeRecordingSession = {
+		_, err := cdppage.AddScriptToEvaluateOnNewDocument(`window.TimePulseSession = {
 			ended() { sessionStorage.setItem('ended', String(Number(sessionStorage.getItem('ended') || 0) + 1)); },
 		};`).Do(ctx)
 
