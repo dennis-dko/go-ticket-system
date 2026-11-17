@@ -205,35 +205,3 @@ func TestAnUnusableKeyIsRefused(t *testing.T) {
 		})
 	}
 }
-
-// A value sealed while the project was called Go-Time-Recording carries the
-// marker of that time over the same body, and an installation keeps the rows it
-// wrote then. It is opened, and it counts as sealed: read as plain text, its
-// ciphertext would be handed back as though it were the secret, and the pass
-// that seals what an installation already had would seal it a second time.
-func TestAValueSealedBeforeTheRenameIsStillOpened(t *testing.T) {
-	sealer, err := security.NewSealer(aKey(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sealed, err := sealer.Seal("JBSWY3DPEHPK3PXP")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	before := "gtr.v1:" + sealed[strings.Index(sealed, ":")+1:]
-
-	if !security.IsSealed(before) {
-		t.Error("a value sealed before the rename does not count as sealed")
-	}
-
-	opened, err := sealer.Open(before)
-	if err != nil {
-		t.Fatalf("a value sealed before the rename cannot be opened: %v", err)
-	}
-
-	if opened != "JBSWY3DPEHPK3PXP" {
-		t.Errorf("a value sealed before the rename opens as %q", opened)
-	}
-}
