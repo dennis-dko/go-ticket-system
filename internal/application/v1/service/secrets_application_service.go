@@ -32,7 +32,12 @@ func NewSecretsService(
 
 // theKeyIsRight is what the check value decrypts to. Its content does not matter;
 // that it decrypts at all is the whole test.
-const theKeyIsRight = "go-time-recording"
+const theKeyIsRight = "timepulse"
+
+// theKeyWasRightBeforeTheRename is what an installation set up while the project
+// was called Go-Time-Recording recorded instead. The check value is written once
+// and never again, so it is the answer that installation's key still has to give.
+const theKeyWasRightBeforeTheRename = "go-time-recording"
 
 // Verify reports whether the configured key is the one this installation's data
 // was written with, and records it the first time.
@@ -79,7 +84,7 @@ func (s *SecretsService) Verify(ctx context.Context) error {
 			"written with: %w", err)
 	}
 
-	if opened != theKeyIsRight {
+	if opened != theKeyIsRight && opened != theKeyWasRightBeforeTheRename {
 		return errors.New("SECRET_KEY does not match this installation's secrets")
 	}
 
