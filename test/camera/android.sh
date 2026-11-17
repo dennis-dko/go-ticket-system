@@ -27,11 +27,13 @@ export PATH="$jdk/bin:$sdk/platform-tools:$PATH"
 
 work=$(mktemp -d)
 server=""
+phone_zone=""
 
 cleanup() {
   if [ -n "$server" ]; then kill "$server" 2> /dev/null || true; fi
   adb shell wm size reset > /dev/null 2>&1 || true
   adb shell wm density reset > /dev/null 2>&1 || true
+  if [ -n "$phone_zone" ]; then adb shell cmd alarm set-timezone "$phone_zone" > /dev/null 2>&1 || true; fi
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -70,10 +72,21 @@ done
 adb shell wm size 540x1200
 adb shell wm density 210
 
-# The day the pictures show is the phone's: the installation keeps its zone, so
-# the stopwatch and the entries fall on the day the status bar shows.
-zone=$(adb shell getprop persist.sys.timezone | tr -d '\r')
-[ -n "$zone" ] || zone=UTC
+# An afternoon, whenever this runs, as the web interface's camera picks one -
+# see afternoon in test/browser/readmepicture_test.go, and its note on POSIX's
+# signs. The page follows the clock for its appearance until somebody chooses
+# one, so the phone's own zone made every picture dark in the evening and light
+# in the morning, beside web pictures that are always light. The phone is set to
+# it, and the installation keeps it, so the stopwatch and the entries fall on
+# the day the status bar shows; the phone's own zone is put back at the end.
+phone_zone=$(adb shell getprop persist.sys.timezone | tr -d '\r')
+offset=$((14 - $(date -u +%-H)))
+case "$offset" in
+  0) zone=Etc/GMT ;;
+  -*) zone="Etc/GMT+${offset#-}" ;;
+  *) zone="Etc/GMT-$offset" ;;
+esac
+adb shell cmd alarm set-timezone "$zone" > /dev/null
 
 day() { TZ="$zone" date -d "$1" +%F; }
 
