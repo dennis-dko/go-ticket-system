@@ -16,7 +16,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // Maintenance switched on under somebody who is already working.

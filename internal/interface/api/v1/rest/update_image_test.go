@@ -14,9 +14,9 @@ import (
 	"gofr.dev/pkg/gofr/container"
 	"gofr.dev/pkg/gofr/logging"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/announce"
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/imageupdate"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/announce"
+	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/imageupdate"
 )
 
 // An image update that changed nothing takes back the restart it announced.

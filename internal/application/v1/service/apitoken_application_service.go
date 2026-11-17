@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 // APITokenPrefix marks the value as a token of this application, so a leaked

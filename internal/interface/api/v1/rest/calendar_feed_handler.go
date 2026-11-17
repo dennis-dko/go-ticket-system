@@ -6,9 +6,9 @@ import (
 	"gofr.dev/pkg/gofr"
 	"gofr.dev/pkg/gofr/http/response"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/support/qrcode"
 )
 
 // CalendarFeedPath is where a feed is read, followed by its key: the route

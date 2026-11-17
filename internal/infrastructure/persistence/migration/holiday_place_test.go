@@ -3,7 +3,7 @@ package migration_test
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // beforeCountries is the last version an installation can have run while a place

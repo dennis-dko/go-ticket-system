@@ -9,10 +9,10 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/qrcode"
 )
 
 // APITokenHeader is the alternative to "Authorization: Bearer <token>", for

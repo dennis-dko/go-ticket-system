@@ -3,8 +3,8 @@ package config_test
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // A connection is read back the way the driver will read it, and refused only

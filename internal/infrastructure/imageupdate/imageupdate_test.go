@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/imageupdate"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/imageupdate"
 )
 
 // Nothing is available where nothing was configured, which is every deployment

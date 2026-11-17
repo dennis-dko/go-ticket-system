@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // Provider is the subset of GoFr's config.Config this package needs, kept

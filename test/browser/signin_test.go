@@ -10,7 +10,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // signIn fills the form and submits it, the way a person does.

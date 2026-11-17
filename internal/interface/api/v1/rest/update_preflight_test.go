@@ -10,10 +10,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/announce"
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
-	"github.com/dennis-dko/go-time-recording/internal/support/hosting"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/announce"
+	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/timepulse/internal/support/hosting"
 )
 
 // An image update into a database that does not answer is refused before

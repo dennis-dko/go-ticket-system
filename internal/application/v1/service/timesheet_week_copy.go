@@ -6,10 +6,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	domainservice "github.com/dennis-dko/go-time-recording/internal/domain/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	domainservice "github.com/dennis-dko/timepulse/internal/domain/service"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // WeekCopy is what copying a week did.

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // The wizard's whole value is that it tells the truth about what is

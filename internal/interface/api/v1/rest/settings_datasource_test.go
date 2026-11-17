@@ -3,7 +3,7 @@ package rest
 import (
 	"testing"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
 )
 
 // A kept password follows its account, and only the parts that name the account

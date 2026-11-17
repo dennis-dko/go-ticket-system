@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // Which of two versions is newer.

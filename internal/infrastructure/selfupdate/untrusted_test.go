@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // A published checksum that is not one is refused, before anything is fetched

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/command"
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/memory"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/application/v1/command"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/memory"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // fakeProvider answers as a provider does, for the application's half of a round:

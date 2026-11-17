@@ -9,7 +9,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 // This pins a decision rather than checking a rule, which is why it is worth

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/config"
 )
 
 // What the environment supplied of the connection goes to whoever holds the

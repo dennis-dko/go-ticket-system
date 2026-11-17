@@ -7,10 +7,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/dennis-dko/go-time-recording/actions/workflows/ci.yml"><img src="https://github.com/dennis-dko/go-time-recording/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/dennis-dko/go-time-recording/releases/latest"><img src="https://img.shields.io/github/v/release/dennis-dko/go-time-recording?label=release" alt="Latest release"></a>
-  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/dennis-dko/go-time-recording" alt="Go version"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/dennis-dko/go-time-recording" alt="MIT licence"></a>
+  <a href="https://github.com/dennis-dko/timepulse/actions/workflows/ci.yml"><img src="https://github.com/dennis-dko/timepulse/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/dennis-dko/timepulse/releases/latest"><img src="https://img.shields.io/github/v/release/dennis-dko/timepulse?label=release" alt="Latest release"></a>
+  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/dennis-dko/timepulse" alt="Go version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/dennis-dko/timepulse" alt="MIT licence"></a>
 </p>
 
 <p align="center">
@@ -209,7 +209,7 @@ docker compose up -d
 ```
 
 **As a single binary** — download `go-time-recording-web` for your platform
-from the [latest release](https://github.com/dennis-dko/go-time-recording/releases/latest)
+from the [latest release](https://github.com/dennis-dko/timepulse/releases/latest)
 and start it. It is the whole installation.
 
 ```bash
@@ -282,7 +282,7 @@ which are set up there.
 
 **It belongs to the release it was built with.** Download
 `go-time-recording-mobile_<version>.apk` from the
-[release](https://github.com/dennis-dko/go-time-recording/releases) the
+[release](https://github.com/dennis-dko/timepulse/releases) the
 installation runs - **My account → Install the Android app** shows it as a code
 the phone's camera downloads it from - and open it on the phone; Android asks once whether the
 browser or file manager it was opened from may install apps. Every release is

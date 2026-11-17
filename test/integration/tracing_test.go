@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // Everything else about tracing can be checked without a collector: that the

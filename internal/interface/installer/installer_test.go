@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
 
 // The page is handed out with its sentences in every language but English

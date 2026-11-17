@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/config"
 )
 
 // A save that cannot be finished leaves the connection that was working.

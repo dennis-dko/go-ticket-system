@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unicode"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
 )
 
 // The restart card compares the connection this process opened against the one

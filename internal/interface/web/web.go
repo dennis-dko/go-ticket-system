@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/imaging"
+	"github.com/dennis-dko/timepulse/internal/support/imaging"
 )
 
 // Branding is what an installation calls itself, as far as the served document

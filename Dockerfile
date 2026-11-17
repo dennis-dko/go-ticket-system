@@ -49,9 +49,9 @@ ARG VERSION=dev
 # exists but is an orphan, reachable only through the account's Packages tab.
 #
 # The rest is the standard set a registry and a `docker inspect` will show.
-LABEL org.opencontainers.image.source="https://github.com/dennis-dko/go-time-recording" \
-      org.opencontainers.image.url="https://github.com/dennis-dko/go-time-recording" \
-      org.opencontainers.image.documentation="https://github.com/dennis-dko/go-time-recording#readme" \
+LABEL org.opencontainers.image.source="https://github.com/dennis-dko/timepulse" \
+      org.opencontainers.image.url="https://github.com/dennis-dko/timepulse" \
+      org.opencontainers.image.documentation="https://github.com/dennis-dko/timepulse#readme" \
       org.opencontainers.image.title="go-time-recording" \
       org.opencontainers.image.description="Project time tracking as a single self-contained binary: REST API, embedded web interface, SQLite, PostgreSQL or MySQL." \
       org.opencontainers.image.licenses="MIT" \

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/test/oidctest"
+	"github.com/dennis-dko/timepulse/test/oidctest"
 )
 
 type openIDSettings struct {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // The installer fills in what the environment already supplied once it has

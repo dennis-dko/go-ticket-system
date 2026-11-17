@@ -116,7 +116,7 @@ var ErrInstalling = errors.New("an update is already being installed")
 var ErrAlreadyInstalled = errors.New("this version is already in place and waits for a restart")
 
 // DefaultAPI is where the releases of this project live.
-const DefaultAPI = "https://api.github.com/repos/dennis-dko/go-time-recording/releases/latest"
+const DefaultAPI = "https://api.github.com/repos/dennis-dko/timepulse/releases/latest"
 
 // New creates a source with sensible limits.
 func New(api, token string) *Source {

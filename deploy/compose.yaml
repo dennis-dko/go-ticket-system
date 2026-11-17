@@ -22,7 +22,7 @@ name: go-time-recording
 
 services:
   app:
-    image: ${GTR_IMAGE:-ghcr.io/dennis-dko/go-time-recording}:${GTR_VERSION:-latest}
+    image: ${GTR_IMAGE:-ghcr.io/dennis-dko/timepulse}:${GTR_VERSION:-latest}
     restart: unless-stopped
     # Longer than the application takes to stop: it waits for requests in flight
     # for SHUTDOWN_GRACE_PERIOD, 30s by default, and then up to ten seconds for

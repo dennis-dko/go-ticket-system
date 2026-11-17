@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/timepulse/internal/support/qrcode"
 )
 
 // A new token comes with what an app needs to use it, once: the address this

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
 )
 
 // An entry without an address keeps the account its identifier names.

@@ -22,7 +22,7 @@ import (
 	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 const (

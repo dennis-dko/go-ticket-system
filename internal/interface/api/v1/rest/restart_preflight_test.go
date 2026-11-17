@@ -12,8 +12,8 @@ import (
 	gofrHTTP "gofr.dev/pkg/gofr/http"
 	"gofr.dev/pkg/gofr/logging"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // A restart into a database that does not answer is refused before anything is

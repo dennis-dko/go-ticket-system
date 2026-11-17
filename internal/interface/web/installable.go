@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/imaging"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/support/imaging"
 )
 
 // manifestPath is where a browser reads what the installed app is called and

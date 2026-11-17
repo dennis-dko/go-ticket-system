@@ -17,8 +17,8 @@ import (
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/harness"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // interactionTimeout bounds one test. Generous, because a cold browser start

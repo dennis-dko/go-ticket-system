@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
 
 // iconPath is where the browser tab's icon comes from.

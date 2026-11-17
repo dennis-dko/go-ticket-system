@@ -16,8 +16,8 @@ import (
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
-	"github.com/dennis-dko/go-time-recording/test/oidctest"
+	"github.com/dennis-dko/timepulse/test/harness"
+	"github.com/dennis-dko/timepulse/test/oidctest"
 )
 
 // readmePictures names the directory the README's pictures are written to.

@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/command"
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/query"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/application/v1/command"
+	"github.com/dennis-dko/timepulse/internal/application/v1/query"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // projectAsSeen reads a project as its owner sees it.

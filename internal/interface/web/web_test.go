@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/interface/web"
 )
 
 // nextMarker is what the stand-in for the API routes behind the UI middleware

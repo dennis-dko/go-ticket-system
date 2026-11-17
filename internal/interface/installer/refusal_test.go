@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/config"
 )
 
 // refused is as much of a refusal as these cases read.

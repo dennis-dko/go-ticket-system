@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // internal/infrastructure/directory is the one package here that talks to

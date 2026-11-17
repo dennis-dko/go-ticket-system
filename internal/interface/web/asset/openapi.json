@@ -2262,7 +2262,7 @@
           "me"
         ],
         "summary": "Where the Android app of this installation is downloaded, and the same as a QR code",
-        "description": "Answers {\"release\": \"https://github.com/dennis-dko/go-time-recording/releases/tag/v0.4.8\", \"download\": \"https://github.com/dennis-dko/go-time-recording/releases/download/v0.4.8/go-time-recording-mobile_v0.4.8.apk\", \"qr\": \"data:image/svg+xml;base64,...\"}. The app belongs to the release it was built with, so these are the release this installation runs; an installation that runs no release - a build from source - is given the newest release's page and no download. The code is of the download, or of the page where there is none, for a phone's camera. Needs nothing beyond being signed in.",
+        "description": "Answers {\"release\": \"https://github.com/dennis-dko/timepulse/releases/tag/v0.4.8\", \"download\": \"https://github.com/dennis-dko/timepulse/releases/download/v0.4.8/go-time-recording-mobile_v0.4.8.apk\", \"qr\": \"data:image/svg+xml;base64,...\"}. The app belongs to the release it was built with, so these are the release this installation runs; an installation that runs no release - a build from source - is given the newest release's page and no download. The code is of the download, or of the page where there is none, for a phone's camera. Needs nothing beyond being signed in.",
         "responses": {
           "200": {
             "description": "OK"

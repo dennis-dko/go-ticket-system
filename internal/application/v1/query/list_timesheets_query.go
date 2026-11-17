@@ -3,7 +3,7 @@ package query
 import (
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/common"
+	"github.com/dennis-dko/timepulse/internal/application/v1/common"
 )
 
 // ListTimesheetsQuery query to list all timesheets by filter

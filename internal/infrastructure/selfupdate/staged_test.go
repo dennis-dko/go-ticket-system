@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // A download that could not be put in place does not stay beside the binary.

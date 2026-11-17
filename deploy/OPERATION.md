@@ -233,7 +233,7 @@ still the tidier arrangement and nothing here argues against it.
 
 ```bash
 docker run -d -p 8000:8000 -v gtr-data:/data --stop-timeout 45 \
-  ghcr.io/dennis-dko/go-time-recording:v1.2.3
+  ghcr.io/dennis-dko/timepulse:v1.2.3
 ```
 
 With no `DB_DIALECT` this serves its **installer** and waits — that is on

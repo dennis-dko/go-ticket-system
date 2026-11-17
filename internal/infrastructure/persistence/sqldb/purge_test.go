@@ -10,9 +10,9 @@ import (
 
 	gofrmigration "gofr.dev/pkg/gofr/migration"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/migration"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/sqldb"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/migration"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 
 	_ "modernc.org/sqlite"
 )

@@ -12,7 +12,7 @@ import (
 	"github.com/chromedp/cdproto/webauthn"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // Passkeys are the one feature that cannot be tested by calling the API: the

@@ -23,8 +23,8 @@ import (
 	"github.com/lib/pq"
 	_ "modernc.org/sqlite"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // DatasourceFile is where the administered database connection is stored.

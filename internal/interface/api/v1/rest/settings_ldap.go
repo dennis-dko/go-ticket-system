@@ -3,8 +3,8 @@ package rest
 import (
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // ldapAdmin is the subset of the LDAP client this handler drives, kept as an

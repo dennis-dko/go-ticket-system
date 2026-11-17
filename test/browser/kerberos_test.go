@@ -17,9 +17,9 @@ import (
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
-	"github.com/dennis-dko/go-time-recording/test/kerberostest"
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/internal/support/security"
+	"github.com/dennis-dko/timepulse/test/kerberostest"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // Signing in with the browser's Kerberos ticket, as the sign-in screen does it.

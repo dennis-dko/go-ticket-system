@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
-	"github.com/dennis-dko/go-time-recording/internal/support/webpush"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/support/security"
+	"github.com/dennis-dko/timepulse/internal/support/webpush"
 )
 
 // PushService pushes the reminders to the browsers people subscribe - a

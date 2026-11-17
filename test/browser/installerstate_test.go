@@ -16,7 +16,7 @@ import (
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // Somebody in front of the installer is told what state the installation is in.

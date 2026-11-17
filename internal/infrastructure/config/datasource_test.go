@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/config"
 )
 
 // This is the logic that decides whether the binary serves its installer or the

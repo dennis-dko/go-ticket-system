@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/api/v1/rest"
+	"github.com/dennis-dko/timepulse/internal/interface/api/v1/rest"
 )
 
 // reached marks that the request got past the middleware.

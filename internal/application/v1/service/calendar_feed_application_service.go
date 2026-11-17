@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	domainservice "github.com/dennis-dko/go-time-recording/internal/domain/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/ical"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	domainservice "github.com/dennis-dko/timepulse/internal/domain/service"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/support/ical"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 // CalendarFeedKeyPrefix marks a key as a calendar feed's, so that it is

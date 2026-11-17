@@ -3,8 +3,8 @@ package rest
 import (
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/announce"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/announce"
 )
 
 // MaintenanceResponse is the maintenance state on the wire.

@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
 )
 
 // AdminEventRepository is an in-memory repository.AdminEventRepository.

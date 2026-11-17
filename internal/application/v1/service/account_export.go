@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // AccountExportService hands somebody everything held about their account - the

@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // A password left out of the form stands for the one belonging to the connection

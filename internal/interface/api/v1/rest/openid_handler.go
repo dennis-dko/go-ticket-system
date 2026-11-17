@@ -9,8 +9,8 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // OpenIDCallbackPath is where a provider sends the browser back to. Not an API

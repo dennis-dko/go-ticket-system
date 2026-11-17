@@ -4,7 +4,7 @@ import "fmt"
 
 // Releases is where this project's releases are shown, each carrying the
 // Android app built from the same commit.
-const Releases = "https://github.com/dennis-dko/go-time-recording/releases"
+const Releases = "https://github.com/dennis-dko/timepulse/releases"
 
 // AndroidApp is where the Android app that belongs to version is downloaded:
 // the page of its release, and the APK that release carries. The app belongs to

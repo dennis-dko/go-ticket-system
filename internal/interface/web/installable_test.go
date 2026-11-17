@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/interface/web"
 )
 
 // The installed app: what a telephone's home screen or a desktop's start menu is

@@ -9,7 +9,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/timepulse/internal/support/qrcode"
 )
 
 // A calendar address is made on the account screen and shown there once, beside a

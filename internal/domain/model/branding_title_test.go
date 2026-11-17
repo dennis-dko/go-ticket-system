@@ -3,7 +3,7 @@ package model_test
 import (
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // What an installation calls itself, in the language that is reading.

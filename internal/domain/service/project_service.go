@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // ProjectDomainService holds the project rule that is more than a field check:

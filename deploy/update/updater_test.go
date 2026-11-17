@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // stub writes a fake docker command that answers the way Docker does, and

@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	appconfig "github.com/dennis-dko/go-time-recording/internal/infrastructure/config"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
 
 //go:embed asset/install.html

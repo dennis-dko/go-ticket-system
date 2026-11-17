@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
-	"github.com/dennis-dko/go-time-recording/internal/support/hosting"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/timepulse/internal/support/hosting"
 )
 
 // A newer release that published nothing for this platform says so.
