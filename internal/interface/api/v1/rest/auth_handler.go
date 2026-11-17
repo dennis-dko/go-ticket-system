@@ -129,13 +129,13 @@ func mistypedCredentials(err error) bool {
 func (h *AuthHandler) Logout(c *gofr.Context) (any, error) {
 	req := requestOf(c)
 
-	if cookie, err := req.Cookie(SessionCookieName); err == nil {
-		if err := h.sessions.Logout(c, cookie.Value); err != nil {
+	if token := sessionToken(req); token != "" {
+		if err := h.sessions.Logout(c, token); err != nil {
 			return nil, toHTTPError(err)
 		}
 	}
 
-	setCookie(c, expiredCookie(req))
+	setCookie(c, expiredCookies(req)...)
 
 	return map[string]string{"status": "signed out"}, nil
 }

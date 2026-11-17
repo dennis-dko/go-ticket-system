@@ -43,7 +43,7 @@ func TestTheConfiguredLogoIsOnTheSignInScreen(t *testing.T) {
 	p.run("store a logo", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/settings/branding', {
 				method: 'PUT',
@@ -273,7 +273,7 @@ func (p *page) storeBranding(t *testing.T, logo string) {
 	p.run("store the branding", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/settings/branding', {
 				method: 'PUT',

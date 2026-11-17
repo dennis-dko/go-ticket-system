@@ -207,7 +207,7 @@ func (c *client) csrfToken() string {
 	}
 
 	for _, cookie := range c.http.Jar.Cookies(u) {
-		if cookie.Name == "gtr_csrf" {
+		if cookie.Name == "timepulse_csrf" {
 			return cookie.Value
 		}
 	}

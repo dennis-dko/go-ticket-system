@@ -110,7 +110,7 @@ session() {
 signed_in() {
   curl -fsS -b "$jar" -c "$jar" -X "$1" -H 'Content-Type: application/json' \
     -H "Origin: http://127.0.0.1:$port" \
-    -H "X-CSRF-Token: $(awk '$6 == "gtr_csrf" { print $7 }' "$jar" | tail -n 1)" \
+    -H "X-CSRF-Token: $(awk '$6 == "timepulse_csrf" { print $7 }' "$jar" | tail -n 1)" \
     "$base$2" ${3:+-d "$3"}
 }
 

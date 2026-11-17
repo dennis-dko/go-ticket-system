@@ -141,7 +141,7 @@ func TestTheCalendarTotalsAWholeMonthOfEntries(t *testing.T) {
 	p.run("book five hours on each of the first 21 days", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const now = new Date();
 			const month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');

@@ -155,7 +155,7 @@ func asAdmin(t *testing.T, client *http.Client, base, method, path string, body 
 	// And the token that came back with the session, which the jar is holding.
 	if parsed, err := url.Parse(base); err == nil {
 		for _, cookie := range client.Jar.Cookies(parsed) {
-			if cookie.Name == "gtr_csrf" {
+			if cookie.Name == "timepulse_csrf" {
 				req.Header.Set("X-CSRF-Token", cookie.Value)
 			}
 		}

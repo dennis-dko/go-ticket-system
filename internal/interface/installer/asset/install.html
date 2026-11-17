@@ -600,7 +600,7 @@
   async function claimTheSession() {
     const csrf = document.cookie.split(';')
       .map((c) => c.trim())
-      .find((c) => c.startsWith('gtr_csrf='));
+      .find((c) => c.startsWith('timepulse_csrf='));
 
     try {
       await fetch('/api/v1/setup/claim', {
@@ -609,7 +609,7 @@
         credentials: 'same-origin',
         headers: {
           'X-Setup-Token': $('token').value.trim(),
-          'X-CSRF-Token': csrf ? csrf.slice('gtr_csrf='.length) : '',
+          'X-CSRF-Token': csrf ? csrf.slice('timepulse_csrf='.length) : '',
         },
       });
     } catch {

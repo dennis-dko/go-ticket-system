@@ -35,8 +35,11 @@ func TestThePageTellsTheAppItsSessionEnded(t *testing.T) {
 	p.settled()
 
 	// The session gone from under the page, as taking its token back takes it: the
-	// next thing the page asks is refused.
-	p.run("end the session underneath the page", network.DeleteCookies("gtr_session").WithURL(p.app.BaseURL()))
+	// next thing the page asks is refused. Under both names it is carried by, the
+	// one from before the rename included, or the page would go on in it.
+	p.run("end the session underneath the page",
+		network.DeleteCookies("timepulse_session").WithURL(p.app.BaseURL()),
+		network.DeleteCookies("gtr_session").WithURL(p.app.BaseURL()))
 	p.awaitJSON(`api('/me').then(() => 'answered', () => 'refused')`, nil)
 	p.waitEvaluates("what the app was told", `sessionStorage.getItem('ended') ?? '0'`, "1")
 

@@ -45,7 +45,7 @@ func (p *page) settleWizard() {
 		(async () => {
 			const csrf = document.cookie.split(';')
 				.map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const post = (path, body) => fetch(path, {
 				method: body === undefined ? 'POST' : 'PUT',
@@ -238,7 +238,7 @@ func (p *page) markTourSeen() {
 		(async () => {
 			const csrf = document.cookie.split(';')
 				.map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const res = await fetch('/api/v1/me/tour', {
 				method: 'PUT',
@@ -472,7 +472,7 @@ func TestASessionTheServerNoLongerAcceptsTakesTheScreenWithIt(t *testing.T) {
 	p.run("end the session behind its back", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map((c) => c.trim())
-				.find((c) => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find((c) => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			await fetch('/api/v1/auth/logout', {
 				method: 'POST',

@@ -16,7 +16,14 @@ import (
 // CSRFCookieName carries the token the browser must echo back. Unlike the
 // session cookie this one is deliberately readable by JavaScript: the whole
 // point is that our own script can read it and another site's cannot.
-const CSRFCookieName = "gtr_csrf"
+const CSRFCookieName = "timepulse_csrf"
+
+// csrfCookieBeforeTheRename is what the token's cookie was called while the
+// project was Go-Time-Recording. A page still running from then - a tab left
+// open across the update, a service worker's copy - and an Android app from then
+// read the token under that name, so it is written beside the new one, and a
+// browser holding only that one is still taken at its word.
+const csrfCookieBeforeTheRename = "gtr_csrf"
 
 // CSRFHeaderName is where the interface returns the token.
 //
@@ -73,17 +80,32 @@ func CSRFMiddleware() func(http.Handler) http.Handler {
 // issuedCSRFToken returns the caller's token, minting one when the browser has
 // none yet. A fresh visitor therefore already holds a usable token by the time
 // the interface has loaded.
+//
+// The token is held under both names. Whichever of them does not carry it yet
+// is given it, so both readers find the same token from the next request on.
 func issuedCSRFToken(w http.ResponseWriter, r *http.Request) string {
-	if cookie, err := r.Cookie(CSRFCookieName); err == nil && cookie.Value != "" {
-		return cookie.Value
-	}
+	current := presented(r, CSRFCookieName)
+	before := presented(r, csrfCookieBeforeTheRename)
 
-	token := newCSRFToken()
+	token := current
 	if token == "" {
-		return ""
+		token = before
 	}
 
-	http.SetCookie(w, csrfCookie(r, token))
+	if token == "" {
+		token = newCSRFToken()
+		if token == "" {
+			return ""
+		}
+	}
+
+	if current != token {
+		http.SetCookie(w, csrfCookie(r, CSRFCookieName, token))
+	}
+
+	if before != token {
+		http.SetCookie(w, csrfCookie(r, csrfCookieBeforeTheRename, token))
+	}
 
 	return token
 }
@@ -99,10 +121,10 @@ func newCSRFToken() string {
 	return base64.RawURLEncoding.EncodeToString(buf)
 }
 
-// csrfCookie builds the cookie holding the token.
-func csrfCookie(r *http.Request, token string) *http.Cookie {
+// csrfCookie builds a cookie holding the token under name.
+func csrfCookie(r *http.Request, name, token string) *http.Cookie {
 	return &http.Cookie{
-		Name:  CSRFCookieName,
+		Name:  name,
 		Value: token,
 		Path:  "/",
 		// Readable by script on purpose; see CSRFCookieName.
@@ -120,13 +142,19 @@ const csrfCookieLifetime = 30 * 24 * time.Hour
 // RotateCSRFToken issues a fresh token, which the sign-in handler does once a
 // session exists so that a token handed out to an anonymous visitor is never
 // carried into an authenticated one.
-func RotateCSRFToken(r *http.Request) *http.Cookie {
+//
+// Under both names, for the reason issuedCSRFToken gives; none at all when there
+// is no randomness to make a token from.
+func RotateCSRFToken(r *http.Request) []*http.Cookie {
 	token := newCSRFToken()
 	if token == "" {
 		return nil
 	}
 
-	return csrfCookie(r, token)
+	return []*http.Cookie{
+		csrfCookie(r, CSRFCookieName, token),
+		csrfCookie(r, csrfCookieBeforeTheRename, token),
+	}
 }
 
 // csrfApplies reports whether this request needs checking.

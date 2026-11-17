@@ -120,7 +120,7 @@ func (p *page) enableTOTP(t *testing.T) string {
 	p.run("begin two-factor enrolment", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/me/totp', {
 				method: 'POST',
@@ -153,7 +153,7 @@ func (p *page) enableTOTP(t *testing.T) string {
 	p.run("confirm two-factor enrolment", chromedp.Evaluate(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/me/totp', {
 				method: 'PUT',

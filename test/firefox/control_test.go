@@ -257,7 +257,7 @@ func post(t *testing.T, b *browser, path, body string, method ...string) {
 
 	answer := b.evalString(fmt.Sprintf(`(async () => {
 		const csrf = document.cookie.split(';').map(c => c.trim())
-			.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+			.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 		const r = await fetch(%q, {
 			method: %q,

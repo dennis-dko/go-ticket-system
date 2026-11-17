@@ -67,7 +67,7 @@ func ticketsReady(t *testing.T) *page {
 	p.run("point the installation at the seeded directory", chromedp.Evaluate(fmt.Sprintf(`
 		(async () => {
 			const csrf = document.cookie.split(';').map(c => c.trim())
-				.find(c => c.startsWith('gtr_csrf='))?.slice('gtr_csrf='.length) ?? '';
+				.find(c => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
 
 			const r = await fetch('/api/v1/settings/ldap', {
 				method: 'PUT',

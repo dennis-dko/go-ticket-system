@@ -132,13 +132,11 @@ func (h *SetupHandler) Claim(c *gofr.Context) (any, error) {
 		return nil, toHTTPError(err)
 	}
 
-	setCookie(c, sessionCookie(request, result.Token, result.ExpiresAt))
+	setCookie(c, sessionCookies(request, result.Token, result.ExpiresAt)...)
 
 	// The same rotation a sign-in does: a token handed to an anonymous visitor
 	// must not follow them into a signed-in session.
-	if rotated := RotateCSRFToken(request); rotated != nil {
-		setCookie(c, rotated)
-	}
+	setCookie(c, RotateCSRFToken(request)...)
 
 	return map[string]bool{"ok": true}, nil
 }
