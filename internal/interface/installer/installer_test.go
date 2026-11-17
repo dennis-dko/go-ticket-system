@@ -209,7 +209,7 @@ func TestTheInstallerFollowsTheBrowserLanguage(t *testing.T) {
 
 	// English stays in the markup as the fallback, so a key nobody translated
 	// still renders something.
-	if !strings.Contains(markup, ">Set up Time Recording</h1>") {
+	if !strings.Contains(markup, ">Set up TimePulse</h1>") {
 		t.Error("the English original is gone from the markup, so there is no fallback")
 	}
 }

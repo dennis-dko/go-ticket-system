@@ -270,14 +270,14 @@ func TestTheWizardTakesTheTitleInBothLanguages(t *testing.T) {
 	}
 
 	p.run("name it twice",
-		chromedp.SetValue(`#setup-step-fields input[name="title.en"]`, "Time Recording GmbH",
+		chromedp.SetValue(`#setup-step-fields input[name="title.en"]`, "TimePulse GmbH",
 			chromedp.ByQuery),
 		chromedp.SetValue(`#setup-step-fields input[name="title.de"]`, "Zeiterfassung GmbH",
 			chromedp.ByQuery),
 		p.click("#setup-next"))
 
 	// Stored, and told apart by language: the reader is on English here.
-	p.waitForText("#app-title", "Time Recording GmbH")
+	p.waitForText("#app-title", "TimePulse GmbH")
 
 	p.chooseLanguage("de")
 

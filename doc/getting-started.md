@@ -32,7 +32,7 @@ itself would look like one that crashed.
 It asks for a token, printed to the log when the process starts:
 
 ```text
-no database is configured, so Time Recording is serving its installer instead
+no database is configured, so TimePulse is serving its installer instead
 open http://localhost:8000 to choose one - the application will not start until you do
 setup token: 782106f2d715eaebba8e1c4b93f0a2d1
 ```

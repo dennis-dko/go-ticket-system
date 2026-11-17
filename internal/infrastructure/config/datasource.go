@@ -187,7 +187,7 @@ func InstallerSettings() Installer {
 
 	return Installer{
 		HTTPPort:   valueOr(cfg, "HTTP_PORT", "8000"),
-		AppName:    valueOr(cfg, "APP_NAME", "Time Recording"),
+		AppName:    valueOr(cfg, "APP_NAME", "TimePulse"),
 		SetupToken: strings.TrimSpace(cfg.Get("SETUP_TOKEN")),
 		Prefill: Datasource{
 			Dialect: strings.TrimSpace(cfg.Get("DB_DIALECT")),

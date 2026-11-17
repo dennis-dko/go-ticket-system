@@ -63,7 +63,7 @@
    *
    * Both are configured, so both live in the database, so the page cannot know
    * either until it has asked - and asking is a request that finishes after the
-   * document has been parsed and shown. Until then the tab reads "Time Recording"
+   * document has been parsed and shown. Until then the tab reads "TimePulse"
    * and shows the shipped mark, whatever this installation calls itself. On a
    * reload that is a visible flicker back to a name nobody chose.
    *

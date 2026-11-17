@@ -115,8 +115,8 @@ func TestTheManifestNamesTheInstallation(t *testing.T) {
 
 // An installation without a name of its own is the application's name.
 func TestAnUnnamedInstallationIsTheApplicationsName(t *testing.T) {
-	if m := readManifest(t, brandedServer(web.Branding{}), "en"); m.Name != "Time Recording" {
-		t.Errorf("an unnamed installation is called %q, want Time Recording", m.Name)
+	if m := readManifest(t, brandedServer(web.Branding{}), "en"); m.Name != "TimePulse" {
+		t.Errorf("an unnamed installation is called %q, want TimePulse", m.Name)
 	}
 }
 

@@ -316,7 +316,7 @@ func Load(p Provider) Config {
 
 	cfg := Config{
 		Dialect:     strings.ToLower(p.GetOrDefault("DB_DIALECT", defaultDialect)),
-		AppName:     p.GetOrDefault("APP_NAME", "Time Recording"),
+		AppName:     p.GetOrDefault("APP_NAME", "TimePulse"),
 		UIEnabled:   v.boolean("UI_ENABLED", true),
 		UpdateCheck: v.boolean("UPDATE_CHECK", true),
 		UpdateFeed:  p.Get("UPDATE_FEED"),

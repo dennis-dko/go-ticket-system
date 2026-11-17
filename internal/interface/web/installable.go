@@ -108,7 +108,7 @@ type manifestTarget struct {
 func (s *installable) serveManifest(w http.ResponseWriter, r *http.Request, branding Branding) {
 	name := strings.TrimSpace(branding.Title)
 	if name == "" {
-		name = "Time Recording"
+		name = "TimePulse"
 	}
 
 	lang := preferredLanguage(r.Header.Get("Accept-Language"))

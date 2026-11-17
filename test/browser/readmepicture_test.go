@@ -25,7 +25,7 @@ const readmePictures = "GTR_README_PICTURES"
 
 // defaultName is what cmd/configs/.env calls an installation, in place of the
 // name the harness gives each instance to tell it from the others.
-const defaultName = "APP_NAME=Time Recording"
+const defaultName = "APP_NAME=TimePulse"
 
 // The README's pictures are taken from the application rather than drawn.
 //

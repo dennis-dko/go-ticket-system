@@ -503,7 +503,7 @@ func main() {
 	if misread != nil {
 		app.Logger().Warnf("database: %v", misread)
 	}
-	app.Logger().Infof("go-time-recording %s starting (dialect=%s)", version, cfg.Dialect)
+	app.Logger().Infof("TimePulse %s starting (dialect=%s)", version, cfg.Dialect)
 
 	db := app.GetSQL()
 

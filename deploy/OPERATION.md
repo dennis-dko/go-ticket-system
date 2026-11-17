@@ -156,7 +156,7 @@ A systemd unit that gets that right:
 
 ```ini
 [Unit]
-Description=Time Recording
+Description=TimePulse
 After=network-online.target
 Wants=network-online.target
 

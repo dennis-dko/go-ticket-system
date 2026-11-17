@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "go-time-recording API",
+    "title": "TimePulse API",
     "version": "1.0.0",
     "description": "Project time tracking.\n\nAuthenticate either with the session cookie obtained from `POST /auth/login`, or with a personal API token sent as `Authorization: Bearer <token>` or `X-API-Token: <token>`.\n\nA token carries no rights of its own: every request is evaluated against the owner's **current** role, so changing or revoking a role takes effect on the very next call.\n\nAll responses are wrapped by the framework as `{\"data\": ...}` on success and `{\"error\": {\"message\": ...}}` on failure."
   },

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Single-page UI for the time recording API.
+ * Single-page UI for the TimePulse API.
  *
  * Plain DOM APIs on purpose: the assets are embedded in the Go binary, so
  * keeping the UI build-step-free means `go build` is the only build there is.
@@ -1536,7 +1536,7 @@ function placeholderValues() {
       hour: '2-digit', minute: '2-digit',
     }).format(now),
     version: lastBranding.version ?? '',
-    instance: lastBranding.title || 'Time Recording',
+    instance: lastBranding.title || 'TimePulse',
   };
 }
 
@@ -8320,7 +8320,7 @@ function drawWelcome(title) {
   $('#login-welcome').textContent = fillIn(t('login.welcome', 'Welcome to {0}'), [title]);
 }
 
-const BUILT_IN_TITLE = 'Time Recording';
+const BUILT_IN_TITLE = 'TimePulse';
 
 function drawBranding(branding) {
   const title = brandingIn(branding, 'title') || BUILT_IN_TITLE;
