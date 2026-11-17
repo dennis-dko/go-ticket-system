@@ -18,11 +18,17 @@
 # either of those arrangements. It sets nothing on the application: tracing is
 # switched on under Settings, not here.
 
+# The project's old name, kept on purpose: compose names every volume after the
+# project, so a new name here would start an installation on new, empty volumes -
+# a database with nobody's hours in it - beside the ones holding its data, and
+# the containers of the old name would still be holding the ports.
 name: go-time-recording
 
 services:
   app:
-    image: ${GTR_IMAGE:-ghcr.io/dennis-dko/timepulse}:${GTR_VERSION:-latest}
+    # TIMEPULSE_IMAGE and TIMEPULSE_VERSION, or the GTR_ names a .env written
+    # before the rename to TimePulse sets.
+    image: ${TIMEPULSE_IMAGE:-${GTR_IMAGE:-ghcr.io/dennis-dko/timepulse}}:${TIMEPULSE_VERSION:-${GTR_VERSION:-latest}}
     restart: unless-stopped
     # Longer than the application takes to stop: it waits for requests in flight
     # for SHUTDOWN_GRACE_PERIOD, 30s by default, and then up to ten seconds for

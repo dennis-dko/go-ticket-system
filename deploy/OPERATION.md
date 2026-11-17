@@ -80,8 +80,11 @@ Pin the version rather than following `latest`, so a restart cannot become an
 unplanned upgrade:
 
 ```bash
-GTR_VERSION=v1.2.3
+TIMEPULSE_VERSION=v1.2.3
 ```
+
+A `.env` written before the project was called TimePulse names it `GTR_VERSION`,
+as it names the image `GTR_IMAGE`; the compose files read those too.
 
 ## B · Compose with TLS
 
@@ -1208,8 +1211,8 @@ recreate failed. Either way the restart announcement is taken back on every scre
 and the card says which it was - for a failure, in the updater's own words.
 
 **Nothing newer is what a pinned version finds.** The updater pulls the tag the
-compose file names. Where `GTR_VERSION` names a version that tag does not move, so
-every press finds the image already running: change `GTR_VERSION` and recreate by
+compose file names. Where `TIMEPULSE_VERSION` names a version that tag does not move,
+so every press finds the image already running: change `TIMEPULSE_VERSION` and recreate by
 hand instead, or leave it unset to follow `latest`.
 
 **Nothing is written into place unverified.** The download is hashed while it is
@@ -1406,7 +1409,7 @@ only.
 
 ```bash
 # A · B
-GTR_VERSION=v1.3.0 docker compose up -d      # after a dump
+TIMEPULSE_VERSION=v1.3.0 docker compose up -d      # after a dump
 
 # C
 systemctl stop gtr && cp go-time-recording-web_v1.3.0_linux_amd64 /opt/gtr/go-time-recording-web && systemctl start gtr

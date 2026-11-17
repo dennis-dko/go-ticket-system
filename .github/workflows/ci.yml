@@ -104,7 +104,7 @@ jobs:
           TLS_EMAIL=ops@example.com
           LDAP_ADMIN_PASSWORD=ci-only-not-a-real-password
           LDAP_BIND_PASSWORD=ci-only-not-a-real-password
-          KERBEROS_KEYTAB_FILE=/etc/go-time-recording/http.keytab
+          KERBEROS_KEYTAB_FILE=/etc/timepulse/http.keytab
           ENV
 
           for files in \
