@@ -179,8 +179,12 @@ func (s *CalendarFeedService) Read(ctx context.Context, key string) ([]byte, err
 		calendar.Name = s.name(ctx, language)
 	}
 
+	// The part after the @ names the program, which the format asks of an id
+	// meant to be unique everywhere. Before the rename it was go-time-recording,
+	// and a calendar reading the feed after the update replaces each event once:
+	// a subscription is read whole every time, so that is all it does.
 	uid := func(day time.Time, what string) string {
-		return day.Format("20060102") + "-" + what + "-" + feed.Prefix + "@go-time-recording"
+		return day.Format("20060102") + "-" + what + "-" + feed.Prefix + "@timepulse"
 	}
 
 	for _, day := range bookedDays(entries) {
