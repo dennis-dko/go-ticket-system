@@ -96,8 +96,7 @@ listens on `127.0.0.1:8000`, for a reverse proxy in front of it. PostgreSQL
 publishes **no port at all**: it is reachable from the application container by
 name, and from nowhere else.
 
-Pin `TIMEPULSE_VERSION` - `GTR_VERSION` in a `.env` from before the rename - to a
-release in your own `.env`. A container restarted at 3am
+Pin `TIMEPULSE_VERSION` to a release in your own `.env`. A container restarted at 3am
 otherwise comes back as a different version than the one that went down.
 
 `deploy/.env.example` deliberately leaves it on `latest`, which is the opposite
