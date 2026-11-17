@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/document"
+	"github.com/dennis-dko/timepulse/internal/support/document"
 )
 
 // What can be asserted about a PDF without a PDF reader.

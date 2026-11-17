@@ -18,7 +18,7 @@ class WebTest {
         assertTrue(belongsTo("http://192.168.1.20:8000", "http://192.168.1.20:8000/#week"))
         assertTrue(belongsTo(home, "https://TIME.example.com/"))
 
-        assertFalse(belongsTo(home, "https://github.com/dennis-dko/go-time-recording"))
+        assertFalse(belongsTo(home, "https://github.com/dennis-dko/timepulse"))
         assertFalse(belongsTo(home, "http://time.example.com/"))
         assertFalse(belongsTo(home, "https://time.example.com:8443/"))
         assertFalse(belongsTo(home, "https://time.example.com.evil.example/"))
@@ -55,5 +55,14 @@ class WebTest {
         assertEquals("report.pdf", downloadName("../../report.pdf"))
         assertEquals("report.pdf", downloadName("..\\report.pdf"))
         assertEquals("download", downloadName("  "))
+    }
+
+    // A bridge is put on the page under its own name and under the one a page from
+    // before the rename to TimePulse looks for it by, because the app is updated
+    // apart from the installation whose page it shows.
+    @Test
+    fun aBridgeIsPutOnThePageUnderBothNames() {
+        assertEquals(listOf("TimePulseFiles", "GoTimeRecordingFiles"), bridgeNames("TimePulseFiles"))
+        assertEquals(listOf("TimePulseSession", "GoTimeRecordingSession"), bridgeNames("TimePulseSession"))
     }
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/common"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/application/v1/common"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // UserResponse is the wire representation of a user. It carries no password

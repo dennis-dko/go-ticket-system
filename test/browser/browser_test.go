@@ -17,8 +17,8 @@ import (
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/harness"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // interactionTimeout bounds one test. Generous, because a cold browser start
@@ -361,7 +361,7 @@ func (p *page) jsBroken() bool {
 	// If app.js failed to parse or threw during init, the functions it defines
 	// are not there.
 	p.run("check that the script initialised",
-		chromedp.Evaluate(`typeof window.gtrTheme === 'object'`, &ok))
+		chromedp.Evaluate(`typeof window.timePulseTheme === 'object'`, &ok))
 
 	return !ok
 }

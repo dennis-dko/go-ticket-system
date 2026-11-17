@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // GoFr fails every one of these settings quietly. An exporter it does not know

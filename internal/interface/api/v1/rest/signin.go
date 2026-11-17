@@ -3,8 +3,8 @@ package rest
 import (
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // completeSignIn hands a caller the session a sign-in opened - the cookie and a
@@ -42,14 +42,12 @@ func completeSignIn(
 	}
 
 	request := requestOf(c)
-	setCookie(c, sessionCookie(request, result.Token, result.ExpiresAt))
+	setCookie(c, sessionCookies(request, result.Token, result.ExpiresAt)...)
 
 	// A token handed to an anonymous visitor must not follow them into a
 	// signed-in session: if someone else planted the one they arrived with,
 	// they would know the value protecting the new session.
-	if rotated := RotateCSRFToken(request); rotated != nil {
-		setCookie(c, rotated)
-	}
+	setCookie(c, RotateCSRFToken(request)...)
 
 	user := newUserResponseFromModel(result.Principal.User, zone)
 

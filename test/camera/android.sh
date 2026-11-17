@@ -18,20 +18,22 @@ set -euo pipefail
 
 sdk=${ANDROID_SDK_ROOT:-$HOME/android/sdk}
 jdk=${JAVA_HOME:-$HOME/android/jdk}
-port=${GTR_CAMERA_PORT:-8091}
+port=${TIMEPULSE_CAMERA_PORT:-8091}
 package=io.github.dennisdko.gotimerecording
-apk=bin/mobile/outputs/apk/release/go-time-recording-mobile-release-unsigned.apk
+apk=bin/mobile/outputs/apk/release/timepulse-mobile-release-unsigned.apk
 into=doc/image
 
 export PATH="$jdk/bin:$sdk/platform-tools:$PATH"
 
 work=$(mktemp -d)
 server=""
+phone_zone=""
 
 cleanup() {
   if [ -n "$server" ]; then kill "$server" 2> /dev/null || true; fi
   adb shell wm size reset > /dev/null 2>&1 || true
   adb shell wm density reset > /dev/null 2>&1 || true
+  if [ -n "$phone_zone" ]; then adb shell cmd alarm set-timezone "$phone_zone" > /dev/null 2>&1 || true; fi
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -41,7 +43,7 @@ fail() {
   exit 1
 }
 
-[ -f bin/linux/go-time-recording-web ] || fail "no bin/linux/go-time-recording-web: run task readme:pictures:app"
+[ -f bin/linux/timepulse-web ] || fail "no bin/linux/timepulse-web: run task readme:pictures:app"
 [ -f "$apk" ] || fail "no $apk: run task readme:pictures:app"
 adb get-state > /dev/null 2>&1 || fail "adb reaches no device: start an emulator first"
 
@@ -70,22 +72,33 @@ done
 adb shell wm size 540x1200
 adb shell wm density 210
 
-# The day the pictures show is the phone's: the installation keeps its zone, so
-# the stopwatch and the entries fall on the day the status bar shows.
-zone=$(adb shell getprop persist.sys.timezone | tr -d '\r')
-[ -n "$zone" ] || zone=UTC
+# An afternoon, whenever this runs, as the web interface's camera picks one -
+# see afternoon in test/browser/readmepicture_test.go, and its note on POSIX's
+# signs. The page follows the clock for its appearance until somebody chooses
+# one, so the phone's own zone made every picture dark in the evening and light
+# in the morning, beside web pictures that are always light. The phone is set to
+# it, and the installation keeps it, so the stopwatch and the entries fall on
+# the day the status bar shows; the phone's own zone is put back at the end.
+phone_zone=$(adb shell getprop persist.sys.timezone | tr -d '\r')
+offset=$((14 - $(date -u +%-H)))
+case "$offset" in
+  0) zone=Etc/GMT ;;
+  -*) zone="Etc/GMT+${offset#-}" ;;
+  *) zone="Etc/GMT-$offset" ;;
+esac
+adb shell cmd alarm set-timezone "$zone" > /dev/null
 
 day() { TZ="$zone" date -d "$1" +%F; }
 
 # --------------------------------------------------------- the installation
 
 mkdir -p "$work/configs"
-cp bin/linux/go-time-recording-web "$work/"
-chmod +x "$work/go-time-recording-web"
+cp bin/linux/timepulse-web "$work/"
+chmod +x "$work/timepulse-web"
 tr -d '\r' < cmd/configs/.env > "$work/configs/.env"
 
-(cd "$work" && exec env APP_ENV= DB_DIALECT=sqlite DB_NAME="$work/gtr.db" HTTP_PORT="$port" \
-  METRICS_PORT=$((port + 1)) LOG_LEVEL=WARN ./go-time-recording-web > "$work/log" 2>&1) &
+(cd "$work" && exec env APP_ENV= DB_DIALECT=sqlite DB_NAME="$work/timepulse.db" HTTP_PORT="$port" \
+  METRICS_PORT=$((port + 1)) LOG_LEVEL=WARN ./timepulse-web > "$work/log" 2>&1) &
 server=$!
 
 for _ in $(seq 1 60); do
@@ -110,7 +123,7 @@ session() {
 signed_in() {
   curl -fsS -b "$jar" -c "$jar" -X "$1" -H 'Content-Type: application/json' \
     -H "Origin: http://127.0.0.1:$port" \
-    -H "X-CSRF-Token: $(awk '$6 == "gtr_csrf" { print $7 }' "$jar" | tail -n 1)" \
+    -H "X-CSRF-Token: $(awk '$6 == "timepulse_csrf" { print $7 }' "$jar" | tail -n 1)" \
     "$base$2" ${3:+-d "$3"}
 }
 
@@ -255,7 +268,7 @@ tap 'Cancel'
 
 # The code's link, the way the phone's camera hands it over; the app offers it
 # and connects only once Connect is pressed.
-adb shell "am start -a android.intent.action.VIEW -d 'go-time-recording://connect?url=http%3A%2F%2F10.0.2.2%3A$port&token=$token'" > /dev/null
+adb shell "am start -a android.intent.action.VIEW -d 'timepulse://connect?url=http%3A%2F%2F10.0.2.2%3A$port&token=$token'" > /dev/null
 tap 'Connect'
 tap 'Menu'
 tap 'Time entries'

@@ -6,8 +6,8 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // SetupHandler serves the first-run wizard.
@@ -132,13 +132,11 @@ func (h *SetupHandler) Claim(c *gofr.Context) (any, error) {
 		return nil, toHTTPError(err)
 	}
 
-	setCookie(c, sessionCookie(request, result.Token, result.ExpiresAt))
+	setCookie(c, sessionCookies(request, result.Token, result.ExpiresAt)...)
 
 	// The same rotation a sign-in does: a token handed to an anonymous visitor
 	// must not follow them into a signed-in session.
-	if rotated := RotateCSRFToken(request); rotated != nil {
-		setCookie(c, rotated)
-	}
+	setCookie(c, RotateCSRFToken(request)...)
 
 	return map[string]bool{"ok": true}, nil
 }

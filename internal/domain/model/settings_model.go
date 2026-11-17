@@ -230,7 +230,7 @@ func BrandingKeysFor(language string) BrandingTextKeys { return brandingTextKeys
 
 // FallbackAppTitle is the name an instance carries when nothing else has been
 // configured - neither a title under Settings nor APP_NAME in the environment.
-const FallbackAppTitle = "Time Recording"
+const FallbackAppTitle = "TimePulse"
 
 // DefaultBranding is what a fresh instance shows.
 //

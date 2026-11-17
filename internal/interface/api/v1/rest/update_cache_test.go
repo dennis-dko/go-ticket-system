@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/announce"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/selfupdate"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/announce"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/selfupdate"
 )
 
 // The release feed is asked rarely, and a refusal does not erase what it said.

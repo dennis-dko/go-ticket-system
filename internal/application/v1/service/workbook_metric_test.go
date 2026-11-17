@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/memory"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/memory"
 )
 
 // histogramSpy keeps every value recorded in a histogram, by name.

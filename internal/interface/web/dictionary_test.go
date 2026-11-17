@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
 
 // A language's dictionary is handed to the page as the binary carries it, at an

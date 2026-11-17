@@ -5,15 +5,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 // APITokenPrefix marks the value as a token of this application, so a leaked
 // string is recognisable in a log or a repository scan.
-const APITokenPrefix = "gtr_"
+const APITokenPrefix = "timepulse_"
+
+// apiTokenPrefixBeforeTheRename is what tokens were issued with while the
+// project was called Go-Time-Recording. A token keeps its value for as long as
+// it lives, and one that never expires is held by scripts and by the Android
+// app, which signs in with nothing else - so it is still accepted.
+const apiTokenPrefixBeforeTheRename = "gtr_"
 
 // maxTokensPerUser bounds how many tokens one account can accumulate.
 const maxTokensPerUser = 20
@@ -140,7 +146,7 @@ func (s *APITokenService) Resolve(ctx context.Context, secret string) (*Principa
 func (s *APITokenService) ResolveToken(ctx context.Context, secret string) (*model.APIToken, *Principal, error) {
 	invalid := apperror.Invalidf("invalid token").WithCode("invalidToken")
 
-	if !strings.HasPrefix(secret, APITokenPrefix) {
+	if !strings.HasPrefix(secret, APITokenPrefix) && !strings.HasPrefix(secret, apiTokenPrefixBeforeTheRename) {
 		return nil, nil, invalid
 	}
 

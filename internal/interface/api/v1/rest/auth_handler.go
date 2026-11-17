@@ -5,10 +5,10 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/qrcode"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/qrcode"
 )
 
 // AuthHandler serves sign-in, sign-out and two-factor enrolment.
@@ -129,13 +129,13 @@ func mistypedCredentials(err error) bool {
 func (h *AuthHandler) Logout(c *gofr.Context) (any, error) {
 	req := requestOf(c)
 
-	if cookie, err := req.Cookie(SessionCookieName); err == nil {
-		if err := h.sessions.Logout(c, cookie.Value); err != nil {
+	if token := sessionToken(req); token != "" {
+		if err := h.sessions.Logout(c, token); err != nil {
 			return nil, toHTTPError(err)
 		}
 	}
 
-	setCookie(c, expiredCookie(req))
+	setCookie(c, expiredCookies(req)...)
 
 	return map[string]string{"status": "signed out"}, nil
 }

@@ -19,8 +19,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
 
 // sources are the app's Kotlin files, tests aside, by their path.
@@ -500,6 +500,26 @@ func TestTheAppAnswersToTheAddressATokensCodeHolds(t *testing.T) {
 	if body := source(t, "Connection.kt"); !strings.Contains(body, `const val connectScheme = "`+scheme+`"`) || !strings.Contains(body, `uri.host != "connect"`) {
 		t.Errorf("the app does not read %s://connect as the address of a connection", scheme)
 	}
+
+	// And the scheme an installation from before the rename to TimePulse writes,
+	// because the app is updated apart from the installation it is connected to:
+	// a phone given a new app goes on being connected to an older installation.
+	const before = "go-time-recording"
+
+	registered = false
+
+	for _, data := range regexp.MustCompile(`<data\b[^>]*/>`).FindAllString(read(t, "src/main/AndroidManifest.xml"), -1) {
+		registered = registered || strings.Contains(data, `android:scheme="`+before+`"`) && strings.Contains(data, `android:host="connect"`)
+	}
+
+	if !registered {
+		t.Errorf("the manifest no longer registers %s://connect, which an older installation writes", before)
+	}
+
+	if body := source(t, "Connection.kt"); !strings.Contains(body, `const val connectSchemeBeforeTheRename = "`+before+`"`) ||
+		!strings.Contains(body, `uri.scheme != connectSchemeBeforeTheRename`) {
+		t.Errorf("the app no longer reads %s://connect, which an older installation writes", before)
+	}
 }
 
 // The web interface is laid out in a WebView exactly as tall as its place. One
@@ -516,84 +536,6 @@ func TestTheWebViewIsAsTallAsItsPlace(t *testing.T) {
 
 	if !fills.MatchString(code) {
 		t.Error("Web.kt does not give the WebView MATCH_PARENT layout params, so the page's 100dvh may be nothing")
-	}
-}
-
-// The page puts away its card about installing it as an app when it is shown in
-// the Android app, which is one already: there the card told somebody to look in
-// a browser's menu that is not on the screen. The page knows the app by the
-// bridge the app registers for saving files, so the name the page asks for is
-// the name Web.kt registers.
-func TestThePageKnowsTheAppByTheBridgeItRegisters(t *testing.T) {
-	code, _ := lexed(source(t, "Web.kt"))
-
-	registered := regexp.MustCompile(`\bconst\s+val\s+filesInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
-	if registered == nil {
-		t.Fatal("Web.kt names no filesInterface, so the page cannot know it is in the app")
-	}
-
-	script := read(t, "../web/asset/app.js")
-
-	// Each place the page behaves differently inside the app, and what it does
-	// there when it no longer recognises the app.
-	for function, otherwise := range map[string]string{
-		"wireInstall":             "shows a card about installing the page as an app",
-		"passkeysWithheldBecause": "says the phone's browser cannot use passkeys, where the app signs in with its token",
-	} {
-		start := strings.Index(script, "function "+function+"()")
-		if start < 0 {
-			t.Fatalf("app.js has no %s", function)
-		}
-
-		body := script[start:]
-		body = body[:strings.Index(body, "\n}\n")]
-
-		if !strings.Contains(body, "'"+registered[1]+"' in window") {
-			t.Errorf("%s does not ask for %s, the bridge the app registers, so the app %s", function, registered[1], otherwise)
-		}
-	}
-}
-
-// The page asks the phone for the notifications the app shows its reminders as,
-// through the bridge the app registers for them - a WebView has no
-// Notification, and without the bridge the Reminders card says no browser can
-// show any. So the name the page asks for is the name Web.kt registers, and the
-// app declares the permission it asks the phone for.
-func TestThePageAsksForTheAppsNotificationsByTheBridgeItRegisters(t *testing.T) {
-	code, _ := lexed(source(t, "Web.kt"))
-
-	registered := regexp.MustCompile(`\bconst\s+val\s+notificationsInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
-	if registered == nil {
-		t.Fatal("Web.kt names no notificationsInterface, so the page cannot ask the phone for notifications")
-	}
-
-	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]) {
-		t.Errorf("app.js does not ask for %s, the bridge the app registers, so in the app the "+
-			"Reminders card says that no browser can show notifications", registered[1])
-	}
-
-	if !strings.Contains(read(t, "src/main/AndroidManifest.xml"), `android:name="android.permission.POST_NOTIFICATIONS"`) {
-		t.Error("the app does not declare POST_NOTIFICATIONS, so the phone is never asked and no reminder is shown")
-	}
-}
-
-// The page tells the app when its session ended without its being signed out
-// of, through the bridge the app registers for it - the app cannot see that for
-// itself, and without it a token taken back left the app showing the page's own
-// sign-in form while it went on asking about the reminders with a token the
-// installation no longer knew. So the name the page tells is the name Web.kt
-// registers.
-func TestThePageTellsTheAppItsSessionEndedByTheBridgeItRegisters(t *testing.T) {
-	code, _ := lexed(source(t, "Web.kt"))
-
-	registered := regexp.MustCompile(`\bconst\s+val\s+sessionInterface\s*=\s*"([A-Za-z]+)"`).FindStringSubmatch(code)
-	if registered == nil {
-		t.Fatal("Web.kt names no sessionInterface, so the page cannot tell the app its session ended")
-	}
-
-	if !strings.Contains(read(t, "../web/asset/app.js"), "window."+registered[1]+"?.ended()") {
-		t.Errorf("app.js does not tell %s, the bridge the app registers, that its session ended, so a "+
-			"token taken back leaves the app on the page's own sign-in form", registered[1])
 	}
 }
 

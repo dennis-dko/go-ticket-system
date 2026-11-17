@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/tempdir"
+	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // stub writes a fake docker command that answers the way Docker does, and
@@ -120,9 +120,18 @@ func run(t *testing.T, stubDir, requests string) string {
 	return answered
 }
 
-// start starts the script against a request directory, and stops it when the
-// case is over.
+// start starts the script against a request directory, under the names a
+// compose file of this release gives its settings, and stops it when the case
+// is over.
 func start(t *testing.T, stubDir, requests string) {
+	t.Helper()
+
+	startUnder(t, stubDir, requests, "TIMEPULSE_")
+}
+
+// startUnder is start with the settings named by prefix: TIMEPULSE_, or GTR_ as
+// a compose file from before the rename to TimePulse names them.
+func startUnder(t *testing.T, stubDir, requests, prefix string) {
 	t.Helper()
 
 	script, err := filepath.Abs("updater.sh")
@@ -139,12 +148,12 @@ func start(t *testing.T, stubDir, requests string) {
 
 	cmd.Env = append(os.Environ(),
 		"PATH="+stubDir+string(os.PathListSeparator)+os.Getenv("PATH"),
-		"GTR_UPDATE_REQUESTS="+requests,
-		"GTR_UPDATE_SERVICE=app",
+		prefix+"UPDATE_REQUESTS="+requests,
+		prefix+"UPDATE_SERVICE=app",
 		// What the daemon knows this container as.
 		"HOSTNAME=container-id",
 		// The loop sleeps between looks, and this test is waiting on it.
-		"GTR_UPDATE_POLL=1",
+		prefix+"UPDATE_POLL=1",
 	)
 
 	if err := cmd.Start(); err != nil {
@@ -294,6 +303,28 @@ func TestAnInstallationAlreadyOnTheNewestImageIsLeftAlone(t *testing.T) {
 
 	if strings.Contains(string(asked), "up -d") {
 		t.Error("the container was recreated although the image had not changed")
+	}
+}
+
+// A compose file from before the rename to TimePulse gives the script its
+// settings under the GTR_ names, and an installation replaces its copies of that
+// file and of this script by hand - not necessarily together. Under those names
+// the script still finds the directory it is asked in; ignoring them, it would
+// watch the default and never answer.
+func TestTheScriptTakesItsSettingsUnderTheNamesFromBeforeTheRename(t *testing.T) {
+	t.Parallel()
+
+	stubDir, _ := stub(t, "sha256:same", "sha256:same", "")
+	requests := tempdir.New(t)
+
+	if err := os.WriteFile(filepath.Join(requests, "request"), nil, 0o600); err != nil {
+		t.Fatalf("cannot leave the request: %v", err)
+	}
+
+	startUnder(t, stubDir, requests, "GTR_")
+
+	if got := waitForResult(t, requests, 30*time.Second); got != "none" {
+		t.Fatalf("asked under the old names, the updater came to %q", got)
 	}
 }
 

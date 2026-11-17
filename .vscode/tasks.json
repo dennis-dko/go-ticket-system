@@ -1,6 +1,6 @@
 {
   // ===========================================================================
-  // Go-Time-Recording - tasks
+  // TimePulse - tasks
   //
   // These call `task` rather than the `go test` underneath it wherever one
   // exists, because they are not interchangeable: the Taskfile sets GOTMPDIR

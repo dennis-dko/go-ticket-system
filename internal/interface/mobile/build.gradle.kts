@@ -28,9 +28,19 @@ fun versionCodeOf(version: String): Int {
 // key, so it is one key for every release, kept where the workflow can reach it
 // and nowhere in the repository. A build without it - every pull request's -
 // makes an unsigned release APK, which proves everything but the signature.
-val keystore: String? = providers.environmentVariable("GTR_ANDROID_KEYSTORE").orNull
+val keystore: String? = providers.environmentVariable("TIMEPULSE_ANDROID_KEYSTORE").orNull
 
 android {
+    // The project's old name, kept here and in applicationId below on purpose.
+    // The application id is what Android installs an update over: a new one is a
+    // second app beside the first, and everybody's phone would have to be
+    // connected again. The namespace is the package the activity, the receiver and
+    // the worker are named by, and an installed app is held to those names from
+    // outside: the reminders are periodic work WorkManager keeps under the
+    // worker's class name and keeps across an update, the next alarm is an intent
+    // for the receiver's, and a launcher's icon points at the activity's - so a
+    // new package leaves each pointing at a class that is no longer there, which
+    // fails without a word.
     namespace = "io.github.dennisdko.gotimerecording"
 
     // The androidx libraries are compiled against 37 and ask the app to be too.
@@ -53,9 +63,9 @@ android {
         if (keystore != null) {
             create("release") {
                 storeFile = file(keystore)
-                storePassword = providers.environmentVariable("GTR_ANDROID_KEYSTORE_PASSWORD").get()
-                keyAlias = providers.environmentVariable("GTR_ANDROID_KEY_ALIAS").get()
-                keyPassword = providers.environmentVariable("GTR_ANDROID_KEY_PASSWORD").get()
+                storePassword = providers.environmentVariable("TIMEPULSE_ANDROID_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("TIMEPULSE_ANDROID_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("TIMEPULSE_ANDROID_KEY_PASSWORD").get()
             }
         }
     }

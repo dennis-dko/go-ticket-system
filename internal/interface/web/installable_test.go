@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/interface/web"
 )
 
 // The installed app: what a telephone's home screen or a desktop's start menu is
@@ -115,8 +115,8 @@ func TestTheManifestNamesTheInstallation(t *testing.T) {
 
 // An installation without a name of its own is the application's name.
 func TestAnUnnamedInstallationIsTheApplicationsName(t *testing.T) {
-	if m := readManifest(t, brandedServer(web.Branding{}), "en"); m.Name != "Time Recording" {
-		t.Errorf("an unnamed installation is called %q, want Time Recording", m.Name)
+	if m := readManifest(t, brandedServer(web.Branding{}), "en"); m.Name != "TimePulse" {
+		t.Errorf("an unnamed installation is called %q, want TimePulse", m.Name)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -37,14 +38,38 @@ func TestNothingStuttersAndTheLayeringHolds(t *testing.T) {
 		// this is the invariant whose breach is architectural rather than
 		// cosmetic - a service that imports a handler is a service that can no
 		// longer be tested or reused without one.
+		//
+		// The module's path is read from go.mod rather than written here. It was
+		// written here once, as go-time-recording/internal/..., and when the module
+		// moved to github.com/dennis-dko/timepulse those prefixes matched no import
+		// any more: the case went on passing over every violation it was written to
+		// report. So it also refuses to pass without having seen the module's own
+		// packages imported at all.
+		module := modulePath(t)
+
 		forbidden := map[string][]string{
 			"internal/domain": {
-				"go-time-recording/internal/infrastructure",
-				"go-time-recording/internal/interface",
+				module + "/internal/infrastructure",
+				module + "/internal/interface",
 			},
 			"internal/application": {
-				"go-time-recording/internal/interface",
+				module + "/internal/interface",
 			},
+		}
+
+		own := 0
+
+		for _, pkg := range packages {
+			for _, imported := range pkg.imports {
+				if strings.HasPrefix(imported.path, module+"/") {
+					own++
+				}
+			}
+		}
+
+		if own == 0 {
+			t.Fatalf("nothing under internal/ imports a package of %s, so no layer could be "+
+				"found pointing the wrong way - the module path is not the one the imports use", module)
 		}
 
 		for _, pkg := range packages {
@@ -55,7 +80,7 @@ func TestNothingStuttersAndTheLayeringHolds(t *testing.T) {
 
 				for _, imported := range pkg.imports {
 					for _, ban := range banned {
-						if strings.Contains(imported.path, ban) {
+						if imported.path == ban || strings.HasPrefix(imported.path, ban+"/") {
 							t.Errorf("%s:%d: %s imports %s, which points the wrong way "+
 								"through the layers", imported.file, imported.line,
 								pkg.dir, imported.path)
@@ -240,4 +265,25 @@ func exportedIn(file *ast.File, fset *token.FileSet, shown string) []declaration
 	}
 
 	return out
+}
+
+// modulePath is the path go.mod declares, which every import of this
+// repository's own packages begins with.
+func modulePath(t *testing.T) string {
+	t.Helper()
+
+	raw, err := os.ReadFile("../go.mod")
+	if err != nil {
+		t.Fatalf("reading go.mod: %v", err)
+	}
+
+	for line := range strings.Lines(string(raw)) {
+		if path, found := strings.CutPrefix(strings.TrimSpace(line), "module "); found {
+			return strings.TrimSpace(path)
+		}
+	}
+
+	t.Fatal("go.mod declares no module")
+
+	return ""
 }

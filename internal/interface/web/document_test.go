@@ -12,12 +12,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/interface/web"
 )
 
 // The page arrives already carrying the instance's own name.
 //
-// It used to arrive with "Time Recording" and a script that corrected it once
+// It used to arrive with "TimePulse" and a script that corrected it once
 // /branding had answered, so every reload showed a name nobody chose for as long
 // as that request took. Reported twice, and both times the fix was on the wrong
 // side of the round trip: there is no arrangement of client code that wins a race
@@ -31,7 +31,7 @@ func TestTheDocumentCarriesTheConfiguredTitle(t *testing.T) {
 		t.Errorf("the page does not name the instance: %.200s", head(res.Body.String()))
 	}
 
-	if strings.Contains(res.Body.String(), "<title>Time Recording</title>") {
+	if strings.Contains(res.Body.String(), "<title>TimePulse</title>") {
 		t.Error("the shipped title is still in the document somebody is sent")
 	}
 }
@@ -62,7 +62,7 @@ func TestAConfiguredTitleCannotCloseItsOwnTag(t *testing.T) {
 func TestAnEmptyTitleFallsBackToTheShippedOne(t *testing.T) {
 	server := brandedServer(web.Branding{Title: "   "})
 
-	if !strings.Contains(fetch(t, server, "/").Body.String(), "<title>Time Recording</title>") {
+	if !strings.Contains(fetch(t, server, "/").Body.String(), "<title>TimePulse</title>") {
 		t.Error("an instance that has named itself nothing has no name at all")
 	}
 }

@@ -5,9 +5,9 @@ import (
 
 	"gofr.dev/pkg/gofr"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // MeHandler serves the endpoints about the signed-in user: identity, password
@@ -107,10 +107,7 @@ func (h *MeHandler) ChangePassword(c *gofr.Context) (any, error) {
 	// device stops working immediately - and this one is not, because it is the
 	// device that just proved it knew the old password. Ending it as well signed
 	// somebody out of the setup wizard between two of its steps.
-	var token string
-	if cookie, err := requestOf(c).Cookie(SessionCookieName); err == nil {
-		token = cookie.Value
-	}
+	token := sessionToken(requestOf(c))
 
 	if err := h.sessions.LogoutOthers(c, principal.User.ID, token); err != nil {
 		return nil, toHTTPError(err)

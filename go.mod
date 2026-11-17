@@ -1,4 +1,4 @@
-module github.com/dennis-dko/go-time-recording
+module github.com/dennis-dko/timepulse
 
 go 1.27.4
 

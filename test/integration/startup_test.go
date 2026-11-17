@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // An instance that cannot start is seen to have stopped, as soon as it stops.

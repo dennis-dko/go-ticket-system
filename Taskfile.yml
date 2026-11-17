@@ -15,9 +15,9 @@ version: '3'
 vars:
   # The project's name, which the image is tagged with and a local SQLite file
   # is called by; the program carries it in a name of its own.
-  APP_NAME: go-time-recording
+  APP_NAME: timepulse
   # The installation: the server and its web interface.
-  WEB_NAME: go-time-recording-web
+  WEB_NAME: timepulse-web
   BIN_DIR: bin
   CONFIG_SRC: cmd/configs
 
@@ -102,8 +102,8 @@ tasks:
           DB_DIALECT: postgres
           DB_HOST: localhost
           DB_PORT: '55432'
-          DB_USER: gtr
-          DB_PASSWORD: gtr-test-password
+          DB_USER: timepulse
+          DB_PASSWORD: timepulse-test-password
           DB_SSL_MODE: disable
 
   dev:sqlite:
@@ -282,7 +282,7 @@ tasks:
       # Empty for SQLite: the harness then gives each instance its own file.
       # root on MySQL: each test creates its own database, which an ordinary
       # MySQL user is not allowed to do. A throwaway server either way.
-      GTR_TEST_DSN: '{{if eq .DB "postgres"}}postgres://gtr:gtr-test-password@localhost:55432/go-time-recording?sslmode=disable{{else if eq .DB "mysql"}}mysql://root:gtr-test-root@localhost:53306/go-time-recording{{end}}'
+      TIMEPULSE_TEST_DSN: '{{if eq .DB "postgres"}}postgres://timepulse:timepulse-test-password@localhost:55432/timepulse?sslmode=disable{{else if eq .DB "mysql"}}mysql://root:timepulse-test-root@localhost:53306/timepulse{{end}}'
     # Starting the server it needs, rather than failing with "connection
     # refused" and leaving the reader to work out which container was missing.
     cmds:
@@ -314,7 +314,7 @@ tasks:
       at one by hand. `task env:down` stops it.
     env:
       GOTMPDIR: '{{.ROOT_DIR}}/{{.TMP_DIR}}'
-      GTR_TEST_LDAP: 'localhost:5389'
+      TIMEPULSE_TEST_LDAP: 'localhost:5389'
     cmds:
       - task: env:up
         vars: { PROFILE: ldap }
@@ -338,7 +338,7 @@ tasks:
       `task env:down` stops it.
     env:
       GOTMPDIR: '{{.ROOT_DIR}}/{{.TMP_DIR}}'
-      GTR_TEST_JAEGER: 'localhost:54317'
+      TIMEPULSE_TEST_JAEGER: 'localhost:54317'
     cmds:
       - task: env:up
         vars: { PROFILE: traces }
@@ -548,7 +548,7 @@ tasks:
       describes. So a machine needs Docker and nothing of Android's, and a build
       here uses the JDK, the Gradle and the SDK CI uses. The image is rebuilt
       from its Dockerfile every time, which costs a second while nothing in it
-      has changed; Gradle's downloads are kept in the gtr-gradle volume.
+      has changed; Gradle's downloads are kept in the timepulse-gradle volume.
 
       What it runs is what CI's Android job runs: the unit tests, Android lint,
       and a release build shrunk by R8 - unsigned, because the key a release is
@@ -557,8 +557,8 @@ tasks:
       than this checkout's version, so it does not tell whoever runs it that
       their installation is another release.
     cmds:
-      - docker build -q -t gtr-android:latest - < internal/interface/mobile/Dockerfile
-      - docker run --rm -v "{{.ROOT_DIR}}:/src" -w /src/internal/interface/mobile -v gtr-gradle:/root/.gradle gtr-android:latest gradle --no-daemon --console=plain testDebugUnitTest assembleRelease lintRelease
+      - docker build -q -t timepulse-android:latest - < internal/interface/mobile/Dockerfile
+      - docker run --rm -v "{{.ROOT_DIR}}:/src" -w /src/internal/interface/mobile -v timepulse-gradle:/root/.gradle timepulse-android:latest gradle --no-daemon --console=plain testDebugUnitTest assembleRelease lintRelease
 
   image:
     desc: 'Ship: build the deployment image, tagged with the version and "latest".'
@@ -658,7 +658,7 @@ tasks:
       so the README does not mix them.
     env:
       GOTMPDIR: '{{.ROOT_DIR}}/{{.TMP_DIR}}'
-      GTR_README_PICTURES: '{{.ROOT_DIR}}/doc/image'
+      TIMEPULSE_README_PICTURES: '{{.ROOT_DIR}}/doc/image'
     cmds:
       - mkdir -p {{.TMP_DIR}}
       - defer: rm -rf {{.TMP_DIR}}
@@ -711,7 +711,7 @@ tasks:
 
       The same run leaves its share in the system's temporary directory too,
       where nothing else ever looks: the harness's build of the application
-      (gtr-harness-*, eighty-odd megabytes each) and the Chrome profiles
+      (timepulse-harness-*, eighty-odd megabytes each) and the Chrome profiles
       chromedp makes for itself (chromedp-runner*). This machine had six of the
       first and 17,745 of the second when somebody finally looked.
 
@@ -738,6 +738,11 @@ tasks:
       - cmd: '{{if eq OS "windows"}}taskkill /F /IM {{.WEB_NAME}}.exe{{else}}pkill -f {{.WEB_NAME}}{{end}}'
         ignore_error: true
 
+      # And under the name it was built with before the project was TimePulse,
+      # which a run from before the rename can still have left behind.
+      - cmd: '{{if eq OS "windows"}}taskkill /F /IM go-time-recording-web.exe{{else}}pkill -f go-time-recording-web{{end}}'
+        ignore_error: true
+
       # And the browsers the suites drive, which outlive an interrupted run the
       # same way and are not cheap to leave lying about: three days after a
       # cancelled run, this machine still had two headless Chromes and a
@@ -761,13 +766,14 @@ tasks:
     # running instance holds its binary and a running browser its profile, and
     # neither can be removed while it is held.
     #
-    # By name, and only the two names a run here leaves: test/harness names its
-    # directory, and chromedp names the profile it makes when it is given none.
-    # Anything else in the temporary directory is somebody else's. The directory
-    # is the one Go's os.TempDir resolves to - GetTempPath on Windows, TMPDIR
-    # elsewhere - because that is where both were written.
+    # By name, and only the names a run here leaves: test/harness names its
+    # directory - timepulse-harness-, and gtr-harness- before the project was
+    # called TimePulse - and chromedp names the profile it makes when it is given
+    # none. Anything else in the temporary directory is somebody else's. The
+    # directory is the one Go's os.TempDir resolves to - GetTempPath on Windows,
+    # TMPDIR elsewhere - because that is where both were written.
     cmds:
-      - cmd: "{{if eq OS \"windows\"}}powershell -NoProfile -Command 'Get-ChildItem -Path ([System.IO.Path]::GetTempPath()) -Directory | Where-Object { $_.Name -like \"gtr-harness-*\" -or $_.Name -like \"chromedp-runner*\" } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue'{{else}}rm -rf \"${TMPDIR:-/tmp}\"/gtr-harness-* \"${TMPDIR:-/tmp}\"/chromedp-runner*{{end}}"
+      - cmd: "{{if eq OS \"windows\"}}powershell -NoProfile -Command 'Get-ChildItem -Path ([System.IO.Path]::GetTempPath()) -Directory | Where-Object { $_.Name -like \"timepulse-harness-*\" -or $_.Name -like \"gtr-harness-*\" -or $_.Name -like \"chromedp-runner*\" } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue'{{else}}rm -rf \"${TMPDIR:-/tmp}\"/timepulse-harness-* \"${TMPDIR:-/tmp}\"/gtr-harness-* \"${TMPDIR:-/tmp}\"/chromedp-runner*{{end}}"
         ignore_error: true
 
   clean:images:
@@ -781,7 +787,10 @@ tasks:
     cmds:
       - cmd: docker rmi {{.APP_NAME}}:{{.VERSION}} {{.APP_NAME}}:latest
         ignore_error: true
-      - cmd: docker rmi gtr-test-app:latest gtr-test-probe:latest gtr-test-openldap:latest gtr-android:latest
+      - cmd: docker rmi timepulse-test-app:latest timepulse-test-probe:latest timepulse-test-openldap:latest timepulse-android:latest
+        ignore_error: true
+      # And what was built under the names from before the project was TimePulse.
+      - cmd: docker rmi go-time-recording:latest gtr-test-app:latest gtr-test-probe:latest gtr-test-openldap:latest gtr-android:latest
         ignore_error: true
       - docker image prune -f
       - echo "Locally built images removed."

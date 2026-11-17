@@ -19,7 +19,7 @@ import (
 
 // ClientID and ClientSecret are what the provider knows the application as.
 const (
-	ClientID     = "go-time-recording"
+	ClientID     = "timepulse"
 	ClientSecret = "oidctest-client-secret"
 )
 

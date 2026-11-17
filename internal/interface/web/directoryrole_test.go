@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
 // The directory card offers, as the role every account from the directory starts

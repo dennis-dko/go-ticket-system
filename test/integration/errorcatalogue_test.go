@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/test/harness"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // Every refusal this API can give names itself.
@@ -174,9 +174,9 @@ func TestAFailureFromUnderneathIsGenericAndKeepsItsDetail(t *testing.T) {
 		"dialect":  "postgres",
 		"host":     "127.0.0.1",
 		"port":     "1",
-		"name":     "gtr",
-		"user":     "gtr",
-		"password": "gtr",
+		"name":     "timepulse",
+		"user":     "timepulse",
+		"password": "timepulse",
 	})
 
 	// A probe answers successfully with the reason inside it: a database that

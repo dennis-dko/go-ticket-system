@@ -105,15 +105,14 @@ fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> U
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
 
-            addJavascriptInterface(
-                Files { name, bytes ->
-                    saving.put(bytes)
-                    save.launch(name)
-                },
-                filesInterface,
-            )
+            val files = Files { name, bytes ->
+                saving.put(bytes)
+                save.launch(name)
+            }
+            val session = Session { Handler(Looper.getMainLooper()).post(onSessionEnded) }
 
-            addJavascriptInterface(Session { Handler(Looper.getMainLooper()).post(onSessionEnded) }, sessionInterface)
+            bridgeNames(filesInterface).forEach { addJavascriptInterface(files, it) }
+            bridgeNames(sessionInterface).forEach { addJavascriptInterface(session, it) }
 
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -178,12 +177,11 @@ fun WebScreen(address: String, words: Language, shown: Int, onSignedOut: () -> U
     // one below that loads the page, so the page has it from its start. Below
     // Android 13 there is nothing to ask: notifications are on unless switched off.
     DisposableEffect(view) {
-        view.addJavascriptInterface(
-            Notifications(context) {
-                if (Build.VERSION.SDK_INT >= 33) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
-            },
-            notificationsInterface,
-        )
+        val notifications = Notifications(context) {
+            if (Build.VERSION.SDK_INT >= 33) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        bridgeNames(notificationsInterface).forEach { view.addJavascriptInterface(notifications, it) }
 
         onDispose { }
     }
@@ -223,8 +221,16 @@ private class Files(private val onSave: (String, ByteArray) -> Unit) {
     }
 }
 
+/**
+ * bridgeNames are the names a bridge is put on the page's window under: its own,
+ * and the one a page from before the rename to TimePulse looks for it by. The
+ * app is updated apart from the installation whose page it shows, so that page
+ * may be the older of the two for a while.
+ */
+fun bridgeNames(name: String): List<String> = listOf(name, "GoTimeRecording" + name.removePrefix("TimePulse"))
+
 /** filesInterface is the name the page reaches [Files] by, which res/raw/keep_download.js calls. */
-private const val filesInterface = "GoTimeRecordingFiles"
+private const val filesInterface = "TimePulseFiles"
 
 /**
  * Notifications is what the page's Reminders card reaches in the app: whether
@@ -245,7 +251,7 @@ private class Notifications(private val context: Context, private val ask: () ->
 }
 
 /** notificationsInterface is the name the page reaches [Notifications] by, which app.js asks for. */
-private const val notificationsInterface = "GoTimeRecordingNotifications"
+private const val notificationsInterface = "TimePulseNotifications"
 
 /**
  * Session is how the page tells the app that its session ended without its
@@ -260,7 +266,7 @@ private class Session(private val ended: () -> Unit) {
 }
 
 /** sessionInterface is the name the page reaches [Session] by, which app.js tells when its session has ended. */
-private const val sessionInterface = "GoTimeRecordingSession"
+private const val sessionInterface = "TimePulseSession"
 
 /** signsOut says whether a request is the web interface signing out of the installation the app shows. */
 fun signsOut(address: String, url: String): Boolean =

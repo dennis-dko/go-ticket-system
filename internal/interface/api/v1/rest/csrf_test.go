@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/interface/api/v1/rest"
+	"github.com/dennis-dko/timepulse/internal/interface/api/v1/rest"
 )
 
 // reached marks that the request got past the middleware.
@@ -32,7 +32,7 @@ func send(r *http.Request) *httptest.ResponseRecorder {
 func tokenFor(t *testing.T) string {
 	t.Helper()
 
-	rec := send(httptest.NewRequest(http.MethodGet, "http://gtr.example.com/", nil))
+	rec := send(httptest.NewRequest(http.MethodGet, "http://timepulse.example.com/", nil))
 
 	for _, cookie := range rec.Result().Cookies() {
 		if cookie.Name == rest.CSRFCookieName {
@@ -47,7 +47,7 @@ func tokenFor(t *testing.T) string {
 
 // post builds a state-changing request the way the interface makes one.
 func post(token, origin string, sendHeader bool) *http.Request {
-	r := httptest.NewRequest(http.MethodPost, "http://gtr.example.com/api/v1/timesheets", nil)
+	r := httptest.NewRequest(http.MethodPost, "http://timepulse.example.com/api/v1/timesheets", nil)
 
 	if origin != "" {
 		r.Header.Set("Origin", origin)
@@ -66,7 +66,7 @@ func post(token, origin string, sendHeader bool) *http.Request {
 
 // Reading is unaffected, and a first visit leaves the browser holding a token.
 func TestSafeMethodsPassAndReceiveAToken(t *testing.T) {
-	rec := send(httptest.NewRequest(http.MethodGet, "http://gtr.example.com/", nil))
+	rec := send(httptest.NewRequest(http.MethodGet, "http://timepulse.example.com/", nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("a GET must not be refused, got %d", rec.Code)
@@ -83,7 +83,7 @@ func TestSafeMethodsPassAndReceiveAToken(t *testing.T) {
 
 // The token must be readable by our own script, or it could never be echoed.
 func TestTokenCookieIsReadableByScriptButTheSessionIsNot(t *testing.T) {
-	rec := send(httptest.NewRequest(http.MethodGet, "http://gtr.example.com/", nil))
+	rec := send(httptest.NewRequest(http.MethodGet, "http://timepulse.example.com/", nil))
 
 	for _, cookie := range rec.Result().Cookies() {
 		if cookie.Name != rest.CSRFCookieName {
@@ -104,7 +104,7 @@ func TestTokenCookieIsReadableByScriptButTheSessionIsNot(t *testing.T) {
 func TestMatchingTokenFromOurOwnOriginIsAccepted(t *testing.T) {
 	token := tokenFor(t)
 
-	rec := send(post(token, "http://gtr.example.com", true))
+	rec := send(post(token, "http://timepulse.example.com", true))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("a legitimate request must pass, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -151,7 +151,7 @@ func TestPostWithoutAnOriginIsRefused(t *testing.T) {
 func TestPostWithoutTheHeaderIsRefused(t *testing.T) {
 	token := tokenFor(t)
 
-	rec := send(post(token, "http://gtr.example.com", false))
+	rec := send(post(token, "http://timepulse.example.com", false))
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("a request without the header must be refused, got %d", rec.Code)
 	}
@@ -159,8 +159,8 @@ func TestPostWithoutTheHeaderIsRefused(t *testing.T) {
 
 // A guessed token must not work.
 func TestPostWithAMismatchedTokenIsRefused(t *testing.T) {
-	r := httptest.NewRequest(http.MethodPost, "http://gtr.example.com/api/v1/timesheets", nil)
-	r.Header.Set("Origin", "http://gtr.example.com")
+	r := httptest.NewRequest(http.MethodPost, "http://timepulse.example.com/api/v1/timesheets", nil)
+	r.Header.Set("Origin", "http://timepulse.example.com")
 	r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: tokenFor(t)})
 	r.Header.Set(rest.CSRFHeaderName, "not-the-right-token")
 
@@ -173,11 +173,11 @@ func TestPostWithAMismatchedTokenIsRefused(t *testing.T) {
 // is nothing to forge and nothing to demand.
 func TestAPITokenRequestsAreExempt(t *testing.T) {
 	for _, header := range []struct{ name, value string }{
-		{rest.APITokenHeader, "gtr_something"},
-		{"Authorization", "Bearer gtr_something"},
+		{rest.APITokenHeader, "timepulse_something"},
+		{"Authorization", "Bearer timepulse_something"},
 	} {
 		t.Run(header.name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPost, "http://gtr.example.com/api/v1/timesheets", nil)
+			r := httptest.NewRequest(http.MethodPost, "http://timepulse.example.com/api/v1/timesheets", nil)
 			r.Header.Set(header.name, header.value)
 
 			rec := send(r)
@@ -195,7 +195,7 @@ func TestAllStateChangingMethodsAreChecked(t *testing.T) {
 		http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete,
 	} {
 		t.Run(method, func(t *testing.T) {
-			r := httptest.NewRequest(method, "http://gtr.example.com/api/v1/timesheets", nil)
+			r := httptest.NewRequest(method, "http://timepulse.example.com/api/v1/timesheets", nil)
 			r.Header.Set("Origin", "http://evil.example.net")
 			r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: tokenFor(t)})
 
@@ -212,8 +212,8 @@ func TestForwardedHostIsHonoured(t *testing.T) {
 	token := tokenFor(t)
 
 	r := httptest.NewRequest(http.MethodPost, "http://internal-backend:8000/api/v1/timesheets", nil)
-	r.Header.Set("X-Forwarded-Host", "gtr.example.com")
-	r.Header.Set("Origin", "https://gtr.example.com")
+	r.Header.Set("X-Forwarded-Host", "timepulse.example.com")
+	r.Header.Set("Origin", "https://timepulse.example.com")
 	r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: token})
 	r.Header.Set(rest.CSRFHeaderName, token)
 
@@ -227,8 +227,8 @@ func TestForwardedHostIsHonoured(t *testing.T) {
 func TestRefererIsAcceptedWhenOriginIsAbsent(t *testing.T) {
 	token := tokenFor(t)
 
-	r := httptest.NewRequest(http.MethodPost, "http://gtr.example.com/api/v1/timesheets", nil)
-	r.Header.Set("Referer", "http://gtr.example.com/some/page")
+	r := httptest.NewRequest(http.MethodPost, "http://timepulse.example.com/api/v1/timesheets", nil)
+	r.Header.Set("Referer", "http://timepulse.example.com/some/page")
 	r.AddCookie(&http.Cookie{Name: rest.CSRFCookieName, Value: token})
 	r.Header.Set(rest.CSRFHeaderName, token)
 
@@ -253,5 +253,38 @@ func TestTokensAreUnique(t *testing.T) {
 		}
 
 		seen[token] = true
+	}
+}
+
+// A page still running from before the project was called TimePulse - a tab
+// left open across the update, a service worker's copy - holds the token under
+// the old name and echoes that one. It is accepted, or that page could change
+// nothing until it was reloaded, and an Android app from then could not sign out.
+func TestATokenUnderTheNameFromBeforeTheRenameIsAccepted(t *testing.T) {
+	token := tokenFor(t)
+
+	r := httptest.NewRequest(http.MethodPost, "http://timepulse.example.com/api/v1/timesheets", nil)
+	r.Header.Set("Origin", "http://timepulse.example.com")
+	r.Header.Set(rest.CSRFHeaderName, token)
+	r.AddCookie(&http.Cookie{Name: "gtr_csrf", Value: token})
+
+	if rec := send(r); rec.Code != http.StatusOK {
+		t.Fatalf("a token under the old name was refused: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Every answer that hands out a token hands it out under both names, the same
+// token under each, so a page from either side of the rename finds the one it
+// reads.
+func TestTheTokenIsHandedOutUnderBothNames(t *testing.T) {
+	rec := send(httptest.NewRequest(http.MethodGet, "http://timepulse.example.com/", nil))
+
+	handed := map[string]string{}
+	for _, cookie := range rec.Result().Cookies() {
+		handed[cookie.Name] = cookie.Value
+	}
+
+	if handed[rest.CSRFCookieName] == "" || handed["gtr_csrf"] != handed[rest.CSRFCookieName] {
+		t.Errorf("a first visit was handed %v, want one token under %s and gtr_csrf", handed, rest.CSRFCookieName)
 	}
 }

@@ -8,20 +8,34 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/domain/repository"
-	domainservice "github.com/dennis-dko/go-time-recording/internal/domain/service"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
-	"github.com/dennis-dko/go-time-recording/internal/support/i18n"
-	"github.com/dennis-dko/go-time-recording/internal/support/ical"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/domain/repository"
+	domainservice "github.com/dennis-dko/timepulse/internal/domain/service"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/support/ical"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 // CalendarFeedKeyPrefix marks a key as a calendar feed's, so that it is
 // recognisable wherever it turns up - and so that the process log can hide what
 // follows it, because a subscription's address is written into the request log of
 // everything it passes through.
-const CalendarFeedKeyPrefix = "gtrcal_"
+const CalendarFeedKeyPrefix = "timepulsecal_"
+
+// calendarFeedKeyPrefixBeforeTheRename is what keys were issued with while the
+// project was called Go-Time-Recording. A calendar keeps asking with the address
+// it was given until its owner makes a new one, so a key of that shape still
+// reads its feed.
+const calendarFeedKeyPrefixBeforeTheRename = "gtrcal_"
+
+// CalendarFeedKeyPrefixes are the prefixes of every key a feed is read with:
+// today's and the one from before the rename. The process log hides what follows
+// each of them, so one list decides both which keys are read and which are kept
+// out of the log, and a key cannot come to be accepted without being hidden.
+func CalendarFeedKeyPrefixes() []string {
+	return []string{CalendarFeedKeyPrefix, calendarFeedKeyPrefixBeforeTheRename}
+}
 
 // calendarFeedYears is how far a feed reaches on each side of today: the year
 // behind, as far back as anybody looks for a day they forgot to book, and the year
@@ -165,8 +179,12 @@ func (s *CalendarFeedService) Read(ctx context.Context, key string) ([]byte, err
 		calendar.Name = s.name(ctx, language)
 	}
 
+	// The part after the @ names the program, which the format asks of an id
+	// meant to be unique everywhere. Before the rename it was go-time-recording,
+	// and a calendar reading the feed after the update replaces each event once:
+	// a subscription is read whole every time, so that is all it does.
 	uid := func(day time.Time, what string) string {
-		return day.Format("20060102") + "-" + what + "-" + feed.Prefix + "@go-time-recording"
+		return day.Format("20060102") + "-" + what + "-" + feed.Prefix + "@timepulse"
 	}
 
 	for _, day := range bookedDays(entries) {
@@ -211,7 +229,9 @@ func (s *CalendarFeedService) owner(ctx context.Context, key string) (*model.Cal
 	gone := apperror.NotFound("feed", "")
 
 	key = strings.TrimSuffix(key, ".ics")
-	if !strings.HasPrefix(key, CalendarFeedKeyPrefix) {
+	if !slices.ContainsFunc(CalendarFeedKeyPrefixes(), func(prefix string) bool {
+		return strings.HasPrefix(key, prefix)
+	}) {
 		return nil, nil, gone
 	}
 

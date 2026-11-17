@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/sqldb"
-	"github.com/dennis-dko/go-time-recording/internal/support/security"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 func aSealer(t *testing.T) *security.Sealer {

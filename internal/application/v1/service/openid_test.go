@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/command"
-	"github.com/dennis-dko/go-time-recording/internal/application/v1/service"
-	"github.com/dennis-dko/go-time-recording/internal/domain/model"
-	"github.com/dennis-dko/go-time-recording/internal/infrastructure/persistence/memory"
-	"github.com/dennis-dko/go-time-recording/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/application/v1/command"
+	"github.com/dennis-dko/timepulse/internal/application/v1/service"
+	"github.com/dennis-dko/timepulse/internal/domain/model"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/memory"
+	"github.com/dennis-dko/timepulse/internal/support/apperror"
 )
 
 // fakeProvider answers as a provider does, for the application's half of a round:
@@ -69,7 +69,7 @@ func newOpenIDFixture(t *testing.T) *openIDFixture {
 	f := &openIDFixture{
 		fixture:  newFixture(t),
 		provider: &fakeProvider{who: model.OpenIDClaims{Subject: "dennis-at-the-provider", Email: "dennis@example.com"}},
-		config:   model.OpenIDConfig{Enabled: true, Issuer: "https://id.example.com", ClientID: "gtr"},
+		config:   model.OpenIDConfig{Enabled: true, Issuer: "https://id.example.com", ClientID: "timepulse"},
 	}
 
 	source := service.OpenIDConfigSource(func(context.Context) (model.OpenIDConfig, error) { return f.config, nil })
