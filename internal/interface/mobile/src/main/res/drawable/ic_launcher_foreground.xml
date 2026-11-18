@@ -1,18 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The hourglass of favicon.svg, its two halves meeting in the middle and the
-     sand already fallen dimmer. That tile is 26 units across and an adaptive
-     icon shows the middle 72 of these 108, so every point is the SVG's, less
-     the tile's corner at 3, times 72/26, plus the 18 around what is shown. -->
+<!-- The white figures of favicon.svg - the T, the foot of its stem, the P with
+     the pulse through it, the clock's hub and hands - with the SVG's own path
+     data, placed by the group: the SVG's 560-unit box scaled to 66 of these 108
+     units and centred. That keeps every figure inside the circle of 66 a
+     launcher may cut the icon to: the point furthest out, the top left corner of
+     the T, lies 272 units from the middle of the box, 32.1 here. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M36.28,33.51h35.44L54,54Z" />
-    <path
-        android:fillAlpha="0.55"
-        android:fillColor="#FFFFFF"
-        android:pathData="M36.28,74.49h35.44L54,54Z" />
+    <group
+        android:scaleX="0.117857"
+        android:scaleY="0.117857"
+        android:translateX="21"
+        android:translateY="21">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M78.96 95.95H314.62A130.11 127.97 0 0 0 270.18 134.8H222.7V255.83L205.5 303.96L184.1 221.09V134.8H109.96A31 31 0 0 1 78.96 103.8Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M184.5 387.98L197.47 420.93A5.4 5.4 0 0 0 207.45 421.09L222.65 385.88V467.82A3.35 3.35 0 0 1 219.3 471.17H219.8A35.3 40.55 0 0 1 184.5 430.62Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M261.75 291.85H374.93A79.18 79.96 0 0 0 454.11 211.89A77.29 79 0 0 0 376.82 132.89A78.06 75.07 0 0 0 298.76 207.96V276.95H261.14V208.49A115.42 113.28 0 0 1 376.56 95.21A115.04 116.8 0 0 1 491.6 212.01A117.12 117.73 0 0 1 374.48 329.74H298.76V465.03A6 6 0 0 1 292.76 471.03H266.64A5.5 5.5 0 0 1 261.14 465.53V360.2L284 307.35H269.82L251.86 343.72L235.47 309.61L202.54 398.88L166.71 276.03L147.72 329.82H83.15A3 3 0 0 1 80.15 326.82V316.88A3 3 0 0 1 83.15 313.88H136.55L168.15 221.93L203.85 350.51L234.35 265.28L253 309.75Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M374.78 216.5m-13.25 0a13.25 13.25 0 1 0 26.5 0a13.25 13.25 0 1 0 -26.5 0Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M378.63 216.5L378.63 153.95A3.85 3.85 0 0 0 370.93 153.95L370.93 216.5ZM377.11 219.57L426.89 181.79A3.85 3.85 0 0 0 422.23 175.65L372.45 213.43ZM376.8 213.22L338.11 189.43A3.85 3.85 0 0 0 334.07 195.99L372.76 219.78Z" />
+    </group>
 </vector>

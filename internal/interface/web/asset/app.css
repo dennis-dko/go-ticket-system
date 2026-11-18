@@ -299,10 +299,10 @@ body {
    no house in it - the same trap the tab icon was pulled out of. It also said
    "home", which is not a word this application uses for that screen.
 
-   The tile takes the accent, so this is the mark that is in the browser tab
-   beside it rather than a second thing that happens to be nearby. */
+   It carries its own colours, the tab icon's, so this is the mark that is in
+   the browser tab beside it rather than a second thing that happens to be
+   nearby. */
 .app-mark {
-  color: var(--accent);
   flex: none;
   height: 22px;
   opacity: 0.9;

@@ -3,8 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"flag"
 	"fmt"
-	"image/png"
+	"io"
 	"os"
 
 	"github.com/dennis-dko/timepulse/internal/support/imaging"
@@ -13,27 +14,38 @@ import (
 // icoSizes are the frames Windows asks for.
 var icoSizes = []int{16, 32, 48, 256}
 
+// faviconSizes are the frames a browser reads /favicon.ico for: sixteen for the
+// tab, and thirty-two where its pixels are dense.
+var faviconSizes = []int{16, 32}
+
 func main() {
-	if err := run(os.Stdout); err != nil {
+	favicon := flag.Bool("favicon", false, "write the web interface's favicon.ico rather than the Windows icon")
+	flag.Parse()
+
+	sizes := icoSizes
+	if *favicon {
+		sizes = faviconSizes
+	}
+
+	if err := run(os.Stdout, sizes); err != nil {
 		fmt.Fprintln(os.Stderr, "drawing the icon:", err)
 		os.Exit(1)
 	}
 }
 
-func run(out *os.File) error {
-	frames := make([][]byte, 0, len(icoSizes))
+func run(out io.Writer, sizes []int) error {
+	frames := make([][]byte, 0, len(sizes))
 
-	for _, size := range icoSizes {
-		var encoded bytes.Buffer
-
-		if err := png.Encode(&encoded, imaging.Mark(size)); err != nil {
-			return fmt.Errorf("encoding %dpx: %w", size, err)
+	for _, size := range sizes {
+		encoded, err := imaging.MarkPNG(size)
+		if err != nil {
+			return fmt.Errorf("drawing %dpx: %w", size, err)
 		}
 
-		frames = append(frames, encoded.Bytes())
+		frames = append(frames, encoded)
 	}
 
-	return writeICO(out, icoSizes, frames)
+	return writeICO(out, sizes, frames)
 }
 
 // writeICO packs the frames into the container Windows reads.
@@ -41,7 +53,7 @@ func run(out *os.File) error {
 // PNG inside rather than the older bitmap-with-mask: every Windows that this
 // application supports reads it, and the 256 as a bitmap would be a quarter of a
 // megabyte on its own.
-func writeICO(out *os.File, sizes []int, frames [][]byte) error {
+func writeICO(out io.Writer, sizes []int, frames [][]byte) error {
 	var buf bytes.Buffer
 
 	// ICONDIR: reserved, type 1 (icon), how many.

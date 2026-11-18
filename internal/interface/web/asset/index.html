@@ -40,14 +40,25 @@
        with no picture at all. -->
   <svg class="sprite" aria-hidden="true" focusable="false">
     <defs>
-      <!-- The mark this application ships with. Defined once and used twice - in
-           the logo slot while an installation has uploaded none, and beside the
-           title once one has taken that slot - because the same drawing written
-           out twice is two drawings that can drift apart. -->
-      <symbol id="icon-mark" viewBox="0 0 32 32">
-        <rect x="3" y="3" width="26" height="26" rx="7.6" fill="currentColor"/>
-        <path d="M9.6 8.6h12.8L16 16Z" fill="var(--accent-text)"/>
-        <path d="M9.6 23.4h12.8L16 16Z" fill="var(--accent-text)" opacity="0.55"/>
+      <!-- The mark this application ships with, beside the title. Defined here
+           rather than drawn where it is used, because the same drawing written
+           out twice is two drawings that can drift apart - and it is favicon.svg's
+           drawing, number for number, which TestTheMarkBesideTheTitleIsTheTabIcon
+           holds it to. -->
+      <symbol id="icon-mark" viewBox="0 0 560 560">
+        <linearGradient id="icon-mark-ground" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0a69a7"/>
+          <stop offset="0.5" stop-color="#095795"/>
+          <stop offset="1" stop-color="#03447a"/>
+        </linearGradient>
+        <rect width="560" height="560" rx="29" fill="url(#icon-mark-ground)"/>
+        <g fill="#ffffff">
+          <path d="M78.96 95.95H314.62A130.11 127.97 0 0 0 270.18 134.8H222.7V255.83L205.5 303.96L184.1 221.09V134.8H109.96A31 31 0 0 1 78.96 103.8Z"/>
+          <path d="M184.5 387.98L197.47 420.93A5.4 5.4 0 0 0 207.45 421.09L222.65 385.88V467.82A3.35 3.35 0 0 1 219.3 471.17H219.8A35.3 40.55 0 0 1 184.5 430.62Z"/>
+          <path d="M261.75 291.85H374.93A79.18 79.96 0 0 0 454.11 211.89A77.29 79 0 0 0 376.82 132.89A78.06 75.07 0 0 0 298.76 207.96V276.95H261.14V208.49A115.42 113.28 0 0 1 376.56 95.21A115.04 116.8 0 0 1 491.6 212.01A117.12 117.73 0 0 1 374.48 329.74H298.76V465.03A6 6 0 0 1 292.76 471.03H266.64A5.5 5.5 0 0 1 261.14 465.53V360.2L284 307.35H269.82L251.86 343.72L235.47 309.61L202.54 398.88L166.71 276.03L147.72 329.82H83.15A3 3 0 0 1 80.15 326.82V316.88A3 3 0 0 1 83.15 313.88H136.55L168.15 221.93L203.85 350.51L234.35 265.28L253 309.75Z"/>
+          <circle cx="374.78" cy="216.5" r="13.25"/>
+          <path d="M378.63 216.5L378.63 153.95A3.85 3.85 0 0 0 370.93 153.95L370.93 216.5ZM377.11 219.57L426.89 181.79A3.85 3.85 0 0 0 422.23 175.65L372.45 213.43ZM376.8 213.22L338.11 189.43A3.85 3.85 0 0 0 334.07 195.99L372.76 219.78Z"/>
+        </g>
       </symbol>
 
       <symbol id="icon-timesheets" viewBox="0 0 24 24">
