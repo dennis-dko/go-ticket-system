@@ -25,10 +25,6 @@ type SettingsService struct {
 	// accounts, forgotten when the attribute they were read from changes.
 	users repository.UserRepository
 
-	// appName is APP_NAME from the environment, used as the instance title
-	// until an administrator sets one under Settings.
-	appName string
-
 	// secrets encrypts the one field in this table that is a credential rather
 	// than a setting: the directory's bind password. The rest of the LDAP
 	// configuration stays readable in the column, which is what makes a stored
@@ -50,31 +46,30 @@ func (s *SettingsService) WithSecrets(secrets *security.Sealer) *SettingsService
 
 // NewSettingsService starts with a sealer that has no key, which stores the
 // directory's bind password as it is; WithSecrets attaches the configured one.
-// appName is the title shown until an administrator sets one.
 func NewSettingsService(
 	settings repository.SettingsRepository,
 	roles repository.RoleRepository,
 	users repository.UserRepository,
-	appName string,
 ) *SettingsService {
 	empty, _ := security.NewSealer("")
 
-	return &SettingsService{settings: settings, roles: roles, users: users, appName: appName, secrets: empty}
+	return &SettingsService{settings: settings, roles: roles, users: users, secrets: empty}
 }
 
-// Branding returns the instance labelling, with defaults filled in.
+// Branding returns the instance labelling as it is stored.
+//
+// Nothing is filled in for a title nobody wrote: the name is TimePulse whatever
+// is stored, and an empty title is an installation that adds nothing to it. It
+// used to be APP_NAME, which named installations after the process they ran in.
 func (s *SettingsService) Branding(ctx context.Context) (model.Branding, error) {
 	all, err := s.settings.GetAll(ctx)
 	if err != nil {
 		return model.Branding{}, err
 	}
 
-	branding := model.DefaultBranding(s.appName)
+	var branding model.Branding
 
-	if v := all[model.SettingAppTitle]; v != "" {
-		branding.Title = v
-	}
-
+	branding.Title = all[model.SettingAppTitle]
 	branding.TabTitle = all[model.SettingTabTitle]
 	branding.Banner = all[model.SettingBannerText]
 	branding.LogoDataURI = all[model.SettingLogoDataURI]

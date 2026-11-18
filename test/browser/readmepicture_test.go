@@ -23,10 +23,6 @@ import (
 // readmePictures names the directory the README's pictures are written to.
 const readmePictures = "TIMEPULSE_README_PICTURES"
 
-// defaultName is what cmd/configs/.env calls an installation, in place of the
-// name the harness gives each instance to tell it from the others.
-const defaultName = "APP_NAME=TimePulse"
-
 // The README's pictures are taken from the application rather than drawn.
 //
 // A screenshot in a README is a claim about what the application looks like, and
@@ -53,9 +49,8 @@ func TestTheReadmePicturesAreTakenFromTheApplication(t *testing.T) {
 	zone := afternoon(time.Now())
 	provider := oidctest.Start(t)
 
-	// INFO, so the live log has the request lines an administrator would see, and
-	// the name an installation is given when nobody chooses one.
-	p := openWith(t, "LOG_LEVEL=INFO", defaultName)
+	// INFO, so the live log has the request lines an administrator would see.
+	p := openWith(t, "LOG_LEVEL=INFO")
 	p.run("a desktop in the afternoon", chromedp.EmulateViewport(1280, 800),
 		emulation.SetTimezoneOverride(zone))
 
@@ -234,7 +229,7 @@ func (p *page) shootCard(into, name, card string, hide ...string) {
 func photographTheInstaller(t *testing.T, into string) {
 	t.Helper()
 
-	app := harness.StartUnconfigured(t, defaultName)
+	app := harness.StartUnconfigured(t)
 
 	alloc, cancelAlloc := chromedp.NewExecAllocator(context.Background(), launch(t, "en-US")...)
 	defer cancelAlloc()

@@ -1373,9 +1373,9 @@
         "tags": [
           "settings"
         ],
-        "summary": "Instance title, logo and footer",
+        "summary": "What the installation adds to its name, its logo and footer",
         "security": [],
-        "description": "Public on purpose: the sign-in screen needs it before anyone is authenticated.",
+        "description": "Public on purpose: the sign-in screen needs it before anyone is authenticated. Every installation is called TimePulse; title is what follows it after a bar (TimePulse | title), and tabTitle what follows it in the browser tab, the title's where tabTitle is empty. Empty adds nothing.",
         "responses": {
           "200": {
             "description": "Branding"

@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
 	"github.com/dennis-dko/timepulse/internal/support/apperror"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
@@ -36,9 +37,6 @@ const TokenEnv = "SETUP_TOKEN"
 type Config struct {
 	// Addr is where to listen, in the form ":8000".
 	Addr string
-
-	// AppName labels the page.
-	AppName string
 
 	// Version is shown in the page footer, so it is possible to tell which
 	// build somebody is looking at before it has an interface.
@@ -182,7 +180,7 @@ type server struct {
 func (s *server) announce(addr net.Addr, generated bool) {
 	where := "http://localhost" + portOf(addr)
 
-	s.cfg.Logf("no database is configured, so %s is serving its installer instead", s.cfg.AppName)
+	s.cfg.Logf("no database is configured, so %s is serving its installer instead", model.Brand)
 	s.cfg.Logf("open %s to choose one - the application will not start until you do", where)
 
 	if generated {
@@ -294,7 +292,7 @@ type prefillFields struct {
 // application will have, before there is an account to sign in with.
 func (s *server) state(w http.ResponseWriter, r *http.Request) {
 	response := stateResponse{
-		AppName: s.cfg.AppName,
+		AppName: model.Brand,
 		Version: s.cfg.Version,
 	}
 

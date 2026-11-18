@@ -15,7 +15,7 @@ import (
 type AuthHandler struct {
 	sessions *service.SessionService
 	authz    *Authorizer
-	issuer   string
+	issuer   func(c *gofr.Context) string
 	timezone InstanceTimezoneFunc
 
 	// kerberos says whether a sign-in with a Kerberos ticket can succeed here;
@@ -47,11 +47,12 @@ func (h *AuthHandler) WithMaintenance(state MaintenanceState) *AuthHandler {
 }
 
 // NewAuthHandler creates the handler. issuer is the name authenticator apps
-// display next to the account.
+// display next to the account, asked per enrolment so that it is the name the
+// installation has at the time rather than the one it started with.
 func NewAuthHandler(
 	sessions *service.SessionService,
 	authz *Authorizer,
-	issuer string,
+	issuer func(c *gofr.Context) string,
 	timezone InstanceTimezoneFunc,
 ) *AuthHandler {
 	return &AuthHandler{sessions: sessions, authz: authz, issuer: issuer, timezone: timezone}
@@ -147,7 +148,7 @@ func (h *AuthHandler) BeginTOTP(c *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	secret, uri, err := h.sessions.BeginTOTPEnrolment(c, principal.User.ID, h.issuer)
+	secret, uri, err := h.sessions.BeginTOTPEnrolment(c, principal.User.ID, h.issuer(c))
 	if err != nil {
 		return nil, toHTTPError(err)
 	}

@@ -101,12 +101,21 @@ func TestAnAnswerIsCheckedAgainstWhatThisProcessSaid(t *testing.T) {
 // the first thing to time out; treating that as "ours" accepts whatever is on
 // the port, which is the mix-up this exists to prevent.
 func TestAReplyFromAnotherInstanceIsRecognised(t *testing.T) {
-	answers := func(title string, status int) *httptest.Server {
+	// What GoFr answers on its health address, and only there: the name it was
+	// started under, which is APP_NAME. Every other address is somebody else's
+	// question.
+	answers := func(name string, status int) *httptest.Server {
 		return httptest.NewServer(http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/.well-known/health" {
+					http.NotFound(w, r)
+
+					return
+				}
+
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(status)
-				_, _ = fmt.Fprintf(w, `{"data":{"title":%q}}`, title)
+				_, _ = fmt.Fprintf(w, `{"data":{"name":%q,"status":"UP"}}`, name)
 			}))
 	}
 
@@ -139,16 +148,29 @@ func TestAReplyFromAnotherInstanceIsRecognised(t *testing.T) {
 		t.Errorf("a request that never got an answer reads as %v", got)
 	}
 
-	// An instance that cannot be asked is not one that failed the question. The
-	// installer runs before there is a database and does not register the route
-	// that would answer; reading that as a stranger would leave it a port it
-	// could never bind.
-	unasked := answers("", http.StatusNotFound)
+	// An instance that cannot be asked is not one that failed the question. One
+	// that is not ready yet answers 503 rather than its name; reading that as a
+	// stranger would leave it a port it could never bind.
+	unasked := answers("", http.StatusServiceUnavailable)
 	defer unasked.Close()
 
-	installer := &App{baseURL: unasked.URL, marker: "harness-1-7"}
-	if got := installer.whoAnswered(client); got != answerIsOurs {
+	starting := &App{baseURL: unasked.URL, marker: "harness-1-7"}
+	if got := starting.whoAnswered(client); got != answerIsOurs {
 		t.Errorf("an instance that cannot answer the question reads as %v", got)
+	}
+
+	// The installer runs before there is a database and answers the health
+	// address with its page, because a container's probe needs a 200 while it
+	// waits. A page names nobody, so it cannot be asked either.
+	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprint(w, "<!doctype html><title>Set up TimePulse</title>")
+	}))
+	defer page.Close()
+
+	installer := &App{baseURL: page.URL, marker: "harness-1-7"}
+	if got := installer.whoAnswered(client); got != answerIsOurs {
+		t.Errorf("the installer's page reads as %v", got)
 	}
 
 	// And an instance the caller named itself carries no marker, so there is

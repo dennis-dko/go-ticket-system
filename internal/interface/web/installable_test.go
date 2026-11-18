@@ -73,12 +73,13 @@ func readManifest(t *testing.T, server http.Handler, language string) manifest {
 }
 
 // The installed app is called what the installation calls itself, opens on the
-// page, and stands on its own rather than inside a browser frame.
+// page, and stands on its own rather than inside a browser frame. Under its icon,
+// where a dozen characters fit, it is called TimePulse.
 func TestTheManifestNamesTheInstallation(t *testing.T) {
-	m := readManifest(t, brandedServer(web.Branding{Title: "Zeiterfassung"}), "en")
+	m := readManifest(t, brandedServer(web.Branding{Title: "TimePulse | htp.net"}), "en")
 
-	if m.Name != "Zeiterfassung" || m.ShortName != "Zeiterfassung" {
-		t.Errorf("the app is called %q (%q), want the installation's own name", m.Name, m.ShortName)
+	if m.Name != "TimePulse | htp.net" || m.ShortName != "TimePulse" {
+		t.Errorf("the app is called %q (%q), want the installation's own name and TimePulse", m.Name, m.ShortName)
 	}
 
 	if m.StartURL != "/" || m.Scope != "/" || m.ID != "/" {

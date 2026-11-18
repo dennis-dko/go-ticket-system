@@ -231,7 +231,7 @@ func TestALanguageWithNoTextsFallsBackRatherThanEmptying(t *testing.T) {
 	}
 }
 
-// The wizard asks for the instance's name in both languages.
+// The wizard asks in both languages for what the installation adds to TimePulse.
 //
 // It is the first thing an administrator meets and the one step that exists to
 // name the installation - so a company working in two languages should not have
@@ -270,32 +270,33 @@ func TestTheWizardTakesTheTitleInBothLanguages(t *testing.T) {
 	}
 
 	p.run("name it twice",
-		chromedp.SetValue(`#setup-step-fields input[name="title.en"]`, "TimePulse GmbH",
+		chromedp.SetValue(`#setup-step-fields input[name="title.en"]`, "Beispiel Ltd",
 			chromedp.ByQuery),
-		chromedp.SetValue(`#setup-step-fields input[name="title.de"]`, "Zeiterfassung GmbH",
+		chromedp.SetValue(`#setup-step-fields input[name="title.de"]`, "Beispiel GmbH",
 			chromedp.ByQuery),
 		p.click("#setup-next"))
 
-	// Stored, and told apart by language: the reader is on English here.
-	p.waitForText("#app-title", "TimePulse GmbH")
+	// Stored, told apart by language, and added to the name rather than put in
+	// its place: the reader is on English here.
+	p.waitForText("#app-title", "TimePulse | Beispiel Ltd")
 
 	p.chooseLanguage("de")
 
-	p.waitForText("#app-title", "Zeiterfassung GmbH")
+	p.waitForText("#app-title", "TimePulse | Beispiel GmbH")
 }
 
-// The tab can be named separately from the header.
+// The tab can add something of its own to TimePulse, separately from the header.
 //
-// They were one field, which holds until the header's name is too long to be a
-// tab: a browser gives a tab a couple of dozen characters and somebody has six
-// of them open, so "Zeiterfassung der Beispiel GmbH & Co. KG" reads as
-// "Zeiterfassung der B…" in every one of them.
+// They were one field, which holds until the header's addition is too long for
+// a tab: a browser gives a tab a couple of dozen characters and somebody has
+// six of them open, so "TimePulse | Beispiel GmbH & Co. KG" reads as
+// "TimePulse | Beispie…" in every one of them.
 func TestTheBrowserTabCanBeNamedSeparately(t *testing.T) {
 	t.Parallel()
 
 	const (
-		header = "Zeiterfassung der Beispiel GmbH"
-		tab    = "Zeiterfassung"
+		header = "TimePulse | Beispiel GmbH & Co. KG"
+		tab    = "TimePulse | Beispiel"
 	)
 
 	p := open(t)
@@ -304,9 +305,9 @@ func TestTheBrowserTabCanBeNamedSeparately(t *testing.T) {
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
-	p.run("name both",
-		chromedp.SetValue(`#form-branding input[name="title"]`, header, chromedp.ByQuery),
-		chromedp.SetValue(`#form-branding input[name="tabTitle"]`, tab, chromedp.ByQuery),
+	p.run("add to both",
+		chromedp.SetValue(`#form-branding input[name="title"]`, "Beispiel GmbH & Co. KG", chromedp.ByQuery),
+		chromedp.SetValue(`#form-branding input[name="tabTitle"]`, "Beispiel", chromedp.ByQuery),
 		p.click(`#form-branding button[type="submit"]`))
 
 	p.waitForText("#toast", "saved")

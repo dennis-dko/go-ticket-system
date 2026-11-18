@@ -1811,11 +1811,13 @@
                  offerBrandingLanguages. -->
             <select id="branding-language" data-not-an-edit></select>
           </label>
-          <label data-i18n="admin.title">Title (header)<input type="text" name="title" maxlength="80">
+          <!-- Every installation is called TimePulse; these add to the name and
+               never replace it. See model.Named. -->
+          <label data-i18n="admin.title">Addition after “TimePulse |” (header)<input type="text" name="title" maxlength="80">
           </label>
           <!-- Shorter on purpose: a browser cuts a tab's name off after a couple
                of dozen characters, and somebody has six of them open. -->
-          <label data-i18n="admin.tabTitle">Browser tab (empty uses the title)<input type="text" name="tabTitle" maxlength="40">
+          <label data-i18n="admin.tabTitle">Addition in the browser tab (empty uses the header's)<input type="text" name="tabTitle" maxlength="40">
           </label>
           <label class="wide" data-i18n="admin.banner">Banner text (empty hides it)<input type="text" name="banner" maxlength="300">
           </label>

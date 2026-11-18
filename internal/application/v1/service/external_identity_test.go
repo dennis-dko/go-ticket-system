@@ -596,7 +596,7 @@ func TestAnExternalAdministratorStillSignsIn(t *testing.T) {
 // identifier the next time its owner signs in.
 func TestChangingTheIdentifierAttributeKeepsEveryAccountFound(t *testing.T) {
 	f := newSyncFixture(t, 1.0)
-	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo, "Test")
+	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo)
 
 	config := model.DefaultLDAPConfig()
 	if err := settings.SaveLDAP(context.Background(), config); err != nil {

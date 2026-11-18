@@ -626,10 +626,10 @@
       const state = await res.json();
 
       if (state.appName) {
-        // Looked up rather than concatenated. APP_NAME defaults to "Time
-        // Recording", so this branch is taken on practically every installation -
-        // which made a hard-coded "Set up ..." the one English line every German
-        // reader was guaranteed to meet, at the top of the page.
+        // Looked up rather than concatenated. The name is TimePulse on every
+        // installation, so this branch is always taken - which made a hard-coded
+        // "Set up ..." the one English line every German reader was guaranteed to
+        // meet, at the top of the page.
         const named = t('title.named', 'Set up {name}').replace('{name}', state.appName);
 
         document.title = named;

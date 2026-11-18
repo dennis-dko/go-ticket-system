@@ -56,7 +56,12 @@ var configDocs = []string{
 // next one is a decision somebody writes down. SHUTDOWN_GRACE_PERIOD was read by
 // main as well while GoFr's Run returned before its shutdown had finished; Run
 // waits for it since v1.62.0, which left main's own wait nothing to wait for.
+//
+// APP_NAME is GoFr's as well since 2026-11-18. GoFr names its traces and its
+// health answer after it. It used to name the installation on screen too, which
+// is TimePulse now, with whatever is written under Settings added after a bar.
 var notOurs = map[string]bool{
+	"APP_NAME":              true,
 	"GOFR_TELEMETRY":        true,
 	"TIMEPULSE_VERSION":     true,
 	"SHUTDOWN_GRACE_PERIOD": true,

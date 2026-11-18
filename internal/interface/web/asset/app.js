@@ -1536,7 +1536,7 @@ function placeholderValues() {
       hour: '2-digit', minute: '2-digit',
     }).format(now),
     version: lastBranding.version ?? '',
-    instance: lastBranding.title || 'TimePulse',
+    instance: named(lastBranding.title),
   };
 }
 
@@ -8320,16 +8320,32 @@ function drawWelcome(title) {
   $('#login-welcome').textContent = fillIn(t('login.welcome', 'Welcome to {0}'), [title]);
 }
 
-const BUILT_IN_TITLE = 'TimePulse';
+/**
+ * The name of every installation. What an administrator writes under Settings
+ * is added to it after a bar and never takes its place; the server writes the
+ * same rule in model.Named, and the two have to agree.
+ */
+const BRAND = 'TimePulse';
+
+/** What an installation is called with the addition written beside the brand. */
+function named(addition) {
+  const added = (addition ?? '').trim();
+
+  // The brand written again adds nothing: it was the obvious answer while the
+  // name could still be replaced, so it is stored where nobody meant to add.
+  if (!added || added.toLowerCase() === BRAND.toLowerCase()) return BRAND;
+
+  return `${BRAND} | ${added}`;
+}
 
 function drawBranding(branding) {
-  const title = brandingIn(branding, 'title') || BUILT_IN_TITLE;
+  const title = named(brandingIn(branding, 'title'));
 
-  // The tab may be named separately, because the room runs out there first: a
-  // name that reads across the top of the screen is cut off after a couple of
-  // dozen characters in a tab, and somebody has six of them open. Where nothing
-  // separate was written, the two are the same name.
-  const tabTitle = brandingIn(branding, 'tabTitle') || title;
+  // The tab may add something of its own, because the room runs out there
+  // first: a name that reads across the top of the screen is cut off after a
+  // couple of dozen characters in a tab, and somebody has six of them open.
+  // Where nothing separate was written, it adds what the header adds.
+  const tabTitle = named(brandingIn(branding, 'tabTitle') || brandingIn(branding, 'title'));
 
   // Remembered on the device, so the next load has the instance's own name and
   // mark before it is painted rather than a second later. theme.js reads this;
@@ -11100,7 +11116,7 @@ const TOUR_STEPS = [
     permission: 'settings:manage',
     title: () => t('tour.branding.title', 'What this installation looks like'),
     text: () => t('tour.branding.text',
-      'Title, banner, logo and footer. The logo becomes the icon in the browser tab, which '
+      'What follows TimePulse, banner, logo and footer. The logo becomes the icon in the browser tab, which '
       + 'is what tells a test instance from the real one at a glance.'),
   },
   {
@@ -12003,19 +12019,21 @@ const SETUP_STEPS = {
   },
 
   branding: {
-    title: () => t('setup.branding.title', 'Name this installation'),
+    title: () => t('setup.branding.title', 'Add to the name'),
     text: () => t('setup.branding.text',
-      'The title appears in the browser tab and the header. Optional, but it is what tells '
-      + 'a test instance apart from the real one at a glance.'),
+      'Every installation is called TimePulse. What you write here follows it after a bar, '
+      + 'as in TimePulse | htp.net, in the header and the browser tab. Optional, but it is '
+      + 'what tells a test instance apart from the real one at a glance.'),
     // One field per language, rather than one field.
     //
-    // The title is the first thing an installation says about itself and the one
-    // thing this step exists for, so a company that works in two languages should
-    // not have to come back to the appearance screen afterwards to say it twice.
-    // Two boxes is small enough to put on the wizard; the four texts on the
-    // appearance screen are not, which is why that one has a switcher instead.
+    // What follows the name is the first thing an installation says about itself
+    // and the one thing this step exists for, so a company that works in two
+    // languages should not have to come back to the appearance screen afterwards
+    // to say it twice. Two boxes is small enough to put on the wizard; the four
+    // texts on the appearance screen are not, which is why that one has a
+    // switcher instead.
     fields: () => BRANDING_LANGUAGES.map((language) => el('label', {
-      text: `${t('setup.instanceName', 'Name of this installation')} — ${languageName(language)}`,
+      text: `${t('setup.instanceName', 'After “TimePulse |”')} — ${languageName(language)}`,
     }, el('input', { type: 'text', name: `title.${language}`, maxlength: '80' }))),
     submit: async (values) => {
       const written = {};
@@ -18393,9 +18411,9 @@ async function init() {
   try {
     await loadBranding();
   } catch {
-    // Falls back to the built-in title, which the header carries in its markup
-    // and the sign-in heading has to be told.
-    drawWelcome(BUILT_IN_TITLE);
+    // Falls back to the brand alone, which the header carries in its markup and
+    // the sign-in heading has to be told.
+    drawWelcome(BRAND);
   }
 
   // Applied before the first render so the sign-in screen already speaks the

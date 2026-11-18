@@ -446,7 +446,13 @@ func TestTheLogoSlotsStayEmptyUntilALogoIsConfigured(t *testing.T) {
 	// - by 18 pixels at the suite's own 1,280 in the faces the CI runner has,
 	// which is how this case came to say so: it had measured there, and passed
 	// for as long as the name was allowed to lie under the account's.
-	p.run("a wide window", chromedp.EmulateViewport(1600, 900))
+	//
+	// 1,600 was wide enough until the name became "TimePulse | Zeiterfassung",
+	// 317 pixels in those faces. The right-hand column needs 609 there, and 713
+	// from 1,800 on, where the account's name is given more room, so the name sat
+	// 3 pixels left of the middle at 1,600 and 7 at 1,800. 1,920 leaves room
+	// on both sides of that step.
+	p.run("a wide window", chromedp.EmulateViewport(1920, 1080))
 
 	var placed struct {
 		TitleLeft float64 `json:"titleLeft"`

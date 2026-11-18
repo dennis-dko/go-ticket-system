@@ -781,9 +781,11 @@ const (
 // whoAnswered asks what is listening on this instance's address what it is
 // called.
 //
-// Every instance is started under a name nothing else is using and says that
-// name through the branding endpoint, which is public - so this is one request
-// at a moment where no session exists yet.
+// Every instance is started under a name nothing else is using, as APP_NAME, and
+// GoFr says that name on its health address, which is public - so this is one
+// request at a moment where no session exists yet. GoFr's word rather than the
+// branding's: what an installation shows is TimePulse and what its administrator
+// adds, which nothing at start-up can set.
 //
 // Three answers rather than two, and the third is the one that matters. The
 // request has a short deadline and this suite now runs several cases at once, so
@@ -792,28 +794,30 @@ const (
 // mix-up this check exists to prevent - and it surfaces three steps later as an
 // account that already exists.
 //
-// A reply that is not 200 is different again: the installer runs before there is
-// a database and never registers the route that would answer, so there the
-// question cannot be put at all and the log is what is left to go on.
+// A reply that is not a 200 carrying JSON is different again: an instance that is
+// not ready answers 503, and the installer, which runs before there is a
+// database, answers with its page. There the question cannot be put at all and
+// the log is what is left to go on.
 func (a *App) whoAnswered(client *http.Client) answeredBy {
 	if a.marker == "" {
 		return answerIsOurs
 	}
 
-	resp, err := client.Get(a.baseURL + "/api/v1/branding")
+	resp, err := client.Get(a.baseURL + "/.well-known/health")
 	if err != nil {
 		return answerIsUnclear
 	}
 
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK ||
+		!strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
 		return answerIsOurs
 	}
 
 	var body struct {
 		Data struct {
-			Title string `json:"title"`
+			Name string `json:"name"`
 		} `json:"data"`
 	}
 
@@ -821,14 +825,11 @@ func (a *App) whoAnswered(client *http.Client) answeredBy {
 		return answerIsUnclear
 	}
 
-	switch body.Data.Title {
-	case "":
-		return answerIsOurs
-	case a.marker:
-		return answerIsOurs
-	default:
+	if body.Data.Name != a.marker {
 		return answerIsAStranger
 	}
+
+	return answerIsOurs
 }
 
 // instances counts the instances this process has started, so each can be given

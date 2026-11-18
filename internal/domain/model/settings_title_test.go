@@ -6,31 +6,35 @@ import (
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 )
 
-// The tab is named separately where an installation says so, and by the title
-// where it does not.
+// The tab carries TimePulse and an addition of its own where an installation
+// wrote one, and the title's addition where it did not.
 //
 // The fallback is what every installation that has never opened this setting
 // relies on: the field arrived after they were all configured, so it is empty
-// everywhere, and an empty field that meant an empty tab would rename every one
-// of them to nothing.
-func TestTheTabIsNamedSeparatelyOrByTheTitle(t *testing.T) {
+// everywhere, and an empty field that meant no addition would take the title's
+// off every tab.
+func TestTheTabAddsItsOwnWordsOrTheTitles(t *testing.T) {
 	for name, tc := range map[string]struct {
 		branding model.Branding
 		want     string
 	}{
-		"nothing of its own": {
-			branding: model.Branding{Title: "Zeiterfassung der Beispiel GmbH"},
-			want:     "Zeiterfassung der Beispiel GmbH",
+		"nothing added": {
+			branding: model.Branding{},
+			want:     "TimePulse",
 		},
-		"its own name": {
-			branding: model.Branding{Title: "Zeiterfassung der Beispiel GmbH", TabTitle: "Zeiterfassung"},
-			want:     "Zeiterfassung",
+		"the title's addition": {
+			branding: model.Branding{Title: "Beispiel GmbH & Co. KG"},
+			want:     "TimePulse | Beispiel GmbH & Co. KG",
 		},
-		// Spaces are not a name. Somebody clearing the field leaves whatever the
-		// keyboard left behind, and a tab titled " " is a tab titled nothing.
+		"its own addition": {
+			branding: model.Branding{Title: "Beispiel GmbH & Co. KG", TabTitle: "Beispiel"},
+			want:     "TimePulse | Beispiel",
+		},
+		// Spaces are not an addition. Somebody clearing the field leaves whatever
+		// the keyboard left behind, and a tab with " " added has nothing added.
 		"blank": {
-			branding: model.Branding{Title: "Zeiterfassung", TabTitle: "   "},
-			want:     "Zeiterfassung",
+			branding: model.Branding{Title: "htp.net", TabTitle: "   "},
+			want:     "TimePulse | htp.net",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

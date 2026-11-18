@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
 	"github.com/dennis-dko/timepulse/internal/support/imaging"
 )
@@ -108,16 +109,19 @@ type manifestTarget struct {
 func (s *installable) serveManifest(w http.ResponseWriter, r *http.Request, branding Branding) {
 	name := strings.TrimSpace(branding.Title)
 	if name == "" {
-		name = "TimePulse"
+		name = model.Brand
 	}
 
 	lang := preferredLanguage(r.Header.Get("Accept-Language"))
 	version := appIconVersion(branding)
 
 	manifest := appManifest{
-		ID:              "/",
-		Name:            name,
-		ShortName:       name,
+		ID:   "/",
+		Name: name,
+		// What a home screen writes under the icon, where a dozen characters fit:
+		// the name every installation shares, while what this one adds goes in
+		// the full name above.
+		ShortName:       model.Brand,
 		Lang:            lang,
 		StartURL:        "/",
 		Scope:           "/",
