@@ -6,8 +6,8 @@
 // when its link is made, and a click on such a link hands it to the app, which
 // asks where to save it.
 (function () {
-  if (window.goTimeRecordingKeepsDownloads) return;
-  window.goTimeRecordingKeepsDownloads = true;
+  if (window.timePulseKeepsDownloads) return;
+  window.timePulseKeepsDownloads = true;
 
   const blobs = new Map();
   const create = URL.createObjectURL;
