@@ -1,6 +1,6 @@
 # CLAUDE.md - Core Directives
 
-**What this is:** `TimePulse` — project time tracking as **a single self-contained binary**. The REST API and the web interface live in the same executable; the UI assets are embedded with `go:embed`, so starting it needs no asset directory and no migration step. Built on [GoFr](https://gofr.dev), structured after [gogs](https://github.com/gogs/gogs). With no database configured it serves an installer on the same port and waits, because there is nowhere to put an account, a project or an hour until a database exists.
+**What this is:** `TimePulse` — project time tracking as **a single self-contained binary**. The REST API and the web interface live in the same executable; the UI assets are embedded with `go:embed`, so starting it needs no asset directory and no migration step. Built on [GoFr](https://gofr.dev). With no database configured it serves an installer on the same port and waits, because there is nowhere to put an account, a project or an hour until a database exists.
 
 ## 1. CI/CD, Git & Branching
 
