@@ -12588,7 +12588,7 @@ function renderUpdate(state) {
       .replace('{0}', state.pending);
 
     hint.textContent = state.restartable
-      ? t('update.pendingRestart', 'Use the restart below, or restart the application yourself.')
+      ? t('update.pendingRestart', 'Use the restart above, or restart the application yourself.')
       : t(`restart.unsupported.${state.restartCode || 'other'}`,
         'Restart the application the way it was started.');
 
@@ -16924,7 +16924,7 @@ function warnAboutLevelsTheProcessDoesNotWrite() {
   warning.textContent = quieter.length
     ? t('log.levelTooQuiet',
       'This installation is writing {0} and above, so {1} will stay empty. '
-      + 'The log level is set under "Logging, metrics and tracing" above.')
+      + 'The log level is set under "Logging, metrics and tracing" on the Operation tab.')
       .replace('{0}', logView.runningLevel)
       .replace('{1}', quieter.join(', '))
     : '';
