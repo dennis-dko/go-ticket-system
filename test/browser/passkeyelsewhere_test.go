@@ -37,6 +37,7 @@ func TestAPasskeyCardKeptBackSaysWhy(t *testing.T) {
 			}), chromedp.Reload())
 			p.settled()
 			p.showView("settings")
+			p.showTabOf("#passkey-elsewhere")
 			p.waitShown("#passkey-elsewhere")
 
 			said := p.text("#passkey-elsewhere")

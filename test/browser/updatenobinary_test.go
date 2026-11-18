@@ -20,6 +20,7 @@ func TestTheUpdateCardSaysWhenAReleaseHasNothingForThisPlatform(t *testing.T) {
 	p.chooseLanguage("de")
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-check", chromedp.ByID))
 
 	// What the server answers for a newer release without a build for this

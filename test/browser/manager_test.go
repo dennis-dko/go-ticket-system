@@ -44,6 +44,7 @@ func TestAManagerBooksForTheAccountAssignedToThemAndItSaysSo(t *testing.T) {
 	})()`, &made)
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-managers", chromedp.ByID))
 	p.run("switch managers on", p.click(`#form-managers .switch-track`),
 		p.click(`#form-managers button[type="submit"]`))
@@ -104,7 +105,8 @@ func TestAManagerBooksForTheAccountAssignedToThemAndItSaysSo(t *testing.T) {
 		t.Errorf("Bea reads her entry as %q, want it to say Mona booked it", row)
 	}
 
-	p.run("open My account", p.click(`.tab[data-view="settings"]`))
+	p.run("open My account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="privacy"]`))
 	p.waitForText("#managers-list", "Mona")
 
 	p.chooseLanguage("de")

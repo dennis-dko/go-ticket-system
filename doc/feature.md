@@ -11,6 +11,7 @@ What the application does, and the rules it keeps while doing it.
 | Schema | GoFr migrations, applied automatically at start-up |
 | API | REST under `/api/v1`, documented at `/api-docs` |
 | Web interface | Embedded via `go:embed`, vanilla JS with no build step |
+| Screens in tabs | *My account* is sorted into working time, sign-in, apps and calendar, and privacy and help; *Settings* into general, sign-in, operation and logs. A tab with nothing on it for an account is not offered, a screen comes back on the tab it was left on, and whatever points at a card - a banner's link, the guided tour - opens its tab |
 | Access control | RBAC with roles administered at run time; bcrypt password hashes |
 | Sign-in | Session cookies, optional passkeys and TOTP two-factor per user, a browser's Kerberos ticket where a keytab and a directory are configured, and an OpenID Connect provider - Keycloak, Authentik, Entra ID, Google - for the accounts their owners linked to it |
 | Live log | The process log, filterable and searchable, for the built-in administrator |
@@ -409,14 +410,18 @@ wordmarks rather than about this. The appearance screen shows the logo at exactl
 that size beside the header and sign-in previews, so it is seen before saving. A
 square mark is what reads best there — many companies keep one for exactly this.
 
-**Until a logo is configured, the header and the sign-in card carry nothing.**
-Those two slots belong to whoever runs the installation, and filling them with
-our mark makes an unbranded installation look branded by somebody else. The
-application's own mark — an hourglass — has its own places: the browser tab, the
-`.exe`, and the button beside the title that leads to the welcome screen. It is
-drawn (`internal/interface/web/asset/favicon.svg`) rather than a font character,
-and `go run ./build/icon > build/icon.ico` redraws the Windows copy from the same
-geometry whenever it changes.
+**Until a logo is configured, the header and the sign-in card show a chip with
+TimePulse's T.** Those two slots belong to whoever runs the installation, and
+filling them with our mark would make an unbranded installation look branded by
+somebody else, so the chip only stands in for a logo. The application's own mark
+— TimePulse's T and P, a pulse running through them and a clock in the P — has
+its own places: the browser tab, the installed app's icons, the `.exe`, the
+Android app, and the button beside the title that leads to the welcome screen. It
+is drawn (`internal/interface/web/asset/favicon.svg`) rather than a font
+character. `go run ./build/icon > build/icon.ico` and
+`go run ./build/icon -favicon > internal/interface/web/asset/favicon.ico` redraw
+the two icon files from the same geometry whenever it changes, and tests fail
+until they have.
 
 **Every installation is called TimePulse, and the title is added to that name.**
 It follows after a bar, as in *TimePulse | htp.net*. The full name appears in the

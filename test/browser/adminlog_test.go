@@ -26,6 +26,7 @@ func TestTheSettingsScreenShowsWhoChangedWhat(t *testing.T) {
 	p.awaitJSON(`(async () => { await loadChanges(); return true; })()`, &read)
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#changes-card", chromedp.ByID))
 
 	p.waitForText("#table-changes tbody", "Created the account Erika")

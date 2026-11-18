@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- favicon.svg, for the app's own screens: the tile, its blue running from
+     lighter at the top to darker at the bottom, and the white figures with the
+     SVG's own path data. The hub is a circle there and two arcs here, because a
+     vector drawable has no circles; TestTheAppsIconsAreTheMark holds every
+     figure and colour to the SVG's. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="560"
+    android:viewportHeight="560">
+    <path android:pathData="M29 0H531A29 29 0 0 1 560 29V531A29 29 0 0 1 531 560H29A29 29 0 0 1 0 531V29A29 29 0 0 1 29 0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="0"
+                android:endY="560">
+                <item android:offset="0" android:color="#FF0A69A7" />
+                <item android:offset="0.5" android:color="#FF095795" />
+                <item android:offset="1" android:color="#FF03447A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M78.96 95.95H314.62A130.11 127.97 0 0 0 270.18 134.8H222.7V255.83L205.5 303.96L184.1 221.09V134.8H109.96A31 31 0 0 1 78.96 103.8Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M184.5 387.98L197.47 420.93A5.4 5.4 0 0 0 207.45 421.09L222.65 385.88V467.82A3.35 3.35 0 0 1 219.3 471.17H219.8A35.3 40.55 0 0 1 184.5 430.62Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M261.75 291.85H374.93A79.18 79.96 0 0 0 454.11 211.89A77.29 79 0 0 0 376.82 132.89A78.06 75.07 0 0 0 298.76 207.96V276.95H261.14V208.49A115.42 113.28 0 0 1 376.56 95.21A115.04 116.8 0 0 1 491.6 212.01A117.12 117.73 0 0 1 374.48 329.74H298.76V465.03A6 6 0 0 1 292.76 471.03H266.64A5.5 5.5 0 0 1 261.14 465.53V360.2L284 307.35H269.82L251.86 343.72L235.47 309.61L202.54 398.88L166.71 276.03L147.72 329.82H83.15A3 3 0 0 1 80.15 326.82V316.88A3 3 0 0 1 83.15 313.88H136.55L168.15 221.93L203.85 350.51L234.35 265.28L253 309.75Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M374.78 216.5m-13.25 0a13.25 13.25 0 1 0 26.5 0a13.25 13.25 0 1 0 -26.5 0Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M378.63 216.5L378.63 153.95A3.85 3.85 0 0 0 370.93 153.95L370.93 216.5ZM377.11 219.57L426.89 181.79A3.85 3.85 0 0 0 422.23 175.65L372.45 213.43ZM376.8 213.22L338.11 189.43A3.85 3.85 0 0 0 334.07 195.99L372.76 219.78Z" />
+</vector>

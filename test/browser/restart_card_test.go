@@ -34,6 +34,7 @@ func TestTheRestartNoticeLeadsToTheCardThatDoesIt(t *testing.T) {
 	// running process the moment it is saved, so it never waits for anything -
 	// which is exactly what this was written against on the first attempt.
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-telemetry", chromedp.ByID))
 
 	p.waitForFilled("#tel-tracing-hint")
@@ -125,6 +126,7 @@ func TestTheRestartCardComesBeforeTheVersionCard(t *testing.T) {
 	// relative to each other - which is true of the markup whether either is
 	// showing.
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-telemetry", chromedp.ByID))
 
 	var order string
@@ -162,6 +164,7 @@ func TestTheRestartCardSpeaksTheReadersLanguage(t *testing.T) {
 	p.chooseLanguage("de")
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-telemetry", chromedp.ByID))
 
 	p.waitForFilled("#tel-tracing-hint")

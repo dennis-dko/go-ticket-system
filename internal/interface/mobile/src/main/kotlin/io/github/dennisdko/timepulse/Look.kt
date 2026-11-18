@@ -1,7 +1,7 @@
 package io.github.dennisdko.timepulse
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -28,13 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -77,8 +77,8 @@ fun mixed(a: Color, b: Color, share: Float): Color = Color(
     blue = a.blue * share + b.blue * (1 - share),
 )
 
-/** corners are the web interface's: 8 pixels round on a card, a field and a button. */
-private val corners = RoundedCornerShape(8.dp)
+/** corners are the web interface's --radius: 10 pixels round on a card, a field and a button. */
+private val corners = RoundedCornerShape(10.dp)
 
 /**
  * Card is the web interface's sign-in card: a surface with its border, rounded
@@ -121,29 +121,24 @@ private fun Band(title: String) {
 }
 
 /**
- * Mark is the hourglass on its tile, from favicon.svg's own numbers: a tile 26
- * units across with corners of 7.6 in a box of 32, and the two halves meeting in
- * the middle, the fallen sand dimmer.
+ * Mark is the application's mark: the drawable ic_mark, which is favicon.svg with
+ * the SVG's own path data. It was drawn here point by point, from numbers worked
+ * out of the SVG's, which is a second copy of the drawing that nothing compared.
  */
 @Composable
 fun Mark(size: Dp) {
-    Canvas(Modifier.size(size)) {
-        val unit = this.size.width / 32f
-        fun at(x: Float, y: Float) = Offset(x * unit, y * unit)
-
-        drawRoundRect(Color(0xFF2F6FEB), topLeft = at(3f, 3f), size = Size(26 * unit, 26 * unit), cornerRadius = CornerRadius(7.6f * unit))
-        drawPath(Path().apply { moveTo(at(9.6f, 8.6f)); lineTo(at(22.4f, 8.6f)); lineTo(at(16f, 16f)); close() }, Color.White)
-        drawPath(Path().apply { moveTo(at(9.6f, 23.4f)); lineTo(at(22.4f, 23.4f)); lineTo(at(16f, 16f)); close() }, Color.White.copy(alpha = 0.55f))
-    }
+    Image(painterResource(R.drawable.ic_mark), contentDescription = null, modifier = Modifier.size(size))
 }
 
-private fun Path.moveTo(point: Offset) = moveTo(point.x, point.y)
-private fun Path.lineTo(point: Offset) = lineTo(point.x, point.y)
-
-/** Field is an input as the web interface draws one: its label above in the quiet colour, the box on the page's background. */
+/**
+ * Field is an input as the web interface draws one: its label above in the quiet
+ * colour, the box a shade off the card inside a border a little stronger than the
+ * card's - app.css's --field-bg and --field-border, mixed the same way.
+ */
 @Composable
 fun Field(label: String, value: String, onValueChange: (String) -> Unit, keyboard: KeyboardType, secret: Boolean = false) {
     val tones = LocalTones.current
+    val box = mixed(tones.surface, tones.bg, 0.6f)
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, color = tones.muted, fontSize = 13.sp)
@@ -155,10 +150,10 @@ fun Field(label: String, value: String, onValueChange: (String) -> Unit, keyboar
             visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = keyboard),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = tones.bg,
-                unfocusedContainerColor = tones.bg,
+                focusedContainerColor = box,
+                unfocusedContainerColor = box,
                 focusedBorderColor = tones.accent,
-                unfocusedBorderColor = tones.border,
+                unfocusedBorderColor = mixed(tones.border, tones.text, 0.85f),
                 focusedTextColor = tones.text,
                 unfocusedTextColor = tones.text,
                 cursorColor = tones.accent,
@@ -170,24 +165,24 @@ fun Field(label: String, value: String, onValueChange: (String) -> Unit, keyboar
 
 /**
  * Action is a button as the web interface draws one: [primary] filled with the
- * accent, otherwise on the page's background inside a border - with [icon]
- * before its words where it has one.
+ * accent, otherwise a tint of the text on the card with no border, app.css's
+ * --quiet - with [icon] before its words where it has one.
  */
 @Composable
 fun Action(text: String, primary: Boolean, onClick: () -> Unit, enabled: Boolean = true, icon: (@Composable () -> Unit)? = null) {
     val tones = LocalTones.current
+    val ground = if (primary) tones.accent else mixed(tones.text, tones.surface, 0.07f)
 
     Button(
         onClick = onClick,
         enabled = enabled,
         shape = corners,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (primary) tones.accent else tones.bg,
+            containerColor = ground,
             contentColor = if (primary) tones.accentText else tones.text,
-            disabledContainerColor = mixed(if (primary) tones.accent else tones.bg, tones.surface, 0.45f),
+            disabledContainerColor = mixed(ground, tones.surface, 0.45f),
             disabledContentColor = mixed(if (primary) tones.accentText else tones.text, tones.surface, 0.6f),
         ),
-        border = if (primary) null else BorderStroke(1.dp, tones.border),
         modifier = Modifier.fillMaxWidth().height(48.dp),
     ) {
         if (icon != null) {

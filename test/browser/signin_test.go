@@ -176,6 +176,7 @@ func (p *page) readyAdmin() {
 
 	p.run("replace the initial password",
 		chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#form-password", chromedp.ByID),
 		chromedp.SendKeys(`#form-password input[name="currentPassword"]`,
 			harness.AdminPassword, chromedp.ByQuery),
@@ -462,6 +463,7 @@ func TestASessionTheServerNoLongerAcceptsTakesTheScreenWithIt(t *testing.T) {
 	// belongs to whoever typed it, and the next person at this browser is not
 	// them.
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 	p.waitForFilled("#datasource-active")
 

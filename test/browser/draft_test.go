@@ -27,6 +27,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 	p.waitForFilled("#datasource-active")
 
@@ -68,6 +69,7 @@ func TestWhatWasTypedIsStillThereAfterAReload(t *testing.T) {
 	p.settled()
 
 	p.run("open Settings again", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 
 	if got := p.value(`#form-datasource select[name="dialect"]`); got != "postgres" {
@@ -131,6 +133,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 	p.waitForFilled("#datasource-active")
 	p.settled()
@@ -164,6 +167,7 @@ func TestADraftFromAnotherVersionIsNotPutBack(t *testing.T) {
 	p.settled()
 
 	p.run("open Settings again", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 	p.waitForFilled("#datasource-active")
 

@@ -25,6 +25,7 @@ func TestTheLogViewerStopsAskingWhileItsTabIsHidden(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open the log, asking every second", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID),
 		chromedp.Evaluate(`(() => {
 			window.logAsked = 0;

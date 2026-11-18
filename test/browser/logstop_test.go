@@ -68,6 +68,7 @@ func TestARefusedLogViewerStopsAsking(t *testing.T) {
 	})()`, nil))
 
 	p.run("open the log", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID))
 
 	// Three default intervals and some room, so a viewer that kept going has had

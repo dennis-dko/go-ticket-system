@@ -28,6 +28,7 @@ func TestTheSecondFactorsCodeIsCheckedBeforeItIsSent(t *testing.T) {
 	p.reload()
 	p.settled()
 	p.showView("settings")
+	p.showTabOf("#totp-disable")
 	p.waitShown("#totp-disable")
 
 	// Every request for the second factor counted, from here on.

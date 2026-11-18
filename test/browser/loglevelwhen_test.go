@@ -30,6 +30,7 @@ func TestNothingSaysTheLogLevelWaitsForARestart(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID))
 
 	waitForLines(p, "the log viewer never showed a line")

@@ -194,6 +194,7 @@ func TestTheConnectionCardKeepsSayingWhatIsRunningWhileBeingEdited(t *testing.T)
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 
 	p.waitForFilled("#datasource-active")
@@ -264,6 +265,7 @@ func TestTheTracingHintNamesThisInstallation(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-telemetry", chromedp.ByID))
 
 	p.waitForFilled("#tel-tracing-hint")

@@ -321,7 +321,7 @@ installed on the phone, as the phone's browser does.
 | [Releases and deployment](doc/deployment.md) | How a release is made and what it carries |
 | [Operations manual](deploy/OPERATION.md) | For whoever runs it: the four ways to deploy, backups, restarts, health |
 
-Built on [GoFr](https://gofr.dev), structured after [gogs](https://github.com/gogs/gogs).
+Built on [GoFr](https://gofr.dev).
 
 ## License
 

@@ -61,6 +61,7 @@ func TestTheReadmePicturesAreTakenFromTheApplication(t *testing.T) {
 	p.settled()
 
 	p.showView("admin")
+	p.showTabOf("#log-card")
 	p.shootCard(into, "log", "#log-card")
 
 	p.run("sign out", chromedp.Click("#logout", chromedp.ByID),
@@ -171,6 +172,27 @@ func (p *page) showView(view string) {
 	p.run("open "+view, p.click(`.tab[data-view="`+view+`"]`))
 	p.waitShown("#view-" + view)
 	p.settled()
+}
+
+// showTabOf presses the tab of the screen an element is on, as somebody looking
+// for it would. The tab is read off the page rather than named here, so a card
+// moved to another tab takes this with it.
+func (p *page) showTabOf(selector string) {
+	p.t.Helper()
+
+	var tab string
+
+	p.run("find the tab of "+selector, chromedp.Evaluate(fmt.Sprintf(`
+		(() => {
+			const panel = document.querySelector(%q)?.closest('[role="tabpanel"]');
+			return panel ? '#' + panel.getAttribute('aria-labelledby') : '';
+		})()`, selector), &tab))
+
+	if tab == "" {
+		p.t.Fatalf("%s is on no tab of a screen", selector)
+	}
+
+	p.run("open the tab of "+selector, p.click(tab))
 }
 
 // still waits for the screen to stop changing - nothing loading, no toast, no

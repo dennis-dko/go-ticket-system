@@ -35,6 +35,7 @@ func TestAServerRefusalIsShownInTheReadersLanguage(t *testing.T) {
 	// one this case is about.
 	p.run("set a daily ceiling",
 		chromedp.Click(`.tab[data-view="admin"]`, chromedp.ByQuery),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible(`#form-operational input[name="maxDailyHours"]`, chromedp.ByQuery),
 		chromedp.SetValue(`#form-operational input[name="maxDailyHours"]`, "8", chromedp.ByQuery),
 		p.click(`#form-operational button[type="submit"]`),
@@ -223,6 +224,7 @@ func TestARejectedFieldIsNamedNotIdentified(t *testing.T) {
 	// A negative ceiling, which is refused by field rather than by sentence.
 	p.run("save an impossible ceiling",
 		chromedp.Click(`.tab[data-view="admin"]`, chromedp.ByQuery),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible(`#form-operational input[name="maxDailyHours"]`, chromedp.ByQuery),
 		chromedp.Evaluate(`(() => {
 			const field = document.querySelector('#form-operational input[name="maxDailyHours"]');

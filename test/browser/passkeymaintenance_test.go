@@ -37,6 +37,7 @@ func TestAPasskeySignInDuringMaintenanceIsTurnedAway(t *testing.T) {
 	p.settleWelcome()
 
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID))
 
 	p.run("register a passkey",
@@ -52,6 +53,7 @@ func TestAPasskeySignInDuringMaintenanceIsTurnedAway(t *testing.T) {
 	p.waitGone("#login-screen")
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	p.run("go out of service",

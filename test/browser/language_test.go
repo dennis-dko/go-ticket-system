@@ -323,6 +323,7 @@ func TestWhatSomebodyTypedSurvivesChoosingALanguage(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 
 	// The card has to have been filled before anything is typed into it, or the
@@ -411,6 +412,7 @@ func TestTheNameJustSavedIsWhatTheLanguageChooserOffers(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
 	p.saveBranding(t, "name the installation",
@@ -595,6 +597,7 @@ func TestTheAppearanceCardKeepsEachLanguagesWordsAcrossAReload(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 	p.settled()
 
@@ -618,6 +621,7 @@ func TestTheAppearanceCardKeepsEachLanguagesWordsAcrossAReload(t *testing.T) {
 	p.settled()
 
 	p.run("open Settings again", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
 	if shown := p.value("#branding-language"); shown != "de" {

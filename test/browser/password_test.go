@@ -19,6 +19,7 @@ func TestAPasswordCanBeRevealedAndHiddenAgain(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 	p.waitForFilled("#datasource-active")
 
@@ -104,6 +105,7 @@ func TestEveryPasswordFieldHasExactlyOneEye(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-datasource", chromedp.ByID))
 	p.waitForFilled("#datasource-active")
 

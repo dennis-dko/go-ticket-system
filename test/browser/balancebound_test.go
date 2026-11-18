@@ -35,6 +35,7 @@ func TestABalancePastItsBoundRaisesABannerUntilItIsInsideAgain(t *testing.T) {
 	}
 
 	p.showView("settings")
+	p.showTabOf("#form-balance-bounds")
 	p.waitForText("#balance-now", "+1.50 h")
 
 	p.run("set an upper bound of one hour",

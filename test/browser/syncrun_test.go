@@ -22,6 +22,7 @@ func TestTheDirectoryCardListsWhatRecentRunsChanged(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#sync-card", chromedp.ByID))
 
 	// A new installation has had no run, and says so rather than showing an

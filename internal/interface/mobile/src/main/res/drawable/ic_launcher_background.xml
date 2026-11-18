@@ -1,11 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The tile of favicon.svg: the colour that carries the mark. -->
+<!-- The tile of favicon.svg: its blue, lighter at the top and darker at the
+     bottom. A launcher shows the middle 72 of these 108 units, cut to its own
+     shape, so the colours run across those 72 as they run across the tile. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#2F6FEB"
-        android:pathData="M0,0h108v108h-108Z" />
+    <path android:pathData="M0,0h108v108h-108Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="18"
+                android:endX="0"
+                android:endY="90">
+                <item android:offset="0" android:color="#FF0A69A7" />
+                <item android:offset="0.5" android:color="#FF095795" />
+                <item android:offset="1" android:color="#FF03447A" />
+            </gradient>
+        </aapt:attr>
+    </path>
 </vector>

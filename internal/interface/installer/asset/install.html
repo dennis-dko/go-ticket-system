@@ -12,6 +12,15 @@
       --bg: #f5f6f8; --surface: #fff; --border: #dfe3e8; --text: #1c2126;
       --muted: #626d78; --accent: #2f6feb; --accent-text: #fff; --danger: #c0392b;
       --ok: #1a7f37; --radius: 10px;
+      /* The application's fields and quiet buttons, mixed from the palette the
+         same way app.css mixes them, so either theme has them. */
+      --field-bg: color-mix(in srgb, var(--surface) 60%, var(--bg));
+      --field-border: color-mix(in srgb, var(--border) 85%, var(--text));
+      --field-border-hover: color-mix(in srgb, var(--border) 65%, var(--text));
+      --quiet: color-mix(in srgb, var(--text) 7%, transparent);
+      --quiet-hover: color-mix(in srgb, var(--text) 12%, transparent);
+      --quiet-press: color-mix(in srgb, var(--text) 17%, transparent);
+      --ring: color-mix(in srgb, var(--accent) 25%, transparent);
       color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
@@ -38,13 +47,19 @@
     .muted { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
     label { display: block; font-size: 13px; margin-bottom: 12px; }
     input, select {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text); font: inherit; margin-top: 4px;
-      padding: 9px 10px; width: 100%;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: var(--radius); box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+      color: var(--text); font: inherit; margin-top: 4px; padding: 9px 12px;
+      transition: border-color .15s ease, box-shadow .15s ease; width: 100%;
     }
-    input:focus-visible, select:focus-visible, button:focus-visible {
-      outline: 2px solid var(--accent); outline-offset: 2px;
+    input:hover:not(:focus), select:hover:not(:focus) { border-color: var(--field-border-hover); }
+    /* The application's soft ring round the field being typed in; the
+       transparent outline is what forced colours draw, where shadows are not. */
+    input:focus, select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring);
+      outline: 2px solid transparent;
     }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     /* A password typed here is transcribed from somewhere else, and a typo is
        answered by "connection refused" with nothing saying which character was
        wrong. The wrapper is added by the script, so it costs the markup
@@ -65,11 +80,16 @@
     @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
     .row { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
     button {
-      background: var(--accent); border: 1px solid var(--accent); border-radius: 8px;
+      background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius);
       color: var(--accent-text); cursor: pointer; font: inherit; font-weight: 500;
-      padding: 9px 16px;
+      padding: 9px 16px; transition: background-color .15s ease, filter .15s ease;
     }
-    button.secondary { background: transparent; border-color: var(--border); color: var(--text); }
+    button:hover { filter: brightness(1.08); }
+    /* A tint of the text rather than a box in a border, as in the application;
+       the border stays, transparent, so it is as tall as the button beside it. */
+    button.secondary { background: var(--quiet); border-color: transparent; color: var(--text); }
+    button.secondary:hover { background: var(--quiet-hover); filter: none; }
+    button.secondary:active { background: var(--quiet-press); }
     button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; }
     .note { border-left: 3px solid var(--border); font-size: 13px; margin: 14px 0 0; padding: 2px 0 2px 12px; }
     .note.bad { border-color: var(--danger); color: var(--danger); }

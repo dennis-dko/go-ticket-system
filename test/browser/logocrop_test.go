@@ -28,12 +28,14 @@ func TestAPartOfTheLogoCanBeChosenForEachPlace(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
 	p.storeBranding(t, wideLogo)
 
 	p.reload()
 	p.run("open Settings again", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
 	// The previews are controls, and each one opens the chooser for its own place.
@@ -176,12 +178,14 @@ func TestTheChosenPartCanBeAnyShape(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
 	p.storeBranding(t, wideLogo)
 
 	p.reload()
 	p.run("open Settings again", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 
 	p.run("choose the part used in the tab",

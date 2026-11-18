@@ -67,6 +67,7 @@ func TestAPasskeySignsInWithoutATwoFactorCodeEvenWhenTOTPIsOn(t *testing.T) {
 
 	// Now register a passkey for the same account.
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID))
 
 	p.run("register a passkey",
@@ -186,6 +187,7 @@ func TestTheTwoFactorQRCodeIsShown(t *testing.T) {
 
 	p.run("start two-factor enrolment",
 		chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#totp-card", chromedp.ByID),
 		p.click("#totp-begin"),
 		chromedp.WaitVisible("#totp-qr", chromedp.ByQuery),
@@ -223,6 +225,7 @@ func TestTheTwoFactorQRCodeIsShown(t *testing.T) {
 		chromedp.Click(`.tab[data-view="users"]`, chromedp.ByQuery),
 		chromedp.Sleep(200*time.Millisecond),
 		chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.Sleep(400*time.Millisecond),
 	)
 

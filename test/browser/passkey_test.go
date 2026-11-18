@@ -84,6 +84,7 @@ func TestRegisteringAPasskeyAndSigningInWithIt(t *testing.T) {
 	p.settleWelcome()
 
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID))
 
 	// Registering is one form and one prompt, which the virtual authenticator
@@ -136,6 +137,7 @@ func TestRemovingAPasskey(t *testing.T) {
 	p.settleWelcome()
 
 	p.run("register", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID),
 		chromedp.SendKeys(`#form-passkey input[name="name"]`, "Doomed device", chromedp.ByQuery),
 		p.click(`#form-passkey button[type="submit"]`),
@@ -179,6 +181,7 @@ func TestTheBuiltInAdministratorIsNotOfferedPasskeys(t *testing.T) {
 	// gated on settings:write:own and the built-in administrator does not hold
 	// it. Waiting for it here was waiting for something that never arrives.
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#form-password", chromedp.ByID))
 
 	if p.visible("#form-passkey") {
@@ -193,6 +196,12 @@ func TestTheBuiltInAdministratorIsNotOfferedPasskeys(t *testing.T) {
 	// And the reason this test now waits on something else, asserted rather than
 	// left as a comment - otherwise the next person to see the working times
 	// missing from this screen has no way to tell intent from regression.
+	// Working times are on another tab, so that tab, with the timezone beside them
+	// shown, before asking: on the sign-in tab they would be out of sight whatever
+	// the administrator's rights said.
+	p.run("open the working time", p.click(`#settings-tabs [data-card-tab="work"]`),
+		chromedp.WaitVisible("#form-my-timezone", chromedp.ByID))
+
 	if p.visible("#form-working-times") {
 		t.Error("the built-in administrator is offered working times, which it has no use for")
 	}
@@ -323,6 +332,7 @@ func TestAPasskeySignsInWithoutTheSecondFactor(t *testing.T) {
 	p.enableTOTP(t)
 
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID))
 
 	p.run("register a passkey",
@@ -507,8 +517,11 @@ func TestADirectoryAccountIsNotOfferedPasskeys(t *testing.T) {
 	p.markAsDirectoryAccount(t, "erika@example.com")
 	p.reload()
 
+	// On the tab passkeys are filed under, with the password beside them shown, so
+	// that the offer being absent is the card's doing rather than the tab's.
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
-		chromedp.WaitVisible("#form-my-timezone", chromedp.ByID))
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
+		chromedp.WaitVisible("#form-password", chromedp.ByID))
 
 	if p.visible("#form-passkey") {
 		t.Error("an account the directory holds is offered a passkey the server would refuse")
@@ -542,6 +555,7 @@ func TestAPasskeyOpensNoSessionForADirectoryAccount(t *testing.T) {
 	p.settleWelcome()
 
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID))
 
 	p.run("register a passkey",

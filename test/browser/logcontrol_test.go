@@ -26,6 +26,7 @@ func TestTheLogControlsStackWithoutAGapOnATelephone(t *testing.T) {
 	// Opened wide, where the tab is on the bar rather than behind the menu, and
 	// then narrowed: the measurement is of the layout, not of how one gets there.
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID))
 	p.run("a telephone", chromedp.EmulateViewport(390, 844))
 

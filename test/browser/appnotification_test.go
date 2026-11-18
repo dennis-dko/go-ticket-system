@@ -38,6 +38,7 @@ func TestTheRemindersCardAsksTheAppForItsNotifications(t *testing.T) {
 	p.run("load the page as the app shows it", asTheAppShowsIt, chromedp.Reload())
 	p.settled()
 	p.showView("settings")
+	p.showTabOf("#notify-allow")
 	p.waitShown("#notify-allow")
 
 	var label string
