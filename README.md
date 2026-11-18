@@ -1,4 +1,4 @@
-<h1 align="center"><img src="internal/interface/web/asset/favicon.svg" alt="" width="96"><br>TimePulse</h1>
+<h1><img src="internal/interface/web/asset/favicon.svg" alt="" width="72" align="absmiddle"> TimePulse</h1>
 
 <p align="center">
   <b>Project time tracking in a single self-contained binary.</b><br>
