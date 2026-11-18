@@ -51,8 +51,8 @@ func TestAnInstallationWithNoLogoStillHasAMark(t *testing.T) {
 		t.Errorf("the mark is defined more or less than once: %s", uses)
 	}
 
-	// The placeholder is not that drawing. It is the installation's initial, and
-	// it is the letter that makes it this installation's rather than anyone's.
+	// The placeholder is not that drawing. It is a lettered chip, and the letter
+	// is TimePulse's T - see TestTheLetteredMarkIsTimePulsesT.
 	if strings.Contains(uses, `"initial":""`) {
 		t.Errorf("the logo slot holds no initial: %s", uses)
 	}
@@ -114,8 +114,6 @@ func TestTheSignInScreenShowsTheLetteredMarkWhenThereIsNoLogo(t *testing.T) {
 		t.Fatal("the sign-in screen shows no mark where a logo would be")
 	}
 
-	// The letter is the initial of the configured title, so it says something
-	// about this installation rather than being a decoration.
 	letter := strings.TrimSpace(p.text("#login-initial"))
 	if letter == "" {
 		t.Error("the mark on the sign-in screen carries no letter")
@@ -131,5 +129,53 @@ func TestTheSignInScreenShowsTheLetteredMarkWhenThereIsNoLogo(t *testing.T) {
 
 	if inHeader := strings.TrimSpace(p.text("#brand-initial")); inHeader != letter {
 		t.Errorf("the sign-in screen says %q and the header says %q", letter, inHeader)
+	}
+}
+
+// The lettered mark carries TimePulse's T, whatever an installation adds to the
+// name.
+//
+// It carried the first letter of the configured title, which was the whole name
+// until every installation came to be called TimePulse and the title became what
+// follows it. An installation that added htp.net then wore an H beside a bar
+// reading TimePulse | htp.net: a letter of the addition standing in for the whole
+// name. The maintainer asked for the T.
+func TestTheLetteredMarkIsTimePulsesT(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyAdmin()
+
+	var saved string
+
+	p.run("add to the name", chromedp.Evaluate(`
+		(async () => {
+			const csrf = document.cookie.split(';').map((c) => c.trim())
+				.find((c) => c.startsWith('timepulse_csrf='))?.slice('timepulse_csrf='.length) ?? '';
+
+			const res = await fetch('/api/v1/settings/branding', {
+				method: 'PUT',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+				body: JSON.stringify({ title: 'htp.net' }),
+			});
+
+			await loadBranding();
+
+			return String(res.status);
+		})()`, &saved, awaitPromise))
+
+	if saved != "200" {
+		t.Fatalf("the addition was not accepted (%s), so this case is about to prove nothing", saved)
+	}
+
+	if title := p.text("#app-title-text"); title != "TimePulse | htp.net" {
+		t.Fatalf("the bar reads %q, so the addition has not arrived and the letter proves nothing", title)
+	}
+
+	for _, chip := range []string{"#brand-initial", "#login-initial"} {
+		if letter := p.text(chip); letter != "T" {
+			t.Errorf("%s carries %q beside TimePulse | htp.net, want TimePulse's T", chip, letter)
+		}
 	}
 }

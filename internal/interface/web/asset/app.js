@@ -3289,22 +3289,21 @@ function restoreDrafts() {
  * Both are always filled now:
  *
  *   middle  the application's own mark, beside the title, always
- *   left    the uploaded logo, or the installation's initial where there is none
+ *   left    the uploaded logo, or a chip with TimePulse's T where there is none
  *
- * The initial is the first letter of the title this installation was given. It
- * costs nothing, it differs between installations, and it changes when somebody
- * changes the title - which is more than a generic placeholder glyph could say,
- * and it never reads as a picture that failed to load.
- *
- * Only in the header. The sign-in card gives a logo the width of the card, and a
- * 26-pixel chip in that space would read as something broken.
+ * The chip carried the first letter of the configured title while that title
+ * was the installation's whole name. Every installation is called TimePulse now
+ * and the title only follows it, so the first letter of the title was a letter
+ * of the addition - an H beside TimePulse | htp.net - and the chip carries the
+ * name's own initial instead. It still never reads as a picture that failed to
+ * load, which is what a generic glyph would.
  */
-function showBrandMark(branding, ownLogo) {
+function showBrandMark(ownLogo) {
   // Both places that stand in for a logo: the chip in the header, and the one on
   // the sign-in screen. The sign-in card used to show nothing when no logo was
   // configured, which reads as a page still loading rather than as an
   // installation that has not uploaded one.
-  const letter = initialOf(brandingIn(branding, 'title'));
+  const letter = BRAND.charAt(0);
 
   for (const [markID, initialID] of [
     ['#brand-mark', '#brand-initial'],
@@ -3324,28 +3323,6 @@ function showBrandMark(branding, ownLogo) {
     const initial = $(initialID);
     if (initial) initial.textContent = letter;
   }
-}
-
-/**
- * The one letter that stands for an installation.
- *
- * The first character that is a letter or a digit, upper-cased. Skipping past
- * anything else matters more than it sounds: a title beginning with a quotation
- * mark or a bracket would otherwise put punctuation in the chip, which reads as
- * a fault rather than as a name.
- *
- * Upper-cased through the reader's own locale, so a Turkish i becomes the
- * capital that language uses rather than the English one.
- *
- * Falls back to the application's own initial, because an installation whose
- * title is empty still has to have something in the corner.
- */
-function initialOf(title) {
-  for (const character of String(title ?? '')) {
-    if (/\p{L}|\p{N}/u.test(character)) return character.toLocaleUpperCase();
-  }
-
-  return 'Z';
 }
 
 /**
@@ -8407,7 +8384,7 @@ function drawBranding(branding) {
     img.alt = mark ? (branding.title || '') : '';
   }
 
-  showBrandMark(branding, Boolean(sized['#brand-logo']));
+  showBrandMark(Boolean(sized['#brand-logo']));
 
   // The announcement banner is separate from the "change your password" one.
   // Through the renderer, so a {year} in a copyright line stays right and a link
