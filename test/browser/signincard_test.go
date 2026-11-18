@@ -31,7 +31,7 @@ func TestTheSignInCardWelcomesByTheInstallationsName(t *testing.T) {
 
 	p.waitEvaluates("the heading of the sign-in card",
 		`document.querySelector('#login-screen h2')?.textContent.trim() ?? ''`,
-		"Welcome to Zeiterfassung")
+		"Welcome to TimePulse | Zeiterfassung")
 
 	// The mark stands before the words, in the same band.
 	var placed struct {

@@ -67,10 +67,6 @@ type Config struct {
 	// binary as a headless API.
 	UIEnabled bool
 
-	// AppName labels the instance, and is what authenticator apps show next to
-	// a two-factor account.
-	AppName string
-
 	// AuthRequired turns on sign-in and role enforcement. With it off every
 	// request is treated as fully privileged, which suits a local trial only.
 	AuthRequired bool
@@ -316,7 +312,6 @@ func Load(p Provider) Config {
 
 	cfg := Config{
 		Dialect:     strings.ToLower(p.GetOrDefault("DB_DIALECT", defaultDialect)),
-		AppName:     p.GetOrDefault("APP_NAME", "TimePulse"),
 		UIEnabled:   v.boolean("UI_ENABLED", true),
 		UpdateCheck: v.boolean("UPDATE_CHECK", true),
 		UpdateFeed:  p.Get("UPDATE_FEED"),

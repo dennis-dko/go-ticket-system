@@ -316,7 +316,7 @@ So the shipped `configs/.env` sets only what no screen can administer:
 | `DB_DIALECT`, `DB_NAME` | this is what decides whether there is a database to store a setting in |
 | `UI_ENABLED`, `AUTH_ENABLED` | either one switched off removes the screen that would switch it back |
 | `SHUTDOWN_GRACE_PERIOD` | read at start by the framework, which waits that long for the requests under way when it stops |
-| `APP_NAME` | see below — it is not the instance title |
+| `APP_NAME` | read by the framework, see below; it names nothing on screen |
 
 Six values used to sit there **as well as** in Settings — the log level, the
 session lifetime, the daily cap, the two rate-limit figures and the directory
@@ -325,14 +325,15 @@ because every built-in fallback was already identical to the line that was
 removed; what changed is that there is now one place per value instead of two,
 and the file's copy was always the losing one.
 
-**`APP_NAME` is not the instance title.** The title under *Settings → Appearance*
-renames the header, and the browser tab where nothing separate is written for it
-(*Browser tab* beside it, for an installation whose name is too long to be a tab).
-`APP_NAME` is the issuer an authenticator
-app shows beside an enrolled two-factor account — read once at start, administered
-by no screen — and it also seeds the initial title, so naming the instance in the
-environment saves naming it again. Changing it invalidates no enrolled codes, but
-phones already enrolled keep showing the old name.
+**`APP_NAME` names nothing on screen.** Every installation is called TimePulse.
+What is written under *Settings → Appearance* is added to that name after a bar,
+as in *TimePulse | htp.net*. That full name appears in the header, the browser tab,
+an authenticator app, a passkey prompt, the foot of an exported document and a
+subscribed calendar. The browser tab can be given a shorter addition of its own.
+`APP_NAME` belongs to the framework: traces are recorded under it, and
+`/.well-known/health` answers with it. An authenticator app keeps the name an
+account was enrolled under, so an older entry goes on showing the name it was
+enrolled with.
 
 ### The two example files here
 

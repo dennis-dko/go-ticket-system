@@ -137,7 +137,7 @@ func TestADayKeptInPlaceOfAHolidaySaysSo(t *testing.T) {
 // cannot be kept without one.
 func TestAPlaceTheRulesDoNotKnowIsRefusedByTheHalfToChange(t *testing.T) {
 	f := newFixture(t)
-	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo, "Test")
+	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo)
 	ctx := context.Background()
 
 	for choice, field := range map[string]string{"XX": "country", "XX-BY": "country", "DE": "region", "DE-XX": "region", "GB": "region"} {

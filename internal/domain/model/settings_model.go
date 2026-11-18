@@ -100,20 +100,21 @@ const (
 
 // Branding is the instance's own labelling, editable by the administrator.
 type Branding struct {
-	// Title names the header, and the browser tab where TabTitle is empty.
+	// Title is what the installation adds to TimePulse in the header, and in the
+	// browser tab where TabTitle is empty. See Named.
 	Title string
 
-	// TabTitle names the browser tab on its own, where an installation wants it
-	// to say something different.
+	// TabTitle is what the browser tab adds to TimePulse instead, where an
+	// installation wants the tab to say something shorter.
 	//
-	// The two were one field, which is the right answer until the header's name
-	// is too long to be a tab: a tab is a couple of dozen characters wide before
-	// the browser cuts it off, and several of an installation's tabs are usually
-	// open at once. "Zeiterfassung der Beispiel GmbH & Co. KG" belongs across the
-	// top of the screen; the tab wants "Zeiterfassung".
+	// The two were one field, which is the right answer until the header's
+	// addition is too long for a tab: a tab is a couple of dozen characters wide
+	// before the browser cuts it off, and several of an installation's tabs are
+	// usually open at once. "Beispiel GmbH & Co. KG" belongs across the top of the
+	// screen; the tab wants "Beispiel".
 	//
-	// Empty means the title, so an installation that has never thought about this
-	// keeps what it had.
+	// Empty means the title's, so an installation that has never thought about
+	// this keeps what it had.
 	TabTitle string
 
 	// Banner is an announcement shown above the application. Empty hides it.
@@ -160,37 +161,55 @@ type Branding struct {
 	Translations map[string]BrandingText
 }
 
-// TitleIn is what this installation calls itself in one language.
+// NameIn is what this installation calls itself in one language: TimePulse, and
+// the addition written for that language or else the untranslated one.
 //
-// The footer of an exported document is the one place the server writes a word
-// of its own into something otherwise composed entirely on the screen, so it is
-// the one place that has to be told which language is reading - a German
+// What the server writes itself asks this - the prompt a passkey device shows,
+// an authenticator's entry, the foot of an exported document, the calendar
+// somebody subscribes to - and the footer is why it takes a language: a German
 // evaluation used to be signed off in English.
-//
-// Falls back to the untranslated title, and then to nothing, so an installation
-// that has named itself in one language only is still named.
-func (b Branding) TitleIn(language string) string {
+func (b Branding) NameIn(language string) string {
 	if text, ok := b.Translations[language]; ok {
 		if title := strings.TrimSpace(text.Title); title != "" {
-			return title
+			return Named(title)
 		}
 	}
 
-	return strings.TrimSpace(b.Title)
+	return Named(b.Title)
 }
 
-// TabName is what the browser tab is called.
+// TabName is what the browser tab is called: TimePulse, and the tab's own
+// addition or else the title's.
 //
 // The one place that asks this question rather than reading either field, so
-// nothing has to remember which of the two wins. The tab title where there is
-// one, and the ordinary title otherwise - which is every installation that has
-// never opened this setting.
+// nothing has to remember which of the two wins. The tab's own is empty on
+// every installation that has never opened this setting.
 func (b Branding) TabName() string {
 	if tab := strings.TrimSpace(b.TabTitle); tab != "" {
-		return tab
+		return Named(tab)
 	}
 
-	return b.Title
+	return Named(b.Title)
+}
+
+// Brand is the name of every installation. What an administrator writes under
+// Settings is added to it after a bar - "TimePulse | htp.net" - and never takes
+// its place, decided by the maintainer on 2026-11-18.
+const Brand = "TimePulse"
+
+// Named is what an installation is called with addition written beside the
+// brand.
+//
+// An addition that only repeats the brand adds nothing. It was the obvious
+// answer to "name this installation" while the name could still be replaced,
+// so it is stored on installations that never meant to add anything.
+func Named(addition string) string {
+	addition = strings.TrimSpace(addition)
+	if addition == "" || strings.EqualFold(addition, Brand) {
+		return Brand
+	}
+
+	return Brand + " | " + addition
 }
 
 // BrandingText is what an installation says about itself, in one language.
@@ -227,24 +246,6 @@ type BrandingTextKeys struct {
 
 // BrandingKeysFor is brandingTextKeys, exported for the settings service.
 func BrandingKeysFor(language string) BrandingTextKeys { return brandingTextKeys(language) }
-
-// FallbackAppTitle is the name an instance carries when nothing else has been
-// configured - neither a title under Settings nor APP_NAME in the environment.
-const FallbackAppTitle = "TimePulse"
-
-// DefaultBranding is what a fresh instance shows.
-//
-// The title comes from APP_NAME when the deployment set one, so an operator who
-// names their instance in the environment sees that name, rather than having to
-// discover that the variable only fed the two-factor issuer and set it a second
-// time under Settings.
-func DefaultBranding(appName string) Branding {
-	if appName == "" {
-		appName = FallbackAppTitle
-	}
-
-	return Branding{Title: appName}
-}
 
 // LDAPConfig describes how to authenticate against a directory.
 type LDAPConfig struct {

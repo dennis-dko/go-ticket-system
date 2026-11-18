@@ -83,7 +83,6 @@ func runInstaller() (installer.Result, error) {
 
 	return installer.Serve(ctx, installer.Config{
 		Addr:           ":" + settings.HTTPPort,
-		AppName:        settings.AppName,
 		Version:        version,
 		Token:          settings.SetupToken,
 		DatasourceFile: appconfig.DatasourceFile,
@@ -579,7 +578,7 @@ func main() {
 	auth := appservice.NewAuthService(userRepo, roleRepo)
 	apiTokens := appservice.NewAPITokenService(tokenRepo, sessionRepo, userRepo, auth)
 	passkeys := appservice.NewPasskeyService(passkeyRepo, userRepo)
-	settingsService := appservice.NewSettingsService(settingsRepo, roleRepo, userRepo, cfg.AppName).
+	settingsService := appservice.NewSettingsService(settingsRepo, roleRepo, userRepo).
 		WithSecrets(secrets)
 
 	// The administered directory schedule wins over the configuration file, the
@@ -673,25 +672,21 @@ func main() {
 	leave := appservice.NewVacationService(vacationRepo, absenceRepo, userRepo, scheduleRepo, holidayPlaces, today)
 	workDays := appservice.NewWorkDayService(workDayRepo, timesheetRepo)
 
-	// What this installation is called in a language, wherever it has to name
-	// itself: the prompt a passkey device shows, the foot of an exported document,
-	// and the calendar somebody subscribes to.
+	// What this installation is called in a language, wherever the server names
+	// it itself: the prompt a passkey device shows, an authenticator's entry, the
+	// foot of an exported document, and the calendar somebody subscribes to.
 	//
-	// The administered title if there is one, so a person sees the name they
-	// know rather than the default the process was started with. One function
-	// rather than one per caller - it was written inline for the first of them,
-	// and the second would have been the same six lines again.
+	// One function rather than one per caller - it was written inline for the
+	// first of them, and the second would have been the same six lines again.
+	// Without the settings it is still TimePulse, which is what it is called
+	// whatever they say.
 	instanceNameIn := func(ctx context.Context, language string) string {
 		branding, err := settingsService.Branding(ctx)
 		if err != nil {
-			return cfg.AppName
+			return model.Brand
 		}
 
-		if title := branding.TitleIn(language); title != "" {
-			return title
-		}
-
-		return cfg.AppName
+		return branding.NameIn(language)
 	}
 
 	calendarFeeds := appservice.NewCalendarFeedService(calendarFeedRepo, userRepo, timesheetRepo,
@@ -1004,7 +999,7 @@ func main() {
 	}
 
 	v1.RegisterRoutes(app, v1.Handlers{
-		Auth: rest.NewAuthHandler(sessions, authorizer, cfg.AppName, instanceTimezone).
+		Auth: rest.NewAuthHandler(sessions, authorizer, instanceName, instanceTimezone).
 			WithMaintenance(maintenanceState).
 			// The Android app's sign-in: it shows the web interface, and is
 			// connected by a token's code rather than a password typed on a phone.

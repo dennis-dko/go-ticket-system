@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dennis-dko/timepulse/internal/domain/model"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
 
@@ -90,7 +91,7 @@ func (d document) serve(w http.ResponseWriter, r *http.Request, branding Brandin
 
 	title := strings.TrimSpace(branding.Title)
 	if title == "" {
-		title = "TimePulse"
+		title = model.Brand
 	}
 
 	// The icon's address carries a fingerprint of what it will answer with, so a

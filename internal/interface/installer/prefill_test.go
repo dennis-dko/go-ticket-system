@@ -22,7 +22,6 @@ import (
 // four are what somebody needs to know to start trying one.
 func TestTheInstallerNamesTheConnectionOnlyToWhoeverHoldsTheToken(t *testing.T) {
 	s := &server{cfg: Config{
-		AppName: "TimePulse",
 		Version: "v1.2.3",
 		Token:   "the-token-from-the-log",
 		Prefill: config.Datasource{

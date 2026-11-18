@@ -100,7 +100,7 @@ func (s *PasskeyService) Available(rp RelyingParty) bool {
 func (s *PasskeyService) webAuthnFor(rp RelyingParty) (*webauthn.WebAuthn, error) {
 	name := rp.DisplayName
 	if name == "" {
-		name = model.FallbackAppTitle
+		name = model.Brand
 	}
 
 	w, err := webauthn.New(&webauthn.Config{

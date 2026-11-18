@@ -18,7 +18,7 @@ import (
 // read it.
 func TestTheSchedulesLengthIsTheFormsAndFitsAnyRealExpression(t *testing.T) {
 	f := newSyncFixture(t, 1.0)
-	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo, "Test")
+	settings := service.NewSettingsService(newStubSettings(), f.roleRepo, f.userRepo)
 	ctx := context.Background()
 
 	minutes := make([]string, 60)
