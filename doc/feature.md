@@ -418,12 +418,18 @@ drawn (`internal/interface/web/asset/favicon.svg`) rather than a font character,
 and `go run ./build/icon > build/icon.ico` redraws the Windows copy from the same
 geometry whenever it changes.
 
-**The tab can be named separately from the header**, under *Browser tab* beside
-the title. The two are one name until the header's is too long to be a tab: a
+**Every installation is called TimePulse, and the title is added to that name.**
+It follows after a bar, as in *TimePulse | htp.net*. The full name appears in the
+header, on the sign-in card, in an authenticator app, on a passkey prompt, at the
+foot of an exported document and in a subscribed calendar. With nothing written,
+the name is *TimePulse* alone. `APP_NAME` names none of these; it is the name the
+framework records traces under.
+
+**The tab can add something shorter of its own**, under *Browser tab* beside the
+title. The two additions are one until the header's is too long for a tab: a
 browser cuts a tab off after a couple of dozen characters, and somebody has six
-of them open — "Zeiterfassung der Beispiel GmbH & Co. KG" reads as
-"Zeiterfassung der B…" in every one. Left empty, the tab keeps the title, which
-is what every installation configured before this existed goes on doing. It
+of them open — "TimePulse | Beispiel GmbH & Co. KG" reads as "TimePulse |
+Beispie…" in every one. Left empty, the tab adds what the header adds. It
 translates like the other texts.
 
 **A language you have written nothing for follows the base**, the same way an

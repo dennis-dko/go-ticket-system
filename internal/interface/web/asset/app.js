@@ -11116,7 +11116,7 @@ const TOUR_STEPS = [
     permission: 'settings:manage',
     title: () => t('tour.branding.title', 'What this installation looks like'),
     text: () => t('tour.branding.text',
-      'Title, banner, logo and footer. The logo becomes the icon in the browser tab, which '
+      'What follows TimePulse, banner, logo and footer. The logo becomes the icon in the browser tab, which '
       + 'is what tells a test instance from the real one at a glance.'),
   },
   {
@@ -12019,19 +12019,21 @@ const SETUP_STEPS = {
   },
 
   branding: {
-    title: () => t('setup.branding.title', 'Name this installation'),
+    title: () => t('setup.branding.title', 'Add to the name'),
     text: () => t('setup.branding.text',
-      'The title appears in the browser tab and the header. Optional, but it is what tells '
-      + 'a test instance apart from the real one at a glance.'),
+      'Every installation is called TimePulse. What you write here follows it after a bar, '
+      + 'as in TimePulse | htp.net, in the header and the browser tab. Optional, but it is '
+      + 'what tells a test instance apart from the real one at a glance.'),
     // One field per language, rather than one field.
     //
-    // The title is the first thing an installation says about itself and the one
-    // thing this step exists for, so a company that works in two languages should
-    // not have to come back to the appearance screen afterwards to say it twice.
-    // Two boxes is small enough to put on the wizard; the four texts on the
-    // appearance screen are not, which is why that one has a switcher instead.
+    // What follows the name is the first thing an installation says about itself
+    // and the one thing this step exists for, so a company that works in two
+    // languages should not have to come back to the appearance screen afterwards
+    // to say it twice. Two boxes is small enough to put on the wizard; the four
+    // texts on the appearance screen are not, which is why that one has a
+    // switcher instead.
     fields: () => BRANDING_LANGUAGES.map((language) => el('label', {
-      text: `${t('setup.instanceName', 'Name of this installation')} — ${languageName(language)}`,
+      text: `${t('setup.instanceName', 'After “TimePulse |”')} — ${languageName(language)}`,
     }, el('input', { type: 'text', name: `title.${language}`, maxlength: '80' }))),
     submit: async (values) => {
       const written = {};
