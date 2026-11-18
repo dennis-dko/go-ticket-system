@@ -26,6 +26,7 @@ func TestTheInstallCardOffersTheAndroidAppAsACode(t *testing.T) {
 	p.readyWorker()
 
 	p.run("open my account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="apps"]`),
 		chromedp.WaitVisible("#install-card", chromedp.ByID))
 	p.waitShown("#install-qr")
 
@@ -63,7 +64,11 @@ func TestTheInstallCardIsNotInTheAndroidApp(t *testing.T) {
 	}), chromedp.Reload())
 	p.settled()
 	p.showView("settings")
-	p.waitShown("#form-my-timezone")
+
+	// On the tab the card would be on, with a card beside it shown, so that the
+	// card not being there is the card's doing rather than the tab's.
+	p.showTabOf("#install-card")
+	p.waitShown("#token-card")
 
 	if p.visible("#install-card") {
 		t.Error("inside the Android app the card offers the Android app")

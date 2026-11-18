@@ -19,6 +19,7 @@ func TestEveryWorkingDayCountsOnceADayIsChosen(t *testing.T) {
 	p.readyWorker()
 
 	p.run("open my account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="work"]`),
 		chromedp.WaitVisible("#form-working-times", chromedp.ByID))
 
 	p.run("choose the day", chromedp.Evaluate(`setDateField(

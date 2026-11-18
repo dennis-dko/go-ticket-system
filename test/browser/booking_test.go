@@ -28,6 +28,7 @@ func TestBookingTimeThroughTheInterface(t *testing.T) {
 
 	p.run("open My account",
 		chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#form-password", chromedp.ByID))
 
 	// Before a key is typed, not after. The form is in the markup, so it is on

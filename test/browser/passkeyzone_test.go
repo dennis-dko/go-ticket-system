@@ -60,6 +60,7 @@ func TestAPasskeySignInDescribesTheAccountInTheInstallationsZone(t *testing.T) {
 	})()`, nil, awaitPromise))
 
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID))
 
 	p.run("register a passkey",

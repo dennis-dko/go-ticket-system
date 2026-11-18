@@ -181,6 +181,7 @@ func TestFollowingTheInstanceZoneNamesTheInstanceZone(t *testing.T) {
 	p.reload()
 
 	p.run("open My account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="work"]`),
 		chromedp.WaitVisible("#my-timezone", chromedp.ByID))
 
 	// Straight to a chosen zone rather than checking the untouched state first.

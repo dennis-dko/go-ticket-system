@@ -25,6 +25,7 @@ func TestChoosingALanguageWaitsForTheScreensToBeDrawnAgain(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("ask for a level the process is not writing", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID),
 		p.click(`#log-levels input[value="DEBUG"]`))
 

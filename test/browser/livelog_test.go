@@ -23,6 +23,7 @@ func TestTheLogViewerFillsWithLines(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID))
 
 	// The level chips are built from what the server reports, so their presence
@@ -70,6 +71,7 @@ func TestPausingTheLogViewer(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID))
 
 	waitForLines(p, "the log viewer never showed a line before pausing")
@@ -146,6 +148,7 @@ func TestResumingAfterABurstSaysLinesWereSkipped(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID))
 
 	waitForLines(p, "the log viewer never showed a line before pausing")

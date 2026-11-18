@@ -31,6 +31,7 @@ func TestEveryOperationalFieldSaysWhatEmptyMeans(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open the card", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-operational", chromedp.ByID))
 
 	var out string

@@ -27,6 +27,7 @@ func TestWhatIsInForceIsStillSaidWhileTheLimitsAreEdited(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open the card", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-operational", chromedp.ByID))
 
 	var before string
@@ -118,6 +119,7 @@ func TestWhatIsInForceIsWrittenTheWayTheReaderWritesNumbers(t *testing.T) {
 	p.chooseLanguage("de")
 
 	p.run("open the card", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-operational", chromedp.ByID))
 
 	p.run("answer with fractions", chromedp.Evaluate(`(() => {
@@ -244,6 +246,7 @@ func TestALimitThatIsSwitchedOffIsSaidToBeOff(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open the card", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-operational", chromedp.ByID))
 	p.waitForText("#operational-effective", "delete limit")
 

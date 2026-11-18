@@ -31,6 +31,7 @@ func TestARevealedPasswordIsHiddenAgainWhenTheSessionEnds(t *testing.T) {
 	p.readyWorker()
 
 	p.run("open My account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#form-password", chromedp.ByID))
 
 	p.run("type a password and look at it", chromedp.Evaluate(`(() => {

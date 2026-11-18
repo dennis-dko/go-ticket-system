@@ -52,6 +52,7 @@ func TestAChosenStatesHolidaysAreMarkedInTheCalendar(t *testing.T) {
 	p.readyWorker()
 
 	p.run("open my account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="work"]`),
 		chromedp.WaitVisible("#form-my-holidays", chromedp.ByID))
 
 	p.waitForNode(`#my-holiday-country option[value="DE"]`)
@@ -97,6 +98,7 @@ func TestTheInstallationsHolidaysStartOnGermany(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-holidays", chromedp.ByID))
 
 	p.waitForNode(`#instance-holidays option[value="BY"]`)

@@ -1071,6 +1071,7 @@ function openTheVersionCard() {
   switchView('admin');
 
   const card = $('#update-card');
+  openTheTabOf(card);
   if (card) card.scrollIntoView({ block: 'center' });
 }
 
@@ -7818,6 +7819,7 @@ async function finishTheProviderRound() {
 function sayWhatTheProviderRoundCameTo(returned) {
   if (returned?.linked) {
     switchView('settings');
+    openTheTabOf($('#openid-card'));
     toast(t('openid.linkedNow', 'Your account is linked. From now on you can sign in through your organisation.'), 'ok');
   } else if (returned?.problem) {
     toast(returned.problem, 'error');
@@ -10933,6 +10935,14 @@ const TOUR_STEPS = [
       + 'hidden button. Tick what the role may do; every account holding it changes with it.'),
   },
   {
+    target: '#settings-tabs',
+    view: 'settings',
+    title: () => t('tour.settingsTabs.title', 'My account, by subject'),
+    text: () => t('tour.settingsTabs.text',
+      'Working time, how you sign in, apps and the calendar, and your data each have a '
+      + 'tab of their own. You only see the tabs that have something for you.'),
+  },
+  {
     target: '#form-working-times',
     view: 'settings',
     title: () => t('tour.account.title', 'My account'),
@@ -10968,6 +10978,38 @@ const TOUR_STEPS = [
       + 'the day you choose; the weeks before it keep the plan they had.'),
   },
   {
+    target: '#form-my-timezone',
+    view: 'settings',
+    title: () => t('tour.myZone.title', 'Your timezone'),
+    text: () => t('tour.myZone.text',
+      'It decides which calendar day a booking lands on. It is taken from your browser the '
+      + 'first time you sign in, and this is where you disagree with that.'),
+  },
+  {
+    target: '#form-my-holidays',
+    view: 'settings',
+    title: () => t('tour.myHolidays.title', 'Your public holidays'),
+    text: () => t('tour.myHolidays.text',
+      'The public holidays where you work: marked in the calendar and on the week, and left '
+      + 'out of your leave. Leave it on the installation\'s unless you work somewhere else.'),
+  },
+  {
+    target: '#form-password',
+    view: 'settings',
+    title: () => t('tour.password.title', 'Your password'),
+    text: () => t('tour.password.text',
+      'Changing it ends every other session but this one. An account that signs in through '
+      + 'the directory has no password here to change.'),
+  },
+  {
+    target: '#totp-card',
+    view: 'settings',
+    title: () => t('tour.totp.title', 'A second factor'),
+    text: () => t('tour.totp.text',
+      'A code from an authenticator app, set up by scanning a QR code - or by typing the '
+      + 'secret, where scanning is not an option.'),
+  },
+  {
     target: '#passkey-card',
     view: 'settings',
     title: () => t('tour.passkey.title', 'Signing in without a password'),
@@ -10995,30 +11037,6 @@ const TOUR_STEPS = [
       + 'installation runs. It shows this interface and reminds you with notifications.'),
   },
   {
-    target: '#form-my-timezone',
-    view: 'settings',
-    title: () => t('tour.myZone.title', 'Your timezone'),
-    text: () => t('tour.myZone.text',
-      'It decides which calendar day a booking lands on. It is taken from your browser the '
-      + 'first time you sign in, and this is where you disagree with that.'),
-  },
-  {
-    target: '#form-my-holidays',
-    view: 'settings',
-    title: () => t('tour.myHolidays.title', 'Your public holidays'),
-    text: () => t('tour.myHolidays.text',
-      'The public holidays where you work: marked in the calendar and on the week, and left '
-      + 'out of your leave. Leave it on the installation\'s unless you work somewhere else.'),
-  },
-  {
-    target: '#totp-card',
-    view: 'settings',
-    title: () => t('tour.totp.title', 'A second factor'),
-    text: () => t('tour.totp.text',
-      'A code from an authenticator app, set up by scanning a QR code - or by typing the '
-      + 'secret, where scanning is not an option.'),
-  },
-  {
     target: '#feed-card',
     view: 'settings',
     permission: 'timesheets:read:own',
@@ -11037,14 +11055,6 @@ const TOUR_STEPS = [
       + 'shown once, when it is created.'),
   },
   {
-    target: '#form-password',
-    view: 'settings',
-    title: () => t('tour.password.title', 'Your password'),
-    text: () => t('tour.password.text',
-      'Changing it ends every other session but this one. An account that signs in through '
-      + 'the directory has no password here to change.'),
-  },
-  {
     target: '#managers-card',
     view: 'settings',
     title: () => t('tour.myManagers.title', 'Who may see your time'),
@@ -11061,31 +11071,13 @@ const TOUR_STEPS = [
       + 'Passwords, second factors, tokens and keys stay out of it.'),
   },
   {
-    target: '#restart-card',
+    target: '#admin-tabs',
     view: 'admin',
     permission: 'settings:manage',
-    title: () => t('tour.restart.title', 'Restarting'),
-    text: () => t('tour.restart.text',
-      'Some settings are read only while the application starts. Saved ones wait here until '
-      + 'a restart applies them, and this is where to restart on purpose.'),
-  },
-  {
-    target: '#update-card',
-    view: 'admin',
-    permission: 'settings:manage',
-    title: () => t('tour.update.title', 'Which version runs here'),
-    text: () => t('tour.update.text',
-      'The version this installation runs, and whether a newer one is out. Where it can '
-      + 'replace itself, it downloads and installs the new one from here.'),
-  },
-  {
-    target: '#form-maintenance',
-    view: 'admin',
-    permission: 'settings:manage',
-    title: () => t('tour.maintenance.title', 'Maintenance mode'),
-    text: () => t('tour.maintenance.text',
-      'Closes the installation with an explanation, shown on the sign-in screen as well - '
-      + 'so somebody who cannot get in is told why rather than left guessing.'),
+    title: () => t('tour.adminTabs.title', 'Settings, by subject'),
+    text: () => t('tour.adminTabs.text',
+      'General settings, how people sign in, how the installation runs, and its logs each '
+      + 'have a tab of their own. The walk opens each one as it gets there.'),
   },
   {
     target: '#form-branding',
@@ -11115,15 +11107,6 @@ const TOUR_STEPS = [
       + 'because every push leaves through the push service of the browser\'s maker.'),
   },
   {
-    target: '#form-operational',
-    view: 'admin',
-    permission: 'settings:manage',
-    title: () => t('tour.limits.title', 'Limits and lifetimes'),
-    text: () => t('tour.limits.text',
-      'How long a session lasts, how many requests a caller may make, and the figures a '
-      + 'new account starts on.'),
-  },
-  {
     target: '#form-timezone',
     view: 'admin',
     permission: 'settings:manage',
@@ -11140,24 +11123,6 @@ const TOUR_STEPS = [
     text: () => t('tour.holidays.text',
       'A country and, where its holidays differ, a state or a region, for everybody who has '
       + 'not chosen their own. Until a choice is saved, nobody keeps any.'),
-  },
-  {
-    target: '#form-datasource',
-    view: 'admin',
-    permission: 'settings:manage',
-    title: () => t('tour.database.title', 'The database'),
-    text: () => t('tour.database.text',
-      'Which database this installation writes to. The connection is tested before it is '
-      + 'saved, and the change applies at the next start.'),
-  },
-  {
-    target: '#form-telemetry',
-    view: 'admin',
-    permission: 'settings:manage',
-    title: () => t('tour.telemetry.title', 'Metrics and tracing'),
-    text: () => t('tour.telemetry.text',
-      'The log level, the metrics endpoint and where traces are exported to. The level applies '
-      + 'at once; the other two are read when the process starts, so they wait for the next one.'),
   },
   {
     target: '#form-ldap',
@@ -11186,6 +11151,60 @@ const TOUR_STEPS = [
       'People can sign in through your organisation\'s provider instead of with a password, '
       + 'once each has linked their account to it. Nobody gets an account just because the '
       + 'provider knows them.'),
+  },
+  {
+    target: '#restart-card',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.restart.title', 'Restarting'),
+    text: () => t('tour.restart.text',
+      'Some settings are read only while the application starts. Saved ones wait here until '
+      + 'a restart applies them, and this is where to restart on purpose.'),
+  },
+  {
+    target: '#update-card',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.update.title', 'Which version runs here'),
+    text: () => t('tour.update.text',
+      'The version this installation runs, and whether a newer one is out. Where it can '
+      + 'replace itself, it downloads and installs the new one from here.'),
+  },
+  {
+    target: '#form-maintenance',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.maintenance.title', 'Maintenance mode'),
+    text: () => t('tour.maintenance.text',
+      'Closes the installation with an explanation, shown on the sign-in screen as well - '
+      + 'so somebody who cannot get in is told why rather than left guessing.'),
+  },
+  {
+    target: '#form-operational',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.limits.title', 'Limits and lifetimes'),
+    text: () => t('tour.limits.text',
+      'How long a session lasts, how many requests a caller may make, and the figures a '
+      + 'new account starts on.'),
+  },
+  {
+    target: '#form-datasource',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.database.title', 'The database'),
+    text: () => t('tour.database.text',
+      'Which database this installation writes to. The connection is tested before it is '
+      + 'saved, and the change applies at the next start.'),
+  },
+  {
+    target: '#form-telemetry',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.telemetry.title', 'Metrics and tracing'),
+    text: () => t('tour.telemetry.text',
+      'The log level, the metrics endpoint and where traces are exported to. The level applies '
+      + 'at once; the other two are read when the process starts, so they wait for the next one.'),
   },
   {
     target: '#changes-card',
@@ -11238,12 +11257,16 @@ function applicableTourSteps() {
  * never mentioned. A step switches to its own screen before it runs, so where
  * somebody is standing right now says nothing about whether the control exists.
  *
- * What does say so is a hidden that is not a screen - a card kept back because
- * there is nothing in it yet, or one a permission removed.
+ * What does say so is a hidden that is not a screen, nor a tab of one - a card
+ * kept back because there is nothing in it yet, or one a permission removed. A
+ * card on a tab that is not chosen is reachable for the same reason one on
+ * another screen is: the step opens its tab before it points at it.
  */
 function tourTargetIsReachable(node) {
   for (let current = node; current && current !== document.body; current = current.parentElement) {
-    if (current.hidden && !current.classList.contains('view')) return false;
+    const aPlaceToGo = current.classList.contains('view') || current.getAttribute('role') === 'tabpanel';
+
+    if (current.hidden && !aPlaceToGo) return false;
   }
 
   return Boolean(node);
@@ -11364,6 +11387,7 @@ async function renderTourStep() {
     return;
   }
 
+  openTheTabOf(node);
   showWhatTheStepPointsAt(node);
 
   node.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -13294,6 +13318,7 @@ function openTheRestartCard() {
   switchView('admin');
 
   const card = $('#restart-card');
+  openTheTabOf(card);
   if (card) card.scrollIntoView({ block: 'center' });
 }
 
@@ -15663,6 +15688,7 @@ function openTheBalanceBounds() {
   switchView('settings');
 
   const form = $('#form-balance-bounds');
+  openTheTabOf(form);
   if (form) form.scrollIntoView({ block: 'center' });
 }
 
@@ -16725,9 +16751,11 @@ function logViewerActive() {
 
   // The sign-in screen being up means there is no session to poll with. Without
   // this the poller keeps asking through a password change - which ends every
-  // session - and paints the screen with authentication failures.
-  return can('settings:manage') && !$('#view-admin').hidden && $('#login-screen').hidden
-    && !document.hidden;
+  // session - and paints the screen with authentication failures. And only on
+  // its own tab: on one that is not chosen it is as unseen as on a screen that
+  // is not.
+  return can('settings:manage') && !$('#view-admin').hidden && !onAHiddenTab(card)
+    && $('#login-screen').hidden && !document.hidden;
 }
 
 function setLogStatus(text) {
@@ -17431,6 +17459,172 @@ function navigationMenuIsOpen() {
   return $('.topbar')?.classList.contains('nav-open') === true;
 }
 
+// ------------------------------------------------------------- screen tabs
+
+/**
+ * Sorts the two long screens, My account and Settings, into their tabs.
+ *
+ * Each had grown to sixteen cards in one column - Settings to well over six
+ * thousand pixels - which is a page somebody scrolls through rather than reads.
+ * A card says which tab it is on with data-tab and keeps its place in the
+ * markup; this moves it into its tab's panel once, in the order the markup has
+ * them, so the order of the markup is still the order on screen within a tab.
+ *
+ * A tab is offered while something on it is shown. Whether a card is shown, and
+ * to whom, is decided by the code that loads it and by the account's rights,
+ * and neither has any business knowing which tab the card is on - so the cards'
+ * own hidden is watched instead of every place that sets it being taught.
+ */
+function arrangeScreenTabs() {
+  for (const strip of $$('.screen-tabs')) {
+    const view = strip.closest('.view');
+    if (!view) continue;
+
+    const cards = $$(':scope > [data-tab]', view);
+
+    for (const card of cards) {
+      $(`[role="tabpanel"][data-card-panel="${card.dataset.tab}"]`, view)?.append(card);
+    }
+
+    for (const tab of $$('[role="tab"]', strip)) {
+      tab.addEventListener('click', () => chooseScreenTab(view, tab.dataset.cardTab));
+    }
+
+    strip.addEventListener('keydown', (event) => walkTheScreenTabs(strip, event));
+
+    const watcher = new MutationObserver(() => offerTheTabsThatHoldSomething(view));
+    for (const card of cards) watcher.observe(card, { attributes: true, attributeFilter: ['hidden'] });
+
+    showScreenTab(view, rememberedScreenTab(view) ?? $('[role="tab"]', strip)?.dataset.cardTab);
+    offerTheTabsThatHoldSomething(view);
+  }
+}
+
+/**
+ * Shows one tab of a screen, and hides the panels of the others.
+ *
+ * Kept for the session, per screen, so a reload comes back to the same tab -
+ * saving a logo reloads the page, and the appearance is not on the first tab of
+ * every screen it could be saved from.
+ */
+function showScreenTab(view, key, { focus = false } = {}) {
+  if (!key) return;
+
+  for (const tab of $$('[role="tab"]', view)) {
+    const chosen = tab.dataset.cardTab === key;
+
+    tab.setAttribute('aria-selected', String(chosen));
+    tab.tabIndex = chosen ? 0 : -1;
+
+    if (chosen && focus) tab.focus();
+  }
+
+  for (const panel of $$('[role="tabpanel"]', view)) {
+    const shown = panel.dataset.cardPanel === key;
+    if (panel.hidden === shown) panel.hidden = !shown;
+  }
+
+  try {
+    sessionStorage.setItem(`timepulse.tab.${view.id}`, key);
+  } catch {
+    // Private browsing refuses storage; the screen then opens on its first tab.
+  }
+}
+
+/**
+ * Changes to another tab of a screen.
+ *
+ * What the tabs left behind showed is let go as it is when the screen itself is
+ * left: on a tab that is not chosen it is just as unseen. A password read in the
+ * clear goes back behind its dots; a token's value, a calendar's secret address
+ * and a second factor's key - each a credential shown once - come off their
+ * cards; and the log stops being read.
+ */
+function chooseScreenTab(view, key, options) {
+  showScreenTab(view, key, options);
+
+  hideEveryRevealedPassword();
+
+  if (onAHiddenTab($('#token-card'))) forgetTheTokenValue();
+  if (onAHiddenTab($('#feed-card'))) forgetTheFeedAddress();
+  if (onAHiddenTab($('#totp-card')) && $('#totp-setup') && !$('#totp-setup').hidden) renderTOTPState();
+
+  if (logViewerActive()) schedulePoll({ immediate: true });
+  else stopLogPolling();
+}
+
+/** The tab a screen last showed in this session, if it still has it. */
+function rememberedScreenTab(view) {
+  let key = null;
+
+  try {
+    key = sessionStorage.getItem(`timepulse.tab.${view.id}`);
+  } catch {
+    return null;
+  }
+
+  if (!key || !/^[a-z]+$/.test(key)) return null;
+
+  return $(`[role="tab"][data-card-tab="${key}"]`, view) ? key : null;
+}
+
+/**
+ * Offers the tabs that have something on them, and only those.
+ *
+ * The chosen one moves to the first left when it empties, and the strip goes
+ * when one tab is all there is: a choice of one says nothing the cards do not.
+ */
+function offerTheTabsThatHoldSomething(view) {
+  const tabs = $$('[role="tab"]', view);
+  let first = null;
+
+  for (const tab of tabs) {
+    const panel = document.getElementById(tab.getAttribute('aria-controls'));
+    const holds = [...(panel?.children ?? [])].some((card) => !card.hidden);
+
+    if (tab.hidden === holds) tab.hidden = !holds;
+    if (holds && !first) first = tab;
+  }
+
+  const strip = $('.screen-tabs', view);
+  const several = tabs.filter((tab) => !tab.hidden).length > 1;
+
+  if (strip && strip.hidden === several) strip.hidden = !several;
+
+  const chosen = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true');
+  if (first && (!chosen || chosen.hidden)) chooseScreenTab(view, first.dataset.cardTab);
+}
+
+/** Moves along a strip with the arrow keys, Home and End, as any tab strip does. */
+function walkTheScreenTabs(strip, event) {
+  const tabs = $$('[role="tab"]', strip).filter((tab) => !tab.hidden);
+  const at = tabs.indexOf(document.activeElement);
+  if (at < 0) return;
+
+  const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: tabs.length - 1 }[event.key];
+  if (to === undefined) return;
+
+  event.preventDefault();
+  chooseScreenTab(strip.closest('.view'), tabs[(to + tabs.length) % tabs.length].dataset.cardTab, { focus: true });
+}
+
+/**
+ * Opens the tab a card is on, for whatever is about to point at it - a banner's
+ * way to a card, or a step of the guided tour. A scroll to an element on a tab
+ * that is not chosen lands nowhere, and a ring drawn round it rings nothing.
+ */
+function openTheTabOf(node) {
+  const panel = node?.closest('[role="tabpanel"]');
+  const view = panel?.closest('.view');
+
+  if (panel?.hidden && view) chooseScreenTab(view, panel.dataset.cardPanel);
+}
+
+/** Whether an element is on a tab of its screen that is not the chosen one. */
+function onAHiddenTab(node) {
+  return Boolean(node?.closest('[role="tabpanel"]')?.hidden);
+}
+
 // --------------------------------------------------------------- bootstrap
 
 // viewTheReaderMayHave answers with the screen asked for, or the welcome screen
@@ -17769,6 +17963,11 @@ async function refreshAll() {
   if (me.user?.mustChangePassword) {
     fillSettingsForm();
     switchView('settings');
+
+    // And on the tab the password is on, which is not the first: a screen of
+    // working hours the server will refuse to save, with the one form that
+    // gets past the block a tab away, is the wizard pointing at nothing.
+    openTheTabOf($('#form-password'));
 
     // Loaded, as far as this account is going to get: the server refuses the
     // rest until the password is replaced, so there is nothing else coming.
@@ -18348,6 +18547,10 @@ async function init() {
   // Beside the password fields, and for the same reason: a field added later is
   // covered without anybody remembering to come back here.
   enhanceDateFields();
+
+  // Before anything is shown or loaded: the cards of the two long screens into
+  // their tabs, so every loader below fills a card where it will stay.
+  arrangeScreenTabs();
 
   // The same again for what the browser says when it refuses a field: bound to
   // the document, so a form drawn later is covered too.

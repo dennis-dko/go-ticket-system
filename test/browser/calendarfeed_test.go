@@ -28,6 +28,7 @@ func TestACalendarAddressIsShownOnceAndTakenBack(t *testing.T) {
 	}).then(() => true)`, nil)
 
 	p.run("open my account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="apps"]`),
 		chromedp.WaitVisible("#feed-card", chromedp.ByID))
 
 	p.waitForText("#feed-state", "No address yet.")
@@ -83,6 +84,7 @@ func TestACalendarAddressIsShownOnceAndTakenBack(t *testing.T) {
 	p.run("go somewhere else and back", p.click(`.tab[data-view="timesheets"]`),
 		chromedp.WaitVisible("#form-timesheet", chromedp.ByID),
 		p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="apps"]`),
 		chromedp.WaitVisible("#feed-card", chromedp.ByID))
 
 	if p.visible("#feed-address") || strings.TrimSpace(p.text("#feed-address-value")) != "" {
@@ -135,6 +137,7 @@ func TestASignOutTakesTheCalendarCardWithIt(t *testing.T) {
 	p.readyWorker()
 
 	p.run("make an address", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="apps"]`),
 		chromedp.WaitVisible("#feed-card", chromedp.ByID),
 		p.click("#feed-create"),
 		chromedp.WaitVisible("#feed-address", chromedp.ByID))

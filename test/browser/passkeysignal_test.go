@@ -45,6 +45,7 @@ func TestAPasskeyThisInstallationRefusedIsDroppedFromTheDevice(t *testing.T) {
 	p.settleWelcome()
 
 	p.run("open My account", chromedp.Click(`.tab[data-view="settings"]`, chromedp.ByQuery),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#passkey-card", chromedp.ByID))
 
 	// The registration's second half is answered here rather than by the server,

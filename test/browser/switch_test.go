@@ -78,6 +78,7 @@ func TestPressingASwitchChangesTheStateUnderneath(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	before := p.switchIsOn(`#form-maintenance input[name="enabled"]`)

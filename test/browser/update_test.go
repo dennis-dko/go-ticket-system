@@ -32,6 +32,7 @@ func TestTheUpdateCardOffersWhatThisDeploymentCanDo(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-card", chromedp.ByID))
 
 	state := p.text("#update-state")
@@ -89,8 +90,11 @@ func TestTheUpdateCardIsOfferedToEverybodyWhoAdministers(t *testing.T) {
 	p.waitGone("#login-screen")
 	p.settleWelcome()
 
+	// The tab the version card is on, with maintenance beside it shown, so that the
+	// card missing would be the card's doing rather than the tab's.
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
-		chromedp.WaitVisible("#form-branding", chromedp.ByID))
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
+		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	if !p.visible("#update-card") {
 		t.Error("somebody who administers the installation and also books time is " +
@@ -112,6 +116,7 @@ func TestTheUpdateCardSaysWhenCheckingIsOff(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-card", chromedp.ByID))
 
 	hint := p.text("#update-hint")
@@ -151,6 +156,7 @@ func TestPressingCheckForUpdatesRaisesTheBannerAsWell(t *testing.T) {
 	p.settleReleaseWatch()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-card", chromedp.ByID))
 
 	if p.visible("#release-banner") {

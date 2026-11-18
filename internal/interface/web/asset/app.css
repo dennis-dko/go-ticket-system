@@ -36,6 +36,12 @@
   --quiet-press: color-mix(in srgb, var(--text) 17%, transparent);
   --ring: color-mix(in srgb, var(--accent) 25%, transparent);
 
+  /* The chosen tab of a screen, lifted off the strip it sits in. The card's own
+     colour in the light theme; a dark one sets its own, because there the card
+     is darker than a strip tinted with the text, and the chosen tab would sink
+     into the strip rather than stand out of it. */
+  --tab-chosen: var(--surface);
+
   /* Log levels. Own variables rather than reusing --danger and --accent:
      a log line is read as a category, and four levels that all render as
      the same two colours cannot be scanned. */
@@ -83,11 +89,13 @@
     --chart-5: #f08579;
     --chart-6: #a294ff;
     --chart-7: #d6b45c;
+    --tab-chosen: color-mix(in srgb, var(--text) 14%, var(--surface));
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
+  --tab-chosen: color-mix(in srgb, var(--text) 14%, var(--surface));
   --bg: #14171a;
   --surface: #1c2126;
   --border: #2c333b;
@@ -1464,6 +1472,45 @@ button.secondary:hover {
 }
 
 button.secondary:active { background: var(--quiet-press); }
+
+/* The tabs of the two long screens, My account and Settings.
+
+   Plain words on a tint of the page, the chosen one lifted onto the card's
+   colour: the navigation above is drawn in the accent, and a second strip of
+   accent under it would read as a second navigation rather than as the parts
+   of this screen. Wrapped rather than scrolled on a narrow window, so that no
+   tab is ever out of sight. Hidden by attribute, which a display rule would
+   otherwise beat. */
+.screen-tabs {
+  background: var(--quiet);
+  border-radius: calc(var(--radius) + 4px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 16px;
+  max-width: 100%;
+  padding: 4px;
+  width: fit-content;
+}
+
+.screen-tab {
+  background: none;
+  color: var(--muted);
+  padding: 7px 14px;
+}
+
+.screen-tab:hover {
+  color: var(--text);
+  filter: none;
+}
+
+.screen-tab[aria-selected="true"] {
+  background: var(--tab-chosen);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 12%, transparent);
+  color: var(--text);
+}
+
+.screen-tabs[hidden], .screen-tab[hidden] { display: none; }
 
 .perms { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; padding: 12px 14px; }
 .perms legend { color: var(--muted); font-size: 12px; padding: 0 6px; text-transform: uppercase; }

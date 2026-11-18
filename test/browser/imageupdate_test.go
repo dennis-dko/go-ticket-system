@@ -48,6 +48,7 @@ func TestTheUpdateCardSaysWhatTheLastImageUpdateCameTo(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-card", chromedp.ByID))
 
 	if !p.visible("#update-image") {
@@ -76,6 +77,7 @@ func TestAWaitForARestartEndsWhenTheAnswerIsThatNoneIsComing(t *testing.T) {
 	// The wait compares start times, so it has to have one: without it the first
 	// look would find a "different" process and end the wait for the wrong reason.
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-card", chromedp.ByID))
 	p.waitEvaluates("the start time is known", `String(Boolean(restartStartedAt))`, "true")
 

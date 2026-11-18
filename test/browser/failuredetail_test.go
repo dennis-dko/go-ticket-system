@@ -28,6 +28,7 @@ func TestAFailedInstallShowsWhatWentWrong(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-card", chromedp.ByID))
 
 	// A build called "dev" is offered no button, so it is shown here; what is

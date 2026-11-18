@@ -62,6 +62,7 @@ func TestAnInstallationWithNoLogoStillHasAMark(t *testing.T) {
 	const dot = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="general"]`),
 		chromedp.WaitVisible("#form-branding", chromedp.ByID))
 	p.settled()
 

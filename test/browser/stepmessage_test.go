@@ -18,6 +18,7 @@ func TestAStepIsTheServersAndSaidInTheScreensWords(t *testing.T) {
 	p := open(t)
 	p.readyWorker()
 	p.showView("settings")
+	p.showTabOf("#form-reminders")
 	p.waitShown("#form-reminders")
 
 	p.run("ask for the stopwatch after two and a half hours",

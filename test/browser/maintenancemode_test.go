@@ -22,6 +22,7 @@ func TestTurningMaintenanceModeOnAndOffFromTheInterface(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	p.run("turn it on",
@@ -59,6 +60,7 @@ func TestTurningMaintenanceModeOnAndOffFromTheInterface(t *testing.T) {
 	p.settleWizard()
 
 	p.run("turn it off", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID),
 		p.click(`#form-maintenance input[name="enabled"]`),
 		p.click(`#form-maintenance button[type="submit"]`),
@@ -89,6 +91,7 @@ func TestTheSignInScreenSaysWhoMaySignInDuringMaintenance(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	p.run("go out of service",
@@ -126,6 +129,7 @@ func TestTheMaintenanceCardNamesEveryoneWhoMayWork(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	said := p.text(`#form-maintenance [data-i18n="maint.who"]`)
@@ -155,6 +159,7 @@ func TestTheMaintenanceQuestionNamesEveryoneWhoMayWork(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	for _, language := range []struct{ code, rule, alone string }{

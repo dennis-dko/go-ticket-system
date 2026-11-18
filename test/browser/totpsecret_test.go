@@ -38,6 +38,7 @@ func TestAnUnfinishedEnrolmentDoesNotSurviveTheSignOut(t *testing.T) {
 	p.readyWorker()
 
 	p.run("start enrolling", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#totp-card", chromedp.ByID),
 		p.click("#totp-begin"),
 		chromedp.WaitVisible("#totp-setup", chromedp.ByID))
@@ -118,6 +119,7 @@ func TestAnEnrolmentUnderWayOutlivesAReloadOfItsScreen(t *testing.T) {
 	p.readyWorker()
 
 	p.run("begin enrolling", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#totp-begin", chromedp.ByID),
 		p.click("#totp-begin"))
 	p.waitShown("#totp-setup")

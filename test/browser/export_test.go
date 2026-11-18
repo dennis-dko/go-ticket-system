@@ -19,6 +19,7 @@ func TestEverythingAboutTheAccountLeavesFromMyAccount(t *testing.T) {
 	p := open(t)
 	p.readyWorker()
 	p.showView("settings")
+	p.showTabOf("#export-me")
 
 	into := t.TempDir()
 

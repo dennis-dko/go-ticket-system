@@ -61,6 +61,7 @@ func TestCheckingForUpdatesGivesTheFocusBack(t *testing.T) {
 	p.settleReleaseWatch()
 
 	p.run("open Settings", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#update-check", chromedp.ByID))
 
 	// An answer that takes a moment, as a feed on the other side of the world does.

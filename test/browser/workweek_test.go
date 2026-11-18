@@ -20,6 +20,7 @@ func TestAWeekIsPlannedFromMyAccount(t *testing.T) {
 	p.readyWorker()
 
 	p.run("open My account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="work"]`),
 		chromedp.WaitVisible("#form-schedule", chromedp.ByID))
 
 	p.waitForValue(`#form-schedule input[name="day0"]`)

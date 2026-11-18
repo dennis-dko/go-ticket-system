@@ -40,6 +40,7 @@ func TestTheBuiltInAdministratorIsToldWhyItHasNoProviderLink(t *testing.T) {
 	p.awaitJSON(`refreshAll().then(() => true)`, nil)
 
 	p.run("open my account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#openid-card", chromedp.ByID))
 
 	p.waitForText("#openid-state", "The built-in administrator signs in with its password")
@@ -76,6 +77,7 @@ func TestAnAccountLinkedToAProviderSignsInThroughIt(t *testing.T) {
 	p.settleWelcome()
 
 	p.run("open my account", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="signin"]`),
 		chromedp.WaitVisible("#openid-card", chromedp.ByID))
 
 	p.waitForText("#openid-state", "Not linked yet.")

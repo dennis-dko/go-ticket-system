@@ -31,6 +31,7 @@ func TestAPausedLogViewerStillSaysSoInAnotherLanguage(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open the log viewer", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="logs"]`),
 		chromedp.WaitVisible("#log-card", chromedp.ByID))
 
 	label := func(when string) string {

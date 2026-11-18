@@ -30,6 +30,7 @@ func TestMaintenanceOnlyAsksWhenItIsBeingSwitchedOn(t *testing.T) {
 	p.readyAdmin()
 
 	p.run("open the card", p.click(`.tab[data-view="admin"]`),
+		p.click(`#admin-tabs [data-card-tab="operation"]`),
 		chromedp.WaitVisible("#form-maintenance", chromedp.ByID))
 
 	// Out of service, answering the question the first time - which is the time it

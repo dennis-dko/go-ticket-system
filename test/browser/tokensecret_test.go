@@ -35,6 +35,7 @@ func TestATokenValueDoesNotOutliveTheScreen(t *testing.T) {
 	p.readyWorker()
 
 	p.run("create a token", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="apps"]`),
 		chromedp.WaitVisible("#form-token", chromedp.ByID),
 		chromedp.SendKeys(`#form-token input[name="name"]`, "Reader", chromedp.ByQuery),
 		p.click(`#form-token button[type="submit"]`),
@@ -105,6 +106,7 @@ func TestATokenValueDoesNotOutliveTheScreen(t *testing.T) {
 
 	// And the half that belongs to the account.
 	p.run("back to the card", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="apps"]`),
 		chromedp.WaitVisible("#form-token", chromedp.ByID))
 
 	p.run("sign out", p.click("#logout"),
@@ -134,6 +136,7 @@ func TestARevokedTokensValueLeavesTheCard(t *testing.T) {
 	p.readyWorker()
 
 	p.run("make a token", p.click(`.tab[data-view="settings"]`),
+		p.click(`#settings-tabs [data-card-tab="apps"]`),
 		chromedp.WaitVisible("#form-token", chromedp.ByID),
 		chromedp.SendKeys(`#form-token input[name="name"]`, "Mistake", chromedp.ByQuery),
 		p.click(`#form-token button[type="submit"]`),
