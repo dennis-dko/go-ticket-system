@@ -903,6 +903,11 @@ button.danger:not(.link) {
 /* Scrolls inside itself rather than widening the page. */
 .table-wrap { overflow-x: auto; }
 
+/* The buttons under a result table - the report's, the overtime's, the
+   statement's exports - stand clear of its last line. Directly on it they read
+   as part of the table rather than of the card. */
+.table-wrap + .row { margin-top: 16px; }
+
 table { border-collapse: collapse; width: 100%; }
 
 /* Eight pixels a side rather than ten: the accounts table has eight columns, and
