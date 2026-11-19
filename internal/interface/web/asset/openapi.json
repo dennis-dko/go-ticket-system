@@ -3083,6 +3083,244 @@
         }
       }
     },
+    "/settings/backups": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read the backup card",
+        "description": "The plan, the backups kept on the server, newest first, and whether one can be made - which takes BACKUP_PASSPHRASE of at least twelve characters on the server. Needs settings:manage, because a backup is the whole installation.",
+        "responses": {
+          "200": {
+            "description": "The card",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "minPassphraseLength": {
+                      "type": "integer"
+                    },
+                    "folder": {
+                      "type": "string"
+                    },
+                    "schedule": {
+                      "type": "string"
+                    },
+                    "keep": {
+                      "type": "integer"
+                    },
+                    "maxKeep": {
+                      "type": "integer"
+                    },
+                    "backups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "integer"
+                          },
+                          "made": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Make a backup now",
+        "description": "Reads every table but the sessions in one moment, seals it with BACKUP_PASSPHRASE, keeps it in BACKUP_DIR and removes the oldest past the number the plan keeps. Answers with the backup kept, to be downloaded. Refused as backupNeedsPassphrase where the server has no passphrase. Recorded in the administration log.",
+        "responses": {
+          "200": {
+            "description": "Made and kept",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer"
+                    },
+                    "made": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No BACKUP_PASSPHRASE of at least twelve characters"
+          }
+        }
+      }
+    },
+    "/settings/backups/plan": {
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Save when backups are made",
+        "description": "A five-field cron expression read in the installation’s timezone - empty makes no backup on its own - and how many backups are kept. A schedule the scheduler could not read is refused rather than stored. Answers with the whole card. Recorded in the administration log.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schedule": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "keep": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "minPassphraseLength": {
+                      "type": "integer"
+                    },
+                    "folder": {
+                      "type": "string"
+                    },
+                    "schedule": {
+                      "type": "string"
+                    },
+                    "keep": {
+                      "type": "integer"
+                    },
+                    "maxKeep": {
+                      "type": "integer"
+                    },
+                    "backups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "integer"
+                          },
+                          "made": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A schedule that would never run, or a number outside 1 to 365"
+          }
+        }
+      }
+    },
+    "/settings/backups/{name}": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Download a backup",
+        "description": "The sealed file, as it is kept. Recorded in the administration log, because it is a copy of the whole installation leaving the server.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^timepulse-\\d{8}-\\d{6}\\.tpbak$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The backup",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No backup of that name"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Delete a backup",
+        "description": "Removes the file from the server. Recorded in the administration log.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^timepulse-\\d{8}-\\d{6}\\.tpbak$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "No backup of that name"
+          }
+        }
+      }
+    },
     "/settings/managers": {
       "get": {
         "tags": [

@@ -55,6 +55,14 @@ services:
       # backed up somewhere other than beside the database.
       SECRET_KEY: ${SECRET_KEY:-}
 
+      # Seals every backup the application makes, by hand or on its schedule;
+      # without twelve characters or more none is made. Keep it where SECRET_KEY
+      # is kept: a backup is restored with both. See "Backup" in OPERATION.md.
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+
+      # On the app-data volume below, so a recreated container keeps them.
+      BACKUP_DIR: /data/backups
+
     ports:
       # Bound to the loopback interface, not 0.0.0.0: without TLS in front,
       # publishing this to the network would serve session cookies in the
@@ -63,8 +71,9 @@ services:
       - "127.0.0.1:8000:8000"
 
     volumes:
-      # Only used if DB_DIALECT is ever switched back to sqlite, but a volume
-      # costs nothing and its absence would cost the data.
+      # The backups in BACKUP_DIR, and the database file if DB_DIALECT is ever
+      # switched back to sqlite. A volume costs nothing; its absence would cost
+      # both.
       - app-data:/data
 
     healthcheck:

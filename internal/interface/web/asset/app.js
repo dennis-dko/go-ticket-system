@@ -493,6 +493,7 @@ const FIELD_NAMES = {
   hours: 'Hours',
   hourlyRate: 'Hourly rate',
   id: 'ID',
+  keep: 'Backups kept',
   kind: 'Reason',
   language: 'Language',
   ldapSyncMaxDeleteRatio: 'Deletion limit',
@@ -508,6 +509,7 @@ const FIELD_NAMES = {
   rateLimit: 'Rate limit',
   rateLimitWindowSeconds: 'Rate limit window (seconds)',
   role: 'Role',
+  schedule: 'Schedule',
   sessionIdleMinutes: 'Sign out after inactivity (minutes)',
   sessionLifetimeHours: 'Session lifetime (hours)',
   startDate: 'Start',
@@ -8855,6 +8857,10 @@ const CHANGE_SENTENCES = {
   'installation.restart': () => t('change.restart', 'Restarted the application'),
   'installation.update': () => t('change.update', 'Started an update'),
   'installation.setup': () => t('change.setup', 'Completed the setup'),
+  'installation.backup': () => t('change.backup', 'Made a backup'),
+  'installation.backupDownloaded': () => t('change.backupDownloaded', 'Downloaded a backup'),
+  'installation.backupDeleted': () => t('change.backupDeleted', 'Deleted a backup'),
+  'settings.backup': () => t('change.backupPlan', 'Changed when backups are made'),
 };
 
 /** One change as a sentence: what was done, to whom, and the value it kept. */

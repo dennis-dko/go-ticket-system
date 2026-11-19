@@ -120,6 +120,24 @@ var (
 	ErrCutShort = errors.New("the backup ends before its last line; it was cut short")
 )
 
+// ErrNotABackupHeader says the first line of what was opened is not a backup's.
+var ErrNotABackupHeader = errors.New("the file opened, and what it holds is not a TimePulse backup")
+
+// ReadBackupHeader reads a backup's first line and nothing more, for saying what
+// a backup is before anything is restored from it.
+func ReadBackupHeader(r io.Reader) (BackupHeader, error) {
+	var header BackupHeader
+	if err := json.NewDecoder(r).Decode(&header); err != nil {
+		return header, ErrNotABackupHeader
+	}
+
+	if header.Format != backupFormat || header.Version != backupVersion {
+		return header, ErrNotABackupHeader
+	}
+
+	return header, nil
+}
+
 // SchemaVersion is the newest migration applied to the database.
 func SchemaVersion(ctx context.Context, db DB) (int64, error) {
 	var version sql64

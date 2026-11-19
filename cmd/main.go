@@ -43,6 +43,7 @@ import (
 	"github.com/dennis-dko/timepulse/internal/interface/api/v1/rest"
 	"github.com/dennis-dko/timepulse/internal/interface/installer"
 	"github.com/dennis-dko/timepulse/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/support/backup"
 	"github.com/dennis-dko/timepulse/internal/support/hosting"
 	"github.com/dennis-dko/timepulse/internal/support/security"
 )
@@ -1011,6 +1012,30 @@ func main() {
 		return name
 	})
 
+	// Backups of the whole installation, sealed with BACKUP_PASSPHRASE and kept in
+	// BACKUP_DIR, on the schedule saved on their card, read in the installation's
+	// timezone. deploy/OPERATION.md says where the folder belongs.
+	backups := appservice.NewBackupService(settingsRepo,
+		func(ctx context.Context, w io.Writer) (int64, error) {
+			schema, err := sqldb.SchemaVersion(ctx, db)
+			if err != nil {
+				return 0, err
+			}
+
+			return sqldb.Dump(ctx, db, sqldb.BackupHeader{
+				Application: version, Dialect: cfg.Dialect, Schema: schema, CreatedAt: time.Now().UTC(),
+			}, w)
+		},
+		backup.NewDirectory(cfg.BackupDir), cfg.BackupPassphrase,
+		func(ctx context.Context) *time.Location {
+			zone, err := time.LoadLocation(instanceTimezone(ctx))
+			if err != nil {
+				return time.UTC
+			}
+
+			return zone
+		})
+
 	// In the language that asked, where there is one. An installation that has
 	// named itself in German and is read in German should not be signed off in
 	// English at the foot of its own evaluation.
@@ -1065,6 +1090,7 @@ func main() {
 			// application is not the thing granted it.
 			WithImageUpdater(imageupdate.New(os.Getenv("TIMEPULSE_UPDATE_REQUESTS"))).
 			WithConnection(ds),
+		Backups:    rest.NewBackupHandler(backups, authorizer),
 		Timers:     rest.NewTimerHandler(timers, authorizer, instanceTimezone),
 		Schedules:  rest.NewScheduleHandler(workWeeks, authorizer),
 		Templates:  rest.NewTemplateHandler(templates, authorizer),
@@ -1118,6 +1144,20 @@ func main() {
 	app.AddCronJob("* * * * *", "web-push", func(ctx *gofr.Context) {
 		if err := push.PushDue(ctx, time.Now()); err != nil {
 			ctx.Logger.Errorf("pushing reminders: %v", err)
+		}
+	})
+
+	// Backups on the plan saved on their card, asked every minute rather than
+	// handed to the scheduler: the scheduler takes its jobs once, at the start,
+	// and a schedule saved on the card has to apply without a restart.
+	app.AddCronJob("* * * * *", "backup", func(ctx *gofr.Context) {
+		made, err := backups.RunDue(ctx, time.Now())
+
+		switch {
+		case err != nil:
+			ctx.Logger.Errorf("the scheduled backup was not made: %v", err)
+		case made:
+			ctx.Logger.Infof("made the scheduled backup")
 		}
 	})
 
