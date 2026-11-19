@@ -536,6 +536,38 @@ func serverEnv(t *testing.T, dsn string) (env []string, driver, driverConn strin
 	return env, dialect, driverDSN(dialect, user, password, host, port, name)
 }
 
+// FreshDatasource is a connection the installer can be told about, in the words
+// of its answer: a database of its own on the server the suite runs against, or
+// a SQLite file in the instance's directory where the suite runs on SQLite. It is
+// how a case that goes through the installer runs on every dialect the suite
+// does rather than always on SQLite.
+func FreshDatasource(t *testing.T) map[string]string {
+	t.Helper()
+
+	dsn := os.Getenv(DSNEnv)
+	if dsn == "" {
+		return map[string]string{"dialect": "sqlite", "name": "chosen"}
+	}
+
+	env, _, _ := serverEnv(t, dsn)
+
+	fields := map[string]string{
+		"DB_DIALECT": "dialect", "DB_HOST": "host", "DB_PORT": "port", "DB_USER": "user",
+		"DB_PASSWORD": "password", "DB_NAME": "name", "DB_SSL_MODE": "sslMode",
+	}
+
+	answer := map[string]string{}
+
+	for _, pair := range env {
+		key, value, _ := strings.Cut(pair, "=")
+		if field, known := fields[key]; known {
+			answer[field] = value
+		}
+	}
+
+	return answer
+}
+
 // driverDSN builds the connection string each driver expects. They disagree:
 // lib/pq takes a URL, go-sql-driver/mysql takes user:pass@tcp(host:port)/name.
 func driverDSN(dialect, user, password, host, port, name string) string {

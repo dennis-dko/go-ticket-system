@@ -92,6 +92,10 @@ const (
 	// browser subscribed before push was switched off is reached again once it is
 	// back on.
 	SettingWebPushKey = "instance.push.key"
+
+	// SettingBackupPlan is when backups are made on their own and how many are
+	// kept, as a BackupPlan. Nothing stored is no schedule, which is how it ships.
+	SettingBackupPlan = "instance.backup"
 )
 
 // Branding is the instance's own labelling, editable by the administrator.

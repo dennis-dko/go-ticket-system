@@ -237,6 +237,20 @@
       TimePulse out.
     </p>
 
+    <!-- Opened here first, so a wrong passphrase is said on this page; restored by
+         the application once it has migrated the database, and only into an empty
+         one. Demo data or a backup, never both. -->
+    <label class="check"><input type="checkbox" id="restore"><span data-i18n="db.restore">Restore a backup into it</span></label>
+    <div id="restore-fields" hidden>
+      <label data-i18n="db.restoreFile">Backup file<input type="file" id="restore-file" accept=".tpbak"></label>
+      <label data-i18n="db.restorePassphrase">The backup's passphrase<input type="password" id="restore-passphrase" autocomplete="off"></label>
+      <p class="muted" data-i18n="db.restoreText">
+        The BACKUP_PASSPHRASE of the installation the backup comes from. Every
+        account, hour and setting comes back with it; start this installation with
+        that installation's SECRET_KEY, or the second factors in it cannot be read.
+      </p>
+    </div>
+
     <div class="row">
       <button type="button" class="secondary" id="test" data-i18n="action.test">Test connection</button>
       <button type="submit" id="save" data-i18n="action.save">Save and start</button>
@@ -608,18 +622,72 @@
     }
   });
 
+  // A backup or demo data, never both: the demo goes into an empty database, and
+  // after a restore there is none.
+  $('restore').addEventListener('change', () => {
+    const restoring = $('restore').checked;
+
+    $('restore-fields').hidden = !restoring;
+    $('demo').disabled = restoring;
+    if (restoring) $('demo').checked = false;
+  });
+
+  /**
+   * Sends the backup to be opened once, before a database is chosen for it.
+   *
+   * The file as it is, and the passphrase as base64 of its UTF-8 in a header: a
+   * browser sends only Latin-1 there, and a passphrase may hold anything.
+   */
+  async function uploadBackup() {
+    const file = $('restore-file').files[0];
+    if (!file) throw new Error(t('err.noBackupChosen', 'Choose the backup file to restore.'));
+
+    let binary = '';
+    for (const byte of new TextEncoder().encode($('restore-passphrase').value)) {
+      binary += String.fromCharCode(byte);
+    }
+
+    let res;
+
+    try {
+      res = await fetch('/install/backup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'X-Setup-Token': $('token').value.trim(),
+          'X-Backup-Passphrase': btoa(binary),
+        },
+        body: file,
+      });
+    } catch {
+      throw new Error(t('msg.unreachable',
+        'The server could not be reached. Check the connection and try again.'));
+    }
+
+    let body = {};
+    try { body = await res.json(); } catch { /* a non-JSON error page */ }
+
+    if (!res.ok) throw new Error(refusal(body, res.status));
+  }
+
   $('form').addEventListener('submit', async (event) => {
     event.preventDefault();
 
     if (working) return;
 
     busy(true);
-    say(t('msg.saving', 'Saving…'));
 
     try {
+      if ($('restore').checked) {
+        say(t('msg.reading', 'Reading the backup…'));
+        await uploadBackup();
+      }
+
+      say(t('msg.saving', 'Saving…'));
+
       // The language goes with the question, so demo data is written in the
       // words this page was read in.
-      await call('/install/save', { demo: $('demo').checked, language });
+      await call('/install/save', { demo: $('demo').checked, restore: $('restore').checked, language });
       say(t('msg.saved',
         'Saved. The application is starting — this page will reload when it answers.'), 'good');
       waitForTheApplication();

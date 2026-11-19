@@ -22,6 +22,7 @@ type Handlers struct {
 	Logs       *rest.LogHandler
 	Restart    *rest.RestartHandler
 	Update     *rest.UpdateHandler
+	Backups    *rest.BackupHandler
 	Timers     *rest.TimerHandler
 	Schedules  *rest.ScheduleHandler
 	Templates  *rest.TemplateHandler
@@ -140,6 +141,11 @@ func RegisterRoutes(app *gofr.App, h Handlers) {
 	app.GET(base+"/settings/update", h.Update.State)
 	app.POST(base+"/settings/update", h.Update.Apply)
 	app.POST(base+"/settings/update/check", h.Update.Check)
+	app.GET(base+"/settings/backups", h.Backups.State)
+	app.POST(base+"/settings/backups", h.Backups.Make)
+	app.PUT(base+"/settings/backups/plan", h.Backups.SavePlan)
+	app.GET(base+"/settings/backups/{name}", h.Backups.Download)
+	app.DELETE(base+"/settings/backups/{name}", h.Backups.Delete)
 
 	// The process log. Under /admin rather than /settings because it changes
 	// nothing - and behind the built-in administrator, because it carries

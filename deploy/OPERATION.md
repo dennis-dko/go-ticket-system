@@ -1411,8 +1411,83 @@ which is a different kind of decision from changing a setting.
 
 ## Backup
 
-There is **no backup feature in the application**. No button, no endpoint, no
-permission. It is external, and what to copy depends on the dialect.
+The application makes its own backups, on the **Backups** card under *Settings*,
+on the operation tab: one now, downloaded as soon as it is made, or on a schedule
+saved on the card and kept on the server, the oldest going once there are more
+than the number set there.
+
+**Every backup is sealed with `BACKUP_PASSPHRASE`.** Without one of at least
+twelve characters none is made - the card says so instead - because a backup is
+downloaded, and a download ends up on a laptop: an unsealed one is not offered.
+The file is compressed and encrypted with AES-256-GCM under a key scrypt derives
+from the passphrase; without the passphrase it is unreadable, and with any byte
+changed it is refused whole.
+
+```bash
+openssl rand -base64 24    # a passphrase, for .env
+```
+
+**What a backup holds.** Every table: accounts, roles and permissions, projects,
+time entries and their history, running timers, absences, plans and templates,
+tokens and passkeys, the administration log, and the whole settings table -
+branding and the logo, the timezone, the directory configuration including its
+bind password. Not the sessions: after a restore everybody signs in again.
+Second factors and the directory password are sealed with `SECRET_KEY` where one
+is set, and stay sealed inside the backup, so a restore needs that `SECRET_KEY`
+too. Keep the passphrase and the key together, and somewhere other than the
+server whose backups they open.
+
+**Where they are kept.** `BACKUP_DIR`: `backups` beside `configs/` for a binary,
+`/data/backups` on the `app-data` volume under Compose. Each file is named for
+the moment it was made, in UTC - `timepulse-20261119-030000.tpbak`. That folder
+is on the server the backups are of, so copy it off the server, or download the
+files: a backup that burns with the disk it describes is not one.
+
+**The schedule** is a five-field cron expression - `0 3 * * *` is three every
+morning - read in the installation's timezone set under *Settings*, not the
+server's clock. Empty makes no backup on its own. After every backup, made on
+schedule or by hand, the oldest go until the number on the card is left.
+
+Making, downloading and deleting a backup, and changing the plan, are in the
+administration log; a download is a copy of the whole installation leaving the
+server.
+
+### Restoring a backup
+
+A backup is restored through the **installer**, into an **empty** database of
+any dialect - one made on SQLite restores into PostgreSQL, and the other way
+round:
+
+1. Start TimePulse so that it serves its installer, with the `SECRET_KEY` the
+   backup's installation had. A binary or a bare container serves it when no
+   database is configured (see *First start*). Compose configures one itself, so
+   run the application once without it, against a database volume that is new
+   and empty:
+
+   ```bash
+   docker compose run --rm --service-ports -e DB_DIALECT= app
+   ```
+
+   The installer fills in the rest of the connection from `.env`, and prints its
+   setup token in that terminal.
+2. Choose the database, tick *Restore a backup into it*, choose the file and type
+   its `BACKUP_PASSPHRASE`. The installer opens it there and then, so a wrong
+   passphrase or a file that is not a backup is said on that page.
+3. *Save and start*. The application migrates the database and puts the backup
+   into it before anything else, and everybody signs in with the passwords they
+   had. Under Compose, stop that run once it has started - Ctrl+C - and bring the
+   stack up as usual with `docker compose up -d`.
+
+A restore refuses a database that already holds an account, and a backup made
+by a newer version of TimePulse than the one restoring it. It is one
+transaction, so a backup that fails part of the way leaves the database as the
+migrations made it - and the connection the installer saved is removed again, so
+the next start serves the installer and it can be tried once more.
+
+### Backing up from outside
+
+A server-side dump of the database is a backup too, and the one to use where
+something outside the application already takes them.
 
 **PostgreSQL or MySQL** — everything is in that server: accounts, roles and their
 permissions, projects, time entries, running timers, sessions, API tokens,
@@ -1443,14 +1518,14 @@ sqlite3 /data/timepulse.db ".backup '/backup/timepulse-$(date +%F).db'"
 
 Add `configs/.env` and any `APP_ENV` overlay if the deployment uses one.
 
-**Dump before an upgrade.** Migrations run at start-up, and they run forward
-only.
+**Back up before an upgrade** - on the card, or with a dump. Migrations run at
+start-up, and they run forward only.
 
 ## Upgrading
 
 ```bash
 # A · B
-TIMEPULSE_VERSION=v1.3.0 docker compose up -d      # after a dump
+TIMEPULSE_VERSION=v1.3.0 docker compose up -d      # after a backup
 
 # C
 systemctl stop timepulse && cp timepulse-web_v1.3.0_linux_amd64 /opt/timepulse/timepulse-web && systemctl start timepulse

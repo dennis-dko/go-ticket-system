@@ -197,6 +197,7 @@ var numberRules = map[string]numberRule{
 	"form-working-times/dailyTargetHours": {"0", figure(model.HoursPerDay), "any"},
 	"form-working-times/maxDailyHours":    {"0", figure(model.HoursPerDay), "any"},
 	"form-reminders/timerAlertHours":      {"0", figure(model.MaxTimerAlertHours), "1"},
+	"form-backup-plan/keep":               {"1", figure(model.MaxBackupsKept), "1"},
 	"form-operational/sessionLifetimeHours": {
 		figure(model.MinSessionLifetimeHours), figure(model.MaxSessionLifetimeHours), "any",
 	},
