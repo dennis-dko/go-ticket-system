@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -102,22 +104,75 @@ fun Card(title: String, content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-/** Band is the card's dark band: the mark on its emblem and a heading, over the accent's line. */
+/**
+ * SignInBand is the web interface's sign-in band, measure for measure: app.css's
+ * .login-band, .login-emblem, .login-mark and the band's heading, which a test in
+ * internal/interface/mobile holds these to. The maintainer asked for the connect
+ * card to draw the mark exactly as the sign-in card does.
+ */
+private object SignInBand {
+    val top = 12.dp
+    val end = 28.dp
+    val bottom = 12.dp
+    val start = 12.dp
+    val rowGap = 14.dp
+    val gap = 24.dp
+    val emblemPadding = 6.dp
+    val emblemCorner = 8.dp
+    val mark = 96.dp
+    val heading = 26.sp
+}
+
+/**
+ * Band is the card's dark band: the mark on its white field and a heading, over
+ * the accent's line.
+ *
+ * The heading stands beside the mark while ten ems of room are left for it and
+ * under it once they are not, as the web's band wraps: on a telephone the mark
+ * alone takes most of the width, and the words squeezed beside it would read one
+ * to a line.
+ */
 @Composable
 private fun Band(title: String) {
     val tones = LocalTones.current
+    val density = LocalDensity.current
 
     Column {
-        Row(
-            Modifier.fillMaxWidth().background(Tones.band).padding(start = 12.dp, top = 12.dp, end = 20.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        BoxWithConstraints(
+            Modifier
+                .fillMaxWidth()
+                .background(Tones.band)
+                .padding(start = SignInBand.start, top = SignInBand.top, end = SignInBand.end, bottom = SignInBand.bottom),
         ) {
-            Box(Modifier.clip(corners).background(tones.surface).padding(6.dp)) { Mark(36.dp) }
-            Spacer(Modifier.size(16.dp))
-            Text(title, color = Color.White, fontSize = 22.sp, lineHeight = 28.sp)
+            val field = SignInBand.mark + SignInBand.emblemPadding * 2
+            val beside = maxWidth - field - SignInBand.gap >= with(density) { (SignInBand.heading * 10).toDp() }
+
+            val emblem: @Composable () -> Unit = {
+                Box(Modifier.clip(RoundedCornerShape(SignInBand.emblemCorner)).background(tones.surface).padding(SignInBand.emblemPadding)) {
+                    Mark(SignInBand.mark)
+                }
+            }
+
+            if (beside) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SignInBand.gap)) {
+                    emblem()
+                    Heading(title, Modifier.weight(1f))
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(SignInBand.rowGap)) {
+                    emblem()
+                    Heading(title, Modifier)
+                }
+            }
         }
         Spacer(Modifier.fillMaxWidth().height(5.dp).background(tones.accent))
     }
+}
+
+/** Heading is the band's words, white on its dark, as large as the sign-in card's welcome. */
+@Composable
+private fun Heading(title: String, modifier: Modifier) {
+    Text(title, color = Color.White, fontSize = SignInBand.heading, lineHeight = SignInBand.heading * 1.25f, modifier = modifier)
 }
 
 /**
