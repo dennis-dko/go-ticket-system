@@ -1814,22 +1814,24 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   align-items: center;
   column-gap: 10px;
   display: grid;
-  grid-template-columns: 32px 1fr 32px;
+  grid-template-columns: 40px 1fr 40px;
   min-width: 168px;
-  padding: 3px;
+  padding: 4px;
 }
 
 .login-submit::after { content: ""; }
 
 /* The button's two colours swapped, so it reads as part of the button in both
- * themes: a white box with a blue tick on light, a dark box on dark. */
+ * themes: white with a blue tick on light, dark on dark. Round, and as far from
+ * the edge on every side, so it follows the pill's round end: as a square it
+ * stood there as a box glued on, and read as a tick box. */
 .login-tick {
   align-items: center;
   background: var(--accent-text);
-  border-radius: 6px;
+  border-radius: 50%;
   color: var(--accent);
   display: flex;
-  height: 32px;
+  height: 40px;
   justify-content: center;
   order: -1;
 }

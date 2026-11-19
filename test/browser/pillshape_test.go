@@ -90,3 +90,49 @@ func TestNoButtonIsStretchedPastAControlsHeight(t *testing.T) {
 			strings.Join(found, "\n\t"))
 	}
 }
+
+// The tick on the sign-in button follows the button's rounded end.
+//
+// It was a square on a button whose ends were square too. Once the buttons
+// became pills it stood in a round end as a box glued on, its corners reaching
+// for the curve, and read as a tick box somebody could press. A round tick,
+// as far from the edge on every side, is part of the button's shape: so it is
+// asked to be round, and to keep the same distance from the button's outline at
+// its left as above and below it.
+func TestTheSignInTickFollowsTheButtonsRoundEnd(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.run("wait for the sign-in form", chromedp.WaitVisible("#form-login .login-submit", chromedp.ByQuery))
+
+	var shape struct {
+		Round bool    `json:"round"`
+		Left  float64 `json:"left"`
+		Top   float64 `json:"top"`
+		Below float64 `json:"below"`
+	}
+
+	p.evalJSON(`JSON.stringify((() => {
+		const button = document.querySelector('#form-login .login-submit');
+		const tick = button.querySelector('.login-tick');
+		const b = button.getBoundingClientRect();
+		const k = tick.getBoundingClientRect();
+		const corner = parseFloat(getComputedStyle(tick).borderTopLeftRadius);
+
+		return {
+			round: Math.abs(k.width - k.height) < 1 && corner >= k.width / 2 - 0.5,
+			left: k.left - b.left,
+			top: k.top - b.top,
+			below: b.bottom - k.bottom,
+		};
+	})())`, &shape)
+
+	if !shape.Round {
+		t.Error("the tick on the sign-in button is not round, so it stands in the button's round end as a box")
+	}
+
+	if d := shape.Left - shape.Top; d > 1 || d < -1 || shape.Top-shape.Below > 1 || shape.Below-shape.Top > 1 {
+		t.Errorf("the tick is %.1fpx from the button's left, %.1fpx from its top and %.1fpx from its bottom; "+
+			"a tick that follows the round end is as far from it on every side", shape.Left, shape.Top, shape.Below)
+	}
+}
