@@ -2,6 +2,7 @@ package harness
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -280,6 +281,43 @@ func StartUnconfigured(t *testing.T, env ...string) *App {
 // - for SQLite - its database file live.
 func (a *App) Dir() string { return a.dir }
 
+// Dialect is the database this instance runs on, in DB_DIALECT's words, which
+// are also the names of the drivers DB opens it with.
+func (a *App) Dialect() string { return a.dbDriver }
+
+// Command runs the instance's binary once more beside it, in the directory it
+// runs in and with the environment it was started with - the way a command an
+// operator types on the server finds the configuration the server reads. It
+// answers with what the command printed and its exit code.
+func (a *App) Command(t *testing.T, args ...string) (stdout, stderr string, code int) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, a.cmd.Path, args...)
+	cmd.Dir = a.cmd.Dir
+	cmd.Env = a.cmd.Env
+
+	var out, errOut bytes.Buffer
+
+	cmd.Stdout, cmd.Stderr = &out, &errOut
+
+	err := cmd.Run()
+
+	var exit *exec.ExitError
+
+	switch {
+	case err == nil:
+	case errors.As(err, &exit):
+		code = exit.ExitCode()
+	default:
+		t.Fatalf("cannot run %s %v: %v", a.cmd.Path, args, err)
+	}
+
+	return out.String(), errOut.String(), code
+}
+
 // Terminate sends the instance the signal a service manager stops it with and
 // returns at once, for a case with something to do while it stops. Windows
 // cannot deliver the signal, and says so in the error.
@@ -496,6 +534,38 @@ func serverEnv(t *testing.T, dsn string) (env []string, driver, driverConn strin
 	}
 
 	return env, dialect, driverDSN(dialect, user, password, host, port, name)
+}
+
+// FreshDatasource is a connection the installer can be told about, in the words
+// of its answer: a database of its own on the server the suite runs against, or
+// a SQLite file in the instance's directory where the suite runs on SQLite. It is
+// how a case that goes through the installer runs on every dialect the suite
+// does rather than always on SQLite.
+func FreshDatasource(t *testing.T) map[string]string {
+	t.Helper()
+
+	dsn := os.Getenv(DSNEnv)
+	if dsn == "" {
+		return map[string]string{"dialect": "sqlite", "name": "chosen"}
+	}
+
+	env, _, _ := serverEnv(t, dsn)
+
+	fields := map[string]string{
+		"DB_DIALECT": "dialect", "DB_HOST": "host", "DB_PORT": "port", "DB_USER": "user",
+		"DB_PASSWORD": "password", "DB_NAME": "name", "DB_SSL_MODE": "sslMode",
+	}
+
+	answer := map[string]string{}
+
+	for _, pair := range env {
+		key, value, _ := strings.Cut(pair, "=")
+		if field, known := fields[key]; known {
+			answer[field] = value
+		}
+	}
+
+	return answer
 }
 
 // driverDSN builds the connection string each driver expects. They disagree:

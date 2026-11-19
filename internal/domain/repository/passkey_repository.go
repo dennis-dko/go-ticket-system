@@ -27,4 +27,12 @@ type PasskeyRepository interface {
 	// Delete removes one credential, scoped to its owner so nobody can revoke
 	// somebody else's by guessing an id.
 	Delete(ctx context.Context, id, userID uint) error
+
+	// DeleteForUser removes every credential of one account, for the phone that
+	// held them having gone missing.
+	DeleteForUser(ctx context.Context, userID uint) error
+
+	// Holders names the accounts that hold at least one credential, so the
+	// account list can say whose there are without asking once per account.
+	Holders(ctx context.Context) (map[uint]bool, error)
 }

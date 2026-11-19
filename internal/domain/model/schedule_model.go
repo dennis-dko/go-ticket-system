@@ -3,6 +3,7 @@ package model
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ScheduleFields is how many components a schedule has: minute, hour, day of
@@ -119,4 +120,70 @@ func validScheduleNumber(item string, minimum, maximum int) bool {
 	value, err := strconv.Atoi(item)
 
 	return err == nil && value >= minimum && value <= maximum
+}
+
+// ScheduleMatches reports whether a schedule names the minute a moment falls in,
+// read in the moment's own zone. An empty or invalid schedule names none.
+//
+// It reads a schedule the way the framework's scheduler does, so a schedule
+// written for one runs the same in the other: a day of the month and a day of
+// the week are alternatives when both are given, and only the one that is given
+// counts when the other is a star.
+func ScheduleMatches(expression string, at time.Time) bool {
+	if strings.TrimSpace(expression) == "" || !ValidSchedule(expression) {
+		return false
+	}
+
+	fields := strings.Fields(expression)
+
+	in := func(field int, value int) bool {
+		return scheduleNames(fields[field], scheduleBounds[field][0], scheduleBounds[field][1], value)
+	}
+
+	if !in(0, at.Minute()) || !in(1, at.Hour()) || !in(3, int(at.Month())) {
+		return false
+	}
+
+	dayOfMonth, dayOfWeek := fields[2] != "*", fields[4] != "*"
+
+	switch {
+	case dayOfMonth && dayOfWeek:
+		return in(2, at.Day()) || in(4, int(at.Weekday()))
+	case dayOfMonth:
+		return in(2, at.Day())
+	default:
+		return in(4, int(at.Weekday()))
+	}
+}
+
+// scheduleNames reports whether a field of a valid schedule names a value.
+func scheduleNames(field string, minimum, maximum, value int) bool {
+	for item := range strings.SplitSeq(field, ",") {
+		from, to, step := minimum, maximum, 1
+
+		base := item
+		if before, after, stepped := strings.Cut(item, "/"); stepped {
+			base = before
+			step, _ = strconv.Atoi(after)
+		}
+
+		switch {
+		case base == "*":
+		case strings.Contains(base, "-"):
+			low, high, _ := strings.Cut(base, "-")
+			from, _ = strconv.Atoi(low)
+			to, _ = strconv.Atoi(high)
+		default:
+			from, _ = strconv.Atoi(base)
+			if step == 1 && !strings.Contains(item, "/") {
+				to = from
+			}
+		}
+
+		if value >= from && value <= to && (value-from)%step == 0 {
+			return true
+		}
+	}
+
+	return false
 }

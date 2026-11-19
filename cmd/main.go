@@ -43,6 +43,7 @@ import (
 	"github.com/dennis-dko/timepulse/internal/interface/api/v1/rest"
 	"github.com/dennis-dko/timepulse/internal/interface/installer"
 	"github.com/dennis-dko/timepulse/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/support/backup"
 	"github.com/dennis-dko/timepulse/internal/support/hosting"
 	"github.com/dennis-dko/timepulse/internal/support/security"
 )
@@ -273,6 +274,13 @@ func main() {
 		os.Exit(2)
 	}
 
+	// The way back into an installation whose built-in administrator nobody can
+	// sign in as. Here rather than behind the interface for the rollback's reason:
+	// the case it exists for is the one where the interface is shut to everybody.
+	if len(os.Args) > 1 && os.Args[1] == "recover" {
+		os.Exit(recoverSystemUser())
+	}
+
 	// Capture the process output before anything writes to it. GoFr's logger
 	// takes os.Stdout when gofr.New() constructs it and keeps it for the life
 	// of the process, so this is the only moment at which the log viewer can be
@@ -344,6 +352,13 @@ func main() {
 		demoLanguage string
 	)
 
+	// The backup that same answer uploaded to start the database from, and the
+	// passphrase it opens with; restored once the migrations have made the tables.
+	var (
+		restoreFile       []byte
+		restorePassphrase string
+	)
+
 	if !configured {
 		chosen, err := runInstaller()
 
@@ -369,6 +384,7 @@ func main() {
 		ds = chosen.Datasource
 		installerToken = chosen.Token
 		demoWanted, demoLanguage = chosen.Demo, chosen.Language
+		restoreFile, restorePassphrase = chosen.Restore, chosen.RestorePassphrase
 	}
 
 	// Asked here and said once there is a logger, never refused: an installation
@@ -581,7 +597,9 @@ func main() {
 	tokenRepo := sqldb.NewAPITokenRepository(db, cfg.Dialect)
 	passkeyRepo := sqldb.NewPasskeyRepository(db, cfg.Dialect)
 	directoryRunRepo := sqldb.NewDirectoryRunRepository(db, cfg.Dialect)
-	adminLog := appservice.NewAdminLogService(sqldb.NewAdminEventRepository(db, cfg.Dialect), userRepo, roleRepo)
+	adminEventRepo := sqldb.NewAdminEventRepository(db, cfg.Dialect)
+	adminLog := appservice.NewAdminLogService(adminEventRepo, userRepo, roleRepo)
+	recovery := appservice.NewRecoveryService(userRepo, passkeyRepo, sessionRepo, adminEventRepo)
 
 	auth := appservice.NewAuthService(userRepo, roleRepo)
 	apiTokens := appservice.NewAPITokenService(tokenRepo, sessionRepo, userRepo, auth)
@@ -649,7 +667,8 @@ func main() {
 		WithLimits(limits).
 		WithMetrics(app.Metrics())
 
-	users := appservice.NewUserApplicationService(userRepo, roleRepo, timesheetRepo, userRepo)
+	users := appservice.NewUserApplicationService(userRepo, roleRepo, timesheetRepo, userRepo).
+		WithPasskeys(passkeyRepo)
 	roles := appservice.NewRoleApplicationService(roleRepo)
 	projects := appservice.NewProjectApplicationService(projectRepo, timesheetRepo, timerRepo)
 	timesheets := appservice.NewTimesheetApplicationService(
@@ -729,6 +748,21 @@ func main() {
 	// The built-in administrator is created after the migrations have run, so
 	// there is always a way in even on a brand new database.
 	prepare := func(ctx *gofr.Context) error {
+		// The backup the installer was given, first: the key and the zone below are
+		// then asked of the installation as it was restored. A restore that fails
+		// takes the saved connection with it, so the next start serves the installer
+		// again instead of an empty installation on the database the backup was for.
+		if restoreFile != nil {
+			if err := restoreBackup(ctx, db, cfg.Dialect, restoreFile, restorePassphrase); err != nil {
+				_ = os.Remove(appconfig.DatasourceFile)
+
+				return fmt.Errorf("the backup was not restored, and the installer is served again "+
+					"at the next start: %w", err)
+			}
+
+			restoreFile, restorePassphrase = nil, ""
+		}
+
 		// Before anything writes a moment. MySQL keeps one without its zone, so a
 		// process in another zone than the one that wrote them reads every stored
 		// day as another; see StorageZoneService.
@@ -1011,6 +1045,30 @@ func main() {
 		return name
 	})
 
+	// Backups of the whole installation, sealed with BACKUP_PASSPHRASE and kept in
+	// BACKUP_DIR, on the schedule saved on their card, read in the installation's
+	// timezone. deploy/OPERATION.md says where the folder belongs.
+	backups := appservice.NewBackupService(settingsRepo,
+		func(ctx context.Context, w io.Writer) (int64, error) {
+			schema, err := sqldb.SchemaVersion(ctx, db)
+			if err != nil {
+				return 0, err
+			}
+
+			return sqldb.Dump(ctx, db, sqldb.BackupHeader{
+				Application: version, Dialect: cfg.Dialect, Schema: schema, CreatedAt: time.Now().UTC(),
+			}, w)
+		},
+		backup.NewDirectory(cfg.BackupDir), cfg.BackupPassphrase,
+		func(ctx context.Context) *time.Location {
+			zone, err := time.LoadLocation(instanceTimezone(ctx))
+			if err != nil {
+				return time.UTC
+			}
+
+			return zone
+		})
+
 	// In the language that asked, where there is one. An installation that has
 	// named itself in German and is read in German should not be signed off in
 	// English at the foot of its own evaluation.
@@ -1044,7 +1102,8 @@ func main() {
 			WithSessionEnder(rest.NewSessionEnder(
 				func(ctx context.Context, userID uint) error {
 					return sessions.LogoutOthers(ctx, userID, "")
-				})),
+				})).
+			WithRecovery(recovery),
 		Roles:      rest.NewRoleHandler(roles, authorizer),
 		Projects:   rest.NewProjectHandler(projects, projectDomain, authorizer).WithTimezone(instanceTimezone),
 		Timesheets: rest.NewTimesheetHandler(timesheets, timesheetDomain, authorizer, instanceTimezone),
@@ -1065,6 +1124,7 @@ func main() {
 			// application is not the thing granted it.
 			WithImageUpdater(imageupdate.New(os.Getenv("TIMEPULSE_UPDATE_REQUESTS"))).
 			WithConnection(ds),
+		Backups:    rest.NewBackupHandler(backups, authorizer),
 		Timers:     rest.NewTimerHandler(timers, authorizer, instanceTimezone),
 		Schedules:  rest.NewScheduleHandler(workWeeks, authorizer),
 		Templates:  rest.NewTemplateHandler(templates, authorizer),
@@ -1118,6 +1178,20 @@ func main() {
 	app.AddCronJob("* * * * *", "web-push", func(ctx *gofr.Context) {
 		if err := push.PushDue(ctx, time.Now()); err != nil {
 			ctx.Logger.Errorf("pushing reminders: %v", err)
+		}
+	})
+
+	// Backups on the plan saved on their card, asked every minute rather than
+	// handed to the scheduler: the scheduler takes its jobs once, at the start,
+	// and a schedule saved on the card has to apply without a restart.
+	app.AddCronJob("* * * * *", "backup", func(ctx *gofr.Context) {
+		made, err := backups.RunDue(ctx, time.Now())
+
+		switch {
+		case err != nil:
+			ctx.Logger.Errorf("the scheduled backup was not made: %v", err)
+		case made:
+			ctx.Logger.Infof("made the scheduled backup")
 		}
 	})
 

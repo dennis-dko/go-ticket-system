@@ -493,6 +493,7 @@ const FIELD_NAMES = {
   hours: 'Hours',
   hourlyRate: 'Hourly rate',
   id: 'ID',
+  keep: 'Backups kept',
   kind: 'Reason',
   language: 'Language',
   ldapSyncMaxDeleteRatio: 'Deletion limit',
@@ -508,6 +509,7 @@ const FIELD_NAMES = {
   rateLimit: 'Rate limit',
   rateLimitWindowSeconds: 'Rate limit window (seconds)',
   role: 'Role',
+  schedule: 'Schedule',
   sessionIdleMinutes: 'Sign out after inactivity (minutes)',
   sessionLifetimeHours: 'Session lifetime (hours)',
   startDate: 'Start',
@@ -4967,6 +4969,21 @@ async function loadUsers() {
       }));
     }
 
+    // For somebody who lost the phone their second factor was on, and only where
+    // there is one to remove. Their own account turns it off under My account,
+    // asking for a code; the built-in administrator is recovered from the
+    // server's command line instead, so the way back is not one more button.
+    if (can('users:write') && !u.isSystem && u.id !== me.user?.id && (u.totpEnabled || u.hasPasskeys)) {
+      // A plain link like the reset beside it, not a red one: the column that
+      // selects rows for deletion is derived from a row's red button.
+      actions.append(el('button', {
+        class: 'link',
+        'data-action': 'remove-second-factor',
+        text: t('user.removeFactor', 'remove second factor'),
+        onclick: () => removeSecondFactor(u),
+      }));
+    }
+
     // Who looks after this account, while the installation has managers - an
     // assignment then reaches nothing, and a control that does nothing is worse
     // than none. Not the built-in administrator, which keeps no time to look after.
@@ -5106,6 +5123,30 @@ async function resetPassword(user) {
 
   await patch(`/users/${user.id}/password`, { password: chosen },
     t('msg.passwordReset', 'Password reset'), refreshAll);
+}
+
+/**
+ * Takes away the second factor somebody lost with their phone.
+ *
+ * The code from the authenticator app goes, every passkey goes with it - most
+ * likely on the same phone, and a way in for whoever holds it now - and every
+ * session the account has open ends, because that phone may still be signed
+ * in. The dialog says all three, since all three happen.
+ */
+async function removeSecondFactor(user) {
+  const sure = await confirmDialog({
+    title: t('user.removeFactorTitle', 'Remove the second factor'),
+    text: fillIn(t('user.removeFactorText',
+      'For {0}, who has lost the phone it was on: the code from the authenticator app and '
+      + 'every passkey are removed, and every session this account has open ends. They sign '
+      + 'in with their password and can set the second factor up again.'), [user.name]),
+    confirmLabel: t('user.removeFactorConfirm', 'Remove'),
+  });
+
+  if (!sure) return;
+
+  await mutate(() => api(`/users/${user.id}/second-factor`, { method: 'DELETE' }),
+    t('msg.secondFactorRemoved', 'Second factor removed'), refreshAll);
 }
 
 /** Opens an existing account in the form above the table. */
@@ -8613,6 +8654,7 @@ async function loadAdmin() {
 
   await loadOperational();
   await loadUpdate();
+  await loadBackups();
 
   const timezone = await api('/settings/timezone');
   const instanceSelect = $('#instance-timezone');
@@ -8813,9 +8855,15 @@ async function loadChanges(older = false) {
 }
 
 function drawChanges() {
+  // Nobody's account made a change numbered zero: that is the recover command,
+  // run on the server where no request and so no account is involved.
+  const changedBy = (actor) => (actor.id === 0
+    ? t('changes.byCommand', 'The command line on the server')
+    : actor.name || `#${actor.id}`);
+
   const rows = adminChanges.entries.map((entry) => el('tr', {},
     el('td', { text: fmtMoment(entry.at) }),
-    el('td', { text: entry.actor.name || `#${entry.actor.id}` }),
+    el('td', { text: changedBy(entry.actor) }),
     el('td', { text: describeChange(entry) }),
   ));
 
@@ -8834,6 +8882,7 @@ const CHANGE_SENTENCES = {
   'user.deleted': () => t('change.userDeleted', 'Deleted the account {0}'),
   'user.role': () => t('change.userRole', 'Gave {0} the role {1}'),
   'user.password': () => t('change.userPassword', 'Set a new password for {0}'),
+  'user.secondFactor': () => t('change.userSecondFactor', 'Removed the second factor of {0}'),
   'user.managers': () => t('change.userManagers', 'Assigned managers to {0}'),
   'users.imported': () => t('change.usersImported', 'Imported accounts from a spreadsheet'),
   'role.created': () => t('change.roleCreated', 'Created the role {0}'),
@@ -8855,6 +8904,11 @@ const CHANGE_SENTENCES = {
   'installation.restart': () => t('change.restart', 'Restarted the application'),
   'installation.update': () => t('change.update', 'Started an update'),
   'installation.setup': () => t('change.setup', 'Completed the setup'),
+  'user.recovered': () => t('change.userRecovered', 'Recovered {0}: a new password, no second factor'),
+  'installation.backup': () => t('change.backup', 'Made a backup'),
+  'installation.backupDownloaded': () => t('change.backupDownloaded', 'Downloaded a backup'),
+  'installation.backupDeleted': () => t('change.backupDeleted', 'Deleted a backup'),
+  'settings.backup': () => t('change.backupPlan', 'Changed when backups are made'),
 };
 
 /** One change as a sentence: what was done, to whom, and the value it kept. */
@@ -11061,6 +11115,16 @@ const TOUR_STEPS = [
       + 'replace itself, it downloads and installs the new one from here.'),
   },
   {
+    target: '#backup-card',
+    view: 'admin',
+    permission: 'settings:manage',
+    title: () => t('tour.backup.title', 'Backups'),
+    text: () => t('tour.backup.text',
+      'The whole installation in one sealed file: made now and downloaded, or made on a '
+      + 'schedule and kept on the server, the oldest going past the number you set. It '
+      + 'comes back through the installer, into an empty database.'),
+  },
+  {
     target: '#form-maintenance',
     view: 'admin',
     permission: 'settings:manage',
@@ -12736,6 +12800,126 @@ function saySoAfterTheReload() {
  * The whole state comes back, so the card is redrawn from the answer rather than
  * loaded again - one request, and the same rendering path a fresh load takes.
  */
+// ------------------------------------------------------------------- backups
+
+/** The backup card's last answer, kept so a change of language redraws it. */
+let backupState = null;
+
+/**
+ * Reads the backup card: the plan, the backups kept, and whether one can be made
+ * at all. Only for an account that may administer the installation, as the
+ * server asks: a backup is all of it.
+ */
+async function loadBackups() {
+  const card = $('#backup-card');
+  if (!card) return;
+
+  if (!can('settings:manage')) {
+    card.hidden = true;
+
+    return;
+  }
+
+  backupState = await api('/settings/backups');
+  card.hidden = false;
+  redrawable('backups', drawBackups);
+}
+
+function drawBackups() {
+  const state = backupState;
+  if (!state) return;
+
+  // Without the passphrase the server refuses every backup, so the button is not
+  // offered and the card says what to set instead.
+  const off = $('#backup-off');
+  off.hidden = state.enabled;
+  off.textContent = fillIn(t('backup.off',
+    'No backup is made until BACKUP_PASSPHRASE is set on the server - at least {0} '
+    + 'characters - and the application restarted. Every backup is sealed with it, and '
+    + 'an unsealed one is not offered.'), [state.minPassphraseLength]);
+  $('#backup-now').hidden = !state.enabled;
+
+  $('#backup-folder').textContent = fillIn(t('backup.folder', 'Kept in {0} on the server.'), [state.folder]);
+
+  const form = $('#form-backup-plan');
+  if (!beingEdited(form)) {
+    form.elements.schedule.value = state.schedule ?? '';
+    form.elements.keep.value = String(state.keep);
+  }
+
+  form.elements.keep.max = String(state.maxKeep);
+
+  const rows = (state.backups ?? []).map((kept) => el('tr', {},
+    el('td', { text: fmtMoment(kept.made) }),
+    el('td', { class: 'num', text: fmtFileSize(kept.size) }),
+    el('td', { class: 'actions' },
+      el('button', {
+        type: 'button',
+        class: 'link',
+        'data-action': 'download',
+        text: t('backup.download', 'download'),
+        onclick: () => mutate(() => downloadBackup(kept.name), null, null),
+      }),
+      deleteButton({
+        label: kept.name,
+        path: `/settings/backups/${encodeURIComponent(kept.name)}`,
+        message: t('backup.deleted', 'Backup deleted'),
+        after: loadBackups,
+      })),
+  ));
+
+  fillTable($('#table-backups tbody'), rows, 3, t('backup.none', 'No backup has been kept yet.'));
+}
+
+/** Saves a kept backup under its own name, which says when it was made. */
+function downloadBackup(name) {
+  return saveDownload(`${API}/settings/backups/${encodeURIComponent(name)}`, name);
+}
+
+/** A file's size in the unit it is read in, written the reader's way. */
+function fmtFileSize(bytes) {
+  const megabytes = bytes >= 1024 * 1024;
+
+  return new Intl.NumberFormat(activeLocale(), {
+    style: 'unit',
+    unit: megabytes ? 'megabyte' : 'kilobyte',
+    maximumFractionDigits: megabytes ? 1 : 0,
+  }).format(megabytes ? bytes / (1024 * 1024) : Math.max(1, Math.round(bytes / 1024)));
+}
+
+/**
+ * Making one downloads it as well - what somebody pressing "Back up now" wants
+ * is the file - and saving the plan answers with the whole card, drawn from
+ * what was kept rather than from what was typed.
+ */
+function wireBackups() {
+  $('#backup-now')?.addEventListener('click', () => mutate(
+    () => api('/settings/backups', { method: 'POST' }),
+    t('backup.madeNow', 'Backup made'),
+    async (made) => {
+      await loadBackups();
+      await downloadBackup(made.name);
+    },
+  ));
+
+  $('#form-backup-plan')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+
+    saveForm(form, () => api('/settings/backups/plan', {
+      method: 'PUT',
+      body: JSON.stringify({
+        schedule: form.elements.schedule.value.trim(),
+        keep: Number(form.elements.keep.value),
+      }),
+    }), t('admin.saved', 'Settings saved'), (state) => {
+      backupState = state;
+      redrawable('backups', drawBackups);
+    });
+  });
+}
+
 function wireUpdateCheck() {
   const button = $('#update-check');
   if (!button) return;
@@ -14107,6 +14291,14 @@ async function exportWorkbook() {
  * check, save - and the two callers below differ only in how they ask.
  */
 async function downloadFile(url, name, extension, request = {}) {
+  await saveDownload(url, `${name}-${todayISO()}.${extension}`, request);
+}
+
+/**
+ * Fetches a file and saves it under exactly the name given - for a file that
+ * carries its own, like a backup, whose name is when it was made.
+ */
+async function saveDownload(url, fileName, request = {}) {
   const res = await reach(url, { credentials: 'same-origin', ...request });
 
   // Everything api() reads off an answer that is not its body. Only the body is
@@ -14128,7 +14320,7 @@ async function downloadFile(url, name, extension, request = {}) {
   const blob = await res.blob();
   const objectURL = URL.createObjectURL(blob);
 
-  const link = el('a', { href: objectURL, download: `${name}-${todayISO()}.${extension}` });
+  const link = el('a', { href: objectURL, download: fileName });
   document.body.append(link);
   link.click();
   link.remove();
@@ -18454,6 +18646,7 @@ async function init() {
     wireRestart();
     wireUpdate();
     wireUpdateCheck();
+    wireBackups();
     wireCropChooser();
 
     // The one control on the rights notice, and the whole of what there is to do

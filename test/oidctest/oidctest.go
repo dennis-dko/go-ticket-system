@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -190,8 +191,8 @@ func (p *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	back, err := url.Parse(asked.Get("redirect_uri"))
-	if err != nil || back.Scheme == "" {
-		http.Error(w, "no address to send the browser back to", http.StatusBadRequest)
+	if err != nil || !isLocalURL(back) {
+		http.Error(w, "no address on this machine to send the browser back to", http.StatusBadRequest)
 
 		return
 	}
@@ -211,6 +212,26 @@ func (p *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 	back.RawQuery = query.Encode()
 
 	http.Redirect(w, r, back.String(), http.StatusFound)
+}
+
+// isLocalURL reports whether an address is one this provider sends a browser
+// back to: http or https, on this machine. A real provider answers only the
+// addresses registered for its client, and every client of this one runs here,
+// so this machine is its registration. A name that only begins with localhost
+// or 127.0.0.1 is somewhere else.
+func isLocalURL(u *url.URL) bool {
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+
+	host := u.Hostname()
+	if host == "localhost" {
+		return true
+	}
+
+	ip := net.ParseIP(host)
+
+	return ip != nil && ip.IsLoopback()
 }
 
 // token trades a code for an identity token: once, for the client it was given to,
