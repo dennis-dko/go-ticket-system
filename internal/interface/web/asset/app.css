@@ -24,11 +24,11 @@
   /* What fields and the quieter buttons are drawn with. Mixed from the palette
      rather than set per theme, so the light and the dark one each have them
      without a line of their own and keep them when one of their colours
-     changes. A field is a shade off the card it sits on, inside a border a
-     little stronger than the card's; a quiet button is a tint of the text laid
-     over whatever is behind it, so it reads on a card, a banner and the page
-     alike. */
-  --field-bg: color-mix(in srgb, var(--surface) 60%, var(--bg));
+     changes. A field is a tint of the text over the card it sits on, with no
+     border until the pointer is on it; a quiet button is a tint of the text
+     laid over whatever is behind it, so it reads on a card, a banner and the
+     page alike. */
+  --field-bg: color-mix(in srgb, var(--text) 6%, var(--surface));
   --field-border: color-mix(in srgb, var(--border) 85%, var(--text));
   --field-border-hover: color-mix(in srgb, var(--border) 65%, var(--text));
   --quiet: color-mix(in srgb, var(--text) 7%, transparent);
@@ -36,11 +36,11 @@
   --quiet-press: color-mix(in srgb, var(--text) 17%, transparent);
   --ring: color-mix(in srgb, var(--accent) 25%, transparent);
 
-  /* The chosen tab of a screen, lifted off the strip it sits in. The card's own
-     colour in the light theme; a dark one sets its own, because there the card
-     is darker than a strip tinted with the text, and the chosen tab would sink
-     into the strip rather than stand out of it. */
-  --tab-chosen: var(--surface);
+  /* Controls as pills, as high as a finger needs, on a tint rather than inside a
+     border: the direction the maintainer chose on 2026-11-19 from five drawn
+     side by side. */
+  --control: 48px;
+  --pill: 999px;
 
   /* Log levels. Own variables rather than reusing --danger and --accent:
      a log line is read as a category, and four levels that all render as
@@ -89,13 +89,11 @@
     --chart-5: #f08579;
     --chart-6: #a294ff;
     --chart-7: #d6b45c;
-    --tab-chosen: color-mix(in srgb, var(--text) 14%, var(--surface));
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --tab-chosen: color-mix(in srgb, var(--text) 14%, var(--surface));
   --bg: #14171a;
   --surface: #1c2126;
   --border: #2c333b;
@@ -290,6 +288,13 @@ body {
    the account beside it, which is cut short with the whole of it in its
    tooltip. */
 .topbar-controls > button { white-space: nowrap; }
+
+/* The bar's own controls are pills like every other, at the bar's height rather
+   than a form's where there is a mouse to aim with: a row of 48-pixel controls
+   would make the bar a third taller. A finger gets the full height. */
+@media (min-width: 901px) and (pointer: fine) {
+  .topbar-controls > button, .topbar-controls > select { min-height: 40px; padding: 0 16px; }
+}
 
 .topbar h1 { font-size: 18px; margin: 0; }
 
@@ -533,20 +538,19 @@ label {
   color: var(--muted);
 }
 
-/* The fields a form is made of: as round as the cards, a hair of shadow under
-   them, and a border that darkens under the pointer, so a field says it can be
-   typed in before it is clicked. The height is the buttons' - eight pixels and
-   a border above and below, nine and none - so a field and a button side by
-   side end on the same line. */
+/* The fields a form is made of: pills on a tint of the text, with a border that
+   appears under the pointer, so a field says it can be typed in before it is
+   clicked. As high as the buttons, so a field and a button side by side end on
+   the same line. */
 input, select {
   background: var(--field-bg);
-  border: 1px solid var(--field-border);
-  border-radius: var(--radius);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+  border: 1px solid transparent;
+  border-radius: var(--pill);
   color: var(--text);
   font: inherit;
-  padding: 8px 12px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-height: var(--control);
+  padding: 0 20px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   width: 100%;
 }
 
@@ -573,12 +577,73 @@ input:disabled, select:disabled {
  * once, on the permission grid alone, which is part of why it stayed hidden - the
  * second place to need it was written later and could not know.
  *
- * Nor the shadow a field draws under itself, which on a tick box is a smudge
- * under the box rather than the edge of a place to type. */
+ * Drawn rather than left to the engine, so they are the pill fields' kind of
+ * thing: a rounded box on the same tint, filled with the accent once chosen. */
 input[type="checkbox"], input[type="radio"] {
-  accent-color: var(--accent);
+  appearance: none;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border-hover);
+  border-radius: 8px;
   box-shadow: none;
-  width: auto;
+  cursor: pointer;
+  flex: none;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+  position: relative;
+  vertical-align: middle;
+  width: 22px;
+}
+
+input[type="radio"] { border-radius: 50%; }
+
+input[type="checkbox"]:checked,
+input[type="checkbox"]:indeterminate,
+input[type="radio"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The tick, the dash of a box that is partly chosen, and the dot. */
+input[type="checkbox"]::after {
+  border-bottom: 2px solid var(--accent-text);
+  border-left: 2px solid var(--accent-text);
+  content: "";
+  height: 5px;
+  inset: 0;
+  margin: auto;
+  opacity: 0;
+  position: absolute;
+  transform: translateY(-1px) rotate(-45deg);
+  width: 10px;
+}
+
+input[type="checkbox"]:checked::after { opacity: 1; }
+
+input[type="checkbox"]:indeterminate::after {
+  border-left: 0;
+  height: 0;
+  opacity: 1;
+  transform: none;
+}
+
+input[type="radio"]::after {
+  background: var(--accent-text);
+  border-radius: 50%;
+  content: "";
+  height: 8px;
+  inset: 0;
+  margin: auto;
+  opacity: 0;
+  position: absolute;
+  width: 8px;
+}
+
+input[type="radio"]:checked::after { opacity: 1; }
+
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
 }
 
 /* A switch, for the controls that turn something on or off.
@@ -607,11 +672,11 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 .switch > input[type="checkbox"] {
-  height: 22px;
+  height: 30px;
   margin: 0;
   opacity: 0;
   position: absolute;
-  width: 40px;
+  width: 50px;
 }
 
 .switch-track {
@@ -619,10 +684,10 @@ input[type="checkbox"], input[type="radio"] {
   border-radius: 999px;
   display: inline-block;
   flex: none;
-  height: 22px;
+  height: 30px;
   position: relative;
   transition: background 0.15s ease;
-  width: 40px;
+  width: 50px;
 }
 
 /* The thumb. Moved rather than redrawn, so the change reads as one thing
@@ -630,19 +695,20 @@ input[type="checkbox"], input[type="radio"] {
 .switch-track::after {
   background: var(--surface);
   border-radius: 50%;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 30%, transparent);
   content: "";
-  height: 16px;
+  height: 24px;
   left: 3px;
   position: absolute;
   top: 3px;
   transition: transform 0.15s ease;
-  width: 16px;
+  width: 24px;
 }
 
 .switch > input[type="checkbox"]:checked + .switch-track { background: var(--accent); }
 
 .switch > input[type="checkbox"]:checked + .switch-track::after {
-  transform: translateX(18px);
+  transform: translateX(20px);
 }
 
 /* The focus ring belongs on the thing somebody can see, since the control that
@@ -678,6 +744,7 @@ input[type="checkbox"], input[type="radio"] {
    colours, where shadows are not drawn and an outline is given a system colour
    that shows. */
 input:focus, select:focus {
+  background: var(--surface);
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
   outline: 2px solid transparent;
@@ -686,13 +753,30 @@ input:focus, select:focus {
 button {
   background: var(--accent);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--pill);
   color: var(--accent-text);
   cursor: pointer;
   font: inherit;
   font-weight: 500;
   padding: 9px 16px;
   transition: background-color 0.15s ease, color 0.15s ease, filter 0.15s ease;
+}
+
+/* The buttons that act - the form's own answer and every other - are as high as
+   the fields beside them. The bar's title, the screen's tabs, a link in a row
+   and the small ones inside a field keep their own sizes; :where keeps this as
+   weak as the rule above, so each of those wins with a rule of its own. The
+   list is written twice more, for the shadow below and for a touch screen. */
+button:where(:not(.link, .link-button, .tab, .screen-tab, .app-title, .nav-toggle, .logo-use-button,
+  .password-toggle, .date-open, .toast-close)) {
+  min-height: var(--control);
+  padding: 0 22px;
+}
+
+/* The form's own answer, lifted off the card on a shadow of its own colour. */
+button:where(:not(.secondary, .link, .link-button, .tab, .screen-tab, .danger, .app-title, .nav-toggle,
+  .logo-use-button, .password-toggle, .date-open, .toast-close, :disabled)) {
+  box-shadow: 0 4px 12px var(--ring);
 }
 
 button:hover { filter: brightness(1.08); }
@@ -1478,41 +1562,36 @@ button.secondary:hover {
 
 button.secondary:active { background: var(--quiet-press); }
 
-/* The tabs of the two long screens, My account and Settings.
+/* The tabs of the long screens.
 
-   Plain words on a tint of the page, the chosen one lifted onto the card's
-   colour: the navigation above is drawn in the accent, and a second strip of
-   accent under it would read as a second navigation rather than as the parts
-   of this screen. Wrapped rather than scrolled on a narrow window, so that no
-   tab is ever out of sight. Hidden by attribute, which a display rule would
-   otherwise beat. */
+   Pills on a tint of the text, the chosen one drawn in the text's own colour:
+   the navigation above is drawn in the accent, and tabs in the accent under it
+   would read as a second navigation rather than as the parts of this screen.
+   Wrapped rather than scrolled on a narrow window, so that no tab is ever out
+   of sight. Hidden by attribute, which a display rule would otherwise beat. */
 .screen-tabs {
-  background: var(--quiet);
-  border-radius: calc(var(--radius) + 4px);
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 8px;
   margin: 0 0 16px;
   max-width: 100%;
-  padding: 4px;
-  width: fit-content;
 }
 
 .screen-tab {
-  background: none;
-  color: var(--muted);
-  padding: 7px 14px;
+  background: var(--quiet);
+  color: var(--text);
+  min-height: 40px;
+  padding: 0 18px;
 }
 
 .screen-tab:hover {
-  color: var(--text);
+  background: var(--quiet-hover);
   filter: none;
 }
 
 .screen-tab[aria-selected="true"] {
-  background: var(--tab-chosen);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 12%, transparent);
-  color: var(--text);
+  background: var(--text);
+  color: var(--surface);
 }
 
 .screen-tabs[hidden], .screen-tab[hidden] { display: none; }
@@ -3204,10 +3283,18 @@ input[readonly]:focus, textarea[readonly]:focus {
    cross on a notice 18. */
 @media (max-width: 900px), (pointer: coarse) {
   button,
-  select,
   .tab,
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  .screen-tab {
     min-height: 44px;
+  }
+
+  /* The fields and the buttons that act are as high as a finger needs on every
+     screen already; written again here so the line above does not lower them. */
+  button:where(:not(.link, .link-button, .tab, .screen-tab, .app-title, .nav-toggle, .logo-use-button,
+  .password-toggle, .date-open, .toast-close)),
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    min-height: var(--control);
   }
 
   /* A summary is pressed to open what it heads, and was 20 pixels of text. A

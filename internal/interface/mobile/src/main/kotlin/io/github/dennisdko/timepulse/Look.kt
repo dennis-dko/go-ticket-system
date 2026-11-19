@@ -79,8 +79,11 @@ fun mixed(a: Color, b: Color, share: Float): Color = Color(
     blue = a.blue * share + b.blue * (1 - share),
 )
 
-/** corners are the web interface's --radius: 10 pixels round on a card, a field and a button. */
+/** corners are the web interface's --radius: 10 pixels round on a card and a notice. */
 private val corners = RoundedCornerShape(10.dp)
+
+/** pill is the web interface's --pill: a field and a button are as round as they are high. */
+private val pill = RoundedCornerShape(percent = 50)
 
 /**
  * Card is the web interface's sign-in card: a surface with its border, rounded
@@ -187,13 +190,14 @@ fun Mark(size: Dp) {
 
 /**
  * Field is an input as the web interface draws one: its label above in the quiet
- * colour, the box a shade off the card inside a border a little stronger than the
- * card's - app.css's --field-bg and --field-border, mixed the same way.
+ * colour, the box a pill on a tint of the text over the card with no border until
+ * it has the focus - app.css's --field-bg, mixed the same way - and then the card's
+ * own colour inside the accent.
  */
 @Composable
 fun Field(label: String, value: String, onValueChange: (String) -> Unit, keyboard: KeyboardType, secret: Boolean = false) {
     val tones = LocalTones.current
-    val box = mixed(tones.surface, tones.bg, 0.6f)
+    val box = mixed(tones.text, tones.surface, 0.06f)
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, color = tones.muted, fontSize = 13.sp)
@@ -201,14 +205,14 @@ fun Field(label: String, value: String, onValueChange: (String) -> Unit, keyboar
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            shape = corners,
+            shape = pill,
             visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = keyboard),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = box,
+                focusedContainerColor = tones.surface,
                 unfocusedContainerColor = box,
                 focusedBorderColor = tones.accent,
-                unfocusedBorderColor = mixed(tones.border, tones.text, 0.85f),
+                unfocusedBorderColor = Color.Transparent,
                 focusedTextColor = tones.text,
                 unfocusedTextColor = tones.text,
                 cursorColor = tones.accent,
@@ -219,9 +223,9 @@ fun Field(label: String, value: String, onValueChange: (String) -> Unit, keyboar
 }
 
 /**
- * Action is a button as the web interface draws one: [primary] filled with the
- * accent, otherwise a tint of the text on the card with no border, app.css's
- * --quiet - with [icon] before its words where it has one.
+ * Action is a button as the web interface draws one: a pill 48 high, [primary]
+ * filled with the accent, otherwise a tint of the text on the card with no
+ * border, app.css's --quiet - with [icon] before its words where it has one.
  */
 @Composable
 fun Action(text: String, primary: Boolean, onClick: () -> Unit, enabled: Boolean = true, icon: (@Composable () -> Unit)? = null) {
@@ -231,7 +235,7 @@ fun Action(text: String, primary: Boolean, onClick: () -> Unit, enabled: Boolean
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = corners,
+        shape = pill,
         colors = ButtonDefaults.buttonColors(
             containerColor = ground,
             contentColor = if (primary) tones.accentText else tones.text,
