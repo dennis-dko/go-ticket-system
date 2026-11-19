@@ -1634,10 +1634,11 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   padding: 12px 28px 12px 12px;
 }
 
-/* The picture keeps the ground it had before the band existed - white in the
- * light theme, the card's own dark in the dark one. A logo is drawn for one of
- * those two, never for an anthracite band, and a dark wordmark straight on the
- * band would simply disappear. */
+/* The mark stands on a ground of its own - white in the light theme, the card's
+ * own dark in the dark one - rather than straight on the band. The maintainer
+ * kept it on 2026-11-19, having compared the card without it, and the app's
+ * connect card and the installer draw the same field: the band is held to these
+ * measures by tests in both. */
 .login-emblem {
   background: var(--surface);
   border-radius: 8px;
