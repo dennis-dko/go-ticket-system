@@ -1628,8 +1628,6 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   align-items: center;
   background: #2b3440;
   border-bottom: 5px solid var(--accent);
-  /* So the logo can be bounded by the band's width - see .login-card .brand-logo. */
-  container-type: inline-size;
   display: flex;
   flex-wrap: wrap;
   gap: 14px 24px;
