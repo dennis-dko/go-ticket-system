@@ -33,6 +33,7 @@ var administrativeChanges = []struct {
 	{http.MethodDelete, "/api/v1/users/{id}", "user.deleted", ""},
 	{http.MethodPut, "/api/v1/users/{id}/role", "user.role", "role"},
 	{http.MethodPut, "/api/v1/users/{id}/password", "user.password", ""},
+	{http.MethodDelete, "/api/v1/users/{id}/second-factor", "user.secondFactor", ""},
 	{http.MethodPut, "/api/v1/users/{id}/managers", "user.managers", ""},
 	{http.MethodPost, "/api/v1/users/import", "users.imported", ""},
 	{http.MethodPost, "/api/v1/roles", "role.created", "name"},

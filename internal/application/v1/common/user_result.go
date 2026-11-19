@@ -26,6 +26,11 @@ type UserResult struct {
 
 	TOTPEnabled bool
 
+	// HasPasskeys says the account holds a passkey, so the account list offers
+	// to remove a lost phone's ways in only where there are some. False where
+	// the list was made without asking.
+	HasPasskeys bool
+
 	// Language is the choice as stored, empty for an account that never made
 	// one; EffectiveLanguage is what actually applies once the fallback has been
 	// worked out. Both travel for the same reason the timezone does: a resolved

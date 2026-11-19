@@ -280,6 +280,10 @@ func StartUnconfigured(t *testing.T, env ...string) *App {
 // - for SQLite - its database file live.
 func (a *App) Dir() string { return a.dir }
 
+// Dialect is the database this instance runs on, in DB_DIALECT's words, which
+// are also the names of the drivers DB opens it with.
+func (a *App) Dialect() string { return a.dbDriver }
+
 // Terminate sends the instance the signal a service manager stops it with and
 // returns at once, for a case with something to do while it stops. Windows
 // cannot deliver the signal, and says so in the error.

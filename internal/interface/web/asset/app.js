@@ -4967,6 +4967,21 @@ async function loadUsers() {
       }));
     }
 
+    // For somebody who lost the phone their second factor was on, and only where
+    // there is one to remove. Their own account turns it off under My account,
+    // asking for a code; the built-in administrator is recovered from the
+    // server's command line instead, so the way back is not one more button.
+    if (can('users:write') && !u.isSystem && u.id !== me.user?.id && (u.totpEnabled || u.hasPasskeys)) {
+      // A plain link like the reset beside it, not a red one: the column that
+      // selects rows for deletion is derived from a row's red button.
+      actions.append(el('button', {
+        class: 'link',
+        'data-action': 'remove-second-factor',
+        text: t('user.removeFactor', 'remove second factor'),
+        onclick: () => removeSecondFactor(u),
+      }));
+    }
+
     // Who looks after this account, while the installation has managers - an
     // assignment then reaches nothing, and a control that does nothing is worse
     // than none. Not the built-in administrator, which keeps no time to look after.
@@ -5106,6 +5121,30 @@ async function resetPassword(user) {
 
   await patch(`/users/${user.id}/password`, { password: chosen },
     t('msg.passwordReset', 'Password reset'), refreshAll);
+}
+
+/**
+ * Takes away the second factor somebody lost with their phone.
+ *
+ * The code from the authenticator app goes, every passkey goes with it - most
+ * likely on the same phone, and a way in for whoever holds it now - and every
+ * session the account has open ends, because that phone may still be signed
+ * in. The dialog says all three, since all three happen.
+ */
+async function removeSecondFactor(user) {
+  const sure = await confirmDialog({
+    title: t('user.removeFactorTitle', 'Remove the second factor'),
+    text: fillIn(t('user.removeFactorText',
+      'For {0}, who has lost the phone it was on: the code from the authenticator app and '
+      + 'every passkey are removed, and every session this account has open ends. They sign '
+      + 'in with their password and can set the second factor up again.'), [user.name]),
+    confirmLabel: t('user.removeFactorConfirm', 'Remove'),
+  });
+
+  if (!sure) return;
+
+  await mutate(() => api(`/users/${user.id}/second-factor`, { method: 'DELETE' }),
+    t('msg.secondFactorRemoved', 'Second factor removed'), refreshAll);
 }
 
 /** Opens an existing account in the form above the table. */
@@ -8834,6 +8873,7 @@ const CHANGE_SENTENCES = {
   'user.deleted': () => t('change.userDeleted', 'Deleted the account {0}'),
   'user.role': () => t('change.userRole', 'Gave {0} the role {1}'),
   'user.password': () => t('change.userPassword', 'Set a new password for {0}'),
+  'user.secondFactor': () => t('change.userSecondFactor', 'Removed the second factor of {0}'),
   'user.managers': () => t('change.userManagers', 'Assigned managers to {0}'),
   'users.imported': () => t('change.usersImported', 'Imported accounts from a spreadsheet'),
   'role.created': () => t('change.roleCreated', 'Created the role {0}'),

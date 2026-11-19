@@ -43,6 +43,35 @@ type UserApplicationService struct {
 	// pointing at nobody. Same request, two different wrong answers, depending
 	// on a choice made in the installer.
 	purger UserPurger
+
+	// passkeys says whose accounts hold a passkey; nil leaves HasPasskeys false.
+	passkeys repository.PasskeyRepository
+}
+
+// WithPasskeys lets the account list say who holds a passkey, which is what the
+// administrator removing a lost phone's ways in needs to know.
+func (s *UserApplicationService) WithPasskeys(passkeys repository.PasskeyRepository) *UserApplicationService {
+	s.passkeys = passkeys
+
+	return s
+}
+
+// withPasskeys marks the results whose accounts hold a passkey.
+func (s *UserApplicationService) withPasskeys(ctx context.Context, results []*common.UserResult) error {
+	if s.passkeys == nil || len(results) == 0 {
+		return nil
+	}
+
+	holders, err := s.passkeys.Holders(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, result := range results {
+		result.HasPasskeys = holders[result.ID]
+	}
+
+	return nil
 }
 
 // NewUserApplicationService needs the time entries to say what deleting an
@@ -132,9 +161,12 @@ func (s *UserApplicationService) GetUser(
 		return nil, err
 	}
 
-	return &query.GetUserQueryResult{
-		Result: common.NewUserResultFromModel(user)[0],
-	}, nil
+	results := common.NewUserResultFromModel(user)
+	if err := s.withPasskeys(ctx, results); err != nil {
+		return nil, err
+	}
+
+	return &query.GetUserQueryResult{Result: results[0]}, nil
 }
 
 // ListUsers processes the query to get all users, applying optional paging.
@@ -150,10 +182,12 @@ func (s *UserApplicationService) ListUsers(
 	// TotalCount reports the unpaged total so a client can size its pager.
 	total := uint(len(allUsers))
 
-	return &query.ListUsersQueryResult{
-		Result:     common.NewUserResultFromModel(paginate(allUsers, q.Page, q.Limit)...),
-		TotalCount: total,
-	}, nil
+	results := common.NewUserResultFromModel(paginate(allUsers, q.Page, q.Limit)...)
+	if err := s.withPasskeys(ctx, results); err != nil {
+		return nil, err
+	}
+
+	return &query.ListUsersQueryResult{Result: results, TotalCount: total}, nil
 }
 
 // UpdateUser processes the command to update a user

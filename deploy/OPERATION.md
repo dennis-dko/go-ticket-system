@@ -707,6 +707,17 @@ and no reports, and the server refuses those to it by the same code that refuses
 them to anybody else. Somebody who both works here and administers gets the
 combined role instead of a second account.
 
+## When nobody can sign in
+
+**Somebody lost the phone their second factor is on.** An administrator opens
+*Accounts* and presses *remove second factor* in that person's row. The code from
+the authenticator app goes, every passkey of the account goes with it - most
+likely on the same phone - and every session it has open ends, because that
+phone may still be signed in. The person signs in with their password and sets a
+second factor up again. The administration log records who did it. The button is
+only on an account that has a second factor, and never on your own, which is
+turned off under *My account* with a code from it.
+
 ## Settings that need a restart
 
 Most changes apply within seconds. These do not, and appear in *Settings* as a

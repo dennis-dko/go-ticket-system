@@ -28,6 +28,9 @@ type UserHandler struct {
 	// cookie goes on working, because a session is not re-checked against the
 	// password that opened it.
 	sessions *SessionEnder
+
+	// recovery removes the second factor somebody lost with their phone.
+	recovery *service.RecoveryService
 }
 
 // SessionEnder ends every session an account has open.
@@ -61,6 +64,13 @@ func NewUserHandler(
 // whose password has just been reset.
 func (h *UserHandler) WithSessionEnder(sessions *SessionEnder) *UserHandler {
 	h.sessions = sessions
+
+	return h
+}
+
+// WithRecovery gives the handler what removes a lost second factor.
+func (h *UserHandler) WithRecovery(recovery *service.RecoveryService) *UserHandler {
+	h.recovery = recovery
 
 	return h
 }
@@ -279,6 +289,39 @@ func (h *UserHandler) SetPassword(c *gofr.Context) (any, error) {
 	h.endSessionsOf(c, id)
 
 	return map[string]string{"status": "reset"}, nil
+}
+
+// RemoveSecondFactor handles DELETE /api/v1/users/{id}/second-factor.
+//
+// For somebody who lost the phone their authenticator code was on: only they
+// could turn it off, and only with a code from that phone. Guarded by
+// users:write, which can already reset the same account's password, and refused
+// for the caller's own account for the reason SetPassword gives - the account
+// screen turns a second factor off there, asking for a code, and this would be
+// a way round the question for anybody at an unlocked screen.
+func (h *UserHandler) RemoveSecondFactor(c *gofr.Context) (any, error) {
+	principal, err := h.authz.Require(c, model.PermUserWrite)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := pathID(c)
+	if err != nil {
+		return nil, toHTTPError(err)
+	}
+
+	if principal.User != nil && principal.User.ID == id {
+		return nil, toHTTPError(apperror.Conflictf(
+			"turn your own second factor off under your own account, which asks for a " +
+				"code from it").
+			WithCode("cannotRemoveOwnSecondFactor"))
+	}
+
+	if err := h.recovery.RemoveSecondFactor(c, id); err != nil {
+		return nil, toHTTPError(err)
+	}
+
+	return map[string]string{"status": "removed"}, nil
 }
 
 // endSessionsOf ends the open sessions of an account whose password has just
