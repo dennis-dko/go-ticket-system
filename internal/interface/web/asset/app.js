@@ -4369,6 +4369,7 @@ function correctKept(kept) {
   if (!form) return;
 
   switchView('timesheets');
+  openTheTabOf(form);
 
   setDateField(form.elements.date, kept.body.date ?? '');
   form.elements.durationHours.value = kept.body.durationHours ?? '';
@@ -5681,6 +5682,7 @@ function editTimesheet(entry) {
   $('#timesheet-cancel').hidden = false;
 
   switchView('timesheets');
+  openTheTabOf(form);
   form.scrollIntoView({ block: 'nearest' });
   form.elements.durationHours.focus();
 }
@@ -6391,6 +6393,7 @@ function showTheDaysEntries(date, key) {
   if (search) search.value = '';
 
   switchView('timesheets');
+  openTheTabOf($('#entries-card'));
   mutate(loadTimesheets, null, null);
 }
 
@@ -15390,6 +15393,7 @@ function openTheBookingFormOn(day) {
   const form = $('#form-timesheet');
   if (!form) return;
 
+  openTheTabOf(form);
   setDateField(form.elements.date, day);
   form.scrollIntoView({ block: 'center' });
   form.elements.durationHours?.focus();
@@ -15558,6 +15562,7 @@ function openTheStopwatch() {
   switchView('timesheets');
 
   const card = $('#timer-card');
+  openTheTabOf(card);
   if (card) card.scrollIntoView({ block: 'center' });
 }
 
@@ -17856,7 +17861,10 @@ function wireForms() {
       async () => { resetRoleForm(); await refreshAll(); });
   });
 
-  $('#welcome-recent-all')?.addEventListener('click', () => switchView('timesheets'));
+  $('#welcome-recent-all')?.addEventListener('click', () => {
+    switchView('timesheets');
+    openTheTabOf($('#entries-card'));
+  });
 
   $('#role-reset').addEventListener('click', resetRoleForm);
 

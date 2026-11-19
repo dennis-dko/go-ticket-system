@@ -629,10 +629,33 @@
 
     <!-- Time entries -->
     <section id="view-timesheets" class="view">
+      <!-- The daily way first and on its own - the stopwatch, the form and the
+           entries - and what is used now and then beside it rather than under a
+           list that grows every day. As on My account: each card names its tab
+           with data-tab and arrangeScreenTabs moves it there at the start, and a
+           tab with nothing shown on it is not offered. -->
+      <div id="timesheets-tabs" class="screen-tabs" role="tablist" aria-label="Parts of Time entries"
+           data-i18n-aria="ts.tabs">
+        <button type="button" role="tab" id="timesheets-tab-record" class="screen-tab" data-card-tab="record"
+                aria-controls="timesheets-panel-record" aria-selected="true"
+                data-i18n="ts.tab.record">Record</button>
+        <button type="button" role="tab" id="timesheets-tab-templates" class="screen-tab" data-card-tab="templates"
+                aria-controls="timesheets-panel-templates" aria-selected="false" tabindex="-1"
+                data-i18n="ts.tab.templates">Templates</button>
+        <button type="button" role="tab" id="timesheets-tab-sheet" class="screen-tab" data-card-tab="sheet"
+                aria-controls="timesheets-panel-sheet" aria-selected="false" tabindex="-1"
+                data-i18n="ts.tab.sheet">Spreadsheet</button>
+      </div>
+      <div id="timesheets-panel-record" class="screen-panel" role="tabpanel"
+           aria-labelledby="timesheets-tab-record" data-card-panel="record"></div>
+      <div id="timesheets-panel-templates" class="screen-panel" role="tabpanel"
+           aria-labelledby="timesheets-tab-templates" data-card-panel="templates" hidden></div>
+      <div id="timesheets-panel-sheet" class="screen-panel" role="tabpanel"
+           aria-labelledby="timesheets-tab-sheet" data-card-panel="sheet" hidden></div>
       <!-- The clock, above the form, because it is the shorter way to record the
            day you are actually having: press start, work, press stop. The form
            below is for a day that has already happened. -->
-      <div class="card" id="timer-card" data-perm="timesheets:write:own" data-own-only>
+      <div class="card" id="timer-card" data-perm="timesheets:write:own" data-own-only data-tab="record">
         <div class="card-head">
           <h2 data-i18n="timer.title">Stopwatch</h2>
           <span class="timer-elapsed" id="timer-elapsed" aria-live="off"></span>
@@ -710,7 +733,7 @@
         </form>
       </div>
 
-      <form method="post" id="form-timesheet" class="card form" data-perm="timesheets:write:own">
+      <form method="post" id="form-timesheet" class="card form" data-perm="timesheets:write:own" data-tab="record">
         <h2 id="timesheet-form-title" data-i18n="ts.book">Book time</h2>
         <input type="hidden" name="id">
         <!-- Shown once somebody has kept a template. Choosing one fills the
@@ -741,7 +764,7 @@
         </div>
       </form>
 
-      <div class="card">
+      <div class="card" id="entries-card" data-tab="record">
         <div class="card-head">
           <h2 data-i18n="ts.entries">Entries</h2>
           <div class="filters">
@@ -784,7 +807,7 @@
           <span class="muted" id="ts-shown"></span>
         </div>
       </div>
-      <div class="card" id="workbook-card" data-perm="timesheets:read:own">
+      <div class="card" id="workbook-card" data-perm="timesheets:read:own" data-tab="sheet">
         <h2 data-i18n="wb.title">Spreadsheet</h2>
         <p class="muted" data-i18n="wb.text">Exports what the filters above are showing. An import creates entries; it never changes or replaces the ones that are already there.</p>
         <div class="row">
@@ -817,7 +840,7 @@
       </div>
       <!-- The templates kept from the booking form, listed to take them back.
            Shown once there is one, like the picker in the form. -->
-      <div class="card" id="templates-card" data-perm="timesheets:write:own" data-own-only hidden>
+      <div class="card" id="templates-card" data-perm="timesheets:write:own" data-own-only data-tab="templates" hidden>
         <h2 data-i18n="tpl.title">Templates</h2>
         <p class="muted" data-i18n="tpl.hint">Bookings you make often, kept with "Save as template" in the form above. A template only fills the form in: nothing is booked until you press Book.</p>
         <div class="table-wrap">
@@ -893,7 +916,28 @@
 
     <!-- Calendar -->
     <section id="view-calendar" class="view" hidden>
-      <div class="card">
+      <!-- Three questions on one long screen: the month, the hours of a day,
+           and the days away. The chosen day stays with the month, because it is
+           opened from the month's grid. -->
+      <div id="calendar-tabs" class="screen-tabs" role="tablist" aria-label="Parts of Calendar"
+           data-i18n-aria="cal.tabs">
+        <button type="button" role="tab" id="calendar-tab-month" class="screen-tab" data-card-tab="month"
+                aria-controls="calendar-panel-month" aria-selected="true"
+                data-i18n="cal.tab.month">Month</button>
+        <button type="button" role="tab" id="calendar-tab-worktime" class="screen-tab" data-card-tab="worktime"
+                aria-controls="calendar-panel-worktime" aria-selected="false" tabindex="-1"
+                data-i18n="cal.tab.worktime">Working time</button>
+        <button type="button" role="tab" id="calendar-tab-leave" class="screen-tab" data-card-tab="leave"
+                aria-controls="calendar-panel-leave" aria-selected="false" tabindex="-1"
+                data-i18n="cal.tab.leave">Leave</button>
+      </div>
+      <div id="calendar-panel-month" class="screen-panel" role="tabpanel"
+           aria-labelledby="calendar-tab-month" data-card-panel="month"></div>
+      <div id="calendar-panel-worktime" class="screen-panel" role="tabpanel"
+           aria-labelledby="calendar-tab-worktime" data-card-panel="worktime" hidden></div>
+      <div id="calendar-panel-leave" class="screen-panel" role="tabpanel"
+           aria-labelledby="calendar-tab-leave" data-card-panel="leave" hidden></div>
+      <div class="card" id="month-card" data-tab="month">
         <div class="card-head">
           <!-- No data-i18n: the script owns this text, and writes the month and
                year into it. Carrying a key as well meant applyLanguage put the
@@ -915,7 +959,7 @@
       <!-- When the days of the month shown above began and finished, and how long
            their breaks were: the person's own record of their working time, beside
            the hours they booked. Nobody else's screen shows it. -->
-      <div class="card" id="workday-card" data-perm="timesheets:read:own" data-own-only>
+      <div class="card" id="workday-card" data-perm="timesheets:read:own" data-own-only data-tab="worktime">
         <div class="card-head">
           <h2 data-i18n="work.title">Working time</h2>
           <div class="filters">
@@ -953,7 +997,7 @@
         <p class="muted" data-i18n="work.actHint">Days past a limit of the Working Hours Act are marked: more than ten hours, a break too short for the hours, or fewer than eleven hours of rest since the day before. They are notices; what happened is what is recorded.</p>
       </div>
 
-      <div class="card" id="calendar-day-card" hidden>
+      <div class="card" id="calendar-day-card" data-tab="month" hidden>
         <div class="card-head">
           <h2 id="calendar-day-title"></h2>
           <button type="button" class="link" id="calendar-day-close" data-i18n="cal.close">close</button>
@@ -977,7 +1021,7 @@
       <!-- A year's leave: what it gives, what the year before left over, what is
            taken and what is planned - counted from the days of leave recorded
            below. The script owns the heading, which names the year. -->
-      <div class="card" id="vacation-card" data-perm="timesheets:read:own" data-own-only>
+      <div class="card" id="vacation-card" data-perm="timesheets:read:own" data-own-only data-tab="leave">
         <div class="card-head">
           <h2 id="vacation-title">Leave</h2>
           <div class="filters">
@@ -1010,7 +1054,7 @@
 
       <!-- The days somebody is away, and why. Recorded over a range, but only on
            the days their week asks something of; the calendar above marks them. -->
-      <div class="card" id="absence-card" data-perm="timesheets:write:own" data-own-only>
+      <div class="card" id="absence-card" data-perm="timesheets:write:own" data-own-only data-tab="leave">
         <h2 data-i18n="absence.title">Days away</h2>
         <p class="muted" data-i18n="absence.hint">Leave, illness and days taken against overtime. Only the days your week asks something of are recorded, so a fortnight of leave is its ten working days.</p>
         <form method="post" id="form-absence" class="form">
@@ -1336,7 +1380,23 @@
 
     <!-- Reports -->
     <section id="view-report" class="view" hidden>
-      <form method="post" id="form-report" class="card form">
+      <!-- Two tools that share nothing: an evaluation, and the statement of
+           work a customer is sent. The second used to stand under the first's
+           result, where a long evaluation hid it. -->
+      <div id="report-tabs" class="screen-tabs" role="tablist" aria-label="Parts of Report"
+           data-i18n-aria="report.tabs">
+        <button type="button" role="tab" id="report-tab-report" class="screen-tab" data-card-tab="report"
+                aria-controls="report-panel-report" aria-selected="true"
+                data-i18n="report.tab.report">Report</button>
+        <button type="button" role="tab" id="report-tab-statement" class="screen-tab" data-card-tab="statement"
+                aria-controls="report-panel-statement" aria-selected="false" tabindex="-1"
+                data-i18n="report.tab.statement">Statement of work</button>
+      </div>
+      <div id="report-panel-report" class="screen-panel" role="tabpanel"
+           aria-labelledby="report-tab-report" data-card-panel="report"></div>
+      <div id="report-panel-statement" class="screen-panel" role="tabpanel"
+           aria-labelledby="report-tab-statement" data-card-panel="statement" hidden></div>
+      <form method="post" id="form-report" class="card form" data-tab="report">
         <h2 data-i18n="report.title">Report</h2>
         <div class="grid">
           <!-- Not required, and the first two options are not projects: an
@@ -1349,7 +1409,7 @@
         <button type="submit" data-i18n="action.evaluate">Evaluate</button>
       </form>
 
-      <div class="card" id="report-result" hidden>
+      <div class="card" id="report-result" data-tab="report" hidden>
         <h2><span data-i18n="report.result">Result</span> <span id="report-total" class="pill"></span></h2>
         <p class="muted" id="report-budget"></p>
 
@@ -1389,7 +1449,7 @@
            whoever charges for their time. Deliberately not an invoice - no number,
            no tax, no customer - and a card of its own with a period of its own,
            because it is asked for on its own: at the end of a month. -->
-      <form method="post" id="form-statement" class="card form" data-perm="reports:read:own">
+      <form method="post" id="form-statement" class="card form" data-perm="reports:read:own" data-tab="statement">
         <h2 data-i18n="statement.title">Statement of work</h2>
         <p class="muted" data-i18n="statement.hint">The hours of your billable projects in a period, with their rate and what they come to, totalled per currency. Not an invoice: no number, no tax, no customer - that part you write your own way.</p>
         <div class="grid">
@@ -1399,7 +1459,7 @@
         <button type="submit" data-i18n="statement.create">Work it out</button>
       </form>
 
-      <div class="card" id="statement-result" hidden>
+      <div class="card" id="statement-result" data-tab="statement" hidden>
         <h2 data-i18n="statement.title">Statement of work</h2>
         <p class="muted" id="statement-period"></p>
         <div class="table-wrap">

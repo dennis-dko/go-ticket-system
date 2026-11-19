@@ -38,7 +38,7 @@ func TestAStatementOfWorkChargesABillableProjectAtItsRate(t *testing.T) {
 		return true;
 	})()`, &booked)
 
-	p.run("work out the statement", p.click(`.tab[data-view="report"]`),
+	p.run("work out the statement", p.click(`.tab[data-view="report"]`), p.click(`#report-tabs [data-card-tab="statement"]`),
 		chromedp.WaitVisible("#form-statement", chromedp.ByID),
 		p.click(`#form-statement button[type="submit"]`))
 	p.waitForText("#table-statement tbody", "Consulting")

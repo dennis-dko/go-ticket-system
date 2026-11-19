@@ -20,7 +20,7 @@ func TestTheLeaveCardSaysWhatIsLeftOfTheYear(t *testing.T) {
 	p := open(t)
 	p.readyWorker()
 
-	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`),
+	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`), p.click(`#calendar-tabs [data-card-tab="leave"]`),
 		chromedp.WaitVisible("#form-vacation", chromedp.ByID))
 
 	p.run("give thirty days a year", chromedp.Evaluate(`(() => {

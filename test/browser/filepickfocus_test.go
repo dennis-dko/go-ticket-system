@@ -22,7 +22,7 @@ func TestAFileChooserShowsWhereTheKeyboardIs(t *testing.T) {
 	p := open(t)
 	p.readyWorker()
 
-	p.run("open the time entries", p.click(`.tab[data-view="timesheets"]`))
+	p.run("open the time entries", p.click(`.tab[data-view="timesheets"]`), p.click(`#timesheets-tabs [data-card-tab="sheet"]`))
 	p.waitShown("#workbook-card")
 
 	// A key first, so the focus that follows counts as the keyboard's.

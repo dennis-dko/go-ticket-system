@@ -92,7 +92,11 @@ func TestEveryCardOnATabbedScreenNamesATabItHas(t *testing.T) {
 		}
 	}
 
-	if screens != 2 {
-		t.Errorf("%d screens have tabs, want My account and Settings", screens)
+	// The five the maintainer asked for: My account and Settings on 2026-11-18,
+	// time entries, the calendar and the report on 2026-11-19. Counted, so a
+	// sixth is a decision somebody writes down here rather than one that happens.
+	if screens != 5 {
+		t.Errorf("%d screens have tabs, want My account, Settings, time entries, the calendar and the report",
+			screens)
 	}
 }

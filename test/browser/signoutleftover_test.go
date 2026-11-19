@@ -55,7 +55,7 @@ func TestASignOutTakesAnImportsFileAndVerdictWithIt(t *testing.T) {
 
 	const card = `#view-projects .card:has(input[type="file"])`
 
-	p.run("check a file of time entries", p.click(`.tab[data-view="timesheets"]`),
+	p.run("check a file of time entries", p.click(`.tab[data-view="timesheets"]`), p.click(`#timesheets-tabs [data-card-tab="sheet"]`),
 		chromedp.WaitVisible("#workbook-card", chromedp.ByID),
 		chromedp.SetUploadFiles("#wb-file", []string{entriesPath}, chromedp.ByQuery))
 	p.waitShown("#wb-preview")
