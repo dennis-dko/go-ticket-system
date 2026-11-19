@@ -3,12 +3,17 @@
 package integration
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 	"github.com/dennis-dko/timepulse/internal/support/backup"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 const backupPassphrase = "the installation's own passphrase"
@@ -166,5 +171,100 @@ func TestABackupPlanIsKeptOnlyIfItCanRun(t *testing.T) {
 
 	if card := readBackupCard(t, admin); card.Schedule != "0 3 * * *" || card.Keep != 7 {
 		t.Errorf("the plan reads back as %q keeping %d, want 0 3 * * * keeping 7", card.Schedule, card.Keep)
+	}
+}
+
+// uploadBackup sends a backup to the installer the way its page does: the file
+// as the body, the passphrase as base64 of its UTF-8 in a header.
+func uploadBackup(t *testing.T, c *installerClient, file []byte, passphrase string) (int, map[string]any) {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodPost, c.app.BaseURL()+"/install/backup", bytes.NewReader(file))
+	if err != nil {
+		t.Fatalf("cannot build the upload: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("X-Setup-Token", c.token)
+	req.Header.Set("X-Backup-Passphrase", base64.StdEncoding.EncodeToString([]byte(passphrase)))
+
+	res, err := (&http.Client{Timeout: time.Minute}).Do(req)
+	if err != nil {
+		t.Fatalf("upload the backup: %v", err)
+	}
+
+	defer func() { _ = res.Body.Close() }()
+
+	var body map[string]any
+
+	_ = json.NewDecoder(res.Body).Decode(&body)
+
+	return res.StatusCode, body
+}
+
+// A backup comes back through the installer of a new installation: everybody
+// signs in with the password they had, and finds what they had booked - into a
+// database of the dialect the suite runs on, so the CI runs on PostgreSQL and
+// MySQL restore into their own as well as from them.
+//
+// The installer opens the file before a database is chosen for it, so a wrong
+// passphrase is said on its page, and it refuses a restore into a database that
+// already holds accounts.
+func TestABackupIsRestoredThroughTheInstallerOfANewInstallation(t *testing.T) {
+	t.Parallel()
+
+	source := start(t, "BACKUP_PASSPHRASE="+backupPassphrase)
+	admin := source.signInAsAdmin("a-much-better-password")
+	worker := source.signInAsUser(admin, "Wera", "wera@example.com")
+
+	worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
+		"date": "2026-11-19", "durationHours": 2.75, "description": "Before the restore",
+	}), http.StatusCreated, http.StatusOK)
+
+	admin.must(admin.api(http.MethodPut, "/settings/backups/plan", map[string]any{"schedule": "", "keep": 3}),
+		http.StatusOK)
+
+	_, file := madeBackup(t, admin)
+
+	c := openInstaller(t)
+
+	if status, body := uploadBackup(t, c, file, "not the passphrase at all"); status != http.StatusBadRequest ||
+		body["code"] != "backupWrongPassphrase" {
+		t.Errorf("a wrong passphrase was answered %d %v, want 400 backupWrongPassphrase", status, body)
+	}
+
+	if status, body := uploadBackup(t, c, file, backupPassphrase); status != http.StatusOK {
+		t.Fatalf("the backup was not taken: %d %v", status, body)
+	}
+
+	answer := map[string]any{"restore": true, "language": "en"}
+	for key, value := range harness.FreshDatasource(t) {
+		answer[key] = value
+	}
+
+	if status, body := c.post("/install/save", c.token, answer); status != http.StatusOK {
+		t.Fatalf("saving the connection with the restore asked for: %d %v", status, body)
+	}
+
+	waitForTheApplication(t, c)
+
+	restored := &app{App: c.app, t: t}
+
+	back := restored.newClient()
+	back.signIn("wera@example.com", "another-password-1")
+
+	var entries listOf[timesheetResponse]
+
+	back.must(back.api(http.MethodGet, "/timesheets", nil), http.StatusOK).Data(t, &entries)
+
+	if entries.TotalCount != 1 || entries.Items[0].DurationHours != 2.75 {
+		t.Fatalf("after the restore Wera finds %+v, want her 2.75 hours\n%s", entries, c.app.Log())
+	}
+
+	again := restored.newClient()
+	again.signIn(adminEmail, "a-much-better-password")
+
+	if card := readBackupCard(t, again); card.Keep != 3 {
+		t.Errorf("the restored installation keeps %d backups, want the 3 its plan said", card.Keep)
 	}
 }

@@ -6,10 +6,12 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -19,7 +21,9 @@ import (
 
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
+	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 	"github.com/dennis-dko/timepulse/internal/support/apperror"
+	"github.com/dennis-dko/timepulse/internal/support/backup"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
 
@@ -82,6 +86,13 @@ type Result struct {
 	// to decide: this screen only carries the question.
 	Demo     bool
 	Language string
+
+	// Restore is a backup to put into the new database once it is migrated, and
+	// RestorePassphrase the passphrase it opens with. The installer has opened it
+	// once already, so a wrong passphrase was said on the screen rather than at
+	// the start.
+	Restore           []byte
+	RestorePassphrase string
 }
 
 // answer is the body the page sends: the connection, and with a save, whether
@@ -91,6 +102,9 @@ type answer struct {
 
 	Demo     bool   `json:"demo"`
 	Language string `json:"language"`
+
+	// Restore asks for the backup uploaded before to be put into the database.
+	Restore bool `json:"restore"`
 }
 
 // handover is what a save hands the application: the connection as it was
@@ -99,6 +113,7 @@ type handover struct {
 	datasource appconfig.Datasource
 	demo       bool
 	language   string
+	restore    *pendingRestore
 }
 
 // Serve blocks until a working database connection has been saved, and returns
@@ -128,6 +143,7 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 	mux.HandleFunc("/install/state", s.state)
 	mux.HandleFunc("/install/test", s.test)
 	mux.HandleFunc("/install/save", s.save)
+	mux.HandleFunc("/install/backup", s.backup)
 	// Everything else is the page, so a bookmarked deep link into the
 	// application still lands somewhere that explains itself.
 	mux.HandleFunc("/", s.page)
@@ -141,7 +157,9 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 	// answered in 150 seconds, and with these bounds it is refused after 30. One
 	// request and then silence, or a body that never arrives, held a connection
 	// until the process ended, as often as a visitor liked. Nothing legitimate
-	// here is slow: the page is small and the largest body read is eight kilobytes.
+	// here is slow: the page is small and every body read is eight kilobytes but
+	// one - a backup, which takes the time it takes and is given it, by its own
+	// handler, only once the token has been checked.
 	httpServer := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           mux,
@@ -183,12 +201,18 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 
 	_ = httpServer.Shutdown(shutdownCtx)
 
-	return Result{
+	result := Result{
 		Datasource: accepted.datasource,
 		Token:      cfg.Token,
 		Demo:       accepted.demo,
 		Language:   accepted.language,
-	}, waitErr
+	}
+
+	if accepted.restore != nil {
+		result.Restore, result.RestorePassphrase = accepted.restore.file, accepted.restore.passphrase
+	}
+
+	return result, waitErr
 }
 
 type server struct {
@@ -204,6 +228,17 @@ type server struct {
 	// corrected and sent again.
 	mu    sync.Mutex
 	saved bool
+
+	// restore is the backup uploaded to start the new database from, held until
+	// the answer that chooses the database asks for it. Guarded by mu.
+	restore *pendingRestore
+}
+
+// pendingRestore is a backup the installer has opened once, to be sure it can
+// be, and hands to the application to restore after the migrations.
+type pendingRestore struct {
+	file       []byte
+	passphrase string
 }
 
 func (s *server) announce(addr net.Addr, generated bool) {
@@ -390,6 +425,13 @@ func (s *server) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	restore, refused := s.restoreAsked(r, given, ds)
+	if refused != nil {
+		writeError(w, http.StatusBadRequest, refused)
+
+		return
+	}
+
 	s.mu.Lock()
 
 	if s.saved {
@@ -427,7 +469,128 @@ func (s *server) save(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cannot block: saved lets exactly one request this far, and done holds one.
-	s.done <- handover{datasource: ds, demo: given.Demo, language: given.Language}
+	s.done <- handover{datasource: ds, demo: given.Demo, language: given.Language, restore: restore}
+}
+
+// restoreAsked is the backup an answer asks to restore, once the questions a
+// restore raises have been answered here, while this screen can still say so:
+// asked by the application, each would be a start that fails.
+func (s *server) restoreAsked(r *http.Request, given answer, ds appconfig.Datasource) (*pendingRestore, error) {
+	if !given.Restore {
+		return nil, nil
+	}
+
+	if given.Demo {
+		return nil, apperror.Invalidf("a new database is filled with demo data or from a backup, not both").
+			WithCode("demoOrRestore")
+	}
+
+	s.mu.Lock()
+	restore := s.restore
+	s.mu.Unlock()
+
+	if restore == nil {
+		return nil, apperror.Invalidf("no backup has been uploaded to restore").WithCode("noBackupUploaded")
+	}
+
+	holds, err := appconfig.HoldsAccounts(r.Context(), ds)
+	if err != nil {
+		return nil, probeFailure(err)
+	}
+
+	if holds {
+		return nil, apperror.Invalidf("the database already holds accounts; a backup is only restored into " +
+			"an empty one").WithCode("restoreNeedsEmptyDatabase")
+	}
+
+	return restore, nil
+}
+
+// backupUploadTime is how long an upload of a backup may take once its token
+// has been checked: the largest file over a slow line, and not for ever.
+const backupUploadTime = 15 * time.Minute
+
+// backup takes the backup a new installation is to start from, and opens it
+// once, so that a wrong passphrase or a file that is no backup is said on this
+// screen rather than at the start that would restore it.
+//
+// The file is the body as it is. The passphrase comes in a header, base64 of its
+// UTF-8: a browser sends only Latin-1 in a header, and a passphrase may hold any
+// character at all.
+func (s *server) backup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+
+		return
+	}
+
+	if !s.holdsTheToken(r) {
+		writeError(w, http.StatusUnauthorized,
+			apperror.Invalidf("the setup token is wrong - it is printed in this "+
+				"process's log").WithCode("wrongSetupToken"))
+
+		return
+	}
+
+	// The read deadline every other request keeps is thirty seconds, which a
+	// backup over a slow line does not fit in.
+	_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(backupUploadTime))
+
+	file, err := io.ReadAll(http.MaxBytesReader(w, r.Body, backup.MaxFileSize))
+	if err != nil {
+		writeError(w, http.StatusRequestEntityTooLarge,
+			apperror.Invalidf("the backup could not be read whole: %v", err).
+				WithCode("backupTooLarge", strconv.Itoa(backup.MaxFileSize>>20)))
+
+		return
+	}
+
+	passphrase, err := base64.StdEncoding.DecodeString(r.Header.Get("X-Backup-Passphrase"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, backupRefusal(backup.ErrWrongPassphrase))
+
+		return
+	}
+
+	var header sqldb.BackupHeader
+
+	err = backup.Open(file, string(passphrase), func(content io.Reader) error {
+		header, err = sqldb.ReadBackupHeader(content)
+
+		return err
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, backupRefusal(err))
+
+		return
+	}
+
+	s.mu.Lock()
+	s.restore = &pendingRestore{file: file, passphrase: string(passphrase)}
+	s.mu.Unlock()
+
+	s.cfg.Logf("a backup made by %s on %s is ready to restore", header.Application,
+		header.CreatedAt.Format(time.RFC3339))
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"application": header.Application, "dialect": header.Dialect, "createdAt": header.CreatedAt,
+	})
+}
+
+// backupRefusal is why a backup was not taken, coded for the page to say.
+func backupRefusal(err error) error {
+	switch {
+	case errors.Is(err, backup.ErrWrongPassphrase):
+		return apperror.Invalidf("the passphrase does not open this backup").WithCode("backupWrongPassphrase")
+	case errors.Is(err, backup.ErrNewerFormat):
+		return apperror.Invalidf("a newer version of TimePulse wrote this backup").WithCode("backupFromNewerVersion")
+	case errors.Is(err, backup.ErrTooLarge):
+		return apperror.Invalidf("the backup is larger than a backup may be").
+			WithCode("backupTooLarge", strconv.Itoa(backup.MaxFileSize>>20))
+	default:
+		return apperror.Invalidf("this is not a TimePulse backup").WithCode("notABackup")
+	}
 }
 
 // holdsTheToken reports whether a request carries the setup token.
