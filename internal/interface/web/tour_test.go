@@ -84,10 +84,13 @@ var notInTheTour = map[string]string{
 }
 
 // screenCard is a card on one of the screens, and every id inside it -
-// its own included.
+// its own included. view is the screen's id, and tab the tab the card is on
+// where its screen is sorted into tabs.
 type screenCard struct {
 	name string
 	ids  map[string]bool
+	view string
+	tab  string
 }
 
 var (
@@ -95,6 +98,8 @@ var (
 	markupTag     = regexp.MustCompile(`<(/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>`)
 	markupID      = regexp.MustCompile(`\bid="([^"]+)"`)
 	markupClass   = regexp.MustCompile(`\bclass="([^"]+)"`)
+	markupTab     = regexp.MustCompile(`\bdata-tab="([^"]+)"`)
+	markupCardTab = regexp.MustCompile(`\bdata-card-tab="([^"]+)"`)
 )
 
 // emptyElements close themselves, so they never wait for an end tag.
@@ -116,6 +121,8 @@ func screenCards(t *testing.T, html string) []screenCard {
 		card       int
 		screen     bool
 		insideView bool
+		view       string
+		tab        string
 	}
 
 	var (
@@ -151,8 +158,21 @@ func screenCards(t *testing.T, html string) []screenCard {
 		insideView := len(stack) > 0 && (stack[len(stack)-1].insideView || stack[len(stack)-1].screen)
 		element := open{name: name, card: -1, screen: slices.Contains(classes, "view"), insideView: insideView}
 
+		// A card inside a card is on the tab of the one around it.
+		if len(stack) > 0 {
+			element.view, element.tab = stack[len(stack)-1].view, stack[len(stack)-1].tab
+		}
+
+		if element.screen {
+			element.view = id
+		}
+
+		if match := markupTab.FindStringSubmatch(attrs); match != nil {
+			element.tab = match[1]
+		}
+
 		if insideView && slices.Contains(classes, "card") {
-			cards = append(cards, screenCard{name: id, ids: map[string]bool{}})
+			cards = append(cards, screenCard{name: id, ids: map[string]bool{}, view: element.view, tab: element.tab})
 			element.card = len(cards) - 1
 		}
 
@@ -223,6 +243,140 @@ func TestEveryCardIsInTheTour(t *testing.T) {
 		if !named[name] {
 			t.Errorf("notInTheTour names %s, which is no card on any screen", name)
 		}
+	}
+}
+
+// tabStrip is the row of tabs a screen is sorted into, and the tabs on it in
+// the order they stand.
+type tabStrip struct {
+	id    string
+	order []string
+}
+
+// tabStrips reads the row of tabs of every screen that has one, by the
+// screen's id. Screens follow one another rather than nest, so the screen a
+// tag is on is the last one opened before it.
+func tabStrips(t *testing.T, html string) map[string]tabStrip {
+	t.Helper()
+
+	strips := map[string]tabStrip{}
+	view := ""
+
+	for _, tag := range markupTag.FindAllStringSubmatch(markupComment.ReplaceAllString(html, ""), -1) {
+		if tag[1] == "/" {
+			continue
+		}
+
+		attrs := tag[3]
+
+		var classes []string
+		if match := markupClass.FindStringSubmatch(attrs); match != nil {
+			classes = strings.Fields(match[1])
+		}
+
+		id := ""
+		if match := markupID.FindStringSubmatch(attrs); match != nil {
+			id = match[1]
+		}
+
+		switch {
+		case slices.Contains(classes, "view"):
+			view = id
+		case slices.Contains(classes, "screen-tabs"):
+			strips[view] = tabStrip{id: id}
+		}
+
+		if match := markupCardTab.FindStringSubmatch(attrs); match != nil {
+			strip := strips[view]
+			strip.order = append(strip.order, match[1])
+			strips[view] = strip
+		}
+	}
+
+	if len(strips) == 0 {
+		t.Fatal("found no screen sorted into tabs")
+	}
+
+	return strips
+}
+
+// Every screen sorted into tabs is said to be in the tour.
+//
+// My account and Settings were sorted into tabs first, and each was given a
+// step on its row of tabs. The time entries, the calendar and the report were
+// sorted after them and given none: the walk opened their tabs one after the
+// other without a word about why the screen had changed under the bubble.
+// TestEveryCardIsInTheTour could not notice, because a row of tabs is not a
+// card.
+func TestEveryTabStripIsInTheTour(t *testing.T) {
+	targets := map[string]bool{}
+	for _, match := range tourTargetPattern.FindAllStringSubmatch(tourSection(t), -1) {
+		targets[strings.TrimPrefix(match[1], "#")] = true
+	}
+
+	for view, strip := range tabStrips(t, asset(t, "/")) {
+		if !targets[strip.id] {
+			t.Errorf("%s is sorted into tabs, and no step of the tour points at #%s to say so", view, strip.id)
+		}
+	}
+}
+
+// The tour says a screen is sorted into tabs before it opens one, and then
+// opens them in the order they stand.
+//
+// A step opens the tab of what it points at, so the walk goes wherever the
+// list of steps sends it. On the time entries it went from the first tab to
+// the third and back to the second, because the spreadsheet's step was older
+// than the tab the templates were moved to.
+func TestTheTourWalksAScreensTabsInTheOrderTheyStand(t *testing.T) {
+	html := asset(t, "/")
+	strips := tabStrips(t, html)
+
+	holding := map[string]screenCard{}
+	for _, card := range screenCards(t, html) {
+		for id := range card.ids {
+			holding[id] = card
+		}
+	}
+
+	introduced := map[string]bool{}
+	reached := map[string]int{}
+
+	for _, match := range tourTargetPattern.FindAllStringSubmatch(tourSection(t), -1) {
+		target := strings.TrimPrefix(match[1], "#")
+
+		for view, strip := range strips {
+			if strip.id == target {
+				introduced[view] = true
+			}
+		}
+
+		card, ok := holding[target]
+		if !ok || card.tab == "" {
+			continue
+		}
+
+		strip, ok := strips[card.view]
+		if !ok {
+			continue
+		}
+
+		at := slices.Index(strip.order, card.tab)
+		if at < 0 {
+			continue // TestEveryCardOnATabbedScreenNamesATabItHas says so.
+		}
+
+		if !introduced[card.view] {
+			t.Errorf("the tour points at #%s on the %s tab of %s before it says that screen is sorted into tabs",
+				target, card.tab, card.view)
+		}
+
+		if at < reached[card.view] {
+			t.Errorf("the tour goes back from the %s tab of %s to the %s tab for #%s",
+				strip.order[reached[card.view]], card.view, card.tab, target)
+		}
+
+		reached[card.view] = max(reached[card.view], at)
 	}
 }
 

@@ -193,6 +193,12 @@ func TestTurningTheTelephoneKeepsTheStepOnScreen(t *testing.T) {
 //
 // Half a pixel of slack, because a rectangle read out of a browser is fractional
 // and one that ends at 390.25 on a 390-pixel screen is on it.
+//
+// What the step points at has to be on the screen as well. A step opens the tab
+// of a card on a screen sorted into tabs, and only the walk of somebody who
+// records time reaches the time entries, the calendar and the report - so this
+// is the one place that asks whether their steps point at something a tab
+// still hides.
 func (p *page) stepProblems(r tourRingReading) []string {
 	p.t.Helper()
 
@@ -201,6 +207,10 @@ func (p *page) stepProblems(r tourRingReading) []string {
 	b := r.Bubble
 
 	var problems []string
+
+	if !r.Shown {
+		problems = append(problems, "it points at "+r.Target+", which has no box on the screen")
+	}
 
 	if b.Top < -slack {
 		problems = append(problems, fmt.Sprintf("the bubble starts %.0fpx above the top of a %.0fx%.0f screen",

@@ -907,7 +907,22 @@ button.danger:not(.link) {
    Sunday and the total lay past its edge, behind a swipe a touch screen draws no
    scroll bar for. A project's name and what a day is besides its date fold for
    the same reason, rather than standing as one long line each. */
-.week-grid input.week-cell { max-width: 5.5em; min-width: 3.6em; text-align: right; width: 100%; }
+.week-grid input.week-cell {
+  /* Hours are typed rather than stepped, and the arrows a number field draws
+     inside itself took the room of the figures: "2.75" lost its last one. */
+  appearance: textfield;
+  max-width: 5.5em;
+  min-width: 3.6em;
+  padding-inline: 12px;
+  text-align: right;
+  width: 100%;
+}
+
+.week-grid input.week-cell::-webkit-inner-spin-button,
+.week-grid input.week-cell::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
 .week-grid tbody th { min-width: 8em; white-space: normal; }
 .week-grid .week-tag { white-space: normal; }
 
@@ -1545,6 +1560,15 @@ body:has(#login-screen:not([hidden])) .toast-stack { bottom: calc(var(--footer-h
 
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* A button in a row keeps its own height and stands at the row's foot, level
+   with the field beside it rather than with the words above that field. Left
+   to flex's stretch, "Copy last week" grew as tall as "Add a row for" and its
+   dropdown together - an oval half again a pill's height. A link is left to
+   the stretch, which centres its words on the line: no taller than them, it
+   sank below the pills' words at the foot, "stopped earlier?" under
+   "Discard". */
+.row > button:not(.link, .link-button) { align-self: flex-end; }
+
 /* A line's worth of air above, where the control below is a different kind of
    thing from the one above it: a synchronisation that deletes sitting under a
    Save that only stores a schedule, the Save of the appearance form sitting
@@ -1808,22 +1832,24 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   align-items: center;
   column-gap: 10px;
   display: grid;
-  grid-template-columns: 32px 1fr 32px;
+  grid-template-columns: 40px 1fr 40px;
   min-width: 168px;
-  padding: 3px;
+  padding: 4px;
 }
 
 .login-submit::after { content: ""; }
 
 /* The button's two colours swapped, so it reads as part of the button in both
- * themes: a white box with a blue tick on light, a dark box on dark. */
+ * themes: white with a blue tick on light, dark on dark. Round, and as far from
+ * the edge on every side, so it follows the pill's round end: as a square it
+ * stood there as a box glued on, and read as a tick box. */
 .login-tick {
   align-items: center;
   background: var(--accent-text);
-  border-radius: 6px;
+  border-radius: 50%;
   color: var(--accent);
   display: flex;
-  height: 32px;
+  height: 40px;
   justify-content: center;
   order: -1;
 }
