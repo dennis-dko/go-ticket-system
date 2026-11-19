@@ -10611,6 +10611,15 @@ const TOUR_STEPS = [
       + 'so this bar is shorter for some people than for others.'),
   },
   {
+    target: '#timesheets-tabs',
+    view: 'timesheets',
+    permission: 'timesheets:read:own',
+    title: () => t('tour.timesheetsTabs.title', 'Time entries, by task'),
+    text: () => t('tour.timesheetsTabs.text',
+      'Recording, templates and the spreadsheet each have a tab of their own. The walk '
+      + 'opens each one as it gets there.'),
+  },
+  {
     target: '#timer-card',
     view: 'timesheets',
     permission: 'timesheets:write:own',
@@ -10641,6 +10650,15 @@ const TOUR_STEPS = [
       + 'submit it to.'),
   },
   {
+    target: '#templates-card',
+    view: 'timesheets',
+    permission: 'timesheets:write:own',
+    title: () => t('tour.templates.title', 'Templates'),
+    text: () => t('tour.templates.text',
+      'Bookings you make often, kept with "Save as template" in the form above. A template '
+      + 'only fills the form in: nothing is booked until you press Book.'),
+  },
+  {
     target: '#workbook-card',
     view: 'timesheets',
     permission: 'timesheets:read:own',
@@ -10651,15 +10669,6 @@ const TOUR_STEPS = [
       + 'Every table worth moving this way has the same pair on its own screen.'),
   },
   {
-    target: '#templates-card',
-    view: 'timesheets',
-    permission: 'timesheets:write:own',
-    title: () => t('tour.templates.title', 'Templates'),
-    text: () => t('tour.templates.text',
-      'Bookings you make often, kept with "Save as template" in the form above. A template '
-      + 'only fills the form in: nothing is booked until you press Book.'),
-  },
-  {
     target: '#week-card',
     view: 'week',
     permission: 'timesheets:read:own',
@@ -10667,6 +10676,15 @@ const TOUR_STEPS = [
     text: () => t('tour.week.text',
       'A row for each project and a column for each day. A number typed into an empty cell '
       + 'books it, and a changed number corrects the entry behind it.'),
+  },
+  {
+    target: '#calendar-tabs',
+    view: 'calendar',
+    permission: 'timesheets:read:own',
+    title: () => t('tour.calendarTabs.title', 'The calendar, by subject'),
+    text: () => t('tour.calendarTabs.text',
+      'The month, your working time, and your leave and days away each have a tab of '
+      + 'their own.'),
   },
   {
     target: '#calendar-days',
@@ -10750,6 +10768,14 @@ const TOUR_STEPS = [
     text: () => t('tour.projectList.text',
       'Only an active project takes hours. Complete one when the work is done, and archive it '
       + 'once it is completed: its hours stay readable.'),
+  },
+  {
+    target: '#report-tabs',
+    view: 'report',
+    permission: 'reports:read:own',
+    title: () => t('tour.reportTabs.title', 'Reports, in two parts'),
+    text: () => t('tour.reportTabs.text',
+      'The report and the statement of work each have a tab of their own.'),
   },
   {
     target: '#form-report',
