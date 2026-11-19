@@ -1061,9 +1061,12 @@ td.actions, th.actions { text-align: right; }
  * nothing to how wide a table makes the column - so the role in a user's row got
  * whatever the column had left and cut its own label: "Benutze" for Benutzer and
  * for Benutzer & Administrator alike. Bounded, because each option carries what
- * the role is for after its name, and the name is the part that has to fit. */
+ * the role is for after its name, and the name is the part that has to fit -
+ * sixteen ems of it, and the pill's padding on top, which is wider than a box's
+ * was: at sixteen ems alone the longest name came out fourteen pixels short in
+ * the faces CI renders in. */
 td > select {
-  max-width: 16em;
+  max-width: calc(16em + 24px);
   width: auto;
 }
 
