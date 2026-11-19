@@ -80,7 +80,12 @@ func TestTheReadmePicturesAreTakenFromTheApplication(t *testing.T) {
 
 	p.showView("calendar")
 	p.shoot(into, "calendar")
+	p.showTabOf("#workday-card")
 	p.shootCard(into, "workday", "#workday-card")
+
+	// Back to the month: a screen comes back on the tab it was left on, and the
+	// calendar's pictures further down are of the month.
+	p.showTabOf("#month-card")
 
 	p.showView("week")
 	p.shootCard(into, "week", "#week-card")
@@ -109,6 +114,7 @@ func TestTheReadmePicturesAreTakenFromTheApplication(t *testing.T) {
 	p.waitShown("#report-result")
 	p.run("as a pie", p.click(`#report-chart-switch [data-chart="pie"]`))
 	p.shootCard(into, "report", "#report-result")
+	p.showTabOf("#form-statement")
 	p.run("work out the month's statement", p.click(`#form-statement button[type="submit"]`))
 	p.waitShown("#statement-result")
 	p.shootCard(into, "statement", "#statement-result")
