@@ -1415,7 +1415,7 @@ body:has(#login-screen:not([hidden])) .toast-stack { bottom: calc(var(--footer-h
 .who {
   color: var(--muted);
   font-size: 13px;
-  max-width: 16em;
+  max-width: 12em;
   overflow: hidden;
   text-align: right;
   text-overflow: ellipsis;
