@@ -1563,8 +1563,11 @@ body:has(#login-screen:not([hidden])) .toast-stack { bottom: calc(var(--footer-h
 /* A button in a row keeps its own height and stands at the row's foot, level
    with the field beside it rather than with the words above that field. Left
    to flex's stretch, "Copy last week" grew as tall as "Add a row for" and its
-   dropdown together - an oval half again a pill's height. */
-.row > button { align-self: flex-end; }
+   dropdown together - an oval half again a pill's height. A link is left to
+   the stretch, which centres its words on the line: no taller than them, it
+   sank below the pills' words at the foot, "stopped earlier?" under
+   "Discard". */
+.row > button:not(.link, .link-button) { align-self: flex-end; }
 
 /* A line's worth of air above, where the control below is a different kind of
    thing from the one above it: a synchronisation that deletes sitting under a

@@ -53,42 +53,111 @@ func TestNoButtonIsStretchedPastAControlsHeight(t *testing.T) {
 		}
 	}
 
-	walk := func(who string) {
-		var views []string
-
-		p.run("list "+who+"'s screens", chromedp.Evaluate(
-			`[...document.querySelectorAll('.tab[data-view]')].filter(tab => !tab.hidden).map(tab => tab.dataset.view)`,
-			&views))
-
-		if len(views) < 2 {
-			t.Fatalf("too few screens to walk for %s: %v", who, views)
-		}
-
-		for _, view := range views {
-			p.run("open "+view, p.click(fmt.Sprintf(`.tab[data-view=%q]`, view)))
-			measure(who + " " + view)
-
-			var tabs []string
-
-			p.run("list the tabs of "+view, chromedp.Evaluate(fmt.Sprintf(
-				`[...document.querySelectorAll('#view-%s .screen-tab')].filter(tab => !tab.hidden).map(tab => tab.id)`,
-				view), &tabs))
-
-			for _, tab := range tabs {
-				p.run("open "+tab, p.click("#"+tab))
-				measure(who + " " + view + " " + tab)
-			}
-		}
-	}
-
-	walk("administrator")
+	p.everyScreen("administrator", measure)
 
 	p.becomeWorker()
-	walk("worker")
+	p.everyScreen("worker", measure)
 
 	if len(found) > 0 {
 		t.Errorf("these buttons are stretched past their own height by what stands beside them:\n\t%s",
 			strings.Join(found, "\n\t"))
+	}
+}
+
+// A link in a row stands level with the controls beside it.
+//
+// A row's pills stand at its foot, so that one beside a label whose words stand
+// above its field is not stretched to the height of both. A link is a button
+// too, but no taller than its words, and put at the foot as well its words sank
+// below those of the pills beside it: "stopped earlier?" stood under "Discard"
+// for as long as a clock ran. So every screen is walked again, with the
+// stopwatch running for whoever works here because that is when that link is
+// shown, and a link whose middle is not the middle of a control on its line is
+// reported.
+func TestALinkInARowStandsLevelWithTheControlsBesideIt(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyAdmin()
+
+	var found []string
+
+	measure := func(where string) {
+		var askew []string
+
+		p.evalJSON(`JSON.stringify([...document.querySelectorAll('.row > button.link')]
+			.filter((link) => link.offsetParent !== null)
+			.flatMap((link) => {
+				const middle = (box) => (box.top + box.bottom) / 2;
+				const own = link.getBoundingClientRect();
+
+				// The pills of the row, and the fields its labels hold.
+				const controls = [...link.parentElement.children].flatMap((el) =>
+					el.matches('button:not(.link, .link-button)') ? [el]
+						: el.matches('label')
+							? [...el.querySelectorAll(':scope > select, :scope > input:not([type="checkbox"], [type="radio"], [type="file"])')]
+							: []);
+
+				return controls
+					.filter((control) => control.offsetParent !== null)
+					.map((control) => control.getBoundingClientRect())
+					.filter((box) => box.top < own.bottom && own.top < box.bottom)
+					.map((box) => middle(own) - middle(box))
+					.filter((off) => Math.abs(off) > 2)
+					.slice(0, 1)
+					.map((off) => (link.id || link.textContent.trim().slice(0, 30)) + ': ' +
+						Math.abs(Math.round(off)) + 'px ' + (off > 0 ? 'below' : 'above') + ' the control beside it');
+			}))`, &askew)
+
+		for _, s := range askew {
+			found = append(found, where+": "+s)
+		}
+	}
+
+	p.everyScreen("administrator", measure)
+
+	p.becomeWorker()
+	p.run("start the stopwatch", p.click(`.tab[data-view="timesheets"]`),
+		chromedp.WaitVisible("#timer-start", chromedp.ByID),
+		p.click("#timer-start"),
+		chromedp.WaitVisible("#timer-end-open", chromedp.ByID))
+	p.everyScreen("worker with the clock running", measure)
+
+	if len(found) > 0 {
+		t.Errorf("these links do not stand level with the controls beside them:\n\t%s",
+			strings.Join(found, "\n\t"))
+	}
+}
+
+// everyScreen opens each screen the signed-in account is offered, and each tab
+// of it, and hands look the name of where it stands.
+func (p *page) everyScreen(who string, look func(where string)) {
+	p.t.Helper()
+
+	var views []string
+
+	p.run("list "+who+"'s screens", chromedp.Evaluate(
+		`[...document.querySelectorAll('.tab[data-view]')].filter(tab => !tab.hidden).map(tab => tab.dataset.view)`,
+		&views))
+
+	if len(views) < 2 {
+		p.t.Fatalf("too few screens to walk for %s: %v", who, views)
+	}
+
+	for _, view := range views {
+		p.run("open "+view, p.click(fmt.Sprintf(`.tab[data-view=%q]`, view)))
+		look(who + " " + view)
+
+		var tabs []string
+
+		p.run("list the tabs of "+view, chromedp.Evaluate(fmt.Sprintf(
+			`[...document.querySelectorAll('#view-%s .screen-tab')].filter(tab => !tab.hidden).map(tab => tab.id)`,
+			view), &tabs))
+
+		for _, tab := range tabs {
+			p.run("open "+tab, p.click("#"+tab))
+			look(who + " " + view + " " + tab)
+		}
 	}
 }
 
