@@ -68,6 +68,20 @@ func filled(t *testing.T) (*sql.DB, *model.User) {
 		t.Fatalf("passkey: %v", err)
 	}
 
+	// A setting that comes back, and the one a restore leaves out: the zone a
+	// MySQL installation records for the process that wrote its moments, which
+	// only MySQL installations hold.
+	settings := sqldb.NewSettingsRepository(db, sqldb.DialectSQLite)
+
+	for key, value := range map[string]string{
+		model.SettingTimezone:    "Europe/Berlin",
+		model.SettingStorageZone: "the zone of the server the backup was made on",
+	} {
+		if err := settings.Set(ctx, key, value); err != nil {
+			t.Fatalf("set %s: %v", key, err)
+		}
+	}
+
 	return db, wera
 }
 
@@ -128,6 +142,17 @@ func TestABackupRestoresWhatWasBackedUp(t *testing.T) {
 	if err != nil || len(keys) != 1 || !bytes.Equal(keys[0].CredentialID, []byte{0, 1, 2, 250}) ||
 		keys[0].LastUsedAt != nil {
 		t.Errorf("the passkey came back as %+v, %v", keys, err)
+	}
+
+	settings := sqldb.NewSettingsRepository(restored, sqldb.DialectSQLite)
+
+	if zone, _ := settings.Get(ctx, model.SettingTimezone); zone != "Europe/Berlin" {
+		t.Errorf("the timezone came back as %q", zone)
+	}
+
+	if zone, _ := settings.Get(ctx, model.SettingStorageZone); zone != "" {
+		t.Errorf("the backup's server's storage zone came back as %q; the restoring process writes "+
+			"every moment, so it is the one to record its own", zone)
 	}
 
 	// And the next account gets an id of its own rather than one the restore wrote.

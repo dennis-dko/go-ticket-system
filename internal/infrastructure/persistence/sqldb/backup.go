@@ -327,6 +327,9 @@ func Restore(ctx context.Context, db DB, dialect string, schema int64, r io.Read
 		// it comes back from restoreTable and is the next one looked at here.
 		var line json.RawMessage
 
+		// Every row read, the ones left out included, is what the last line counts.
+		var read int64
+
 		for {
 			if line == nil {
 				var err error
@@ -337,8 +340,8 @@ func Restore(ctx context.Context, db DB, dialect string, schema int64, r io.Read
 
 			var end backupEnd
 			if json.Unmarshal(line, &end) == nil && end.End {
-				if end.Rows != summary.Rows {
-					return fmt.Errorf("the backup says it holds %d rows and %d were read", end.Rows, summary.Rows)
+				if end.Rows != read {
+					return fmt.Errorf("the backup says it holds %d rows and %d were read", end.Rows, read)
 				}
 
 				return resetSequences(ctx, tx)
@@ -349,13 +352,14 @@ func Restore(ctx context.Context, db DB, dialect string, schema int64, r io.Read
 				return fmt.Errorf("the backup has a line where a table should begin: %.80s", line)
 			}
 
-			restored, next, err := restoreTable(ctx, tx, section, decoder)
+			rows, next, err := restoreTable(ctx, tx, section, decoder)
 			if err != nil {
 				return fmt.Errorf("restore %s: %w", section.Table, err)
 			}
 
 			summary.Tables++
-			summary.Rows += restored
+			summary.Rows += rows.restored
+			read += rows.read
 			line = next
 		}
 	})
@@ -379,16 +383,25 @@ func nextLine(decoder *json.Decoder) (json.RawMessage, error) {
 	return line, nil
 }
 
+// tableRows is what a table's rows came to: every row read, and the ones written.
+// They differ by the settings a restore leaves out, which still count towards
+// the number the backup's last line names.
+type tableRows struct {
+	read, restored int64
+}
+
 // restoreTable inserts the rows that follow a section line, up to the first line
 // that is not a row, which it hands back unread.
-func restoreTable(ctx context.Context, tx base, section backupSection, decoder *json.Decoder) (int64, json.RawMessage, error) {
+func restoreTable(ctx context.Context, tx base, section backupSection, decoder *json.Decoder) (tableRows, json.RawMessage, error) {
+	var rows tableRows
+
 	if !slices.Contains(BackupTables, section.Table) {
-		return 0, nil, fmt.Errorf("%q is not a table a backup carries", section.Table)
+		return rows, nil, fmt.Errorf("%q is not a table a backup carries", section.Table)
 	}
 
 	target, err := columnKinds(ctx, tx, section.Table)
 	if err != nil {
-		return 0, nil, err
+		return rows, nil, err
 	}
 
 	// The columns both the backup and the database know, by their position in
@@ -420,23 +433,23 @@ func restoreTable(ctx context.Context, tx base, section backupSection, decoder *
 
 	keyColumn := slices.Index(section.Columns, "key_name")
 
-	var restored int64
-
 	for {
 		line, err := nextLine(decoder)
 		if err != nil {
-			return restored, nil, err
+			return rows, nil, err
 		}
 
 		// A row is an array; the line that is not one opens what follows.
 		if line[0] != '[' {
-			return restored, line, nil
+			return rows, line, nil
 		}
 
 		row, err := rowOf(line)
 		if err != nil {
-			return restored, nil, err
+			return rows, nil, err
 		}
+
+		rows.read++
 
 		if section.Table == "settings" && keyColumn >= 0 && keyColumn < len(row) {
 			if key, _ := row[keyColumn].(string); slices.Contains(skippedOnRestore, key) {
@@ -447,19 +460,19 @@ func restoreTable(ctx context.Context, tx base, section backupSection, decoder *
 		args := make([]any, len(names))
 		for j, position := range positions {
 			if position >= len(row) {
-				return restored, nil, fmt.Errorf("a row of %d values where %d columns were named", len(row), len(section.Columns))
+				return rows, nil, fmt.Errorf("a row of %d values where %d columns were named", len(row), len(section.Columns))
 			}
 
 			if args[j], err = decodeValue(kinds[j], row[position]); err != nil {
-				return restored, nil, fmt.Errorf("column %s: %w", names[j], err)
+				return rows, nil, fmt.Errorf("column %s: %w", names[j], err)
 			}
 		}
 
 		if _, err := tx.db.ExecContext(ctx, insert, args...); err != nil {
-			return restored, nil, err
+			return rows, nil, err
 		}
 
-		restored++
+		rows.restored++
 	}
 }
 
