@@ -570,8 +570,7 @@ func (s *server) backup(w http.ResponseWriter, r *http.Request) {
 	s.restore = &pendingRestore{file: file, passphrase: string(passphrase)}
 	s.mu.Unlock()
 
-	s.cfg.Logf("a backup made by %s on %s is ready to restore", header.Application,
-		header.CreatedAt.Format(time.RFC3339))
+	s.cfg.Logf("a backup %s is ready to restore", header.Describe())
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"application": header.Application, "dialect": header.Dialect, "createdAt": header.CreatedAt,

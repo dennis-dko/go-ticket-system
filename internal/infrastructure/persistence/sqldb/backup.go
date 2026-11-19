@@ -79,6 +79,19 @@ type BackupHeader struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+// Describe says what a backup is in one line, for a log: the release it was
+// made by, the moment and the dialect. The release and the dialect are read from
+// the file, so a line break in either is taken out rather than left to start a
+// log line of its own, written by whoever made the file.
+func (h BackupHeader) Describe() string {
+	flat := func(s string) string {
+		return strings.ReplaceAll(strings.ReplaceAll(s, "\n", " "), "\r", " ")
+	}
+
+	return fmt.Sprintf("made by %s on %s from %s",
+		flat(h.Application), h.CreatedAt.UTC().Format(time.RFC3339), flat(h.Dialect))
+}
+
 // backupSection opens a table's rows: its columns, and what kind of value each
 // holds where it was read.
 type backupSection struct {

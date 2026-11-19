@@ -211,3 +211,24 @@ func TestARestoreRefusesWhatItCannotFinish(t *testing.T) {
 			users, roles, seeded)
 	}
 }
+
+// What a backup's header says goes into the log on one line. The release and
+// the dialect are read from the file, and a line break in either would start a
+// log line of its own, written by whoever made the file.
+func TestABackupIsDescribedOnOneLine(t *testing.T) {
+	header := sqldb.BackupHeader{
+		Application: "v1.0.0\nERROR the built-in administrator was deleted",
+		Dialect:     "postgres\r\nINFO all is well",
+		CreatedAt:   time.Date(2026, 11, 19, 21, 0, 0, 0, time.UTC),
+	}
+
+	said := header.Describe()
+
+	if strings.ContainsAny(said, "\r\n") {
+		t.Errorf("a backup is described over more than one line: %q", said)
+	}
+
+	if !strings.Contains(said, "v1.0.0") || !strings.Contains(said, "2026-11-19T21:00:00Z") {
+		t.Errorf("a backup is described as %q, without its release or its moment", said)
+	}
+}

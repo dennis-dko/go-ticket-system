@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"time"
 
 	"gofr.dev/pkg/gofr"
 
@@ -25,9 +24,8 @@ func restoreBackup(ctx *gofr.Context, db sqldb.DB, dialect string, file []byte, 
 			return err
 		}
 
-		ctx.Logger.Infof("restored the backup made by %s on %s from %s: %d rows in %d tables",
-			summary.Header.Application, summary.Header.CreatedAt.Format(time.RFC3339), summary.Header.Dialect,
-			summary.Rows, summary.Tables)
+		ctx.Logger.Infof("restored the backup %s: %d rows in %d tables",
+			summary.Header.Describe(), summary.Rows, summary.Tables)
 
 		return nil
 	})
