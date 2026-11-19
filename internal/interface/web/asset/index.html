@@ -1898,6 +1898,15 @@
         <h2 data-i18n="update.title">Version</h2>
         <p class="muted" id="update-state"></p>
         <p class="muted" id="update-hint" hidden></p>
+        <!-- Shown with the command in the hint, for the deployments it does not take. -->
+        <div id="update-by-hand" hidden>
+          <p class="muted" data-i18n="update.byHand.intro">Where the command alone is not enough:</p>
+          <ul class="muted by-hand">
+            <li data-i18n="update.byHand.overlays">Overlays given with -f, such as compose.tls.yaml: give both commands the same -f files, or list them in COMPOSE_FILE in .env - otherwise the container is recreated without them.</li>
+            <li data-i18n="update.byHand.pinned">A version pinned in TIMEPULSE_VERSION in .env: set it to the new version first - otherwise the pull fetches the version already running.</li>
+            <li data-i18n="update.byHand.dockerRun">A container started with docker run rather than Compose: pull the new version's image with docker pull, then remove the container and start it again from the new image with the same options.</li>
+          </ul>
+        </div>
         <div class="row">
           <button type="button" id="update-check" class="secondary"
                   data-i18n="update.check">Check for updates</button>

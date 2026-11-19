@@ -12420,8 +12420,10 @@ function renderUpdate(state) {
   const button = $('#update-now');
   const notes = $('#update-notes');
   const problem = $('#update-problem');
+  const byHand = $('#update-by-hand');
 
   button.hidden = !state.available;
+  byHand.hidden = true;
   notes.hidden = !state.url;
 
   if (state.url) notes.href = state.url;
@@ -12555,6 +12557,11 @@ function renderUpdate(state) {
       + 'the container is recreated. Update the image by hand: '
       + 'docker compose pull && docker compose up -d - or add '
       + 'deploy/compose.update.yaml to the deployment and this card will do it.');
+
+    // That command is Compose's with its overlays listed in COMPOSE_FILE. The
+    // guide recommends pinning the version and describes overlays given with -f
+    // and a bare docker run, and it does not take any of those as it stands.
+    byHand.hidden = false;
 
     return;
   }
