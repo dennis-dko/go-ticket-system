@@ -29,6 +29,20 @@ func TestEveryValueFormattedIntoSQLIsNamed(t *testing.T) {
 		"cmd/main.go:makeSQLiteWait": "sqliteBusyTimeout, a constant; " +
 			"a PRAGMA takes no parameters, so there is no other way to write it",
 
+		// A backup is every table, so its statements name a table, and a restore's
+		// name its columns; neither can be a parameter. The tables are only ever
+		// sqldb.BackupTables, a fixed list - a restore checks a table the file names
+		// against it before anything else - and the columns are the ones the
+		// database itself answers with, never the ones the file names.
+		"internal/infrastructure/persistence/sqldb/backup.go:dumpTable": "a table from sqldb.BackupTables",
+		"internal/infrastructure/persistence/sqldb/backup.go:Restore": "a table from sqldb.BackupTables, emptied " +
+			"in reverse",
+		"internal/infrastructure/persistence/sqldb/backup.go:restoreTable": "a table checked against " +
+			"sqldb.BackupTables, and the columns the database answers with for it",
+		"internal/infrastructure/persistence/sqldb/backup.go:columnKinds": "a table from sqldb.BackupTables",
+		"internal/infrastructure/persistence/sqldb/backup.go:resetSequences": "a table from sqldb.BackupTables, " +
+			"twice, in PostgreSQL's setval",
+
 		"internal/infrastructure/persistence/migration/migration.go:addRoleBasedAccess": "model.RoleUser, " +
 			"a constant, and the constant rather than a literal on purpose - the comment above it says why",
 
