@@ -14,13 +14,15 @@
       --ok: #1a7f37; --radius: 10px;
       /* The application's fields and quiet buttons, mixed from the palette the
          same way app.css mixes them, so either theme has them. */
-      --field-bg: color-mix(in srgb, var(--surface) 60%, var(--bg));
+      --field-bg: color-mix(in srgb, var(--text) 6%, var(--surface));
       --field-border: color-mix(in srgb, var(--border) 85%, var(--text));
       --field-border-hover: color-mix(in srgb, var(--border) 65%, var(--text));
       --quiet: color-mix(in srgb, var(--text) 7%, transparent);
       --quiet-hover: color-mix(in srgb, var(--text) 12%, transparent);
       --quiet-press: color-mix(in srgb, var(--text) 17%, transparent);
       --ring: color-mix(in srgb, var(--accent) 25%, transparent);
+      /* The application's pills, as high as a finger needs. */
+      --control: 48px; --pill: 999px;
       color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
@@ -38,7 +40,22 @@
       padding: 32px 20px;
     }
     main { margin: 0 auto; max-width: 640px; }
-    h1 { font-size: 22px; margin: 0 0 6px; }
+    /* The sign-in card's band, rule for rule: TimePulse's mark on its white
+       field and the heading in white beside it, over the accent's line.
+       TestTheHeadingIsTheSignInCardsBand holds these to app.css's .login-band,
+       .login-emblem, .login-mark and the band's heading. */
+    .welcome {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 10px 30px rgb(16 24 40 / 14%); margin-bottom: 16px; overflow: hidden;
+    }
+    .band {
+      align-items: center; background: #2b3440; border-bottom: 5px solid var(--accent);
+      display: flex; flex-wrap: wrap; gap: 14px 24px; padding: 12px 28px 12px 12px;
+    }
+    .emblem { background: var(--surface); border-radius: 8px; display: flex; flex: none; padding: 6px; }
+    .band .mark { height: 96px; width: 96px; }
+    .band h1 { color: #ffffff; flex: 1 1 10em; font-size: 26px; font-weight: 400; line-height: 1.25; margin: 0; }
+    .welcome .intro { margin: 0; padding: 16px 20px 18px; }
     h2 { font-size: 16px; margin: 0 0 4px; }
     .card {
       background: var(--surface); border: 1px solid var(--border);
@@ -46,17 +63,34 @@
     }
     .muted { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
     label { display: block; font-size: 13px; margin-bottom: 12px; }
+    /* A tick box beside its words rather than above a field: the rule for inputs
+       below sizes text fields, and a box drawn a whole row wide reads as one. The
+       label is what is pressed, so it is the one given a finger's height. */
+    label.check { align-items: center; display: flex; font-size: 14px; gap: 10px; margin-bottom: 4px; min-height: 44px; }
+    /* Drawn as the application draws its tick boxes: a rounded box on the
+       fields' tint, filled with the accent and ticked once chosen. */
+    label.check input {
+      appearance: none; background: var(--field-bg); border: 1px solid var(--field-border-hover);
+      border-radius: 8px; box-shadow: none; cursor: pointer; flex: none; height: 22px; margin: 0;
+      min-height: 0; padding: 0; position: relative; width: 22px;
+    }
+    label.check input:checked { background: var(--accent); border-color: var(--accent); }
+    label.check input::after {
+      border-bottom: 2px solid var(--accent-text); border-left: 2px solid var(--accent-text);
+      content: ""; height: 5px; inset: 0; margin: auto; opacity: 0; position: absolute;
+      transform: translateY(-1px) rotate(-45deg); width: 10px;
+    }
+    label.check input:checked::after { opacity: 1; }
     input, select {
-      background: var(--field-bg); border: 1px solid var(--field-border);
-      border-radius: var(--radius); box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
-      color: var(--text); font: inherit; margin-top: 4px; padding: 9px 12px;
-      transition: border-color .15s ease, box-shadow .15s ease; width: 100%;
+      background: var(--field-bg); border: 1px solid transparent; border-radius: var(--pill);
+      color: var(--text); font: inherit; margin-top: 4px; min-height: var(--control); padding: 0 20px;
+      transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease; width: 100%;
     }
     input:hover:not(:focus), select:hover:not(:focus) { border-color: var(--field-border-hover); }
     /* The application's soft ring round the field being typed in; the
        transparent outline is what forced colours draw, where shadows are not. */
     input:focus, select:focus {
-      border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring);
+      background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring);
       outline: 2px solid transparent;
     }
     button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -69,8 +103,8 @@
     .password-toggle {
       align-items: center; background: none; border: none; border-radius: 6px;
       color: var(--muted); cursor: pointer; display: flex; padding: 4px;
-      position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-      width: auto;
+      min-height: 0; position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+      width: auto; box-shadow: none;
     }
     .password-toggle:hover { color: var(--text); }
     .password-slash { display: none; }
@@ -80,14 +114,15 @@
     @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
     .row { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
     button {
-      background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius);
-      color: var(--accent-text); cursor: pointer; font: inherit; font-weight: 500;
-      padding: 9px 16px; transition: background-color .15s ease, filter .15s ease;
+      background: var(--accent); border: 1px solid var(--accent); border-radius: var(--pill);
+      box-shadow: 0 4px 12px var(--ring); color: var(--accent-text); cursor: pointer; font: inherit;
+      font-weight: 500; min-height: var(--control); padding: 0 22px;
+      transition: background-color .15s ease, filter .15s ease;
     }
     button:hover { filter: brightness(1.08); }
     /* A tint of the text rather than a box in a border, as in the application;
        the border stays, transparent, so it is as tall as the button beside it. */
-    button.secondary { background: var(--quiet); border-color: transparent; color: var(--text); }
+    button.secondary { background: var(--quiet); border-color: transparent; box-shadow: none; color: var(--text); }
     button.secondary:hover { background: var(--quiet-hover); filter: none; }
     button.secondary:active { background: var(--quiet-press); }
     button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; }
@@ -96,12 +131,11 @@
     .note.good { border-color: var(--ok); color: var(--ok); }
     [hidden] { display: none !important; }
     code { background: var(--bg); border-radius: 4px; font-size: 12px; padding: 1px 5px; }
-    /* Big enough to press with a finger, as the application's own controls are:
-       44 pixels, on a narrow window or any touch screen. This page loads none of
-       the application, so its rule never reached here - the fields were 40
-       pixels tall, the buttons 43 and the eye that shows the password 26. */
+    /* Big enough to press with a finger, as the application's own controls are.
+       The fields and buttons are 48 pixels high everywhere; what a narrow
+       window or a touch screen still needs is room round the eye that shows
+       the password, which sits inside its field. */
     @media (max-width: 900px), (pointer: coarse) {
-      input, select, button { min-height: 44px; }
       .password-field input { padding-right: 52px; }
       .password-toggle { justify-content: center; min-height: 44px; min-width: 44px; right: 2px; }
     }
@@ -109,12 +143,39 @@
 </head>
 <body>
 <main>
-  <h1 id="heading" data-i18n="title">Set up TimePulse</h1>
-  <p class="muted" data-i18n="intro">
+  <!-- Opened as the sign-in card opens: TimePulse's mark on its white field
+       and the heading beside it, on the band. The mark is favicon.svg's
+       drawing, number for number, which TestTheMarkBesideTheTitleIsTheTabIcon
+       holds this copy to. Beside the heading rather than in it, because the
+       heading's words are written by the script and would take the mark with
+       them. -->
+  <section class="welcome">
+  <div class="band">
+    <div class="emblem">
+    <svg class="mark" viewBox="0 0 560 560" aria-hidden="true" focusable="false">
+      <linearGradient id="installer-mark-ground" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0a69a7"/>
+        <stop offset="0.5" stop-color="#095795"/>
+        <stop offset="1" stop-color="#03447a"/>
+      </linearGradient>
+      <rect width="560" height="560" rx="29" fill="url(#installer-mark-ground)"/>
+      <g fill="#ffffff">
+        <path d="M78.96 95.95H314.62A130.11 127.97 0 0 0 270.18 134.8H222.7V255.83L205.5 303.96L184.1 221.09V134.8H109.96A31 31 0 0 1 78.96 103.8Z"/>
+        <path d="M184.5 387.98L197.47 420.93A5.4 5.4 0 0 0 207.45 421.09L222.65 385.88V467.82A3.35 3.35 0 0 1 219.3 471.17H219.8A35.3 40.55 0 0 1 184.5 430.62Z"/>
+        <path d="M261.75 291.85H374.93A79.18 79.96 0 0 0 454.11 211.89A77.29 79 0 0 0 376.82 132.89A78.06 75.07 0 0 0 298.76 207.96V276.95H261.14V208.49A115.42 113.28 0 0 1 376.56 95.21A115.04 116.8 0 0 1 491.6 212.01A117.12 117.73 0 0 1 374.48 329.74H298.76V465.03A6 6 0 0 1 292.76 471.03H266.64A5.5 5.5 0 0 1 261.14 465.53V360.2L284 307.35H269.82L251.86 343.72L235.47 309.61L202.54 398.88L166.71 276.03L147.72 329.82H83.15A3 3 0 0 1 80.15 326.82V316.88A3 3 0 0 1 83.15 313.88H136.55L168.15 221.93L203.85 350.51L234.35 265.28L253 309.75Z"/>
+        <circle cx="374.78" cy="216.5" r="13.25"/>
+        <path d="M378.63 216.5L378.63 153.95A3.85 3.85 0 0 0 370.93 153.95L370.93 216.5ZM377.11 219.57L426.89 181.79A3.85 3.85 0 0 0 422.23 175.65L372.45 213.43ZM376.8 213.22L338.11 189.43A3.85 3.85 0 0 0 334.07 195.99L372.76 219.78Z"/>
+      </g>
+    </svg>
+    </div>
+    <h1 id="heading" data-i18n="title">Set up TimePulse</h1>
+  </div>
+  <p class="muted intro" data-i18n="intro">
     This installation has no database yet. Nothing can be stored, and nobody can
     sign in, until one is chosen here — so this is the first and only screen
     until it works.
   </p>
+  </section>
 
   <div class="card">
     <h2 data-i18n="token.title">Setup token</h2>
@@ -164,6 +225,17 @@
         </label>
       </div>
     </div>
+
+    <!-- Asked here and answered by the application once it has migrated the
+         database, into the built-in administrator's account, and only into a
+         database that holds no projects yet. -->
+    <label class="check"><input type="checkbox" id="demo"><span data-i18n="db.demo">Fill it with demo data</span></label>
+    <p class="muted" data-i18n="db.demoText">
+      Four projects, eight weeks of bookings, a week of leave and two templates,
+      in the built-in administrator's account, which is given the role that
+      records time as well. Only into an empty database, and only for trying
+      TimePulse out.
+    </p>
 
     <div class="row">
       <button type="button" class="secondary" id="test" data-i18n="action.test">Test connection</button>
@@ -322,14 +394,14 @@
     return (typeof body.error === 'string' && body.error) || `Error ${status}`;
   }
 
-  async function call(path) {
+  async function call(path, extra = {}) {
     let res;
 
     try {
       res = await fetch(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Setup-Token': $('token').value.trim() },
-        body: JSON.stringify(datasource()),
+        body: JSON.stringify({ ...datasource(), ...extra }),
       });
     } catch {
       // The browser's own words for a request that never arrived are English
@@ -545,7 +617,9 @@
     say(t('msg.saving', 'Saving…'));
 
     try {
-      await call('/install/save');
+      // The language goes with the question, so demo data is written in the
+      // words this page was read in.
+      await call('/install/save', { demo: $('demo').checked, language });
       say(t('msg.saved',
         'Saved. The application is starting — this page will reload when it answers.'), 'good');
       waitForTheApplication();

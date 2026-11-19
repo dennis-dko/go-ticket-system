@@ -45,6 +45,9 @@ func TestATemplateFillsTheBookingForm(t *testing.T) {
 	p.run("keep it as a template", p.click("#ts-template-save"))
 
 	p.waitShown("#ts-template-row")
+
+	// The card is on a tab of its own, offered once it holds a template.
+	p.showTabOf("#templates-card")
 	p.waitShown("#templates-card")
 
 	var date string
@@ -98,6 +101,11 @@ func TestATemplateFillsTheBookingForm(t *testing.T) {
 
 	p.waitGone("#templates-card:not([hidden])")
 
+	// Asked on the form's own tab, beside the form, so a picker that stayed is
+	// one somebody would see rather than one a hidden tab keeps out of sight.
+	p.showTabOf("#form-timesheet")
+	p.waitShown("#form-timesheet")
+
 	if p.visible("#ts-template-row") {
 		t.Error("the picker is still on the form with no template left to choose")
 	}
@@ -148,6 +156,7 @@ func TestASignOutTakesTheTemplatesWithIt(t *testing.T) {
 		return true;
 	})()`, nil)
 
+	p.showTabOf("#templates-card")
 	p.waitShown("#templates-card")
 
 	p.run("sign out", p.click("#logout"), chromedp.WaitVisible("#form-login", chromedp.ByID))

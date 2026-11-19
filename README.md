@@ -1,4 +1,4 @@
-<h1 align="center"><img src="internal/interface/web/asset/favicon.svg" alt="" width="96"><br>TimePulse</h1>
+<h1 align="center"><img src="internal/interface/web/asset/favicon.svg" alt="" width="72" align="absmiddle"> TimePulse</h1>
 
 <p align="center">
   <b>Project time tracking in a single self-contained binary.</b><br>
@@ -130,7 +130,7 @@ working time first — `task readme:pictures` takes them again.
     </td>
     <td valign="top" align="center">
       <img src="doc/image/phone.png" alt="The stopwatch on a telephone" width="240">
-      <p><b>From a telephone to a wide screen</b>, and installable as an app with the installation's own name and logo - which opens without a network, and keeps what is booked meanwhile until it is back.</p>
+      <p><b>From a telephone to a wide screen</b>, and installable as an app with the installation's own name - which opens without a network, and keeps what is booked meanwhile until it is back.</p>
     </td>
   </tr>
 </table>

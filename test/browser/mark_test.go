@@ -98,38 +98,29 @@ func TestAnInstallationWithNoLogoStillHasAMark(t *testing.T) {
 	}
 }
 
-// The sign-in screen stands in for a logo the same way the header does.
+// The sign-in screen shows TimePulse's mark, drawn from the figures the tab's is.
 //
-// An installation that has uploaded no logo showed nothing at all above the
-// heading, which reads as a page that has not finished loading rather than as an
-// installation without a logo. The header has carried a lettered chip for this
-// all along; the sign-in card is the one screen everybody sees first, and it had
-// none.
-func TestTheSignInScreenShowsTheLetteredMarkWhenThereIsNoLogo(t *testing.T) {
+// It showed the installation's logo where one had been uploaded, and a lettered
+// chip where none had. The maintainer decided the sign-in card is the
+// application's, like the tab: what an installation uploads stands at the left of
+// the bar once somebody has signed in.
+func TestTheSignInScreenShowsTimePulsesMark(t *testing.T) {
 	t.Parallel()
 
 	p := open(t)
 
 	// Before signing in: this is the screen the mark belongs on.
 	if !p.visible("#login-mark") {
-		t.Fatal("the sign-in screen shows no mark where a logo would be")
+		t.Fatal("the sign-in screen shows no mark above its heading")
 	}
 
-	letter := strings.TrimSpace(p.text("#login-initial"))
-	if letter == "" {
-		t.Error("the mark on the sign-in screen carries no letter")
-	}
+	var drawing string
 
-	if len([]rune(letter)) != 1 {
-		t.Errorf("the mark should carry one letter, it carries %q", letter)
-	}
+	p.evalJSON(`JSON.stringify(document.querySelector('#login-mark use')?.getAttribute('href') ?? '')`,
+		&drawing)
 
-	// And it is the same letter the header uses, rather than a second answer to
-	// the same question.
-	p.readyAdmin()
-
-	if inHeader := strings.TrimSpace(p.text("#brand-initial")); inHeader != letter {
-		t.Errorf("the sign-in screen says %q and the header says %q", letter, inHeader)
+	if drawing != "#icon-mark" {
+		t.Errorf("the sign-in card draws %q rather than the mark the tab and the title share", drawing)
 	}
 }
 
@@ -174,9 +165,7 @@ func TestTheLetteredMarkIsTimePulsesT(t *testing.T) {
 		t.Fatalf("the bar reads %q, so the addition has not arrived and the letter proves nothing", title)
 	}
 
-	for _, chip := range []string{"#brand-initial", "#login-initial"} {
-		if letter := p.text(chip); letter != "T" {
-			t.Errorf("%s carries %q beside TimePulse | htp.net, want TimePulse's T", chip, letter)
-		}
+	if letter := p.text("#brand-initial"); letter != "T" {
+		t.Errorf("the chip carries %q beside TimePulse | htp.net, want TimePulse's T", letter)
 	}
 }

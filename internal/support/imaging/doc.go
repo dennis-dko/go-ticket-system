@@ -1,9 +1,13 @@
-// Package imaging makes the sizes of a logo an installation is shown in.
+// Package imaging makes the copies of a logo the bar draws, and draws
+// TimePulse's own mark as pixels.
 //
-// A logo is uploaded once, for a header, and then drawn in three places that
-// want three very different things: a mark beside the title, a banner over a
-// sign-in card, and sixteen pixels in a browser tab. Handing the same few
-// thousand pixels to all three is what this exists to stop - most visibly in the
-// tab, where a browser given an image that size makes its own decision about
-// whether to use it at all.
+// A logo is uploaded once, a few thousand pixels across, and drawn at the left
+// of the bar at a fraction of that. Handing every visitor the original is what
+// the copies exist to stop: they are cut to the part chosen for the bar and
+// scaled to the size it draws, once, when the logo is saved.
+//
+// The mark is the other half, and no logo ever stands in for it. The installed
+// app's icons, the executable's and the favicon.ico a browser asks for by name
+// are pictures rather than the SVG the page draws the mark from - so they are
+// drawn here, from favicon.svg's own figures.
 package imaging

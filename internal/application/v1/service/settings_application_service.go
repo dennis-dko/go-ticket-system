@@ -75,10 +75,8 @@ func (s *SettingsService) Branding(ctx context.Context) (model.Branding, error) 
 	branding.LogoDataURI = all[model.SettingLogoDataURI]
 	branding.LogoHeader = all[model.SettingLogoHeader]
 	branding.LogoBanner = all[model.SettingLogoBanner]
-	branding.LogoIcon = all[model.SettingLogoIcon]
 	branding.HeaderCrop = model.ParseLogoCrop(all[model.SettingLogoHeaderCrop])
 	branding.BannerCrop = model.ParseLogoCrop(all[model.SettingLogoBannerCrop])
-	branding.IconCrop = model.ParseLogoCrop(all[model.SettingLogoIconCrop])
 	branding.FooterText = all[model.SettingFooterText]
 	branding.CompanyName = all[model.SettingCompanyName]
 	branding.CompanyURL = all[model.SettingCompanyURL]
@@ -131,15 +129,15 @@ func (s *SettingsService) SaveBranding(ctx context.Context, branding model.Brand
 		return apperror.InvalidFields(tooLong...)
 	}
 
-	// Derived here, once, rather than every time a page is loaded. The three are
-	// what every screen is actually given; the original is kept beside them so a
+	// Derived here, once, rather than every time a page is loaded. The copies are
+	// what a browser is actually given; the original is kept beside them so a
 	// later change of size is a re-derivation rather than a request to every
 	// installation to upload their logo again.
 	//
 	// A logo that cannot be converted is stored with no derivatives, and the
 	// readers fall back to the original - which is also the state of every
 	// installation whose logo predates this.
-	header, banner, icon := deriveLogoSizes(branding)
+	header, banner := deriveLogoSizes(branding)
 
 	values := map[string]string{
 		model.SettingAppTitle:    strings.TrimSpace(branding.Title),
@@ -148,11 +146,9 @@ func (s *SettingsService) SaveBranding(ctx context.Context, branding model.Brand
 		model.SettingLogoDataURI: branding.LogoDataURI,
 		model.SettingLogoHeader:  header,
 		model.SettingLogoBanner:  banner,
-		model.SettingLogoIcon:    icon,
 
 		model.SettingLogoHeaderCrop: branding.HeaderCrop.String(),
 		model.SettingLogoBannerCrop: branding.BannerCrop.String(),
-		model.SettingLogoIconCrop:   branding.IconCrop.String(),
 		model.SettingFooterText:     branding.FooterText,
 		model.SettingCompanyName:    branding.CompanyName,
 		model.SettingCompanyURL:     branding.CompanyURL,
@@ -607,18 +603,10 @@ func validateLogo(dataURI string) error {
 			WithCode("logoNotInline")
 	}
 
-	// PNG or JPEG, and nothing else.
-	//
-	// This used to take any image the browser would encode, SVG included, and SVG
-	// is where it went wrong: the same file that renders perfectly in the header
-	// and on the sign-in screen can be refused as a tab icon, silently, by an
-	// engine that has its own rules about what it will rasterise. Nothing in the
-	// response says so - the icon is served, fetched, and then not used.
-	//
-	// A raster image has no such argument with anybody. It costs an installation
-	// one export from whatever drew the logo, and it costs this application the
-	// class of failure where a logo is configured, correct, and invisible in one
-	// browser.
+	// PNG or JPEG, and nothing else: the bar draws a copy cut to the part chosen
+	// for it, and the cut is made here, from pixels. A drawing would be stored and
+	// never cut, and the bar would show the whole of it whatever part had been
+	// chosen. It costs an installation one export from whatever drew the logo.
 	if !isRasterImage(dataURI) {
 		return apperror.Invalidf("the logo must be a PNG or a JPEG").
 			WithCode("logoNotRaster")
@@ -638,8 +626,8 @@ func validateLogo(dataURI string) error {
 	// from deriveLogoSizes, which swallows its errors on purpose: a logo that
 	// scales badly must not refuse the title beside it. That is right for a logo
 	// that is merely awkward and wrong for one that cannot be used at all - it
-	// would be stored, served to every visitor at full size, and silently missing
-	// from the header, the sign-in card and the tab, with nothing said.
+	// would be stored, served to every visitor at full size, and the copy the bar
+	// draws silently never made, with nothing said.
 	pixels, err := imaging.PixelsIn(dataURI)
 	if err != nil {
 		return apperror.Invalidf("the logo must be a PNG or a JPEG").
@@ -655,13 +643,13 @@ func validateLogo(dataURI string) error {
 	return nil
 }
 
-// isRasterImage reports whether the data URI holds one of the two formats every
-// browser will take as a tab icon.
+// isRasterImage reports whether the data URI declares one of the two formats a
+// logo may be.
 //
 // Read from the URI's own declaration rather than by sniffing the bytes: the
-// browser wrote it from the file it was given, and the same string is what the
-// icon endpoint later serves as a content type. Sniffing would let those two
-// disagree, which is the one thing that must not happen for an image served under
+// browser wrote it from the file it was given, and the same declaration is what
+// the original is sent under where no copy exists. Sniffing would let those two
+// disagree, which is the one thing that must not happen for an image shown under
 // a type somebody else chose.
 func isRasterImage(dataURI string) bool {
 	head, _, found := strings.Cut(dataURI, ",")
@@ -678,18 +666,18 @@ func isHTTPURL(raw string) bool {
 	return strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://")
 }
 
-// deriveLogoSizes makes the three shown versions of a logo.
+// deriveLogoSizes makes the copies of a logo that are sent instead of it.
 //
 // Failures are silent on purpose: this runs inside saving the appearance, and a
 // logo that scales badly is not a reason to refuse the title beside it. What
 // happens instead is that the derivatives are empty and every reader falls back
 // to the original, which is exactly what an installation whose logo predates this
 // already does.
-func deriveLogoSizes(branding model.Branding) (header, banner, icon string) {
+func deriveLogoSizes(branding model.Branding) (header, banner string) {
 	logo := branding.LogoDataURI
 
 	if strings.TrimSpace(logo) == "" {
-		return "", "", ""
+		return "", ""
 	}
 
 	fit := func(crop model.LogoCrop, width, height int) string {
@@ -701,16 +689,8 @@ func deriveLogoSizes(branding model.Branding) (header, banner, icon string) {
 		return out
 	}
 
-	// The tab's is padded out to the square, which the other two must not be -
-	// see FitIcon.
-	tab, err := imaging.FitIcon(logo, asCrop(branding.IconCrop))
-	if err != nil {
-		tab = ""
-	}
-
 	return fit(branding.HeaderCrop, imaging.HeaderWidth, imaging.HeaderHeight),
-		fit(branding.BannerCrop, imaging.BannerWidth, imaging.BannerHeight),
-		tab
+		fit(branding.BannerCrop, imaging.BannerWidth, imaging.BannerHeight)
 }
 
 // asCrop carries a crop across the layer boundary.

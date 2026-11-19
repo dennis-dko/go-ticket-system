@@ -44,7 +44,6 @@ import (
 	"github.com/dennis-dko/timepulse/internal/interface/installer"
 	"github.com/dennis-dko/timepulse/internal/interface/web"
 	"github.com/dennis-dko/timepulse/internal/support/hosting"
-	"github.com/dennis-dko/timepulse/internal/support/imaging"
 	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
@@ -337,6 +336,14 @@ func main() {
 	// password; see rest.SetupHandler.Claim for the conditions on that.
 	var installerToken string
 
+	// Whether that same answer asked for demo data, and in which language. Asked
+	// once, of a database that has only just been chosen; a later start never
+	// asks it again.
+	var (
+		demoWanted   bool
+		demoLanguage string
+	)
+
 	if !configured {
 		chosen, err := runInstaller()
 
@@ -361,6 +368,7 @@ func main() {
 
 		ds = chosen.Datasource
 		installerToken = chosen.Token
+		demoWanted, demoLanguage = chosen.Demo, chosen.Language
 	}
 
 	// Asked here and said once there is a logger, never refused: an installation
@@ -671,6 +679,8 @@ func main() {
 	absences := appservice.NewAbsenceService(absenceRepo, userRepo, scheduleRepo, holidayPlaces)
 	leave := appservice.NewVacationService(vacationRepo, absenceRepo, userRepo, scheduleRepo, holidayPlaces, today)
 	workDays := appservice.NewWorkDayService(workDayRepo, timesheetRepo)
+	demo := appservice.NewDemoService(userRepo, projectRepo, users, projects, timesheets, workWeeks, leave,
+		absences, templates, today)
 
 	// What this installation is called in a language, wherever the server names
 	// it itself: the prompt a passkey device shows, an authenticator's entry, the
@@ -768,6 +778,25 @@ func main() {
 				ctx.Logger.Warnf("the built-in administrator %q still opens with the documented initial "+
 					"password - anybody who can reach this installation can sign in as it; sign in and change it",
 					appservice.SystemUserEmail)
+			}
+		}
+
+		// The demo, where whoever answered this process's installer asked for it:
+		// after the built-in administrator exists, because it goes into that
+		// account, and never a reason to stop - an installation without its demo
+		// is an installation that works.
+		if demoWanted {
+			summary, err := demo.Seed(ctx, demoLanguage)
+
+			switch {
+			case err != nil:
+				ctx.Logger.Errorf("the demo data was added only in part: %v", err)
+			case summary.Skipped != "":
+				ctx.Logger.Warnf("no demo data was added: %s", summary.Skipped)
+			default:
+				ctx.Logger.Infof("added demo data to the built-in administrator's account: %d projects, "+
+					"%d entries, %d days away and %d templates", summary.Projects, summary.Entries,
+					summary.Absences, summary.Templates)
 			}
 		}
 
@@ -1252,14 +1281,10 @@ func startTLS(app *gofr.App, cfg appconfig.Config) func(context.Context) error {
 //
 // It was cached for five seconds at first, on the reasoning that this is on the
 // path of every page load. What that bought was one small SELECT of a table with
-// a handful of rows; what it cost was that saving a logo and reloading to look at
-// it showed the old one, which is exactly what somebody does immediately after
-// saving. A correctness problem in the one workflow this feature has, traded for
-// a query nobody would have noticed.
-//
-// The icon itself is cached hard by the browser instead, at an address carrying a
-// fingerprint of its contents - so a repeated page load re-reads this row and
-// fetches no image at all.
+// a handful of rows; what it cost was that saving and reloading to look at the
+// result showed the old one, which is exactly what somebody does immediately
+// after saving. A correctness problem in the one workflow this feature has,
+// traded for a query nobody would have noticed.
 func brandingFor(settings *appservice.SettingsService) web.BrandingFunc {
 	return func(ctx context.Context) web.Branding {
 		branding, err := settings.Branding(ctx)
@@ -1275,12 +1300,6 @@ func brandingFor(settings *appservice.SettingsService) web.BrandingFunc {
 			// The header's name is put there by the interface once it has loaded,
 			// and the two are only the same until somebody sets them apart.
 			Title: branding.TabName(),
-			Logo:  branding.LogoDataURI,
-			Icon:  branding.LogoIcon,
-			IconCrop: imaging.Crop{
-				X: branding.IconCrop.X, Y: branding.IconCrop.Y,
-				W: branding.IconCrop.W, H: branding.IconCrop.H,
-			},
 		}
 	}
 }

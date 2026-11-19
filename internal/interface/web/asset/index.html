@@ -15,9 +15,11 @@
   <link rel="alternate icon" href="/favicon.ico">
   <!-- What makes the page installable as an app. Its name, its icons and the
        screens a long press leads to are in the manifest, which the server writes
-       per installation; the colour is what a device paints around the app
+       per installation; Safari reads no manifest for a home screen's icon and
+       asks this link instead; the colour is what a device paints around the app
        before the page has. -->
   <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/app-icon/192">
   <meta name="theme-color" content="#2f6feb">
   <!-- Blocking on purpose: it has to pick the theme before the first paint,
        or the page flashes in the wrong colours. -->
@@ -515,24 +517,18 @@
          storage, and a shared machine would hand the next person the last one's
          name - which is the same reason signing out resets it. -->
     <form method="post" id="form-login" data-no-draft class="login-card">
-      <!-- The installation's picture and its name, in a band across the top.
+      <!-- TimePulse's mark and the installation's name, in a band across the top.
            The heading is drawn by the script because the name in it is the
            configured title, in the language being read. -->
       <div class="login-band">
         <div class="login-emblem">
-          <!-- The same placeholder the header carries, for an installation that
-               has not uploaded a logo. The sign-in screen used to show nothing at
-               all there, which reads as a page that has not finished loading
-               rather than as an installation without a logo. Its letter is the
-               T of TimePulse, as in the header. -->
-          <svg id="login-mark" class="brand-mark login-mark" viewBox="0 0 32 32"
-               aria-hidden="true" focusable="false">
-            <rect x="3.6" y="3.6" width="24.8" height="24.8" rx="7.2"
-                  class="brand-mark-ground"/>
-            <text id="login-initial" x="16" y="16.9" text-anchor="middle"
-                  dominant-baseline="middle" class="brand-mark-letter"></text>
-          </svg>
-          <img id="login-logo" class="brand-logo" alt="" hidden>
+          <!-- The application's mark, whatever logo the installation has
+               uploaded: the sign-in screen is TimePulse's, as the browser tab is,
+               and an installation's logo stands at the left of the bar once
+               somebody has signed in - decided by the maintainer on 2026-11-18.
+               The one drawing, referenced, like the mark beside the title. -->
+          <svg id="login-mark" class="login-mark" viewBox="0 0 560 560"
+               aria-hidden="true" focusable="false"><use href="#icon-mark"/></svg>
         </div>
         <h2 id="login-welcome"></h2>
       </div>
@@ -633,10 +629,33 @@
 
     <!-- Time entries -->
     <section id="view-timesheets" class="view">
+      <!-- The daily way first and on its own - the stopwatch, the form and the
+           entries - and what is used now and then beside it rather than under a
+           list that grows every day. As on My account: each card names its tab
+           with data-tab and arrangeScreenTabs moves it there at the start, and a
+           tab with nothing shown on it is not offered. -->
+      <div id="timesheets-tabs" class="screen-tabs" role="tablist" aria-label="Parts of Time entries"
+           data-i18n-aria="ts.tabs">
+        <button type="button" role="tab" id="timesheets-tab-record" class="screen-tab" data-card-tab="record"
+                aria-controls="timesheets-panel-record" aria-selected="true"
+                data-i18n="ts.tab.record">Record</button>
+        <button type="button" role="tab" id="timesheets-tab-templates" class="screen-tab" data-card-tab="templates"
+                aria-controls="timesheets-panel-templates" aria-selected="false" tabindex="-1"
+                data-i18n="ts.tab.templates">Templates</button>
+        <button type="button" role="tab" id="timesheets-tab-sheet" class="screen-tab" data-card-tab="sheet"
+                aria-controls="timesheets-panel-sheet" aria-selected="false" tabindex="-1"
+                data-i18n="ts.tab.sheet">Spreadsheet</button>
+      </div>
+      <div id="timesheets-panel-record" class="screen-panel" role="tabpanel"
+           aria-labelledby="timesheets-tab-record" data-card-panel="record"></div>
+      <div id="timesheets-panel-templates" class="screen-panel" role="tabpanel"
+           aria-labelledby="timesheets-tab-templates" data-card-panel="templates" hidden></div>
+      <div id="timesheets-panel-sheet" class="screen-panel" role="tabpanel"
+           aria-labelledby="timesheets-tab-sheet" data-card-panel="sheet" hidden></div>
       <!-- The clock, above the form, because it is the shorter way to record the
            day you are actually having: press start, work, press stop. The form
            below is for a day that has already happened. -->
-      <div class="card" id="timer-card" data-perm="timesheets:write:own" data-own-only>
+      <div class="card" id="timer-card" data-perm="timesheets:write:own" data-own-only data-tab="record">
         <div class="card-head">
           <h2 data-i18n="timer.title">Stopwatch</h2>
           <span class="timer-elapsed" id="timer-elapsed" aria-live="off"></span>
@@ -714,7 +733,7 @@
         </form>
       </div>
 
-      <form method="post" id="form-timesheet" class="card form" data-perm="timesheets:write:own">
+      <form method="post" id="form-timesheet" class="card form" data-perm="timesheets:write:own" data-tab="record">
         <h2 id="timesheet-form-title" data-i18n="ts.book">Book time</h2>
         <input type="hidden" name="id">
         <!-- Shown once somebody has kept a template. Choosing one fills the
@@ -745,7 +764,7 @@
         </div>
       </form>
 
-      <div class="card">
+      <div class="card" id="entries-card" data-tab="record">
         <div class="card-head">
           <h2 data-i18n="ts.entries">Entries</h2>
           <div class="filters">
@@ -788,7 +807,7 @@
           <span class="muted" id="ts-shown"></span>
         </div>
       </div>
-      <div class="card" id="workbook-card" data-perm="timesheets:read:own">
+      <div class="card" id="workbook-card" data-perm="timesheets:read:own" data-tab="sheet">
         <h2 data-i18n="wb.title">Spreadsheet</h2>
         <p class="muted" data-i18n="wb.text">Exports what the filters above are showing. An import creates entries; it never changes or replaces the ones that are already there.</p>
         <div class="row">
@@ -821,7 +840,7 @@
       </div>
       <!-- The templates kept from the booking form, listed to take them back.
            Shown once there is one, like the picker in the form. -->
-      <div class="card" id="templates-card" data-perm="timesheets:write:own" data-own-only hidden>
+      <div class="card" id="templates-card" data-perm="timesheets:write:own" data-own-only data-tab="templates" hidden>
         <h2 data-i18n="tpl.title">Templates</h2>
         <p class="muted" data-i18n="tpl.hint">Bookings you make often, kept with "Save as template" in the form above. A template only fills the form in: nothing is booked until you press Book.</p>
         <div class="table-wrap">
@@ -897,7 +916,28 @@
 
     <!-- Calendar -->
     <section id="view-calendar" class="view" hidden>
-      <div class="card">
+      <!-- Three questions on one long screen: the month, the hours of a day,
+           and the days away. The chosen day stays with the month, because it is
+           opened from the month's grid. -->
+      <div id="calendar-tabs" class="screen-tabs" role="tablist" aria-label="Parts of Calendar"
+           data-i18n-aria="cal.tabs">
+        <button type="button" role="tab" id="calendar-tab-month" class="screen-tab" data-card-tab="month"
+                aria-controls="calendar-panel-month" aria-selected="true"
+                data-i18n="cal.tab.month">Month</button>
+        <button type="button" role="tab" id="calendar-tab-worktime" class="screen-tab" data-card-tab="worktime"
+                aria-controls="calendar-panel-worktime" aria-selected="false" tabindex="-1"
+                data-i18n="cal.tab.worktime">Working time</button>
+        <button type="button" role="tab" id="calendar-tab-leave" class="screen-tab" data-card-tab="leave"
+                aria-controls="calendar-panel-leave" aria-selected="false" tabindex="-1"
+                data-i18n="cal.tab.leave">Leave</button>
+      </div>
+      <div id="calendar-panel-month" class="screen-panel" role="tabpanel"
+           aria-labelledby="calendar-tab-month" data-card-panel="month"></div>
+      <div id="calendar-panel-worktime" class="screen-panel" role="tabpanel"
+           aria-labelledby="calendar-tab-worktime" data-card-panel="worktime" hidden></div>
+      <div id="calendar-panel-leave" class="screen-panel" role="tabpanel"
+           aria-labelledby="calendar-tab-leave" data-card-panel="leave" hidden></div>
+      <div class="card" id="month-card" data-tab="month">
         <div class="card-head">
           <!-- No data-i18n: the script owns this text, and writes the month and
                year into it. Carrying a key as well meant applyLanguage put the
@@ -919,7 +959,7 @@
       <!-- When the days of the month shown above began and finished, and how long
            their breaks were: the person's own record of their working time, beside
            the hours they booked. Nobody else's screen shows it. -->
-      <div class="card" id="workday-card" data-perm="timesheets:read:own" data-own-only>
+      <div class="card" id="workday-card" data-perm="timesheets:read:own" data-own-only data-tab="worktime">
         <div class="card-head">
           <h2 data-i18n="work.title">Working time</h2>
           <div class="filters">
@@ -957,7 +997,7 @@
         <p class="muted" data-i18n="work.actHint">Days past a limit of the Working Hours Act are marked: more than ten hours, a break too short for the hours, or fewer than eleven hours of rest since the day before. They are notices; what happened is what is recorded.</p>
       </div>
 
-      <div class="card" id="calendar-day-card" hidden>
+      <div class="card" id="calendar-day-card" data-tab="month" hidden>
         <div class="card-head">
           <h2 id="calendar-day-title"></h2>
           <button type="button" class="link" id="calendar-day-close" data-i18n="cal.close">close</button>
@@ -981,7 +1021,7 @@
       <!-- A year's leave: what it gives, what the year before left over, what is
            taken and what is planned - counted from the days of leave recorded
            below. The script owns the heading, which names the year. -->
-      <div class="card" id="vacation-card" data-perm="timesheets:read:own" data-own-only>
+      <div class="card" id="vacation-card" data-perm="timesheets:read:own" data-own-only data-tab="leave">
         <div class="card-head">
           <h2 id="vacation-title">Leave</h2>
           <div class="filters">
@@ -1014,7 +1054,7 @@
 
       <!-- The days somebody is away, and why. Recorded over a range, but only on
            the days their week asks something of; the calendar above marks them. -->
-      <div class="card" id="absence-card" data-perm="timesheets:write:own" data-own-only>
+      <div class="card" id="absence-card" data-perm="timesheets:write:own" data-own-only data-tab="leave">
         <h2 data-i18n="absence.title">Days away</h2>
         <p class="muted" data-i18n="absence.hint">Leave, illness and days taken against overtime. Only the days your week asks something of are recorded, so a fortnight of leave is its ten working days.</p>
         <form method="post" id="form-absence" class="form">
@@ -1340,7 +1380,23 @@
 
     <!-- Reports -->
     <section id="view-report" class="view" hidden>
-      <form method="post" id="form-report" class="card form">
+      <!-- Two tools that share nothing: an evaluation, and the statement of
+           work a customer is sent. The second used to stand under the first's
+           result, where a long evaluation hid it. -->
+      <div id="report-tabs" class="screen-tabs" role="tablist" aria-label="Parts of Report"
+           data-i18n-aria="report.tabs">
+        <button type="button" role="tab" id="report-tab-report" class="screen-tab" data-card-tab="report"
+                aria-controls="report-panel-report" aria-selected="true"
+                data-i18n="report.tab.report">Report</button>
+        <button type="button" role="tab" id="report-tab-statement" class="screen-tab" data-card-tab="statement"
+                aria-controls="report-panel-statement" aria-selected="false" tabindex="-1"
+                data-i18n="report.tab.statement">Statement of work</button>
+      </div>
+      <div id="report-panel-report" class="screen-panel" role="tabpanel"
+           aria-labelledby="report-tab-report" data-card-panel="report"></div>
+      <div id="report-panel-statement" class="screen-panel" role="tabpanel"
+           aria-labelledby="report-tab-statement" data-card-panel="statement" hidden></div>
+      <form method="post" id="form-report" class="card form" data-tab="report">
         <h2 data-i18n="report.title">Report</h2>
         <div class="grid">
           <!-- Not required, and the first two options are not projects: an
@@ -1353,7 +1409,7 @@
         <button type="submit" data-i18n="action.evaluate">Evaluate</button>
       </form>
 
-      <div class="card" id="report-result" hidden>
+      <div class="card" id="report-result" data-tab="report" hidden>
         <h2><span data-i18n="report.result">Result</span> <span id="report-total" class="pill"></span></h2>
         <p class="muted" id="report-budget"></p>
 
@@ -1393,7 +1449,7 @@
            whoever charges for their time. Deliberately not an invoice - no number,
            no tax, no customer - and a card of its own with a period of its own,
            because it is asked for on its own: at the end of a month. -->
-      <form method="post" id="form-statement" class="card form" data-perm="reports:read:own">
+      <form method="post" id="form-statement" class="card form" data-perm="reports:read:own" data-tab="statement">
         <h2 data-i18n="statement.title">Statement of work</h2>
         <p class="muted" data-i18n="statement.hint">The hours of your billable projects in a period, with their rate and what they come to, totalled per currency. Not an invoice: no number, no tax, no customer - that part you write your own way.</p>
         <div class="grid">
@@ -1403,7 +1459,7 @@
         <button type="submit" data-i18n="statement.create">Work it out</button>
       </form>
 
-      <div class="card" id="statement-result" hidden>
+      <div class="card" id="statement-result" data-tab="statement" hidden>
         <h2 data-i18n="statement.title">Statement of work</h2>
         <p class="muted" id="statement-period"></p>
         <div class="table-wrap">
@@ -1926,35 +1982,19 @@
           </label>
           <button type="button" class="secondary" id="logo-clear" data-i18n="admin.logoClear">Remove logo</button>
         </div>
-        <!-- Both places the one image is used, at the size each of them gives it.
-             A logo that reads in the header can be unreadable as a banner and the
-             other way round, and the only way to know is to see it - so it is
-             shown here rather than discovered on the sign-in screen after saving,
-             which is a screen an administrator does not see again for as long as
-             they stay signed in. -->
-        <p class="muted" id="logo-crop-hint" data-i18n="admin.logoCropHint" hidden>Each of these shows a part of the logo. Press one to choose which part.</p>
+        <!-- The one place the logo is drawn, at the size it is drawn there: the left
+             of the bar, once somebody has signed in. The sign-in screen and the
+             browser tab carry TimePulse's own mark, whatever is uploaded here -
+             decided by the maintainer on 2026-11-18. The bar draws the copy the
+             sign-in card used to draw, so this place's part of the logo is the one
+             the API calls the banner's. -->
+        <p class="muted" id="logo-crop-hint" data-i18n="admin.logoCropHint" hidden>This shows the part of the logo the header draws. Press it to choose another part.</p>
         <div class="logo-uses" id="logo-preview-uses" hidden>
           <figure class="logo-use">
-            <button type="button" class="logo-use-button" data-crop="header">
+            <button type="button" class="logo-use-button" data-crop="banner">
               <img id="logo-preview" class="logo-preview" alt="">
             </button>
             <figcaption class="muted" data-i18n="admin.logoInHeader">In the header</figcaption>
-          </figure>
-          <figure class="logo-use">
-            <button type="button" class="logo-use-button" data-crop="banner">
-              <img id="logo-preview-login" class="logo-preview logo-preview-login" alt="">
-            </button>
-            <figcaption class="muted" data-i18n="admin.logoOnSignIn">On the sign-in screen</figcaption>
-          </figure>
-          <!-- The third use, and the one with the least room by a long way. A
-               wordmark that reads perfectly as a banner is a smear at sixteen
-               pixels, and that is worth seeing before saving rather than
-               discovering in the tab afterwards. -->
-          <figure class="logo-use">
-            <button type="button" class="logo-use-button" data-crop="icon">
-              <img id="logo-preview-icon" class="logo-preview logo-preview-icon" alt="">
-            </button>
-            <figcaption class="muted" data-i18n="admin.logoAsFavicon">In the browser tab</figcaption>
           </figure>
         </div>
         <!-- Away from the file picker above it: they sat on adjacent lines and

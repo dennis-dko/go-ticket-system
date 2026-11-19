@@ -8,31 +8,17 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
-
-	"github.com/dennis-dko/timepulse/internal/support/imaging"
 )
 
 // Branding is what an installation calls itself, as far as the served document
 // is concerned.
+//
+// A name and nothing else. The tab and the installed app show TimePulse's mark
+// whatever logo an installation uploads - the logo is drawn at the left of the
+// bar, by the page, once somebody has signed in.
 type Branding struct {
-	// Title names the browser tab.
+	// Title names the browser tab and the installed app.
 	Title string
-
-	// Logo is the configured mark as a data URI, or empty for the shipped one.
-	//
-	// The original, as uploaded - a wordmark made for a header. Used only where
-	// Icon is empty, which is an installation whose logo was saved before the
-	// sizes were derived on save.
-	Logo string
-
-	// Icon is that logo already at icon size, derived when it was saved: square,
-	// small, and the same bytes after a restart.
-	Icon string
-
-	// IconCrop is the part of the logo chosen for the tab. The installed app's
-	// icons are fitted from the original through it, at sizes the tab's 64
-	// pixels could only be stretched to.
-	IconCrop imaging.Crop
 }
 
 // BrandingFunc answers what this installation is called right now.
@@ -71,14 +57,14 @@ var apiPrefixes = []string{
 // matches gofr.dev/pkg/gofr/http.Middleware.
 //
 // The branding function is what makes the served document say the instance's own
-// name and carry its own mark. Optional: nil serves the assets exactly as they
-// are embedded, which is what the tests that only care about caching want.
+// name. Optional: nil serves the assets exactly as they are embedded, which is
+// what the tests that only care about caching want.
 //
-// It has to be the server that does this. The title and the logo are configured,
-// so they live in the database, so the page cannot know either until it has asked
-// - and asking finishes after the document has been parsed and shown. Patching
-// them afterwards from script is what this used to do, and it leaves a reload
-// showing "TimePulse" and the shipped mark for as long as the request takes.
+// It has to be the server that does this. The title is configured, so it lives in
+// the database, so the page cannot know it until it has asked - and asking
+// finishes after the document has been parsed and shown. Patching it afterwards
+// from script is what this used to do, and it leaves a reload showing a name
+// nobody chose for as long as the request takes.
 // There is no arrangement of client-side code that fixes that, because the
 // problem is the order of two things and one of them is a round trip.
 func Handler(branding BrandingFunc) func(http.Handler) http.Handler {
@@ -92,9 +78,6 @@ func Handler(branding BrandingFunc) func(http.Handler) http.Handler {
 	fileServer := http.FileServer(http.FS(sub))
 	tags := buildETags(sub)
 	document := newDocument(sub)
-	shipped := shippedIcon(sub)
-	converted := &icons{}
-
 	install := newInstallable()
 
 	return func(next http.Handler) http.Handler {
@@ -105,35 +88,22 @@ func Handler(branding BrandingFunc) func(http.Handler) http.Handler {
 				return
 			}
 
-			// The instance's own mark, at a stable address. A data: URI in the
-			// markup would be the obvious alternative and is the version that did
-			// not work: engines disagree about honouring one, and about honouring
-			// an icon link that changed after the document was parsed. A URL is
-			// something every one of them fetches.
-			//
-			// Before the single-page fallback below, which rewrites anything that
-			// is not a file to "/" - and this is not a file. Left after it, every
-			// request for the tab icon was answered with the page.
-			if path(r) == iconPath {
-				serveIcon(w, r, branding, shipped, converted)
-
-				return
-			}
-
-			// What makes the page installable, before the fallback for the same
-			// reason as the icon: neither is a file, and both would otherwise be
-			// answered with the page.
-			if p := path(r); p == manifestPath || strings.HasPrefix(p, appIconPath) {
+			// What makes the page installable, before the single-page fallback
+			// below, which rewrites anything that is not a file to "/": neither of
+			// these is a file, and both would otherwise be answered with the page.
+			if path(r) == manifestPath {
 				var current Branding
 				if branding != nil {
 					current = branding(r.Context())
 				}
 
-				if p == manifestPath {
-					install.serveManifest(w, r, current)
-				} else {
-					install.serveAppIcon(w, r, current)
-				}
+				install.serveManifest(w, r, current)
+
+				return
+			}
+
+			if strings.HasPrefix(path(r), appIconPath) {
+				install.serveAppIcon(w, r)
 
 				return
 			}
@@ -161,8 +131,7 @@ func Handler(branding BrandingFunc) func(http.Handler) http.Handler {
 				r.URL.Path = "/"
 			}
 
-			// The document, with the title and the icon written into it before it
-			// is sent.
+			// The document, with the title written into it before it is sent.
 			if branding != nil && isDocument(path(r)) {
 				document.serve(w, r, branding(r.Context()))
 

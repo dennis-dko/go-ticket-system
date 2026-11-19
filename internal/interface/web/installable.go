@@ -2,12 +2,10 @@ package web
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
@@ -52,17 +50,21 @@ var appShortcuts = []appShortcut{
 }
 
 // installable serves what makes the page installable as an app.
+//
+// Both halves are read or drawn once, because neither can change while the
+// process runs: the dictionaries are compiled in, and so is the mark.
 type installable struct {
-	// words names the shortcuts, by language: read once, because the
-	// dictionaries are compiled in and cannot change while the process runs.
+	// words names the shortcuts, by language.
 	words map[string]i18n.Translator
 
-	mu    sync.Mutex
-	drawn map[string][]byte
+	// icons is the mark at each of appIconSizes. The installed app shows
+	// TimePulse's mark whatever logo an installation uploads, so there is one
+	// picture per size for the life of the process.
+	icons map[int][]byte
 }
 
 // newInstallable reads the shortcuts' names out of the dictionaries the page
-// reads, so the two cannot come to disagree.
+// reads, so the two cannot come to disagree, and draws the icons.
 func newInstallable() *installable {
 	words := map[string]i18n.Translator{}
 
@@ -70,7 +72,18 @@ func newInstallable() *installable {
 		words[language] = i18n.For(language)
 	}
 
-	return &installable{words: words, drawn: map[string][]byte{}}
+	icons := map[int][]byte{}
+
+	for _, size := range appIconSizes {
+		// A size that cannot be drawn is left out, and asking for it is then
+		// answered 404 - which cannot happen with the mark compiled in, and would
+		// say so rather than serve an empty picture if it ever did.
+		if drawn, err := imaging.MarkPNG(size); err == nil {
+			icons[size] = drawn
+		}
+	}
+
+	return &installable{words: words, icons: icons}
 }
 
 // appManifest is the Web App Manifest, the fields a device reads of it.
@@ -103,9 +116,8 @@ type manifestTarget struct {
 // serveManifest writes the manifest for this installation, in the language the
 // device asked for.
 //
-// Built per request rather than shipped as a file, because two of its fields are
-// settings: the name is the installation's own, and the icons carry a fingerprint
-// of its logo so a changed logo is a changed address.
+// Built per request rather than shipped as a file, because the name is the
+// installation's own and the shortcuts are named in the language asked for.
 func (s *installable) serveManifest(w http.ResponseWriter, r *http.Request, branding Branding) {
 	name := strings.TrimSpace(branding.Title)
 	if name == "" {
@@ -113,7 +125,6 @@ func (s *installable) serveManifest(w http.ResponseWriter, r *http.Request, bran
 	}
 
 	lang := preferredLanguage(r.Header.Get("Accept-Language"))
-	version := appIconVersion(branding)
 
 	manifest := appManifest{
 		ID:   "/",
@@ -134,7 +145,7 @@ func (s *installable) serveManifest(w http.ResponseWriter, r *http.Request, bran
 		side := strconv.Itoa(size)
 
 		manifest.Icons = append(manifest.Icons, manifestIcon{
-			Src:     appIconPath + side + "?v=" + version,
+			Src:     appIconPath + side,
 			Sizes:   side + "x" + side,
 			Type:    "image/png",
 			Purpose: "any",
@@ -174,12 +185,8 @@ func (s *installable) serveManifest(w http.ResponseWriter, r *http.Request, bran
 	_, _ = w.Write(body)
 }
 
-// serveAppIcon writes one of the installed app's icons: the installation's logo
-// where it has one, the shipped mark where it has not.
-//
-// The logo is fitted from the original, through the part of it chosen for the
-// tab, rather than scaled up from the 64 pixels the tab is kept at.
-func (s *installable) serveAppIcon(w http.ResponseWriter, r *http.Request, branding Branding) {
+// serveAppIcon writes one of the installed app's icons.
+func (s *installable) serveAppIcon(w http.ResponseWriter, r *http.Request) {
 	size, ok := appIconSize(strings.TrimPrefix(path(r), appIconPath))
 	if !ok {
 		http.NotFound(w, r)
@@ -187,40 +194,30 @@ func (s *installable) serveAppIcon(w http.ResponseWriter, r *http.Request, brand
 		return
 	}
 
-	key := appIconVersion(branding) + ":" + strconv.Itoa(size)
+	body := s.icons[size]
+	if len(body) == 0 {
+		http.NotFound(w, r)
 
-	s.mu.Lock()
-	body, known := s.drawn[key]
-	s.mu.Unlock()
-
-	if !known {
-		body = drawAppIcon(branding, size)
-
-		s.mu.Lock()
-		// Kept for as long as the process runs, keyed by what it was drawn from: a
-		// logo changes rarely, and a stale key only ever wastes a few kilobytes.
-		s.drawn[key] = body
-		s.mu.Unlock()
+		return
 	}
 
-	serveImage(w, r, body, "image/png")
-}
+	header := w.Header()
+	header.Set("Content-Type", "image/png")
 
-// drawAppIcon makes the picture: the logo fitted into the square, or - for an
-// installation without one, or with one that cannot be read - the shipped mark.
-func drawAppIcon(branding Branding, size int) []byte {
-	if decoded, _, ok := decodeDataURI(branding.Logo); ok {
-		if fitted, err := imaging.FitSquare(decoded, branding.IconCrop, size); err == nil {
-			return fitted
-		}
+	// Revalidated like every other asset rather than cached for good: the address
+	// carries no version, and the next release may draw the mark differently.
+	header.Set("Cache-Control", "no-cache")
+
+	tag := `"` + fingerprint(string(body)) + `"`
+	header.Set("ETag", tag)
+
+	if match := r.Header.Get("If-None-Match"); match != "" && strings.Contains(match, tag) {
+		w.WriteHeader(http.StatusNotModified)
+
+		return
 	}
 
-	mark, err := imaging.MarkPNG(size)
-	if err != nil {
-		return nil
-	}
-
-	return mark
+	_, _ = w.Write(body)
 }
 
 // appIconSize reads the size from the address, and only the announced ones.
@@ -237,12 +234,6 @@ func appIconSize(raw string) (int, bool) {
 	}
 
 	return 0, false
-}
-
-// appIconVersion is the part of an app icon's address that changes when the
-// picture would: the logo and the part of it chosen.
-func appIconVersion(b Branding) string {
-	return fingerprint(b.Logo + "\x00" + fmt.Sprint(b.IconCrop))
 }
 
 // preferredLanguage is the language a device asking with this Accept-Language

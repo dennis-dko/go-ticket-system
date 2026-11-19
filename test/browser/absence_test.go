@@ -19,7 +19,7 @@ func TestLeaveIsRecordedAndMarkedInTheCalendar(t *testing.T) {
 	p := open(t)
 	p.readyWorker()
 
-	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`),
+	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`), p.click(`#calendar-tabs [data-card-tab="leave"]`),
 		chromedp.WaitVisible("#form-absence", chromedp.ByID))
 
 	p.run("fill the week in", chromedp.Evaluate(`(() => {

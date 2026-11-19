@@ -44,6 +44,7 @@ func TestTheImportShowsWhatAFileWouldDoBeforeDoingIt(t *testing.T) {
 
 	p.run("choose the file",
 		chromedp.Click(`.tab[data-view="timesheets"]`, chromedp.ByQuery),
+		chromedp.Click(`#timesheets-tabs [data-card-tab="sheet"]`, chromedp.ByQuery),
 		chromedp.WaitVisible("#workbook-card", chromedp.ByID),
 		chromedp.SetUploadFiles("#wb-file", []string{path}, chromedp.ByQuery),
 	)

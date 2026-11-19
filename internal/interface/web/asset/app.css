@@ -24,11 +24,11 @@
   /* What fields and the quieter buttons are drawn with. Mixed from the palette
      rather than set per theme, so the light and the dark one each have them
      without a line of their own and keep them when one of their colours
-     changes. A field is a shade off the card it sits on, inside a border a
-     little stronger than the card's; a quiet button is a tint of the text laid
-     over whatever is behind it, so it reads on a card, a banner and the page
-     alike. */
-  --field-bg: color-mix(in srgb, var(--surface) 60%, var(--bg));
+     changes. A field is a tint of the text over the card it sits on, with no
+     border until the pointer is on it; a quiet button is a tint of the text
+     laid over whatever is behind it, so it reads on a card, a banner and the
+     page alike. */
+  --field-bg: color-mix(in srgb, var(--text) 6%, var(--surface));
   --field-border: color-mix(in srgb, var(--border) 85%, var(--text));
   --field-border-hover: color-mix(in srgb, var(--border) 65%, var(--text));
   --quiet: color-mix(in srgb, var(--text) 7%, transparent);
@@ -36,11 +36,11 @@
   --quiet-press: color-mix(in srgb, var(--text) 17%, transparent);
   --ring: color-mix(in srgb, var(--accent) 25%, transparent);
 
-  /* The chosen tab of a screen, lifted off the strip it sits in. The card's own
-     colour in the light theme; a dark one sets its own, because there the card
-     is darker than a strip tinted with the text, and the chosen tab would sink
-     into the strip rather than stand out of it. */
-  --tab-chosen: var(--surface);
+  /* Controls as pills, as high as a finger needs, on a tint rather than inside a
+     border: the direction the maintainer chose on 2026-11-19 from five drawn
+     side by side. */
+  --control: 48px;
+  --pill: 999px;
 
   /* Log levels. Own variables rather than reusing --danger and --accent:
      a log line is read as a category, and four levels that all render as
@@ -89,13 +89,11 @@
     --chart-5: #f08579;
     --chart-6: #a294ff;
     --chart-7: #d6b45c;
-    --tab-chosen: color-mix(in srgb, var(--text) 14%, var(--surface));
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --tab-chosen: color-mix(in srgb, var(--text) 14%, var(--surface));
   --bg: #14171a;
   --surface: #1c2126;
   --border: #2c333b;
@@ -290,6 +288,13 @@ body {
    the account beside it, which is cut short with the whole of it in its
    tooltip. */
 .topbar-controls > button { white-space: nowrap; }
+
+/* The bar's own controls are pills like every other, at the bar's height rather
+   than a form's where there is a mouse to aim with: a row of 48-pixel controls
+   would make the bar a third taller. A finger gets the full height. */
+@media (min-width: 901px) and (pointer: fine) {
+  .topbar-controls > button, .topbar-controls > select { min-height: 40px; padding: 0 16px; }
+}
 
 .topbar h1 { font-size: 18px; margin: 0; }
 
@@ -533,20 +538,19 @@ label {
   color: var(--muted);
 }
 
-/* The fields a form is made of: as round as the cards, a hair of shadow under
-   them, and a border that darkens under the pointer, so a field says it can be
-   typed in before it is clicked. The height is the buttons' - eight pixels and
-   a border above and below, nine and none - so a field and a button side by
-   side end on the same line. */
+/* The fields a form is made of: pills on a tint of the text, with a border that
+   appears under the pointer, so a field says it can be typed in before it is
+   clicked. As high as the buttons, so a field and a button side by side end on
+   the same line. */
 input, select {
   background: var(--field-bg);
-  border: 1px solid var(--field-border);
-  border-radius: var(--radius);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+  border: 1px solid transparent;
+  border-radius: var(--pill);
   color: var(--text);
   font: inherit;
-  padding: 8px 12px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-height: var(--control);
+  padding: 0 20px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   width: 100%;
 }
 
@@ -573,12 +577,73 @@ input:disabled, select:disabled {
  * once, on the permission grid alone, which is part of why it stayed hidden - the
  * second place to need it was written later and could not know.
  *
- * Nor the shadow a field draws under itself, which on a tick box is a smudge
- * under the box rather than the edge of a place to type. */
+ * Drawn rather than left to the engine, so they are the pill fields' kind of
+ * thing: a rounded box on the same tint, filled with the accent once chosen. */
 input[type="checkbox"], input[type="radio"] {
-  accent-color: var(--accent);
+  appearance: none;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border-hover);
+  border-radius: 8px;
   box-shadow: none;
-  width: auto;
+  cursor: pointer;
+  flex: none;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+  position: relative;
+  vertical-align: middle;
+  width: 22px;
+}
+
+input[type="radio"] { border-radius: 50%; }
+
+input[type="checkbox"]:checked,
+input[type="checkbox"]:indeterminate,
+input[type="radio"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The tick, the dash of a box that is partly chosen, and the dot. */
+input[type="checkbox"]::after {
+  border-bottom: 2px solid var(--accent-text);
+  border-left: 2px solid var(--accent-text);
+  content: "";
+  height: 5px;
+  inset: 0;
+  margin: auto;
+  opacity: 0;
+  position: absolute;
+  transform: translateY(-1px) rotate(-45deg);
+  width: 10px;
+}
+
+input[type="checkbox"]:checked::after { opacity: 1; }
+
+input[type="checkbox"]:indeterminate::after {
+  border-left: 0;
+  height: 0;
+  opacity: 1;
+  transform: none;
+}
+
+input[type="radio"]::after {
+  background: var(--accent-text);
+  border-radius: 50%;
+  content: "";
+  height: 8px;
+  inset: 0;
+  margin: auto;
+  opacity: 0;
+  position: absolute;
+  width: 8px;
+}
+
+input[type="radio"]:checked::after { opacity: 1; }
+
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
 }
 
 /* A switch, for the controls that turn something on or off.
@@ -607,11 +672,11 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 .switch > input[type="checkbox"] {
-  height: 22px;
+  height: 30px;
   margin: 0;
   opacity: 0;
   position: absolute;
-  width: 40px;
+  width: 50px;
 }
 
 .switch-track {
@@ -619,10 +684,10 @@ input[type="checkbox"], input[type="radio"] {
   border-radius: 999px;
   display: inline-block;
   flex: none;
-  height: 22px;
+  height: 30px;
   position: relative;
   transition: background 0.15s ease;
-  width: 40px;
+  width: 50px;
 }
 
 /* The thumb. Moved rather than redrawn, so the change reads as one thing
@@ -630,19 +695,20 @@ input[type="checkbox"], input[type="radio"] {
 .switch-track::after {
   background: var(--surface);
   border-radius: 50%;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 30%, transparent);
   content: "";
-  height: 16px;
+  height: 24px;
   left: 3px;
   position: absolute;
   top: 3px;
   transition: transform 0.15s ease;
-  width: 16px;
+  width: 24px;
 }
 
 .switch > input[type="checkbox"]:checked + .switch-track { background: var(--accent); }
 
 .switch > input[type="checkbox"]:checked + .switch-track::after {
-  transform: translateX(18px);
+  transform: translateX(20px);
 }
 
 /* The focus ring belongs on the thing somebody can see, since the control that
@@ -678,6 +744,7 @@ input[type="checkbox"], input[type="radio"] {
    colours, where shadows are not drawn and an outline is given a system colour
    that shows. */
 input:focus, select:focus {
+  background: var(--surface);
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
   outline: 2px solid transparent;
@@ -686,13 +753,30 @@ input:focus, select:focus {
 button {
   background: var(--accent);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--pill);
   color: var(--accent-text);
   cursor: pointer;
   font: inherit;
   font-weight: 500;
   padding: 9px 16px;
   transition: background-color 0.15s ease, color 0.15s ease, filter 0.15s ease;
+}
+
+/* The buttons that act - the form's own answer and every other - are as high as
+   the fields beside them. The bar's title, the screen's tabs, a link in a row
+   and the small ones inside a field keep their own sizes; :where keeps this as
+   weak as the rule above, so each of those wins with a rule of its own. The
+   list is written twice more, for the shadow below and for a touch screen. */
+button:where(:not(.link, .link-button, .tab, .screen-tab, .app-title, .nav-toggle, .logo-use-button,
+  .password-toggle, .date-open, .toast-close)) {
+  min-height: var(--control);
+  padding: 0 22px;
+}
+
+/* The form's own answer, lifted off the card on a shadow of its own colour. */
+button:where(:not(.secondary, .link, .link-button, .tab, .screen-tab, .danger, .app-title, .nav-toggle,
+  .logo-use-button, .password-toggle, .date-open, .toast-close, :disabled)) {
+  box-shadow: 0 4px 12px var(--ring);
 }
 
 button:hover { filter: brightness(1.08); }
@@ -903,6 +987,11 @@ button.danger:not(.link) {
 /* Scrolls inside itself rather than widening the page. */
 .table-wrap { overflow-x: auto; }
 
+/* The buttons under a result table - the report's, the overtime's, the
+   statement's exports - stand clear of its last line. Directly on it they read
+   as part of the table rather than of the card. */
+.table-wrap + .row { margin-top: 16px; }
+
 table { border-collapse: collapse; width: 100%; }
 
 /* Eight pixels a side rather than ten: the accounts table has eight columns, and
@@ -972,9 +1061,15 @@ td.actions, th.actions { text-align: right; }
  * nothing to how wide a table makes the column - so the role in a user's row got
  * whatever the column had left and cut its own label: "Benutze" for Benutzer and
  * for Benutzer & Administrator alike. Bounded, because each option carries what
- * the role is for after its name, and the name is the part that has to fit. */
+ * the role is for after its name, and the name is the part that has to fit.
+ *
+ * Narrower inside than a field, too: a row of a table can spare least the room
+ * a pill leaves on either side of its words. With a field's twenty pixels the
+ * longest role name needed fourteen more than the bound, and given them, the
+ * accounts table ran nine past its card - in the faces CI renders in. */
 td > select {
   max-width: 16em;
+  padding-inline: 12px;
   width: auto;
 }
 
@@ -1473,41 +1568,36 @@ button.secondary:hover {
 
 button.secondary:active { background: var(--quiet-press); }
 
-/* The tabs of the two long screens, My account and Settings.
+/* The tabs of the long screens.
 
-   Plain words on a tint of the page, the chosen one lifted onto the card's
-   colour: the navigation above is drawn in the accent, and a second strip of
-   accent under it would read as a second navigation rather than as the parts
-   of this screen. Wrapped rather than scrolled on a narrow window, so that no
-   tab is ever out of sight. Hidden by attribute, which a display rule would
-   otherwise beat. */
+   Pills on a tint of the text, the chosen one drawn in the text's own colour:
+   the navigation above is drawn in the accent, and tabs in the accent under it
+   would read as a second navigation rather than as the parts of this screen.
+   Wrapped rather than scrolled on a narrow window, so that no tab is ever out
+   of sight. Hidden by attribute, which a display rule would otherwise beat. */
 .screen-tabs {
-  background: var(--quiet);
-  border-radius: calc(var(--radius) + 4px);
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 8px;
   margin: 0 0 16px;
   max-width: 100%;
-  padding: 4px;
-  width: fit-content;
 }
 
 .screen-tab {
-  background: none;
-  color: var(--muted);
-  padding: 7px 14px;
+  background: var(--quiet);
+  color: var(--text);
+  min-height: 40px;
+  padding: 0 18px;
 }
 
 .screen-tab:hover {
-  color: var(--text);
+  background: var(--quiet-hover);
   filter: none;
 }
 
 .screen-tab[aria-selected="true"] {
-  background: var(--tab-chosen);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 12%, transparent);
-  color: var(--text);
+  background: var(--text);
+  color: var(--surface);
 }
 
 .screen-tabs[hidden], .screen-tab[hidden] { display: none; }
@@ -1623,18 +1713,17 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   align-items: center;
   background: #2b3440;
   border-bottom: 5px solid var(--accent);
-  /* So the logo can be bounded by the band's width - see .login-card .brand-logo. */
-  container-type: inline-size;
   display: flex;
   flex-wrap: wrap;
   gap: 14px 24px;
   padding: 12px 28px 12px 12px;
 }
 
-/* The picture keeps the ground it had before the band existed - white in the
- * light theme, the card's own dark in the dark one. A logo is drawn for one of
- * those two, never for an anthracite band, and a dark wordmark straight on the
- * band would simply disappear. */
+/* The mark stands on a ground of its own - white in the light theme, the card's
+ * own dark in the dark one - rather than straight on the band. The maintainer
+ * kept it on 2026-11-19, having compared the card without it, and the app's
+ * connect card and the installer draw the same field: the band is held to these
+ * measures by tests in both. */
 .login-emblem {
   background: var(--surface);
   border-radius: 8px;
@@ -2115,23 +2204,23 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   object-fit: contain;
 }
 
+/* In the room the bar gives a logo - .brand-logo's bound of 328x96 - so what is
+   on screen here is what will be on screen there. */
 .logo-preview {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  height: 44px;
-  max-width: 160px;
+  height: 96px;
+  max-width: 100%;
   object-fit: contain;
   padding: 4px;
+  width: 328px;
 }
 
-/* The two uses side by side, each in a box the shape that use gives it. Wrapping
- * rather than shrinking on a narrow screen: a preview that has been squeezed is
- * no longer showing what it is a preview of. */
+/* The use, in a box the shape the bar gives it. Wrapping rather than shrinking on
+ * a narrow screen: a preview that has been squeezed is no longer showing what it
+ * is a preview of. */
 .logo-uses {
-  /* start, not the default stretch: the two boxes are deliberately different
-   * heights, and stretching the shorter one leaves its caption floating halfway
-   * down the gap instead of sitting under the thing it names. */
   align-items: start;
   display: flex;
   flex-wrap: wrap;
@@ -2140,9 +2229,9 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 }
 .logo-use { display: grid; gap: 4px; justify-items: start; margin: 0; }
 
-/* A preview is a control now: pressing it chooses which part of the logo that
-   place uses. It carries the cue a button does, quietly - it sits in a row of
-   pictures, and three outlined boxes would read as a toolbar. */
+/* The preview is a control: pressing it chooses which part of the logo the bar
+   uses. It carries the cue a button does, quietly - an outlined box around a
+   picture would read as a frame rather than as something to press. */
 .logo-use-button {
   background: none;
   border: 1px solid transparent;
@@ -2207,23 +2296,6 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .crop-handle-se { bottom: -1px; cursor: nwse-resize; right: -1px; }
 .logo-use figcaption { font-size: 12px; }
 
-/* The room the sign-in band gives a logo, so what is on screen here is what
- * will be on screen there. */
-.logo-preview-login { height: 96px; max-width: 328px; width: 328px; }
-
-/* Sixteen pixels square, which is what a browser tab gives it - and the point of
-   showing it at all. A wordmark that reads as a banner is a smear at this size,
-   and finding that out here costs nothing while finding it out in the tab means
-   preparing a second image. */
-.logo-preview-icon {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  height: 16px;
-  object-fit: contain;
-  padding: 1px;
-  width: 16px;
-}
 
 .site-footer {
   align-items: center;
@@ -2389,33 +2461,9 @@ body:has(#login-screen:not([hidden])) > :is(.topbar, .banner, #standing-notices,
   visibility: hidden;
 }
 
-/* The same image in the sign-in band, at the header's bound of 328x96, so one
- * picture is drawn at one size wherever it appears - and narrower where the band
- * is, which on a telephone is less than 328px.
- *
- * contain rather than cover, deliberately. cover fills the box by cutting
- * whatever does not fit, and what does not fit in a 328x96 box is the top and
- * bottom of anything close to square - which for a logo means slicing the mark in
- * half. An administrator uploading their company's logo has not asked for it to
- * be cut, and a letterboxed logo reads as deliberate where a beheaded one reads
- * as broken. Anything wider than the band is scaled down to fit, so the width is
- * a bound rather than a target.
- *
- * The band's width less the emblem's padding, and not 100%: a percentage would
- * be of the emblem, which is sized by this picture. Measured, that cycle drew a
- * 600x120 wordmark at 328px inside an emblem 492px wide - the emblem sized for
- * the picture as if the percentage were not there - and the empty white beside
- * it pushed the welcome off the line. */
-.login-card .brand-logo {
-  height: auto;
-  max-height: 96px;
-  max-width: min(328px, calc(100cqw - 12px));
-  object-fit: contain;
-}
-
-/* The placeholder standing in for a logo is drawn at the height a logo gets
-   rather than at the header's chip size, so the band is the same height with or
-   without one. */
+/* TimePulse's mark in the sign-in band, at the height an installation's logo was
+   given there before the band became the application's alone - so the band kept
+   its height when the logo left it. */
 .login-mark {
   height: 96px;
   width: 96px;
@@ -3241,10 +3289,18 @@ input[readonly]:focus, textarea[readonly]:focus {
    cross on a notice 18. */
 @media (max-width: 900px), (pointer: coarse) {
   button,
-  select,
   .tab,
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  .screen-tab {
     min-height: 44px;
+  }
+
+  /* The fields and the buttons that act are as high as a finger needs on every
+     screen already; written again here so the line above does not lower them. */
+  button:where(:not(.link, .link-button, .tab, .screen-tab, .app-title, .nav-toggle, .logo-use-button,
+  .password-toggle, .date-open, .toast-close)),
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    min-height: var(--control);
   }
 
   /* A summary is pressed to open what it heads, and was 20 pixels of text. A

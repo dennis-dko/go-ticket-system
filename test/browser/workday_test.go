@@ -33,7 +33,7 @@ func TestAWorkingDayIsRecordedBesideTheHoursBookedOnIt(t *testing.T) {
 		return wallClock(runningTimer.startedAt).time;
 	})()`, &clockStart)
 
-	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`),
+	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`), p.click(`#calendar-tabs [data-card-tab="worktime"]`),
 		chromedp.WaitVisible("#workday-card", chromedp.ByID))
 
 	p.waitForValue(`#form-workday input[name="start"]`)
@@ -114,7 +114,7 @@ func TestADayPastALimitOfTheWorkingHoursActSaysWhich(t *testing.T) {
 		return true;
 	})()`, &recorded)
 
-	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`),
+	p.run("open the calendar", p.click(`.tab[data-view="calendar"]`), p.click(`#calendar-tabs [data-card-tab="worktime"]`),
 		chromedp.WaitVisible("#workday-card", chromedp.ByID))
 
 	p.waitForText("#table-workdays tbody", "More than ten hours")

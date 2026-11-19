@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/dennis-dko/timepulse/internal/infrastructure/config"
 )
 
 // refused is as much of a refusal as these cases read.
@@ -39,7 +37,7 @@ func refusalOf(t *testing.T, rec *httptest.ResponseRecorder) refused {
 func TestAFailedProbeIsNamedAndKeepsWhatTheDriverSaid(t *testing.T) {
 	s := &server{
 		cfg:  Config{Token: "the-token", DatasourceFile: filepath.Join(t.TempDir(), "datasource.json"), Logf: t.Logf},
-		done: make(chan config.Datasource, 1),
+		done: make(chan handover, 1),
 	}
 
 	// Nothing listens on port 1, so the refusal is immediate.
@@ -90,7 +88,7 @@ func TestAConnectionThatCannotBeSavedIsNamed(t *testing.T) {
 
 	s := &server{
 		cfg:  Config{Token: "the-token", DatasourceFile: filepath.Join(blocker, "datasource.json"), Logf: t.Logf},
-		done: make(chan config.Datasource, 1),
+		done: make(chan handover, 1),
 	}
 
 	body := `{"dialect":"sqlite","name":"` + filepath.ToSlash(filepath.Join(dir, "chosen")) + `"}`
@@ -137,7 +135,7 @@ func TestAConnectionThatCannotBeSavedIsNamed(t *testing.T) {
 func TestAConnectionTheDriverWouldReadOtherwiseIsRefused(t *testing.T) {
 	s := &server{
 		cfg:  Config{Token: "the-token", DatasourceFile: filepath.Join(t.TempDir(), "datasource.json"), Logf: t.Logf},
-		done: make(chan config.Datasource, 1),
+		done: make(chan handover, 1),
 	}
 
 	// Nothing listens on port 1, so whatever is let through fails at once.
