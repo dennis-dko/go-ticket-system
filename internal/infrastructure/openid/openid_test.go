@@ -21,7 +21,7 @@ func aRound() model.OpenIDRound {
 		State:       "the-state-of-this-round",
 		Nonce:       "the-nonce-of-this-round",
 		Verifier:    "a-verifier-long-enough-for-pkce-0123456789abcdef",
-		RedirectURI: "http://time.example/oidc-callback",
+		RedirectURI: "http://localhost:8000/oidc-callback",
 	}
 }
 
