@@ -1545,6 +1545,12 @@ body:has(#login-screen:not([hidden])) .toast-stack { bottom: calc(var(--footer-h
 
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* A button in a row keeps its own height and stands at the row's foot, level
+   with the field beside it rather than with the words above that field. Left
+   to flex's stretch, "Copy last week" grew as tall as "Add a row for" and its
+   dropdown together - an oval half again a pill's height. */
+.row > button { align-self: flex-end; }
+
 /* A line's worth of air above, where the control below is a different kind of
    thing from the one above it: a synchronisation that deletes sitting under a
    Save that only stores a schedule, the Save of the appearance form sitting
