@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/dennis-dko/timepulse/internal/interface/web"
+	"github.com/dennis-dko/timepulse/internal/support/imaging"
 )
 
 // The installed app: what a telephone's home screen or a desktop's start menu is
@@ -108,8 +109,8 @@ func TestTheManifestNamesTheInstallation(t *testing.T) {
 			continue
 		}
 
-		if !strings.HasPrefix(src, "/app-icon/"+strings.Split(want, "x")[0]+"?v=") {
-			t.Errorf("the %s icon is at %q, want a fingerprinted address", want, src)
+		if src != "/app-icon/"+strings.Split(want, "x")[0] {
+			t.Errorf("the %s icon is at %q, want the address the size is drawn at", want, src)
 		}
 	}
 }
@@ -154,8 +155,8 @@ func TestTheManifestSpeaksTheDevicesLanguage(t *testing.T) {
 	}
 }
 
-// The icons are drawn at the sizes they are announced at - a 192 scaled up to
-// 512 by the device is the blur this exists to avoid.
+// The icons are TimePulse's mark, drawn at the sizes they are announced at - a
+// 192 scaled up to 512 by the device is the blur this exists to avoid.
 func TestTheAppIconsAreDrawnAtTheirSizes(t *testing.T) {
 	server := brandedServer(web.Branding{})
 	m := readManifest(t, server, "en")
@@ -177,54 +178,44 @@ func TestTheAppIconsAreDrawnAtTheirSizes(t *testing.T) {
 			t.Errorf("the icon announced as %s is %s", icon.Sizes, got)
 		}
 
-		// The mark's tile is opaque in the middle: an empty picture would decode
-		// at the right size and show nothing.
-		if _, _, _, alpha := img.At(bounds.Dx()/2, bounds.Dy()/2).RGBA(); alpha == 0 {
-			t.Errorf("the %s icon is empty in the middle", icon.Sizes)
+		mark, err := imaging.MarkPNG(bounds.Dx())
+		if err != nil {
+			t.Fatalf("drawing the mark at %d: %v", bounds.Dx(), err)
+		}
+
+		if !bytes.Equal(res.Body.Bytes(), mark) {
+			t.Errorf("the %s icon is not the mark as imaging draws it", icon.Sizes)
 		}
 	}
 }
 
-// An installation with a logo of its own is shown as that logo on the home
-// screen, as it is in the tab.
-func TestTheAppIconIsTheConfiguredLogo(t *testing.T) {
-	shipped := fetch(t, brandedServer(web.Branding{}), "/app-icon/512").Body.Bytes()
+// An icon is asked about again rather than kept for good.
+//
+// Its address carries no version, so a year of caching would keep a device on
+// the mark it first saw through every release that draws it differently.
+func TestAnAppIconIsRevalidatedRatherThanKept(t *testing.T) {
+	server := brandedServer(web.Branding{})
 
-	branded := brandedServer(web.Branding{Logo: rasterLogo(t, 900, 420)})
-	m := readManifest(t, branded, "en")
+	first := fetch(t, server, "/app-icon/192")
 
-	var src string
-
-	for _, icon := range m.Icons {
-		if icon.Sizes == "512x512" {
-			src = icon.Src
-		}
+	if got := first.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("the icon is served with Cache-Control %q, want no-cache", got)
 	}
 
-	res := fetch(t, branded, src)
-
-	img, err := png.Decode(bytes.NewReader(res.Body.Bytes()))
-	if err != nil {
-		t.Fatalf("the logo's app icon is not a PNG: %v", err)
+	tag := first.Header().Get("ETag")
+	if tag == "" {
+		t.Fatal("the icon carries no ETag, so asking again costs the whole picture")
 	}
 
-	if b := img.Bounds(); b.Dx() != 512 || b.Dy() != 512 {
-		t.Errorf("the logo's app icon is %dx%d, want 512x512", b.Dx(), b.Dy())
-	}
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/app-icon/192", nil)
+	req.Header.Set("If-None-Match", tag)
 
-	if bytes.Equal(res.Body.Bytes(), shipped) {
-		t.Error("the installation's logo is served as the shipped mark")
-	}
-}
+	again := httptest.NewRecorder()
+	server.ServeHTTP(again, req)
 
-// A changed logo is a changed address, so a device that cached the old icon for a
-// year has a reason to fetch the new one.
-func TestADifferentLogoIsADifferentAppIconAddress(t *testing.T) {
-	first := readManifest(t, brandedServer(web.Branding{Logo: pngLogo()}), "en")
-	second := readManifest(t, brandedServer(web.Branding{Logo: rasterLogo(t, 40, 20)}), "en")
-
-	if len(first.Icons) == 0 || first.Icons[0].Src == second.Icons[0].Src {
-		t.Errorf("two logos share the app icon address %v", first.Icons)
+	if again.Code != http.StatusNotModified || again.Body.Len() != 0 {
+		t.Errorf("asking again with the tag answered %d and %d bytes, want 304 and none",
+			again.Code, again.Body.Len())
 	}
 }
 
@@ -247,7 +238,7 @@ func TestTheDocumentLinksTheManifestAndATouchIcon(t *testing.T) {
 		t.Errorf("the document does not link the manifest: %.400s", body)
 	}
 
-	if !strings.Contains(body, `<link rel="apple-touch-icon" href="/app-icon/192?v=`) {
-		t.Errorf("the document has no touch icon at a fingerprinted address: %.400s", body)
+	if !strings.Contains(body, `<link rel="apple-touch-icon" href="/app-icon/192">`) {
+		t.Errorf("the document has no touch icon: %.400s", body)
 	}
 }

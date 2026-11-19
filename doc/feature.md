@@ -41,7 +41,7 @@ What the application does, and the rules it keeps while doing it.
 | Leave | Days of leave a year, from a year on, and for each year what is left of them: what the year gives, what the year before left over - carried in, or owed where it was overdrawn - and what is taken and still planned, counted from the days of leave recorded on working days |
 | Public holidays | The public holidays of seventeen countries - Austria, Belgium, Czechia, Denmark, Finland, France, Germany, Ireland, Italy, Luxembourg, the Netherlands, Norway, Poland, Portugal, Sweden, the United Kingdom and the United States - worked out in the binary rather than fetched from anywhere. A country is chosen first, Germany standing ready, and a second picker follows where its holidays differ: a German state or a British nation always, and Alsace, Moselle, South Tyrol, the Azores or Madeira where they keep a day or two more than the rest of their country. The installation chooses under *Settings*, and anybody can choose another place - or none - under *My account*. A holiday a country moves off a weekend is kept on the weekday it moves to, and said to be. They are named in the calendar and on the week, leave is not recorded on them, and from the day every working day counts from they ask nothing |
 | Transport | Optional HTTPS with automatic Let's Encrypt certificates |
-| Installable | A manifest and icons per installation - its own name and logo - so the page installs as an app on a telephone or a desktop, with shortcuts to the time entries, the calendar and the overtime. Browsers offer this over HTTPS or on localhost only. *My account* shows the installation's address beside the offer, as text and as a QR code, to open it on a telephone by scanning it rather than typing it |
+| Installable | A manifest and icons per installation - its own name, and TimePulse's mark - so the page installs as an app on a telephone or a desktop, with shortcuts to the time entries, the calendar and the overtime. Browsers offer this over HTTPS or on localhost only. *My account* shows the installation's address beside the offer, as text and as a QR code, to open it on a telephone by scanning it rather than typing it |
 | Booking offline | The installed application opens without a network from the shell it kept, and says the installation cannot be reached rather than showing a dead page. A booking made in the form while the connection is gone waits on the device, a banner says how many wait, and they are sent - once each - when it is back; one the installation then refuses stays with its reason until it is corrected. Nothing the installation answers is ever shown from a copy. Over HTTPS or on localhost only, like installing |
 | Operations | Health and liveness endpoints, Prometheus metrics, tracing (all from GoFr), administered under *Settings* |
 
@@ -360,65 +360,47 @@ and the values in it. The reasons are a fixed set, so each one travels as a code
 whatever its sentence names — the row number, the offending word — rather than as a
 sentence assembled on the server in English.
 
-## The logo, and what a tab does with it
+## The logo, and where it is drawn
 
-A logo is a **PNG or a JPEG**, up to 256 KB. Not an SVG: the same file that
-renders perfectly in the header and on the sign-in screen can be refused as a tab
-icon, silently, by an engine with its own rules about what it will rasterise —
-nothing in the response says so, and the tab is simply empty.
+**The logo stands at the left of the bar once somebody has signed in, and
+nowhere else.** The browser tab, the sign-in screen and the installed app's icons
+show TimePulse's own mark whatever is uploaded — decided on 2026-11-18, because
+those places say which program this is, before anybody has signed in to the
+installation that runs it.
 
-**It is converted when it is saved**, into the size each place draws it:
+A logo is a **PNG or a JPEG**, up to 256 KB. Not an SVG: the bar draws a copy cut
+to the part chosen for it, and the cut is made on the server, from pixels — a
+drawing would be stored and never cut.
 
-| | Kept at | Drawn at |
-| --- | --- | --- |
-| Header | 440×80 | 220×40 |
-| Sign-in card | 656×192 | 328×96 |
-| Browser tab | 64×64, square | 16, 32 or more |
+**It is converted when it is saved**, into the size the bar draws it: kept at
+656×192 for the 328×96 the bar gives it, twice the drawn size because a screen at
+twice the density draws twice as many pixels for the same box. Derived once and
+stored, so a page load reads it rather than making it, and a restart has nothing
+to redo. It also shrinks what every visitor downloads: the branding answer carries
+the copy rather than the original. A 440×80 copy is made beside it as well,
+because the API has always sent one as `logoHeader`.
 
-Twice the drawn size, because a screen at twice the density draws twice as many
-pixels for the same box. Derived once and stored, so a page load reads them
-rather than making them, and a restart has nothing to redo.
-
-That matters most for the tab. What an installation uploads is a wordmark made
-for a header — a few thousand pixels across, often twice as wide as it is tall —
-and handed to a browser at that size, every decision is the browser's: whether to
-accept it at all, how to fit two-to-one into a square, whether to bother. The
-answers differ by engine, and one that decides against shows nothing and says
-nothing. The tab's version is padded out to a square for the same reason; the
-other two are not, because a header places the mark itself.
-
-It also shrinks what every visitor downloads. The sign-in screen used to receive
-the whole original inside the branding response, before anybody had signed in.
-
-**Which part of the logo each place uses is yours to choose.** Press a preview on
+**Which part of the logo the bar uses is yours to choose.** Press the preview on
 the appearance screen and drag: any part, in any shape, from any corner. The
-selection opens on the shape of the place it is for, because that is the one
-selection nothing has to be done to, but nothing holds it there — and a part that
-is not that shape is fitted into the place rather than stretched to fill it. A
-wide header can take the whole wordmark; a browser tab has sixteen pixels, and the part worth
-keeping there is usually the mark at one end rather than whatever falls in the
-middle. Nothing has to be chosen — a logo starts as all of itself in all three
-places, which is what most installations will leave it as.
+selection opens on the shape of the bar's room, because that is the one selection
+nothing has to be done to, but nothing holds it there — and a part that is not
+that shape is fitted into the room rather than stretched to fill it. A wordmark
+with a symbol at one end can read better as the symbol alone. Nothing has to be
+chosen: a logo starts as all of itself, which is what most installations will
+leave it as.
 
-The choice is remembered per place and per logo. Uploading a different logo
-forgets it, because a selection made against one picture means nothing against
-another.
+The choice is remembered per logo. Uploading a different logo forgets it, because
+a selection made against one picture means nothing against another.
 
-Fitted, not cropped: nothing of the logo is cut. That does mean a wide wordmark
-becomes a thin strip at the sixteen pixels a tab draws, which is a fact about
-wordmarks rather than about this. The appearance screen shows the logo at exactly
-that size beside the header and sign-in previews, so it is seen before saving. A
-square mark is what reads best there — many companies keep one for exactly this.
-
-**Until a logo is configured, the header and the sign-in card show a chip with
-TimePulse's T.** Those two slots belong to whoever runs the installation, and
-filling them with our mark would make an unbranded installation look branded by
-somebody else, so the chip only stands in for a logo. The application's own mark
-— TimePulse's T and P, a pulse running through them and a clock in the P — has
-its own places: the browser tab, the installed app's icons, the `.exe`, the
-Android app, and the button beside the title that leads to the welcome screen. It
-is drawn (`internal/interface/web/asset/favicon.svg`) rather than a font
-character. `go run ./build/icon > build/icon.ico` and
+**Until a logo is configured, the bar shows a chip with TimePulse's T.** That slot
+belongs to whoever runs the installation, and filling it with our mark would make
+an unbranded installation look branded by somebody else, so the chip only stands
+in for a logo. The application's own mark — TimePulse's T and P, a pulse running
+through them and a clock in the P — has its own places: the browser tab, the
+sign-in card, the installer, the installed app's icons, the `.exe`, the Android
+app, and the button beside the title that leads to the welcome screen. It is
+drawn (`internal/interface/web/asset/favicon.svg`) rather than a font character.
+`go run ./build/icon > build/icon.ico` and
 `go run ./build/icon -favicon > internal/interface/web/asset/favicon.ico` redraw
 the two icon files from the same geometry whenever it changes, and tests fail
 until they have.
@@ -437,15 +419,13 @@ of them open — "TimePulse | Beispiel GmbH & Co. KG" reads as "TimePulse |
 Beispie…" in every one. Left empty, the tab adds what the header adds. It
 translates like the other texts.
 
-**A language you have written nothing for follows the base**, the same way an
-unconfigured logo falls back to the shipped mark. The form fills each language
+**A language you have written nothing for follows the base.** The form fills each language
 with the base text so you can see what a reader of it currently gets; leaving
 that untouched means exactly what it looks like — nothing written here. Rename
 the installation later and every untranslated language follows along.
 
-Saving a mark reloads the page, because no engine takes a new tab icon from a
-link swapped in afterwards — and the reload comes back to where you were on the
-screen rather than to the top of it.
+Saving redraws the bar where it stands, without reloading the page, so you stay
+where you were on the screen.
 
 ## Business rules
 

@@ -20,8 +20,8 @@ func TestTheSignInCardWelcomesByTheInstallationsName(t *testing.T) {
 	p := open(t)
 	p.readyAdmin()
 
-	// Titled "Zeiterfassung", with no logo, so the lettered mark stands in the
-	// band beside the words.
+	// Titled "Zeiterfassung". TimePulse's mark stands in the band beside the
+	// words whatever the logo is, so none is needed here.
 	p.storeBranding(t, "")
 
 	p.run("sign out", chromedp.Click("#logout", chromedp.ByID),

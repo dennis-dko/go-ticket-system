@@ -2120,23 +2120,23 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   object-fit: contain;
 }
 
+/* In the room the bar gives a logo - .brand-logo's bound of 328x96 - so what is
+   on screen here is what will be on screen there. */
 .logo-preview {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  height: 44px;
-  max-width: 160px;
+  height: 96px;
+  max-width: 100%;
   object-fit: contain;
   padding: 4px;
+  width: 328px;
 }
 
-/* The two uses side by side, each in a box the shape that use gives it. Wrapping
- * rather than shrinking on a narrow screen: a preview that has been squeezed is
- * no longer showing what it is a preview of. */
+/* The use, in a box the shape the bar gives it. Wrapping rather than shrinking on
+ * a narrow screen: a preview that has been squeezed is no longer showing what it
+ * is a preview of. */
 .logo-uses {
-  /* start, not the default stretch: the two boxes are deliberately different
-   * heights, and stretching the shorter one leaves its caption floating halfway
-   * down the gap instead of sitting under the thing it names. */
   align-items: start;
   display: flex;
   flex-wrap: wrap;
@@ -2145,9 +2145,9 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 }
 .logo-use { display: grid; gap: 4px; justify-items: start; margin: 0; }
 
-/* A preview is a control now: pressing it chooses which part of the logo that
-   place uses. It carries the cue a button does, quietly - it sits in a row of
-   pictures, and three outlined boxes would read as a toolbar. */
+/* The preview is a control: pressing it chooses which part of the logo the bar
+   uses. It carries the cue a button does, quietly - an outlined box around a
+   picture would read as a frame rather than as something to press. */
 .logo-use-button {
   background: none;
   border: 1px solid transparent;
@@ -2212,23 +2212,6 @@ tr.self td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .crop-handle-se { bottom: -1px; cursor: nwse-resize; right: -1px; }
 .logo-use figcaption { font-size: 12px; }
 
-/* The room the sign-in band gives a logo, so what is on screen here is what
- * will be on screen there. */
-.logo-preview-login { height: 96px; max-width: 328px; width: 328px; }
-
-/* Sixteen pixels square, which is what a browser tab gives it - and the point of
-   showing it at all. A wordmark that reads as a banner is a smear at this size,
-   and finding that out here costs nothing while finding it out in the tab means
-   preparing a second image. */
-.logo-preview-icon {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  height: 16px;
-  object-fit: contain;
-  padding: 1px;
-  width: 16px;
-}
 
 .site-footer {
   align-items: center;
@@ -2394,33 +2377,9 @@ body:has(#login-screen:not([hidden])) > :is(.topbar, .banner, #standing-notices,
   visibility: hidden;
 }
 
-/* The same image in the sign-in band, at the header's bound of 328x96, so one
- * picture is drawn at one size wherever it appears - and narrower where the band
- * is, which on a telephone is less than 328px.
- *
- * contain rather than cover, deliberately. cover fills the box by cutting
- * whatever does not fit, and what does not fit in a 328x96 box is the top and
- * bottom of anything close to square - which for a logo means slicing the mark in
- * half. An administrator uploading their company's logo has not asked for it to
- * be cut, and a letterboxed logo reads as deliberate where a beheaded one reads
- * as broken. Anything wider than the band is scaled down to fit, so the width is
- * a bound rather than a target.
- *
- * The band's width less the emblem's padding, and not 100%: a percentage would
- * be of the emblem, which is sized by this picture. Measured, that cycle drew a
- * 600x120 wordmark at 328px inside an emblem 492px wide - the emblem sized for
- * the picture as if the percentage were not there - and the empty white beside
- * it pushed the welcome off the line. */
-.login-card .brand-logo {
-  height: auto;
-  max-height: 96px;
-  max-width: min(328px, calc(100cqw - 12px));
-  object-fit: contain;
-}
-
-/* The placeholder standing in for a logo is drawn at the height a logo gets
-   rather than at the header's chip size, so the band is the same height with or
-   without one. */
+/* TimePulse's mark in the sign-in band, at the height an installation's logo was
+   given there before the band became the application's alone - so the band kept
+   its height when the logo left it. */
 .login-mark {
   height: 96px;
   width: 96px;

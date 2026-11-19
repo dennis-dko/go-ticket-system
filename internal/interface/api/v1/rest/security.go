@@ -397,10 +397,9 @@ func (l *RateLimiter) clientKey(r *http.Request) string {
 // session, no permission and no account that exists.
 //
 // The two numbers are chosen from what the application actually sends. A saved
-// appearance is the largest ordinary body there is: a logo and a tab icon, each
-// capped at 256 KB as a data URI, plus a title per language. That is well under
-// a megabyte, and two leaves room for the next field without leaving room for an
-// attack. A spreadsheet is the one thing legitimately larger, and thirty-two
+// appearance is the largest ordinary body there is: a logo capped at 256 KB as a
+// data URI, plus a title per language. That is well under a megabyte, and two
+// leaves room for the next field without leaving room for an attack. A spreadsheet is the one thing legitimately larger, and thirty-two
 // megabytes is more rows than this application will ever be handed at once.
 const (
 	maxRequestBody = 2 << 20

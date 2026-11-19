@@ -752,30 +752,23 @@ equivalent would leave a window with no application running. The card says so.
 
 ## If the tab icon does not appear
 
-The configured logo is served at `/favicon`, from an address carrying a
-fingerprint of its contents, and written into the page by the server. Firefox,
-Chrome and Edge all take it: the Firefox suite checks that by reading what
-Firefox recorded in its own icon store, for an SVG that states its size, one with
-only a viewBox, one with neither, and a raster wordmark 2000px across.
+The tab shows TimePulse's mark whatever logo is configured: the page declares
+`/favicon.svg`, with `/favicon.ico` beside it for whatever asks for that by name.
+A configured logo is drawn at the left of the bar after signing in, and nowhere
+else.
 
-So if a tab is empty, it is one of these three, in this order:
+So if a tab is empty, or still shows a logo, it is one of these two:
 
-**The build is older than the fix.** The icon used to be patched in by the page
-after loading, which Chrome honours and Firefox ignores - the exact shape of
-"works in Chrome, empty in Firefox". Check the footer: it names the version.
+**The build is older than this.** Up to v0.4.16 the tab showed the configured
+logo, from `/favicon`. Check the footer: it names the version.
 
-**Firefox is showing what it remembered.** It keeps an icon against a page in
-`favicons.sqlite` and reuses it, including the memory of a page that had none.
-`Ctrl`+`Shift`+`R` reloads past it; *Forget About This Site* clears it outright.
+**The browser is showing what it remembered.** Firefox keeps an icon against a
+page in `favicons.sqlite` and reuses it, including the memory of a page that had
+none or another. `Ctrl`+`Shift`+`R` reloads past it; *Forget About This Site*
+clears it outright.
 
-**The logo cannot be seen at that size.** A tab gives it sixteen pixels. A wide
-wordmark in near-black is a smudge on a dark tab strip - present, adopted,
-invisible. The appearance screen shows the logo at exactly that size beside the
-other two previews, which is the quickest way to tell this apart from the two
-above.
-
-To take the browser out of it entirely, open `/favicon` directly. What comes back
-is what any tab is given.
+To take the browser out of it entirely, open `/favicon.svg` directly. What comes
+back is what any tab is given.
 
 ## Monitoring
 

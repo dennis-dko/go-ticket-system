@@ -10,13 +10,10 @@ import (
 	"testing"
 )
 
-// Each place a logo is shown gets it at the size that place draws.
+// Each copy of a logo is made at the size it is drawn.
 //
-// One upload, three very different jobs: a mark beside a title, a banner over a
-// sign-in card, and sixteen pixels in a browser tab. Handing the same few
-// thousand pixels to all three is what this exists to stop - most visibly in the
-// tab, where a browser given an image that size makes its own decision about
-// whether to use it at all, and one that decides against shows nothing.
+// What is uploaded is a few thousand pixels across, and the bar draws a fraction
+// of that. Handing every visitor the original is what the copies exist to stop.
 func TestALogoIsMadeInTheSizeEachPlaceDraws(t *testing.T) {
 	logo := wordmark(t, 2776, 1299)
 
@@ -52,29 +49,25 @@ func TestALogoIsMadeInTheSizeEachPlaceDraws(t *testing.T) {
 	}
 }
 
-// The tab's is square whatever shape the logo is; the other two are not padded.
+// A copy keeps the logo's proportions and is not padded out to its box.
 //
-// A tab icon that is not square gets one dimension stretched or the whole thing
-// refused, depending on who is asked. A header places the mark itself, so a
-// transparent margin baked into the image would only fight it for room.
-func TestOnlyTheTabsVersionIsPadded(t *testing.T) {
+// The bar places the logo itself, so a transparent margin baked into the image
+// would only fight it for room.
+func TestNoCopyIsPadded(t *testing.T) {
 	logo := wordmark(t, 2000, 500)
 
-	icon := decode(t, mustFitIcon(t, logo))
-	if icon.Bounds().Dx() != icon.Bounds().Dy() {
-		t.Errorf("the tab's version is %dx%d, which is not square",
-			icon.Bounds().Dx(), icon.Bounds().Dy())
-	}
+	for name, box := range map[string]struct{ width, height int }{
+		"the header": {HeaderWidth, HeaderHeight},
+		"the banner": {BannerWidth, BannerHeight},
+	} {
+		copied := decode(t, mustFit(t, logo, box.width, box.height))
 
-	header := decode(t, mustFit(t, logo, HeaderWidth, HeaderHeight))
-	if header.Bounds().Dx() == header.Bounds().Dy() {
-		t.Error("the header's version was padded into a square")
-	}
-
-	// Four to one in, four to one out: nothing is cropped anywhere.
-	ratio := float64(header.Bounds().Dx()) / float64(header.Bounds().Dy())
-	if ratio < 3.5 || ratio > 4.5 {
-		t.Errorf("the header's version has a ratio of %.2f against the logo's 4", ratio)
+		// Four to one in, four to one out: nothing is cropped and nothing added.
+		ratio := float64(copied.Bounds().Dx()) / float64(copied.Bounds().Dy())
+		if ratio < 3.5 || ratio > 4.5 {
+			t.Errorf("%s's copy is %dx%d, a ratio of %.2f against the logo's 4",
+				name, copied.Bounds().Dx(), copied.Bounds().Dy(), ratio)
+		}
 	}
 }
 
@@ -85,15 +78,10 @@ func TestOnlyTheTabsVersionIsPadded(t *testing.T) {
 func TestASmallMarkIsNotEnlarged(t *testing.T) {
 	small := wordmark(t, 32, 32)
 
-	icon := decode(t, mustFitIcon(t, small))
+	copied := decode(t, mustFit(t, small, BannerWidth, BannerHeight))
 
-	// Padded to the square, but what was drawn into it is still 32.
-	if icon.Bounds().Dx() != IconSize {
-		t.Fatalf("the tab's version is %dpx across", icon.Bounds().Dx())
-	}
-
-	if drawn := drawnBounds(icon); drawn.Dx() > 32 {
-		t.Errorf("a 32px mark was enlarged to %dpx", drawn.Dx())
+	if copied.Bounds().Dx() != 32 || copied.Bounds().Dy() != 32 {
+		t.Errorf("a 32px mark came out at %dx%d", copied.Bounds().Dx(), copied.Bounds().Dy())
 	}
 }
 
@@ -105,21 +93,10 @@ func TestOnlyTheTwoFormatsAreConverted(t *testing.T) {
 		"not encoded":      "data:image/png,plain",
 		"not a URI at all": "hello",
 	} {
-		if _, err := FitIcon(uri, Crop{}); err == nil {
+		if _, err := Fit(uri, Crop{}, BannerWidth, BannerHeight); err == nil {
 			t.Errorf("%s was converted", name)
 		}
 	}
-}
-
-func mustFitIcon(t *testing.T, logo string) string {
-	t.Helper()
-
-	out, err := FitIcon(logo, Crop{})
-	if err != nil {
-		t.Fatalf("converting: %v", err)
-	}
-
-	return out
 }
 
 func mustFit(t *testing.T, logo string, width, height int) string {
@@ -210,12 +187,10 @@ func drawnBounds(img image.Image) image.Rectangle {
 	return found
 }
 
-// A part of the logo can be chosen for each place it is shown.
+// Only the part of the logo chosen for the bar is used.
 //
-// A wordmark that reads as a banner is a smear in a tab, and the part worth
-// keeping there is usually the mark at one end rather than whatever falls in the
-// middle. Nobody can guess which, so it is chosen - and per place, because the
-// answer differs between a wide header and a square tab.
+// A wordmark with a symbol at one end can read better as the symbol alone, and
+// nobody can guess which part is worth showing, so it is chosen.
 func TestOnlyTheChosenPartIsUsed(t *testing.T) {
 	// Left half green, right half black, so which half came through is a question
 	// about a colour rather than about a size.
@@ -245,7 +220,7 @@ func TestOnlyTheChosenPartIsUsed(t *testing.T) {
 // It arrives from a browser, so it can be anything: a stray drag, a rounding
 // error on a small image, a value somebody typed into the request by hand. A logo
 // shown complete is never wrong, only sometimes small - and nothing here should
-// be able to produce an empty tab, which is the failure this all started with.
+// be able to leave the bar with an empty picture.
 func TestAnImpossibleCropIsTheWholeImage(t *testing.T) {
 	logo := halves(t, 400, 200)
 
@@ -316,51 +291,37 @@ func halves(t *testing.T, width, height int) string {
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(out.Bytes())
 }
 
-// A part chosen in a shape the place does not have is fitted into it, not
+// A part chosen in a shape the box does not have is fitted into it, not
 // stretched to fill it.
 //
-// The part is chosen freely - any corner, any shape - so a square can be picked
-// for the header and a strip for the tab, and neither has the proportions of the
-// box it is going into. Filling the box would mean distorting the logo, which is
-// the one thing an instance's mark must never come out as. So it is scaled until
-// it fits and left at its own proportions, and the sides that are left over are
-// simply not there for the header and padded for the tab.
+// The part is chosen freely - any corner, any shape - so neither a square nor a
+// strip has the proportions of the box it is going into. Filling the box would
+// mean distorting the logo, which is the one thing an instance's mark must never
+// come out as. So it is scaled until it fits and left at its own proportions.
 func TestAPartOfAnyShapeIsFittedRatherThanStretched(t *testing.T) {
 	logo := wordmark(t, 2000, 500)
 
-	// A square out of a four-to-one wordmark, headed for a five-and-a-half-to-one
-	// header box.
-	square := Crop{X: 0.4, Y: 0, W: 0.25, H: 1}
+	for name, part := range map[string]struct {
+		crop            Crop
+		lowest, highest float64
+	}{
+		// A square out of a four-to-one wordmark.
+		"a square": {crop: Crop{X: 0.4, Y: 0, W: 0.25, H: 1}, lowest: 0.9, highest: 1.1},
+		// A twenty-to-one strip out of the same.
+		"a strip": {crop: Crop{X: 0, Y: 0.4, W: 1, H: 0.2}, lowest: 18, highest: 22},
+	} {
+		copied := decode(t, mustFitCrop(t, logo, part.crop, BannerWidth, BannerHeight))
 
-	header := decode(t, mustFitCrop(t, logo, square, HeaderWidth, HeaderHeight))
+		if ratio := float64(copied.Bounds().Dx()) / float64(copied.Bounds().Dy()); ratio < part.lowest ||
+			ratio > part.highest {
+			t.Errorf("%s came out of the banner's box at %dx%d, a ratio of %.2f",
+				name, copied.Bounds().Dx(), copied.Bounds().Dy(), ratio)
+		}
 
-	if ratio := float64(header.Bounds().Dx()) / float64(header.Bounds().Dy()); ratio < 0.9 || ratio > 1.1 {
-		t.Errorf("a square part came out of the header's box at %dx%d, a ratio of %.2f",
-			header.Bounds().Dx(), header.Bounds().Dy(), ratio)
-	}
-
-	if header.Bounds().Dy() > HeaderHeight {
-		t.Errorf("the header's version is %dpx tall, taller than the %dpx it is given",
-			header.Bounds().Dy(), HeaderHeight)
-	}
-
-	// And the other way round: a wide strip headed for the square tab.
-	strip := Crop{X: 0, Y: 0.4, W: 1, H: 0.2}
-
-	icon := decode(t, mustFitIconCrop(t, logo, strip))
-
-	if icon.Bounds().Dx() != IconSize || icon.Bounds().Dy() != IconSize {
-		t.Fatalf("the tab's version is %dx%d rather than %dpx square",
-			icon.Bounds().Dx(), icon.Bounds().Dy(), IconSize)
-	}
-
-	// Padded into the square rather than squashed to it: what was drawn is still
-	// the twenty-to-one strip that was chosen.
-	drawn := drawnBounds(icon)
-
-	if ratio := float64(drawn.Dx()) / float64(drawn.Dy()); ratio < 5 {
-		t.Errorf("a twenty-to-one strip was drawn into the tab at %dx%d, a ratio of %.2f",
-			drawn.Dx(), drawn.Dy(), ratio)
+		if copied.Bounds().Dx() > BannerWidth || copied.Bounds().Dy() > BannerHeight {
+			t.Errorf("%s came out at %dx%d, outside the %dx%d box", name,
+				copied.Bounds().Dx(), copied.Bounds().Dy(), BannerWidth, BannerHeight)
+		}
 	}
 }
 
@@ -368,17 +329,6 @@ func mustFitCrop(t *testing.T, logo string, crop Crop, width, height int) string
 	t.Helper()
 
 	out, err := Fit(logo, crop, width, height)
-	if err != nil {
-		t.Fatalf("converting: %v", err)
-	}
-
-	return out
-}
-
-func mustFitIconCrop(t *testing.T, logo string, crop Crop) string {
-	t.Helper()
-
-	out, err := FitIcon(logo, crop)
 	if err != nil {
 		t.Fatalf("converting: %v", err)
 	}

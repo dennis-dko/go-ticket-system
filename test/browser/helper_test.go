@@ -162,45 +162,44 @@ func (p *page) waitForNode(selector string) {
 	p.t.Fatalf("nothing ever matched %s", selector)
 }
 
-// submitAndAwaitReload sends the appearance form and waits for the page to come
-// back.
+// submitAndAwaitSave sends the appearance form and waits for the save to land.
 //
-// A changed mark reloads: no engine takes a new tab icon from a link swapped in
-// afterwards, and a differently cropped logo is a different icon. The reload
-// takes the saved notice away with it, so waiting for that notice is waiting for
-// something that is being removed - which is a wait that sometimes sees it and
-// sometimes does not, depending on how quickly the request came back.
-//
-// The reload itself is what is waited for, by a mark left on the document that
-// is about to be replaced.
-func (p *page) submitAndAwaitReload(t *testing.T, submit chromedp.Action) {
+// On the same document: saving the appearance redraws the page rather than
+// reloading it, so a reload here is a failure rather than something to wait for.
+// The mark left on the document is what tells the two apart.
+func (p *page) submitAndAwaitSave(t *testing.T, submit chromedp.Action) {
 	t.Helper()
 
-	p.run("mark this document", chromedp.Evaluate(`window.__beforeReload = true`, nil))
+	p.run("watch for the answer", chromedp.Evaluate(`
+		(() => {
+			window.__beforeSave = true;
+			window.__saved = 'no answer';
+
+			const real = window.fetch;
+
+			window.fetch = async (url, options) => {
+				const answer = await real(url, options);
+
+				if (String(url).includes('/settings/branding') && options?.method === 'PUT') {
+					window.__saved = String(answer.status);
+				}
+
+				return answer;
+			};
+
+			return 1;
+		})()`, nil))
+
 	p.run("save", submit)
+	p.waitEvaluates("the save's answer", `String(window.__saved)`, "200")
 
-	deadline := time.Now().Add(waitPatience)
+	var kept bool
 
-	for {
-		var gone bool
+	p.run("ask whether the document stayed", chromedp.Evaluate(`window.__beforeSave === true`, &kept))
 
-		// An evaluation that lands while the old document is being replaced fails
-		// with the very navigation it is waiting for, so a failure here means "not
-		// yet" - the deadline below still ends a reload that never comes.
-		err := chromedp.Run(p.ctx, chromedp.Evaluate(`window.__beforeReload === undefined`, &gone))
-		if err == nil && gone {
-			break
-		}
-
-		if time.Now().After(deadline) {
-			t.Fatalf("the save never reloaded the page; the notice says %q",
-				p.text("#toast"))
-		}
-
-		time.Sleep(250 * time.Millisecond)
+	if !kept {
+		t.Fatal("saving the appearance reloaded the page")
 	}
-
-	p.run("wait for the screen", chromedp.WaitVisible("#form-branding", chromedp.ByID))
 }
 
 // readyWorker signs in as somebody who works here.

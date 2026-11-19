@@ -637,7 +637,12 @@ func TestSavingTheSameSettingsTwiceIsFine(t *testing.T) {
 	}
 }
 
-// The part chosen for each place is stored and comes back.
+// The part chosen for the bar is stored and comes back.
+//
+// A page loaded before the tab stopped showing the logo still sends the part it
+// chose for the tab. That is accepted rather than refused, and dropped: nothing
+// is cut from it any more, so keeping it would be keeping a choice that does
+// nothing.
 func TestTheChosenPartOfTheLogoIsStored(t *testing.T) {
 	t.Parallel()
 
@@ -648,7 +653,8 @@ func TestTheChosenPartOfTheLogoIsStored(t *testing.T) {
 		"title": "Zeiterfassung",
 		"logo":  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
 		"crops": map[string]any{
-			"icon": map[string]float64{"x": 0, "y": 0, "w": 0.2, "h": 1},
+			"banner": map[string]float64{"x": 0, "y": 0, "w": 0.2, "h": 1},
+			"icon":   map[string]float64{"x": 0, "y": 0, "w": 0.5, "h": 1},
 		},
 	})
 
@@ -665,12 +671,16 @@ func TestTheChosenPartOfTheLogoIsStored(t *testing.T) {
 
 	admin.must(admin.api(http.MethodGet, "/branding", nil), http.StatusOK).Data(t, &branding)
 
-	icon, ok := branding.Crops["icon"]
+	banner, ok := branding.Crops["banner"]
 	if !ok {
-		t.Fatalf("nothing came back for the tab's part: %+v", branding.Crops)
+		t.Fatalf("nothing came back for the bar's part: %+v", branding.Crops)
 	}
 
-	if icon.W != 0.2 {
-		t.Errorf("the tab uses %v of the width, want 0.2", icon.W)
+	if banner.W != 0.2 {
+		t.Errorf("the bar uses %v of the width, want 0.2", banner.W)
+	}
+
+	if _, kept := branding.Crops["icon"]; kept {
+		t.Errorf("a part for the tab was kept, though nothing is cut from it: %+v", branding.Crops)
 	}
 }

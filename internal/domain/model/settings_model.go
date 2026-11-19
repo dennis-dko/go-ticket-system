@@ -14,24 +14,20 @@ const (
 	SettingBannerText  = "branding.banner"
 	SettingLogoDataURI = "branding.logo"
 
-	// The logo at the size each place shows it, derived when it is saved.
+	// The logo at the sizes it is sent in, derived when it is saved.
 	//
 	// Kept beside the original rather than instead of it: the original is what a
 	// later version re-derives from when a size changes, and it is the only copy
 	// that has lost nothing. What is sent to a browser is these.
 	SettingLogoHeader = "branding.logo.header"
 	SettingLogoBanner = "branding.logo.banner"
-	SettingLogoIcon   = "branding.logo.icon"
 
-	// Which part of the logo each place uses, as fractions of the whole.
+	// Which part of the logo each copy is made from, as fractions of the whole.
 	//
-	// A wordmark that reads as a banner is a smear in a tab, and the part worth
-	// keeping there is usually the mark at one end rather than the middle. Nobody
-	// can guess which, so it is chosen - and remembered per place, because the
-	// answer differs between a wide header and a square tab.
+	// A wordmark with a symbol at one end can read better as the symbol alone,
+	// and nobody can guess which part is worth showing, so it is chosen.
 	SettingLogoHeaderCrop = "branding.logo.header.crop"
 	SettingLogoBannerCrop = "branding.logo.banner.crop"
-	SettingLogoIconCrop   = "branding.logo.icon.crop"
 	SettingFooterText     = "branding.footer"
 	SettingCompanyName    = "branding.company"
 	SettingCompanyURL     = "branding.companyUrl"
@@ -123,25 +119,26 @@ type Branding struct {
 	// LogoDataURI holds the logo inline, so it needs no upload directory and
 	// travels with the database rather than the filesystem.
 	//
-	// The original, exactly as uploaded. Nothing displays it: each place is shown
-	// one of the three below, derived from this when it was saved. It is kept so
-	// that changing a size later is a re-derivation rather than asking every
-	// installation to upload their logo again.
+	// The original, exactly as uploaded. Nothing displays it while one of the
+	// copies below exists. It is kept so that changing a size later is a
+	// re-derivation rather than asking every installation to upload their logo
+	// again.
+	//
+	// The logo is drawn at the left of the bar and nowhere else: the sign-in
+	// screen, the browser tab and the installed app show TimePulse's mark.
 	LogoDataURI string
 
-	// LogoHeader, LogoBanner and LogoIcon are the logo at the size the header,
-	// the sign-in card and a browser tab draw it. Empty on an installation whose
-	// logo was saved before these existed, which is why every reader falls back
-	// to LogoDataURI.
+	// LogoBanner is the copy the bar draws. LogoHeader is the smaller one it drew
+	// before it took the banner's, still made because the API has always sent it.
+	// Both are empty on an installation whose logo was saved before they existed,
+	// which is why every reader falls back to LogoDataURI.
 	LogoHeader string
 	LogoBanner string
-	LogoIcon   string
 
 	// The part of the logo each of those is made from. The zero value is the
 	// whole image, which is what a logo starts as.
 	HeaderCrop LogoCrop
 	BannerCrop LogoCrop
-	IconCrop   LogoCrop
 
 	FooterText  string
 	CompanyName string

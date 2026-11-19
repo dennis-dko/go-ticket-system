@@ -2,7 +2,6 @@ package web
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"io/fs"
 	"net/http"
@@ -11,13 +10,6 @@ import (
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
 )
-
-// iconPath is where the browser tab's icon comes from.
-//
-// One address whatever is configured, so the markup never changes and every
-// engine simply fetches it. What comes back is the instance's logo where there is
-// one and the shipped mark where there is not.
-const iconPath = "/favicon"
 
 // isDocument reports whether this request is for the single page itself rather
 // than for one of the files it pulls in.
@@ -29,13 +21,13 @@ func isDocument(p string) bool {
 }
 
 // document is index.html taken apart once, so a request only has to put it back
-// together with this installation's own name and mark in it.
+// together with this installation's own name in it.
 type document struct {
-	// The three pieces around the two things that are substituted. Empty when the
-	// markup did not contain what was expected, in which case the file is served
-	// as it is - a missing title is a worse failure than a generic one.
-	before, middle, after string
-	usable                bool
+	// The two pieces around the title. Empty when the markup did not contain what
+	// was expected, in which case the page is not served at all - a missing title
+	// is a worse failure than a generic one.
+	before, after string
+	usable        bool
 
 	// languages is the meta tags naming the languages the page may speak, written
 	// after the title. Fixed for the life of the process, like the dictionaries
@@ -43,16 +35,15 @@ type document struct {
 	languages string
 }
 
-// The exact strings replaced. Kept as constants beside the markup they match,
-// because a change to index.html that misses this file should fail loudly here
-// rather than quietly serve a document with nothing substituted.
-const (
-	titleMarkup = "<title>TimePulse</title>"
-	iconMarkup  = `<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="alternate icon" href="/favicon.ico">`
-)
+// titleMarkup is the exact string replaced. Kept as a constant beside the markup
+// it matches, because a change to index.html that misses this file should fail
+// loudly here rather than quietly serve a document with nothing substituted.
+const titleMarkup = "<title>TimePulse</title>"
 
-// newDocument splits index.html around the title and the icon links.
+// newDocument splits index.html around the title.
+//
+// The assets are compiled in, so this is decided once at start-up and is the
+// same for every request.
 func newDocument(sub fs.FS) document {
 	body, err := fs.ReadFile(sub, "index.html")
 	if err != nil {
@@ -62,26 +53,19 @@ func newDocument(sub fs.FS) document {
 	markup := string(body)
 
 	titleAt := strings.Index(markup, titleMarkup)
-	iconAt := strings.Index(markup, iconMarkup)
-
-	// The title comes first in the markup and the icons after it. If either is
-	// missing, or they have been reordered, this stops substituting rather than
-	// guessing - the assets are compiled in, so this is decided once at start-up
-	// and is the same for every request.
-	if titleAt < 0 || iconAt < titleAt+len(titleMarkup) {
+	if titleAt < 0 {
 		return document{}
 	}
 
 	return document{
 		before:    markup[:titleAt],
-		middle:    markup[titleAt+len(titleMarkup) : iconAt],
-		after:     markup[iconAt+len(iconMarkup):],
+		after:     markup[titleAt+len(titleMarkup):],
 		usable:    true,
 		languages: languagesMeta(i18n.Languages(), i18n.Name),
 	}
 }
 
-// serve writes the page with this installation's name and mark already in it.
+// serve writes the page with this installation's name already in it.
 func (d document) serve(w http.ResponseWriter, r *http.Request, branding Branding) {
 	if !d.usable {
 		http.Error(w, "the interface could not be assembled", http.StatusInternalServerError)
@@ -94,18 +78,7 @@ func (d document) serve(w http.ResponseWriter, r *http.Request, branding Brandin
 		title = model.Brand
 	}
 
-	// The icon's address carries a fingerprint of what it will answer with, so a
-	// changed icon is a changed URL. Without it a browser that cached the old one
-	// keeps showing it for as long as it feels like, which is the whole difficulty
-	// with tab icons.
-	//
-	// And the installed app's icon for the devices that read no manifest - Safari
-	// adding the page to a home screen asks for this link and nothing else.
-	icon := `<link rel="icon" href="` + iconPath + `?v=` + iconVersion(branding) + `">` +
-		"\n  " + `<link rel="apple-touch-icon" href="` + appIconPath + `192?v=` +
-		appIconVersion(branding) + `">`
-
-	page := d.before + "<title>" + escape(title) + "</title>\n  " + d.languages + d.middle + icon + d.after
+	page := d.before + "<title>" + escape(title) + "</title>\n  " + d.languages + d.after
 
 	header := w.Header()
 	header.Set("Content-Type", "text/html; charset=utf-8")
@@ -141,141 +114,10 @@ func escape(s string) string {
 	).Replace(s)
 }
 
-// iconVersion is the part of the icon's address that changes when the icon does.
-//
-// Taken from the icon rather than from the logo it was made out of. The two
-// stopped being the same thing when a part of the logo became choosable: picking
-// a different corner for the tab makes a different icon out of an unchanged
-// logo, and a fingerprint of the logo answered that with the same address as
-// before. That address is served with a year of immutable caching, so the browser
-// was right not to ask again - it had been told the picture there could never
-// change. What that looked like was a tab that kept the old icon through every
-// reload until somebody held down shift.
-//
-// Both, so an installation whose icon is derived at request time - one whose logo
-// predates the stored sizes - still gets a new address when its logo changes.
-func iconVersion(b Branding) string {
-	return fingerprint(b.Icon + "\x00" + b.Logo)
-}
-
 // fingerprint is a short stable digest, used for cache validators rather than
 // for anything that needs to resist an adversary.
 func fingerprint(s string) string {
 	sum := sha256.Sum256([]byte(s))
 
 	return hex.EncodeToString(sum[:8])
-}
-
-// shippedIcon is the mark an instance carries when nothing has been configured.
-func shippedIcon(sub fs.FS) []byte {
-	body, err := fs.ReadFile(sub, "favicon.svg")
-	if err != nil {
-		return nil
-	}
-
-	return body
-}
-
-// serveIcon answers the tab icon: the configured logo, converted, or the shipped
-// mark.
-//
-// Converted rather than passed through. What an installation uploads is a
-// wordmark made for a header - a few thousand pixels across, twice as wide as it
-// is tall - and handing that to a browser as a tab icon leaves every decision to
-// the browser, including whether to use it at all. See imaging.ToIcon.
-func serveIcon(
-	w http.ResponseWriter, r *http.Request,
-	branding BrandingFunc, shipped []byte, cache *icons,
-) {
-	body, contentType := shipped, "image/svg+xml"
-
-	if branding != nil {
-		current := branding(r.Context())
-
-		// Already the right size and shape, made when it was saved. Nothing to
-		// decide, nothing to scale, and the same bytes after a restart.
-		if decoded, kind, ok := decodeDataURI(current.Icon); ok {
-			serveImage(w, r, decoded, kind)
-
-			return
-		}
-
-		// An installation whose logo was saved before the sizes were derived. The
-		// original is a wordmark, so it is converted rather than served.
-		logo := current.Logo
-
-		if decoded, _, ok := decodeDataURI(logo); ok {
-			// A logo that cannot be converted leaves the shipped mark in place: a
-			// tab with the wrong picture is a small wrong thing, and a tab with no
-			// picture is the thing being fixed.
-			if converted := cache.convert(logo, decoded); converted != nil {
-				body, contentType = converted, "image/png"
-			}
-		}
-	}
-
-	serveImage(w, r, body, contentType)
-}
-
-// serveImage writes one image, cached hard against a fingerprint of itself.
-func serveImage(w http.ResponseWriter, r *http.Request, body []byte, contentType string) {
-	if len(body) == 0 {
-		http.NotFound(w, r)
-
-		return
-	}
-
-	header := w.Header()
-	header.Set("Content-Type", contentType)
-
-	// A year, because the address carries a fingerprint of the contents: a
-	// different logo is a different URL, so this copy can never be the wrong one.
-	header.Set("Cache-Control", "public, max-age=31536000, immutable")
-
-	tag := `"` + fingerprint(string(body)) + `"`
-	header.Set("ETag", tag)
-
-	if match := r.Header.Get("If-None-Match"); match != "" && strings.Contains(match, tag) {
-		w.WriteHeader(http.StatusNotModified)
-
-		return
-	}
-
-	_, _ = w.Write(body)
-}
-
-// decodeDataURI unpacks the logo, which is stored inline so it travels with the
-// database rather than with the filesystem.
-//
-// Only base64 images, which is what the interface stores and what the settings
-// endpoint accepts. Anything else is not decoded rather than passed through: this
-// answer becomes an image on a page, and a caller-chosen content type is how that
-// stops being an image.
-func decodeDataURI(uri string) (body []byte, contentType string, ok bool) {
-	const prefix = "data:image/"
-
-	if !strings.HasPrefix(uri, prefix) {
-		return nil, "", false
-	}
-
-	head, encoded, found := strings.Cut(uri, ",")
-	if !found || !strings.HasSuffix(head, ";base64") {
-		return nil, "", false
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil || len(decoded) == 0 {
-		return nil, "", false
-	}
-
-	// "data:image/png;base64" -> "image/png". Bounded to the types an image can
-	// be, so nothing here can name text/html.
-	kind := strings.TrimSuffix(strings.TrimPrefix(head, "data:"), ";base64")
-
-	switch kind {
-	case "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml", "image/x-icon":
-		return decoded, kind, true
-	default:
-		return nil, "", false
-	}
 }

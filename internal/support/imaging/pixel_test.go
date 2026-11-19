@@ -16,7 +16,7 @@ import (
 // what those bytes decode to. A PNG of one flat colour compresses at about
 // 1250:1, so 8000 by 8000 encodes to 199 KB, which is inside that limit, and
 // decodes to 244 MB. Measured, not estimated. Saving the appearance then decodes
-// the stored logo three times, once per derivative.
+// the stored logo once per copy.
 //
 // image.DecodeConfig reads the header and answers the dimensions without
 // decoding anything - it took no measurable time on the same file - so the bound
@@ -42,14 +42,6 @@ func TestAnImageWithTooManyPixelsIsRefusedBeforeItIsDecoded(t *testing.T) {
 		t.Error("a 64-megapixel logo was scaled rather than refused")
 	} else if !strings.Contains(err.Error(), "too large") {
 		t.Errorf("refused for the wrong reason: %v", err)
-	}
-
-	if _, err := FitIcon(uri, Crop{}); err == nil {
-		t.Error("a 64-megapixel logo was accepted as a tab icon")
-	}
-
-	if _, err := ToIcon(huge); err == nil {
-		t.Error("a 64-megapixel logo was accepted by the icon endpoint")
 	}
 }
 

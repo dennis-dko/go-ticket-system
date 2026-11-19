@@ -59,21 +59,18 @@
   applyStoredBranding();
 
   /**
-   * Puts the instance's own name and mark on the page before it is painted.
+   * Puts the instance's own name on the page before it is painted.
    *
-   * Both are configured, so both live in the database, so the page cannot know
-   * either until it has asked - and asking is a request that finishes after the
-   * document has been parsed and shown. Until then the tab reads "TimePulse"
-   * and shows the shipped mark, whatever this installation calls itself. On a
-   * reload that is a visible flicker back to a name nobody chose.
+   * It is configured, so it lives in the database, so the page cannot know it
+   * until it has asked - and asking is a request that finishes after the
+   * document has been parsed and shown. Until then the tab reads "TimePulse",
+   * whatever this installation calls itself. On a reload that is a visible
+   * flicker back to a name nobody chose.
    *
-   * The tab icon is no longer here: the server writes that into the document, at
-   * an address carrying a fingerprint of what it answers with, so it is right on
-   * the first paint without anything on this side.
-   *
-   * The title is written by the server too. This stays as the answer for the one
-   * case the server cannot cover - a page restored from the browser's own cache,
-   * where no request was made and the document is whatever it was last time.
+   * The server writes the title into the document as well. This stays as the
+   * answer for the one case the server cannot cover - a page restored from the
+   * browser's own cache, where no request was made and the document is whatever
+   * it was last time.
    */
   function applyStoredBranding() {
     var stored;

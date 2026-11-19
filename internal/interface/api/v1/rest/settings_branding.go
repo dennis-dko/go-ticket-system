@@ -126,7 +126,6 @@ func (h *SettingsHandler) SaveBranding(c *gofr.Context) (any, error) {
 		LegalNotice: req.LegalNotice,
 		HeaderCrop:  cropFrom(req.Crops["header"]),
 		BannerCrop:  cropFrom(req.Crops["banner"]),
-		IconCrop:    cropFrom(req.Crops["icon"]),
 		Translations: func() map[string]model.BrandingText {
 			if len(req.Translations) == 0 {
 				return nil
@@ -218,7 +217,6 @@ func cropsOf(b model.Branding) map[string]CropResponse {
 	for name, crop := range map[string]model.LogoCrop{
 		"header": b.HeaderCrop,
 		"banner": b.BannerCrop,
-		"icon":   b.IconCrop,
 	} {
 		if crop.Whole() {
 			continue

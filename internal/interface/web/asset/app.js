@@ -1711,71 +1711,6 @@ function statusBadge(status) {
  */
 
 /**
- * Points the browser tab at the instance's logo, after it has just changed.
- *
- * The document already arrives with the right icon: the server writes the link
- * into the page, at an address carrying a fingerprint of what it answers with. So
- * on every load there is nothing to do here, and this exists for the one moment
- * that is not a load - somebody has just saved a new logo and is still looking at
- * the page they saved it from.
- *
- * This used to do the whole job, and could not. An icon patched in after the
- * document was parsed is honoured by some engines and ignored by others; the logo
- * was correct in the DOM, correct in the tests, and not in the tab. What every
- * engine does honour is a fetch of a URL it has not seen before, which is what
- * changing the fingerprint gives it.
- */
-function applyFavicon(logo) {
-  const link = document.querySelector('link[rel~="icon"]');
-  if (!link) return;
-
-  const wanted = `/favicon?v=${faviconFingerprint(logo ?? '')}`;
-
-  if (link.getAttribute('href') === wanted) return;
-
-  // Replaced rather than pointed elsewhere: setting .href on the existing element
-  // is the mutation engines disagree about honouring.
-  const fresh = document.createElement('link');
-  fresh.rel = 'icon';
-  fresh.href = wanted;
-
-  document.head.append(fresh);
-  link.remove();
-}
-
-/**
- * The same fingerprint the server puts in the address.
- *
- * It has to match, or every load would swap the link the document arrived with
- * for an identical one - a fetch, a repaint and a flicker for nothing. The server
- * hashes the logo; this cannot, so it keeps what the server sent and compares
- * against that.
- */
-let serverFaviconVersion = null;
-
-function faviconFingerprint(logo) {
-  if (serverFaviconVersion === null) {
-    const link = document.querySelector('link[rel~="icon"]');
-    const href = link?.getAttribute('href') ?? '';
-
-    serverFaviconVersion = new URLSearchParams(href.split('?')[1] ?? '').get('v') ?? '';
-    lastFaviconLogo = logo;
-  }
-
-  // Unchanged since the document was served: keep the server's own version, so
-  // nothing is refetched.
-  if (logo === lastFaviconLogo) return serverFaviconVersion;
-
-  lastFaviconLogo = logo;
-
-  // Changed while the page was open. The value only has to differ from the last
-  // one for the browser to fetch again; the server decides what comes back.
-  serverFaviconVersion = String(Date.now());
-
-  return serverFaviconVersion;
-}
-
-/**
  * Keeps a stylesheet property equal to the height of something that other parts
  * of the page make room for.
  *
@@ -1837,28 +1772,25 @@ function languageName(language) {
 }
 
 /**
- * Choosing which part of the logo one place uses.
+ * Choosing which part of the logo the bar draws.
  *
- * A logo is uploaded once and drawn in three places that want three different
- * things, and the part worth showing differs between them: a wide header can take
- * the whole wordmark, a browser tab cannot - sixteen pixels of a two-to-one
- * wordmark is a smear, and what is worth keeping there is usually the mark at one
- * end. Nobody can guess which end, so it is chosen here, per place.
+ * A logo is uploaded once and drawn in one place, the left of the bar, and the
+ * part worth showing there is not always the whole: a wordmark with a symbol at
+ * one end can read better as the symbol alone. Nobody can guess which part, so
+ * it is chosen here. It is filed under the banner's name, because the bar draws
+ * the copy the sign-in card used to draw.
  *
  * The selection is free: any part, in any shape, from any corner. It opens on
- * the shape of the place it is for, because that is the one selection nothing has
+ * the shape the bar gives a logo, because that is the one selection nothing has
  * to be done to, but nothing holds it there.
  *
- * A chosen part that is not the place's shape is fitted into that place rather
- * than stretched to fill it - scaled until it fits and left at its own
- * proportions, which is what the header and the sign-in banner do with it and
- * what the tab's icon is padded out to. So the previews show it fitted too, and
- * what is on this screen is what will be on the others.
+ * A chosen part that is not that shape is fitted into the place rather than
+ * stretched to fill it - scaled until it fits and left at its own proportions,
+ * which is what the bar does with it. So the preview shows it fitted too, and
+ * what is on this screen is what will be on the bar.
  */
 const CROP_SHAPES = {
-  header: { width: 440, height: 80, label: () => t('admin.logoInHeader', 'In the header') },
-  banner: { width: 656, height: 192, label: () => t('admin.logoOnSignIn', 'On the sign-in screen') },
-  icon: { width: 64, height: 64, label: () => t('admin.logoAsFavicon', 'In the browser tab') },
+  banner: { width: 656, height: 192, label: () => t('admin.logoInHeader', 'In the header') },
 };
 
 /** What has been chosen, per place, while the form is open. */
@@ -2222,9 +2154,6 @@ function rememberBrandingDraft() {
     brandingDraft[brandingLanguage][field] = typed === brandingFallback(field) ? '' : typed;
   }
 }
-
-/** What the icon currently shown was made from. */
-let lastFaviconLogo = null;
 
 function fmtDate(iso) {
   if (!iso) return '–';
@@ -3300,30 +3229,18 @@ function restoreDrafts() {
  * load, which is what a generic glyph would.
  */
 function showBrandMark(ownLogo) {
-  // Both places that stand in for a logo: the chip in the header, and the one on
-  // the sign-in screen. The sign-in card used to show nothing when no logo was
-  // configured, which reads as a page still loading rather than as an
-  // installation that has not uploaded one.
-  const letter = BRAND.charAt(0);
+  const mark = $('#brand-mark');
 
-  for (const [markID, initialID] of [
-    ['#brand-mark', '#brand-initial'],
-    ['#login-mark', '#login-initial'],
-  ]) {
-    const mark = $(markID);
-
-    // The attribute rather than the property, because these are SVG elements and
-    // `hidden` is defined on HTMLElement: assigning it here creates a property
-    // nobody reads and leaves the chip on screen beside the logo that replaced
-    // it.
-    if (mark) {
-      if (ownLogo) mark.setAttribute('hidden', '');
-      else mark.removeAttribute('hidden');
-    }
-
-    const initial = $(initialID);
-    if (initial) initial.textContent = letter;
+  // The attribute rather than the property, because this is an SVG element and
+  // `hidden` is defined on HTMLElement: assigning it here creates a property
+  // nobody reads and leaves the chip on screen beside the logo that replaced it.
+  if (mark) {
+    if (ownLogo) mark.setAttribute('hidden', '');
+    else mark.removeAttribute('hidden');
   }
+
+  const initial = $('#brand-initial');
+  if (initial) initial.textContent = BRAND.charAt(0);
 }
 
 /**
@@ -8326,15 +8243,14 @@ function drawBranding(branding) {
   // Where nothing separate was written, it adds what the header adds.
   const tabTitle = named(brandingIn(branding, 'tabTitle') || brandingIn(branding, 'title'));
 
-  // Remembered on the device, so the next load has the instance's own name and
-  // mark before it is painted rather than a second later. theme.js reads this;
-  // see the note there for why a reload otherwise flickers back to a name nobody
+  // Remembered on the device, so the next load has the instance's own name
+  // before it is painted rather than a second later. theme.js reads this; see
+  // the note there for why a reload otherwise flickers back to a name nobody
   // chose. The tab's name resolved rather than both fields, since the tab is the
   // only thing that reads it.
   try {
     localStorage.setItem('timepulse.branding', JSON.stringify({
       title: tabTitle,
-      logo: branding.logo ?? '',
     }));
   } catch {
     // Private browsing refuses storage outright, which costs only the flicker.
@@ -8346,47 +8262,32 @@ function drawBranding(branding) {
   $('#app-title-text').textContent = title;
   drawWelcome(title);
 
-  // These two places show the installation's own logo and nothing else.
+  // The one place an installation's logo is drawn: the left of the bar, once
+  // somebody has signed in. The sign-in screen and the browser tab carry
+  // TimePulse's own mark whatever is uploaded - decided by the maintainer on
+  // 2026-11-18 - and the button beside the title carries it as well.
   //
-  // For a while they fell back to the shipped mark, on the reasoning that a
-  // header of words alone looks unfinished. It is the wrong place for it: these
-  // are the slots a company's own mark goes in, and filling them with ours makes
-  // an unbranded installation look like it is branded by somebody else. The
-  // application's own mark has its own place - the browser tab, and the button
-  // beside the title - which is where it says which program this is without
-  // claiming the space meant for whoever runs it.
+  // It is the installation's slot, so with no logo it does not fall back to our
+  // mark - that would make an unbranded installation look branded by somebody
+  // else - but to the chip with the T, which showBrandMark draws.
   //
-  // Each place gets the logo at the size it draws, made when the logo was saved.
-  // The header used to be handed the original - a wordmark of a few hundred
-  // kilobytes - and scaled it down with CSS, which is a large download to draw a
-  // 40px mark and one every visitor of the sign-in screen paid for.
-  //
-  // The original is the fallback for an installation whose logo predates the
-  // derived sizes; it looks the same, it is only bigger.
-  // Both places are given the banner-sized copy now that both draw it at the
-  // same size. The header used to take the 440x80 one, which is the right file
-  // for a 40px-tall slot and a blurred one for a 96px slot - the pixels are not
-  // there to enlarge. Nothing extra is fetched: this answer already carried both
-  // copies, because the sign-in screen behind the session needs one of them.
-  const sized = {
-    '#brand-logo': branding.logoBanner || branding.logo,
-    '#login-logo': branding.logoBanner || branding.logo,
-  };
+  // At the size it draws, made when the logo was saved: the banner-sized copy,
+  // which is the one the old sign-in card drew at the same 96 pixels. The
+  // 440x80 one is the right file for a 40px slot and a blurred one here. The
+  // original is the fallback for an installation whose logo predates the derived
+  // sizes; it looks the same, it is only bigger.
+  const logo = branding.logoBanner || branding.logo;
+  const header = $('#brand-logo');
 
-  for (const holder of ['#brand-logo', '#login-logo']) {
-    const img = $(holder);
-    if (!img) continue;
-
-    const mark = sized[holder];
-
+  if (header) {
     // Emptied as well as hidden: a hidden element holding a few hundred
     // kilobytes of data URI is still holding them.
-    img.src = mark || '';
-    img.hidden = !mark;
-    img.alt = mark ? (branding.title || '') : '';
+    header.src = logo || '';
+    header.hidden = !logo;
+    header.alt = logo ? (branding.title || '') : '';
   }
 
-  showBrandMark(Boolean(sized['#brand-logo']));
+  showBrandMark(Boolean(logo));
 
   // The announcement banner is separate from the "change your password" one.
   // Through the renderer, so a {year} in a copyright line stays right and a link
@@ -8406,11 +8307,6 @@ function drawBranding(branding) {
   // which is why the footer is no longer hidden when the branding is empty:
   // "which version is actually running" is the first question of every support
   // conversation, and guessing it from a container tag is not an answer.
-  // The instance's own logo in the browser tab, where somebody with several
-  // installations open tells them apart. Falls back to the built-in mark, so an
-  // instance with no logo looks as it always did.
-  applyFavicon(branding.logo);
-
   const versionEl = $('#footer-version');
   if (versionEl) {
     // The platform beside the version, as "v1.0 (windows)". The same version is
@@ -9008,30 +8904,19 @@ async function loadSyncRuns() {
 let pendingLogo = '';
 
 /**
- * Shows the chosen image at both the sizes it will actually be given.
+ * Shows the chosen image at the size the bar will give it, before saving.
  *
- * One upload, two uses: 28px beside the navigation, and up to 96px across the
- * sign-in card. A mark that reads at one of those can be unreadable at the other,
- * and the sign-in screen is the one an administrator does not see again for as
- * long as they stay signed in - so it is shown here, before saving, rather than
- * found out the next time somebody signs out.
+ * The left of the bar is the one place the logo is drawn - the sign-in screen
+ * and the browser tab carry TimePulse's own mark - and it draws the banner-sized
+ * copy, so the preview shows the part chosen for the banner.
  */
 function setLogoPreview(dataURI) {
   pendingLogo = dataURI;
 
-  // Each preview shows the part chosen for that place, so what is on this screen
-  // is what will be on the others. Drawn here rather than by the server, because
-  // nothing has been saved yet - the logo may not even have left the machine.
-  for (const [id, use] of [
-    ['#logo-preview', 'header'],
-    ['#logo-preview-login', 'banner'],
-    ['#logo-preview-icon', 'icon'],
-  ]) {
-    const preview = $(id);
-    if (!preview) continue;
-
-    preview.src = dataURI ? cropPreview(dataURI, logoCrops[use], preview) : '';
-  }
+  // Drawn here rather than by the server, because nothing has been saved yet -
+  // the logo may not even have left the machine.
+  const preview = $('#logo-preview');
+  if (preview) preview.src = dataURI ? cropPreview(dataURI, logoCrops.banner, preview) : '';
 
   const uses = $('#logo-preview-uses');
   if (uses) uses.hidden = !dataURI;
@@ -9091,9 +8976,7 @@ function wireAdmin() {
     // dialog to "all files". So the type is checked here as well, before
     // anything is read.
     if (!['image/png', 'image/jpeg'].includes(file.type)) {
-      toast(t('err.logoNotRaster',
-        'The logo must be a PNG or a JPEG. Some browsers will not take an SVG as a tab icon.'),
-      'error');
+      toast(t('err.logoNotRaster', 'The logo must be a PNG or a JPEG.'), 'error');
       e.target.value = '';
 
       return;
@@ -9143,29 +9026,22 @@ function wireAdmin() {
       translations: brandingDraft,
       crops: logoCrops,
     };
-    // Whether the tab's own identity is changing, decided before the save so the
-    // comparison is against what is currently on screen.
-    //
-    // The chosen parts count as much as the logo does. A different corner of an
-    // unchanged logo is a different icon, and leaving the reload out for that
-    // case left the tab showing the old one - which is exactly the shape of the
-    // bug that made this reload necessary in the first place.
-    const markChanged = (lastBranding.logo ?? '') !== (pendingLogo ?? '')
-      || JSON.stringify(lastBranding.crops ?? {}) !== JSON.stringify(logoCrops ?? {});
 
+    // No reload after it, though there was one for as long as the logo was the
+    // tab's icon: every engine takes that from the document it was given, so a
+    // changed logo meant a new document. The tab keeps TimePulse's mark now, and
+    // the one place the logo is drawn is redrawn by loadBranding like everything
+    // else on the page.
     saveForm(e.target, async () => {
       const saved = await api('/settings/branding',
         { method: 'PUT', body: JSON.stringify(body) });
 
       // The copy the language chooser fills its boxes from, brought up to date
-      // from what was just sent - not from the reload below.
-      //
-      // The reload is behind the notice, and between the two there is a window
-      // somebody can click in. Clicking in it filled the boxes with the name
-      // from before the save, and saving that stored the old name as a
-      // translation of the new one - a wrong value written by a screen that
-      // looked like it was showing the right one. What was sent is what the
-      // server now holds, so there is nothing to wait for.
+      // from what was just sent rather than from the load that follows: between
+      // the two there is a window somebody can click in, and clicking in it
+      // filled the boxes with the name from before the save - a wrong value
+      // written by a screen that looked like it was showing the right one. What
+      // was sent is what the server now holds, so there is nothing to wait for.
       brandingBase = { ...brandingBase, ...base };
 
       return saved;
@@ -9174,21 +9050,6 @@ function wireAdmin() {
       async () => {
         await loadBranding();
         await loadAdmin();
-
-        // A changed mark means the page is reloaded, and it is the one setting
-        // that needs it. Every engine takes the tab icon from the document it was
-        // given; Firefox in particular ignores an icon link inserted afterwards
-        // entirely, so taking a logo off and saving left the old one in the tab
-        // until something else caused a load. Chrome honours the swap, which is
-        // why this looked finished.
-        //
-        // Only for the mark, and only when it actually changed - reloading after
-        // every save on this screen would throw away whatever else was being
-        // edited for no reason at all.
-        if (markChanged) {
-          rememberPlace();
-          window.location.reload();
-        }
       });
   });
 
@@ -11085,8 +10946,8 @@ const TOUR_STEPS = [
     permission: 'settings:manage',
     title: () => t('tour.branding.title', 'What this installation looks like'),
     text: () => t('tour.branding.text',
-      'What follows TimePulse, banner, logo and footer. The logo becomes the icon in the browser tab, which '
-      + 'is what tells a test instance from the real one at a glance.'),
+      'What follows TimePulse, banner, logo and footer. The logo stands at the left of the header once '
+      + "somebody has signed in; the browser tab and the sign-in screen always show TimePulse's own."),
   },
   {
     target: '#form-managers',
@@ -17503,9 +17364,8 @@ function arrangeScreenTabs() {
 /**
  * Shows one tab of a screen, and hides the panels of the others.
  *
- * Kept for the session, per screen, so a reload comes back to the same tab -
- * saving a logo reloads the page, and the appearance is not on the first tab of
- * every screen it could be saved from.
+ * Kept for the session, per screen, so a reload comes back to the same tab
+ * rather than to the first one, which is seldom where somebody was working.
  */
 function showScreenTab(view, key, { focus = false } = {}) {
   if (!key) return;
@@ -17720,75 +17580,6 @@ function switchView(name) {
   }
 }
 
-/**
- * Where somebody was on the page, kept across a reload this application caused.
- *
- * Saving a logo reloads: the tab's icon comes from the document, and no engine
- * takes a new one from a link swapped in afterwards. What that cost was the
- * place - the appearance settings are a long way down a long screen, and coming
- * back to the top of it after every save means scrolling back down to see
- * whether the thing that was just saved looks right.
- *
- * In the session rather than on the device, and cleared as soon as it is used:
- * this is about one reload that is already in flight, not about where somebody
- * was yesterday. That is what rememberedView is for.
- */
-const PLACE_KEY = 'timepulse.place';
-
-/** Records the place, immediately before reloading. */
-function rememberPlace() {
-  try {
-    sessionStorage.setItem(PLACE_KEY, JSON.stringify({
-      view: currentHashView(),
-      y: Math.round(window.scrollY),
-    }));
-  } catch {
-    // Private browsing refuses storage; the reload then starts at the top,
-    // which is where it always used to start.
-  }
-}
-
-/**
- * Puts somebody back where they were, once there is enough page to do it.
- *
- * Not in one go: at the moment this runs the screen is a few hundred pixels of
- * empty form, and scrolling to where the LDAP section will be scrolls to the
- * bottom of nothing. The page grows as each panel answers, so this keeps asking
- * until the scroll actually lands or the patience runs out - either of which
- * leaves somebody looking at a page rather than at a spinner.
- */
-function restorePlace() {
-  let place = null;
-
-  try {
-    place = JSON.parse(sessionStorage.getItem(PLACE_KEY) || 'null');
-    sessionStorage.removeItem(PLACE_KEY);
-  } catch {
-    return;
-  }
-
-  if (!place || typeof place.y !== 'number' || place.y <= 0) return;
-
-  // Only back to the screen it was taken on. A reload that ends up somewhere
-  // else - a session that expired, a link that named another view - has no
-  // business being scrolled to an offset measured on a different page.
-  if (place.view && place.view !== currentHashView()) return;
-
-  const deadline = Date.now() + 3000;
-
-  const settle = () => {
-    window.scrollTo(0, place.y);
-
-    // Arrived, near enough: the last panel to answer can be a pixel or two
-    // shorter than it was, and chasing that would never finish.
-    if (Math.abs(window.scrollY - place.y) <= 2) return;
-
-    if (Date.now() < deadline) requestAnimationFrame(settle);
-  };
-
-  requestAnimationFrame(settle);
-}
-
 /** The view named in the address bar, if it names one. */
 function currentHashView() {
   return decodeURIComponent(window.location.hash.replace(/^#/, ''));
@@ -17836,8 +17627,8 @@ function rememberView(name) {
  *
  * refreshAll marks the page loaded once every screen has been filled from the
  * server, and for a refresh that is the truth. On the way in it is one step
- * early: the first view has still to be chosen, and on a page load the reader
- * has still to be put back where they were. Both of those switch the view.
+ * early: the first view has still to be chosen, and choosing it switches the
+ * view.
  *
  * That mark is what anything outside this page has to go on - a browser case, or
  * a person wondering whether a blank card is empty or unanswered - and it was
@@ -17848,14 +17639,10 @@ function rememberView(name) {
  * So the mark is taken back and given again around the choice. Nothing is
  * awaited in between, so it is never observably given too early.
  */
-function openTheStartingView({ restoring = false } = {}) {
+function openTheStartingView() {
   document.documentElement.dataset.loaded = 'no';
 
   switchView(startingView());
-
-  // Back to where a reload this application caused took somebody from. Only on a
-  // page load: signing in is not coming back from anywhere.
-  if (restoring) restorePlace();
 
   document.documentElement.dataset.loaded = 'yes';
 }
@@ -18681,7 +18468,7 @@ async function init() {
     restoreDrafts();
 
     hideLogin();
-    openTheStartingView({ restoring: true });
+    openTheStartingView();
 
     // After the first view is up, so the tour highlights something that is
     // actually on screen.
@@ -18736,7 +18523,7 @@ function afterAFailedFirstLoad(err) {
   if (me.user && err?.status !== 401) {
     restoreDrafts();
     hideLogin();
-    openTheStartingView({ restoring: true });
+    openTheStartingView();
     toastFailure(err, t('msg.loadFailed', 'Could not load everything'));
 
     return;
