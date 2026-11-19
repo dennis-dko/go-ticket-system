@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -18,6 +19,16 @@ var changesNothing = map[string]string{
 	"POST /api/v1/settings/update/check":      "asks whether a newer release exists",
 	"POST /api/v1/setup/claim":                "signs in the browser that answered the installer, which is a sign-in",
 	"PUT /api/v1/users/{id}/working-times":    "a person's own figures, which only their owner sets",
+}
+
+// recordedWithoutARoute are the changes the administration log records that no
+// request makes, so the middleware's table of routes cannot name them. Each
+// names the file that writes it, and why it is not a route.
+var recordedWithoutARoute = map[string]struct{ file, why string }{
+	"user.recovered": {
+		file: "internal/application/v1/service/recovery_application_service.go",
+		why:  "the recover command on the server, for when nobody can sign in to make a request",
+	},
 }
 
 // Every route that changes accounts, roles or settings is in the administration
@@ -86,6 +97,17 @@ func TestEveryRecordedChangeHasItsSentence(t *testing.T) {
 	for _, match := range regexp.MustCompile(`\{http\.Method\w+, "[^"]+", "([^"]+)", "[^"]*"\}`).
 		FindAllStringSubmatch(table, -1) {
 		recorded = append(recorded, match[1])
+	}
+
+	// A change no request makes is written by the code that makes it, so its code
+	// is read from there - and a row whose file no longer writes it fails, rather
+	// than keeping a sentence alive for a change nothing records.
+	for action, writer := range recordedWithoutARoute {
+		if !strings.Contains(read(t, filepath.Join("..", writer.file)), `"`+action+`"`) {
+			t.Errorf("%s is named as recorded by %s, which no longer writes it", action, writer.file)
+		}
+
+		recorded = append(recorded, action)
 	}
 
 	sentences := regexp.MustCompile(`(?s)const CHANGE_SENTENCES = \{(.*?)\n\};`).FindStringSubmatch(script)

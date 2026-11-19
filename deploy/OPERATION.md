@@ -718,6 +718,34 @@ second factor up again. The administration log records who did it. The button is
 only on an account that has a second factor, and never on your own, which is
 turned off under *My account* with a code from it.
 
+**Nobody can sign in as `admin@local`** - its password is lost, or its second
+factor with a phone, and no other account administers accounts. Run the recover
+command on the server, where the application runs:
+
+```bash
+# A · B
+docker compose exec app /app/timepulse-web recover
+
+# C - from the directory the service starts in, as the user it runs as
+cd /opt/timepulse && sudo -u timepulse ./timepulse-web recover
+
+# D
+docker exec <container> /app/timepulse-web recover
+```
+
+It prints a new password for `admin@local`, once. Signing in with it asks for a
+password of your own before anything else. The command also removes the
+account's second factor and ends every session it had, and the administration
+log shows the recovery as made by *the command line on the server*.
+
+It opens the database the server uses - `configs/datasource.json`, otherwise the
+`DB_*` variables from the environment and `configs/.env` - beside the running
+application, so nothing has to be stopped; run from anywhere else it finds no
+configuration and says so. It needs `SECRET_KEY` where the server has it, or the
+second factors sealed with it cannot be read. Whoever can run a command on the
+server can read the database anyway, so this opens nothing that was closed -
+which is also why there is no way to do it from outside the server.
+
 ## Settings that need a restart
 
 Most changes apply within seconds. These do not, and appear in *Settings* as a

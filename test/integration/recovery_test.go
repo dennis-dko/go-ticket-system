@@ -6,12 +6,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 	"github.com/dennis-dko/timepulse/internal/support/security"
+	"github.com/dennis-dko/timepulse/test/harness"
 )
 
 // enableTOTP turns a second factor on for whoever c is signed in as.
@@ -167,5 +170,83 @@ func TestAnAdministratorRemovesTheSecondFactorSomebodyLost(t *testing.T) {
 	if got := refusalOf(t, own); own.Status != http.StatusConflict || got.Code != "cannotRemoveOwnSecondFactor" {
 		t.Errorf("an administrator removing their own second factor got %d %q, want 409 "+
 			"cannotRemoveOwnSecondFactor", own.Status, got.Code)
+	}
+}
+
+// recoveredPassword is the line the recover command prints the password on.
+var recoveredPassword = regexp.MustCompile(`(?m)^ {4}([A-Z2-7]{26})\r?$`)
+
+// The recover command lets the built-in administrator back in when nobody can
+// sign in as it.
+//
+// The way back into an installation, run on the server beside the application
+// rather than through it: the password chosen at setup is lost, and the second
+// factor with the phone. The command prints a password once; with it the
+// account signs in, has to choose its own, and has no second factor in the
+// way. The old password no longer opens it, the session it had ends, and the
+// administration log says it was the command line rather than an account.
+func TestTheRecoverCommandLetsTheBuiltInAdministratorBackIn(t *testing.T) {
+	t.Parallel()
+
+	a := start(t)
+	before := a.signInAsAdmin("a-much-better-password")
+
+	enableTOTP(t, before)
+
+	stdout, stderr, code := a.App.Command(t, "recover")
+	if code != 0 {
+		t.Fatalf("recover exited %d:\n%s\n%s", code, stdout, stderr)
+	}
+
+	found := recoveredPassword.FindStringSubmatch(stdout)
+	if found == nil {
+		t.Fatalf("recover printed no password:\n%s\n%s", stdout, stderr)
+	}
+
+	if r := before.api(http.MethodGet, "/me", nil); r.Status != http.StatusUnauthorized {
+		t.Errorf("the session the built-in administrator had still answers %d", r.Status)
+	}
+
+	if old, asked := passwordSignIn(t, a, adminEmail, "a-much-better-password"); old != nil || asked {
+		t.Error("the password from before the recovery still opens the account")
+	}
+
+	after, asked := passwordSignIn(t, a, adminEmail, found[1])
+	if asked || after == nil {
+		t.Fatal("the recovered password did not sign the built-in administrator in on its own")
+	}
+
+	if !whoIs(t, after).MustChangePassword {
+		t.Error("the printed password is not one the account has to replace")
+	}
+
+	after.must(after.api(http.MethodPut, "/me/password", map[string]string{
+		"currentPassword": found[1], "newPassword": "chosen-again-after-recovery",
+	}), http.StatusOK, http.StatusNoContent)
+
+	if action, actor, target := changeLogged(t, after); action != "user.recovered" || actor != 0 || target == "" {
+		t.Errorf("the administration log's newest entry is %q by %d for %q, "+
+			"want user.recovered by nobody's account for the built-in administrator", action, actor, target)
+	}
+}
+
+// Where nothing is configured, the recover command says so rather than
+// recovering nothing.
+//
+// An installation still waiting at its installer has no account, and a command
+// run from the wrong directory finds no configuration - the same answer either
+// way, and it names what it looked for.
+func TestTheRecoverCommandSaysSoWhereNoDatabaseIsConfigured(t *testing.T) {
+	t.Parallel()
+
+	app := harness.StartUnconfigured(t)
+
+	stdout, stderr, code := app.Command(t, "recover")
+	if code == 0 {
+		t.Fatalf("recover succeeded where nothing is configured:\n%s", stdout)
+	}
+
+	if !strings.Contains(stderr, "no database is configured") {
+		t.Errorf("recover did not say why it could not run:\n%s", stderr)
 	}
 }

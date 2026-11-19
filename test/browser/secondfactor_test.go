@@ -84,3 +84,49 @@ func TestTheAccountListOffersToRemoveASecondFactorOnlyWhereThereIsOne(t *testing
 		t.Errorf("the account still holds %d passkeys", n)
 	}
 }
+
+// The administration log names the server's command line for a recovery.
+//
+// The recover command changes an account with no account of its own - nobody
+// can sign in, which is what it is for - so the log records it by nobody. Read
+// as an account, that was "#0" in the column saying who: a number that names no
+// one and looks like a fault. The column says where it came from instead, in
+// either language, and the sentence names the account it was done to.
+func TestTheLogNamesTheCommandLineForARecovery(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyAdmin()
+
+	p.run("open the settings", p.click(`.tab[data-view="admin"]`))
+	p.showTabOf("#changes-card")
+
+	for _, want := range []struct{ language, who, what string }{
+		{"en", "The command line on the server", "Recovered Administrator: a new password, no second factor"},
+		{"de", "Die Kommandozeile auf dem Server", "Administrator wiederhergestellt: neues Passwort, kein zweiter Faktor"},
+	} {
+		if want.language != "en" {
+			p.chooseLanguage(want.language)
+		}
+
+		var cells []string
+
+		p.run("draw a recovery in the log", chromedp.Evaluate(`(() => {
+			adminChanges = {
+				entries: [{
+					id: 99, at: new Date().toISOString(), action: 'user.recovered',
+					actor: { id: 0, name: '' }, target: { id: 1, name: 'Administrator' },
+				}],
+				more: false,
+			};
+			redrawable('changes', drawChanges);
+
+			const row = document.querySelector('#table-changes tbody tr');
+			return [...row.cells].map((cell) => cell.textContent);
+		})()`, &cells))
+
+		if len(cells) < 3 || cells[1] != want.who || cells[2] != want.what {
+			t.Errorf("%s: the log reads %q, want %q by %q", want.language, cells, want.what, want.who)
+		}
+	}
+}

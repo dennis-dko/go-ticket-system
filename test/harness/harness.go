@@ -2,6 +2,7 @@ package harness
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -283,6 +284,39 @@ func (a *App) Dir() string { return a.dir }
 // Dialect is the database this instance runs on, in DB_DIALECT's words, which
 // are also the names of the drivers DB opens it with.
 func (a *App) Dialect() string { return a.dbDriver }
+
+// Command runs the instance's binary once more beside it, in the directory it
+// runs in and with the environment it was started with - the way a command an
+// operator types on the server finds the configuration the server reads. It
+// answers with what the command printed and its exit code.
+func (a *App) Command(t *testing.T, args ...string) (stdout, stderr string, code int) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, a.cmd.Path, args...)
+	cmd.Dir = a.cmd.Dir
+	cmd.Env = a.cmd.Env
+
+	var out, errOut bytes.Buffer
+
+	cmd.Stdout, cmd.Stderr = &out, &errOut
+
+	err := cmd.Run()
+
+	var exit *exec.ExitError
+
+	switch {
+	case err == nil:
+	case errors.As(err, &exit):
+		code = exit.ExitCode()
+	default:
+		t.Fatalf("cannot run %s %v: %v", a.cmd.Path, args, err)
+	}
+
+	return out.String(), errOut.String(), code
+}
 
 // Terminate sends the instance the signal a service manager stops it with and
 // returns at once, for a case with something to do while it stops. Windows

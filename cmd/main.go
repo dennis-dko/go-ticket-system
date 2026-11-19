@@ -273,6 +273,13 @@ func main() {
 		os.Exit(2)
 	}
 
+	// The way back into an installation whose built-in administrator nobody can
+	// sign in as. Here rather than behind the interface for the rollback's reason:
+	// the case it exists for is the one where the interface is shut to everybody.
+	if len(os.Args) > 1 && os.Args[1] == "recover" {
+		os.Exit(recoverSystemUser())
+	}
+
 	// Capture the process output before anything writes to it. GoFr's logger
 	// takes os.Stdout when gofr.New() constructs it and keeps it for the life
 	// of the process, so this is the only moment at which the log viewer can be
@@ -581,8 +588,9 @@ func main() {
 	tokenRepo := sqldb.NewAPITokenRepository(db, cfg.Dialect)
 	passkeyRepo := sqldb.NewPasskeyRepository(db, cfg.Dialect)
 	directoryRunRepo := sqldb.NewDirectoryRunRepository(db, cfg.Dialect)
-	adminLog := appservice.NewAdminLogService(sqldb.NewAdminEventRepository(db, cfg.Dialect), userRepo, roleRepo)
-	recovery := appservice.NewRecoveryService(userRepo, passkeyRepo, sessionRepo)
+	adminEventRepo := sqldb.NewAdminEventRepository(db, cfg.Dialect)
+	adminLog := appservice.NewAdminLogService(adminEventRepo, userRepo, roleRepo)
+	recovery := appservice.NewRecoveryService(userRepo, passkeyRepo, sessionRepo, adminEventRepo)
 
 	auth := appservice.NewAuthService(userRepo, roleRepo)
 	apiTokens := appservice.NewAPITokenService(tokenRepo, sessionRepo, userRepo, auth)

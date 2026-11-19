@@ -8852,9 +8852,15 @@ async function loadChanges(older = false) {
 }
 
 function drawChanges() {
+  // Nobody's account made a change numbered zero: that is the recover command,
+  // run on the server where no request and so no account is involved.
+  const changedBy = (actor) => (actor.id === 0
+    ? t('changes.byCommand', 'The command line on the server')
+    : actor.name || `#${actor.id}`);
+
   const rows = adminChanges.entries.map((entry) => el('tr', {},
     el('td', { text: fmtMoment(entry.at) }),
-    el('td', { text: entry.actor.name || `#${entry.actor.id}` }),
+    el('td', { text: changedBy(entry.actor) }),
     el('td', { text: describeChange(entry) }),
   ));
 
@@ -8895,6 +8901,7 @@ const CHANGE_SENTENCES = {
   'installation.restart': () => t('change.restart', 'Restarted the application'),
   'installation.update': () => t('change.update', 'Started an update'),
   'installation.setup': () => t('change.setup', 'Completed the setup'),
+  'user.recovered': () => t('change.userRecovered', 'Recovered {0}: a new password, no second factor'),
 };
 
 /** One change as a sentence: what was done, to whom, and the value it kept. */
