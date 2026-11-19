@@ -56,6 +56,9 @@ func TestTheRoleInAUsersRowCanBeRead(t *testing.T) {
 		probe.append(new Option(name));
 		probe.style.cssText = 'position: absolute; visibility: hidden; width: auto';
 		probe.style.font = getComputedStyle(select).font;
+		// And its room on either side of the words, which a dropdown in a cell
+		// keeps narrower than a field does.
+		probe.style.paddingInline = getComputedStyle(select).paddingInline;
 		document.body.append(probe);
 
 		const needed = probe.getBoundingClientRect().width;

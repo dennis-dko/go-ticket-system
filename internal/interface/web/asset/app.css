@@ -1061,12 +1061,15 @@ td.actions, th.actions { text-align: right; }
  * nothing to how wide a table makes the column - so the role in a user's row got
  * whatever the column had left and cut its own label: "Benutze" for Benutzer and
  * for Benutzer & Administrator alike. Bounded, because each option carries what
- * the role is for after its name, and the name is the part that has to fit -
- * sixteen ems of it, and the pill's padding on top, which is wider than a box's
- * was: at sixteen ems alone the longest name came out fourteen pixels short in
- * the faces CI renders in. */
+ * the role is for after its name, and the name is the part that has to fit.
+ *
+ * Narrower inside than a field, too: a row of a table can spare least the room
+ * a pill leaves on either side of its words. With a field's twenty pixels the
+ * longest role name needed fourteen more than the bound, and given them, the
+ * accounts table ran nine past its card - in the faces CI renders in. */
 td > select {
-  max-width: calc(16em + 24px);
+  max-width: 16em;
+  padding-inline: 12px;
   width: auto;
 }
 
@@ -1412,7 +1415,7 @@ body:has(#login-screen:not([hidden])) .toast-stack { bottom: calc(var(--footer-h
 .who {
   color: var(--muted);
   font-size: 13px;
-  max-width: 12em;
+  max-width: 16em;
   overflow: hidden;
   text-align: right;
   text-overflow: ellipsis;
