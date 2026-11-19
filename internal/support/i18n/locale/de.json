@@ -1289,7 +1289,7 @@
   "tour.stats.title": "Deine eigenen Zahlen",
   "tour.telemetry.text": "Die Protokollstufe, der Metrik-Endpunkt und wohin Traces exportiert werden. Die Stufe gilt sofort; die beiden anderen werden beim Start des Prozesses gelesen, gelten also ab dem nächsten.",
   "tour.telemetry.title": "Metriken und Tracing",
-  "tour.templates.text": "Buchungen, die du oft machst, gespeichert mit „Als Vorlage speichern“ im Formular darüber. Eine Vorlage füllt nur das Formular aus: Gebucht wird erst, wenn du auf Buchen drückst.",
+  "tour.templates.text": "Buchungen, die du oft machst, gespeichert mit „Als Vorlage speichern“ im Buchungsformular auf dem Tab Erfassen. Eine Vorlage füllt nur dieses Formular aus: Gebucht wird erst, wenn du auf Buchen drückst.",
   "tour.templates.title": "Vorlagen",
   "tour.theme.text": "Hell oder dunkel — automatisch richtet sich nach der Tageszeit. Die Sprache folgt dem Browser, bis du eine wählst. Das war alles, viel Erfolg.",
   "tour.theme.title": "Darstellung und Sprache",

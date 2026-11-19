@@ -10655,8 +10655,8 @@ const TOUR_STEPS = [
     permission: 'timesheets:write:own',
     title: () => t('tour.templates.title', 'Templates'),
     text: () => t('tour.templates.text',
-      'Bookings you make often, kept with "Save as template" in the form above. A template '
-      + 'only fills the form in: nothing is booked until you press Book.'),
+      'Bookings you make often, kept with "Save as template" in the booking form on the '
+      + 'Record tab. A template only fills that form in: nothing is booked until you press Book.'),
   },
   {
     target: '#workbook-card',
