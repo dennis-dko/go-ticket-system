@@ -193,7 +193,7 @@ func TestTheRecoverCommandLetsTheBuiltInAdministratorBackIn(t *testing.T) {
 
 	enableTOTP(t, before)
 
-	stdout, stderr, code := a.App.Command(t, "recover")
+	stdout, stderr, code := a.Command(t, "recover")
 	if code != 0 {
 		t.Fatalf("recover exited %d:\n%s\n%s", code, stdout, stderr)
 	}
