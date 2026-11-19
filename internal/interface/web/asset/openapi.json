@@ -1231,6 +1231,36 @@
         }
       }
     },
+    "/users/{id}/second-factor": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove an account’s second factor",
+        "description": "For somebody who has lost the phone their second factor was on: turns off the code from the authenticator app, deletes every passkey the account holds and ends every session it has open, so its password alone signs it in again. Needs users:write. Refused for the caller’s own account, whose second factor is turned off under /me/totp with a code from it, and for an account that has no second factor to remove. Recorded in the administration log.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removed"
+          },
+          "404": {
+            "description": "No such account"
+          },
+          "409": {
+            "description": "Your own account, or one with no second factor"
+          }
+        }
+      }
+    },
     "/users/{id}/working-times": {
       "put": {
         "tags": [

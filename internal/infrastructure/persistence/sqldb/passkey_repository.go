@@ -119,6 +119,40 @@ func (r *PasskeyRepository) Delete(ctx context.Context, id, userID uint) error {
 	return nil
 }
 
+func (r *PasskeyRepository) DeleteForUser(ctx context.Context, userID uint) error {
+	if _, err := r.exec(ctx, "DELETE FROM passkeys WHERE user_id = ?", userID); err != nil {
+		return apperror.Internal(err)
+	}
+
+	return nil
+}
+
+func (r *PasskeyRepository) Holders(ctx context.Context) (map[uint]bool, error) {
+	rows, err := r.db.QueryContext(ctx, "SELECT DISTINCT user_id FROM passkeys")
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	holders := map[uint]bool{}
+
+	for rows.Next() {
+		var id uint
+		if err := rows.Scan(&id); err != nil {
+			return nil, apperror.Internal(err)
+		}
+
+		holders[id] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, apperror.Internal(err)
+	}
+
+	return holders, nil
+}
+
 func scanPasskey(s scanner) (*model.Passkey, error) {
 	var (
 		passkey  model.Passkey

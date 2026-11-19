@@ -30,6 +30,11 @@ type UserResponse struct {
 
 	TOTPEnabled bool `json:"totpEnabled"`
 
+	// HasPasskeys says the account holds a passkey. Sent in the account list,
+	// where an administrator removes a lost phone's ways in; false in answers
+	// that do not ask.
+	HasPasskeys bool `json:"hasPasskeys"`
+
 	// Language is this user's own choice; empty means they have never made one.
 	// The emptiness is the whole point: the interface adopts the browser's
 	// language on a first sign-in, and it can only know it is a first sign-in
@@ -181,6 +186,7 @@ func newUserResponse(r *common.UserResult, instanceTimezone string) UserResponse
 		MustChangePassword: r.MustChangePassword,
 		IsExternal:         r.IsExternal,
 		TOTPEnabled:        r.TOTPEnabled,
+		HasPasskeys:        r.HasPasskeys,
 		Language:           r.Language,
 		EffectiveLanguage:  r.EffectiveLanguage,
 		Timezone:           r.Timezone,
