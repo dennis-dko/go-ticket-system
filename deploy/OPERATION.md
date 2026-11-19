@@ -675,6 +675,18 @@ installer requires a token. It is generated and printed in the process log at
 start, with the URL to open. For an unattended install set `SETUP_TOKEN`
 yourself; then nothing is printed and a provisioning script can drive the page.
 
+**Demo data**, if you tick the box on the installer. The new database is filled
+with four projects, eight weeks of bookings on working days up to yesterday, a
+week of leave, a day off sick and two templates — written in the language the
+installer was read in, and all of it in the built-in administrator's account,
+which is given the *user-admin* role so that it records time as well as
+administering. That is the account the browser that answered the installer is
+signed into, so the demo is on screen at once. It goes only into a database
+that holds no projects yet: pointed at a database in use, the start says so in
+the log and adds nothing. It is meant for trying TimePulse out; for an
+installation people will work in, leave the box empty, or move the built-in
+administrator back to the *admin* role and delete the demo projects afterwards.
+
 Two things about an exposed installer. `GET /install/state` needs no token and
 says the instance name and the build version; whatever database prefill the
 environment supplied — dialect, name, host, port, user, SSL mode — it adds only for a

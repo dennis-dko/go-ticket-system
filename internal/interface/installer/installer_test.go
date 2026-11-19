@@ -289,7 +289,7 @@ func TestASecondAnswerIsRefusedOnceAConnectionIsSaved(t *testing.T) {
 
 	s := &server{
 		cfg:  Config{Token: "the-token", DatasourceFile: file, Logf: t.Logf},
-		done: make(chan config.Datasource, 1),
+		done: make(chan handover, 1),
 	}
 
 	answer := func(name string) int {
@@ -317,8 +317,8 @@ func TestASecondAnswerIsRefusedOnceAConnectionIsSaved(t *testing.T) {
 		t.Errorf("the file holds %q, not the connection that was handed over", saved.Name)
 	}
 
-	if handed := <-s.done; !strings.HasSuffix(filepath.ToSlash(handed.Name), "/first") {
-		t.Errorf("the connection handed over is %q", handed.Name)
+	if handed := <-s.done; !strings.HasSuffix(filepath.ToSlash(handed.datasource.Name), "/first") {
+		t.Errorf("the connection handed over is %q", handed.datasource.Name)
 	}
 }
 
@@ -337,7 +337,7 @@ func TestTheConnectionHandedOverIsTheOneTheNextStartReads(t *testing.T) {
 
 	s := &server{
 		cfg:  Config{Token: "the-token", DatasourceFile: file, Logf: t.Logf},
-		done: make(chan config.Datasource, 1),
+		done: make(chan handover, 1),
 	}
 
 	body := fmt.Sprintf(`{"dialect":"sqlite","name":%q,"host":"db","port":"5432","user":"timepulse",`+
@@ -357,7 +357,7 @@ func TestTheConnectionHandedOverIsTheOneTheNextStartReads(t *testing.T) {
 		t.Fatal("nothing was saved")
 	}
 
-	if handed := <-s.done; handed != saved {
-		t.Errorf("the application goes on with %+v while the next start reads %+v", handed, saved)
+	if handed := <-s.done; handed.datasource != saved {
+		t.Errorf("the application goes on with %+v while the next start reads %+v", handed.datasource, saved)
 	}
 }

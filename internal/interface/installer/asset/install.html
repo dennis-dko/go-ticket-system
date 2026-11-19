@@ -61,6 +61,10 @@
     }
     .muted { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
     label { display: block; font-size: 13px; margin-bottom: 12px; }
+    /* A tick box beside its words rather than above a field: the rule for inputs
+       below sizes text fields, and a box drawn a whole row wide reads as one. */
+    label.check { align-items: center; display: flex; font-size: 14px; gap: 10px; margin-bottom: 4px; }
+    label.check input { accent-color: var(--accent); box-shadow: none; flex: none; height: 18px; margin: 0; padding: 0; width: 18px; }
     input, select {
       background: var(--field-bg); border: 1px solid var(--field-border);
       border-radius: var(--radius); box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
@@ -206,6 +210,17 @@
         </label>
       </div>
     </div>
+
+    <!-- Asked here and answered by the application once it has migrated the
+         database, into the built-in administrator's account, and only into a
+         database that holds no projects yet. -->
+    <label class="check"><input type="checkbox" id="demo"><span data-i18n="db.demo">Fill it with demo data</span></label>
+    <p class="muted" data-i18n="db.demoText">
+      Four projects, eight weeks of bookings, a week of leave and two templates,
+      in the built-in administrator's account, which is given the role that
+      records time as well. Only into an empty database, and only for trying
+      TimePulse out.
+    </p>
 
     <div class="row">
       <button type="button" class="secondary" id="test" data-i18n="action.test">Test connection</button>
@@ -364,14 +379,14 @@
     return (typeof body.error === 'string' && body.error) || `Error ${status}`;
   }
 
-  async function call(path) {
+  async function call(path, extra = {}) {
     let res;
 
     try {
       res = await fetch(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Setup-Token': $('token').value.trim() },
-        body: JSON.stringify(datasource()),
+        body: JSON.stringify({ ...datasource(), ...extra }),
       });
     } catch {
       // The browser's own words for a request that never arrived are English
@@ -587,7 +602,9 @@
     say(t('msg.saving', 'Saving…'));
 
     try {
-      await call('/install/save');
+      // The language goes with the question, so demo data is written in the
+      // words this page was read in.
+      await call('/install/save', { demo: $('demo').checked, language });
       say(t('msg.saved',
         'Saved. The application is starting — this page will reload when it answers.'), 'good');
       waitForTheApplication();

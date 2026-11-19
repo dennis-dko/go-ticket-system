@@ -336,6 +336,14 @@ func main() {
 	// password; see rest.SetupHandler.Claim for the conditions on that.
 	var installerToken string
 
+	// Whether that same answer asked for demo data, and in which language. Asked
+	// once, of a database that has only just been chosen; a later start never
+	// asks it again.
+	var (
+		demoWanted   bool
+		demoLanguage string
+	)
+
 	if !configured {
 		chosen, err := runInstaller()
 
@@ -360,6 +368,7 @@ func main() {
 
 		ds = chosen.Datasource
 		installerToken = chosen.Token
+		demoWanted, demoLanguage = chosen.Demo, chosen.Language
 	}
 
 	// Asked here and said once there is a logger, never refused: an installation
@@ -670,6 +679,8 @@ func main() {
 	absences := appservice.NewAbsenceService(absenceRepo, userRepo, scheduleRepo, holidayPlaces)
 	leave := appservice.NewVacationService(vacationRepo, absenceRepo, userRepo, scheduleRepo, holidayPlaces, today)
 	workDays := appservice.NewWorkDayService(workDayRepo, timesheetRepo)
+	demo := appservice.NewDemoService(userRepo, projectRepo, users, projects, timesheets, workWeeks, leave,
+		absences, templates, today)
 
 	// What this installation is called in a language, wherever the server names
 	// it itself: the prompt a passkey device shows, an authenticator's entry, the
@@ -767,6 +778,25 @@ func main() {
 				ctx.Logger.Warnf("the built-in administrator %q still opens with the documented initial "+
 					"password - anybody who can reach this installation can sign in as it; sign in and change it",
 					appservice.SystemUserEmail)
+			}
+		}
+
+		// The demo, where whoever answered this process's installer asked for it:
+		// after the built-in administrator exists, because it goes into that
+		// account, and never a reason to stop - an installation without its demo
+		// is an installation that works.
+		if demoWanted {
+			summary, err := demo.Seed(ctx, demoLanguage)
+
+			switch {
+			case err != nil:
+				ctx.Logger.Errorf("the demo data was added only in part: %v", err)
+			case summary.Skipped != "":
+				ctx.Logger.Warnf("no demo data was added: %s", summary.Skipped)
+			default:
+				ctx.Logger.Infof("added demo data to the built-in administrator's account: %d projects, "+
+					"%d entries, %d days away and %d templates", summary.Projects, summary.Entries,
+					summary.Absences, summary.Templates)
 			}
 		}
 

@@ -75,6 +75,30 @@ type Result struct {
 	// documented initial password. See the setup handler's claim, which is where
 	// the conditions on that live.
 	Token string
+
+	// Demo asks for the new database to be filled with demo data once the
+	// application has migrated it, written in Language - the language the page
+	// was read in. Whether it is, and into whose account, is the application's
+	// to decide: this screen only carries the question.
+	Demo     bool
+	Language string
+}
+
+// answer is the body the page sends: the connection, and with a save, whether
+// the new database is to be filled with demo data and in which language.
+type answer struct {
+	appconfig.Datasource
+
+	Demo     bool   `json:"demo"`
+	Language string `json:"language"`
+}
+
+// handover is what a save hands the application: the connection as it was
+// written, and what was asked of the new database.
+type handover struct {
+	datasource appconfig.Datasource
+	demo       bool
+	language   string
 }
 
 // Serve blocks until a working database connection has been saved, and returns
@@ -98,7 +122,7 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 		cfg.Token = token
 	}
 
-	s := &server{cfg: cfg, done: make(chan appconfig.Datasource, 1)}
+	s := &server{cfg: cfg, done: make(chan handover, 1)}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/install/state", s.state)
@@ -140,7 +164,7 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 	s.announce(listener.Addr(), generated)
 
 	var (
-		accepted appconfig.Datasource
+		accepted handover
 		waitErr  error
 	)
 
@@ -159,12 +183,17 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 
 	_ = httpServer.Shutdown(shutdownCtx)
 
-	return Result{Datasource: accepted, Token: cfg.Token}, waitErr
+	return Result{
+		Datasource: accepted.datasource,
+		Token:      cfg.Token,
+		Demo:       accepted.demo,
+		Language:   accepted.language,
+	}, waitErr
 }
 
 type server struct {
 	cfg  Config
-	done chan appconfig.Datasource
+	done chan handover
 
 	// mu and saved decide the handover before the file is written, not after:
 	// two browser tabs submitting at the same moment must not both be told they
@@ -311,12 +340,12 @@ func (s *server) state(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) test(w http.ResponseWriter, r *http.Request) {
-	ds, ok := s.accept(w, r)
+	given, ok := s.accept(w, r)
 	if !ok {
 		return
 	}
 
-	if err := appconfig.TestDatasource(r.Context(), ds); err != nil {
+	if err := appconfig.TestDatasource(r.Context(), given.Datasource); err != nil {
 		writeError(w, http.StatusBadRequest, probeFailure(err))
 
 		return
@@ -343,14 +372,14 @@ func probeFailure(err error) error {
 }
 
 func (s *server) save(w http.ResponseWriter, r *http.Request) {
-	ds, ok := s.accept(w, r)
+	given, ok := s.accept(w, r)
 	if !ok {
 		return
 	}
 
 	// As it will be written, from here on: the application goes on with what is
 	// handed over, the next start with the file, and the two must be one value.
-	ds = ds.AsStored()
+	ds := given.AsStored()
 
 	// Probed before it is written, not after. A saved connection that does not
 	// work would leave the process unable to start and unable to serve the
@@ -398,7 +427,7 @@ func (s *server) save(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cannot block: saved lets exactly one request this far, and done holds one.
-	s.done <- ds
+	s.done <- handover{datasource: ds, demo: given.Demo, language: given.Language}
 }
 
 // holdsTheToken reports whether a request carries the setup token.
@@ -413,12 +442,12 @@ func (s *server) holdsTheToken(r *http.Request) bool {
 }
 
 // accept checks the method and the token and decodes the body.
-func (s *server) accept(w http.ResponseWriter, r *http.Request) (appconfig.Datasource, bool) {
+func (s *server) accept(w http.ResponseWriter, r *http.Request) (answer, bool) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
 
-		return appconfig.Datasource{}, false
+		return answer{}, false
 	}
 
 	if !s.holdsTheToken(r) {
@@ -428,28 +457,28 @@ func (s *server) accept(w http.ResponseWriter, r *http.Request) (appconfig.Datas
 			apperror.Invalidf("the setup token is wrong - it is printed in this "+
 				"process's log").WithCode("wrongSetupToken"))
 
-		return appconfig.Datasource{}, false
+		return answer{}, false
 	}
 
-	var ds appconfig.Datasource
+	var given answer
 
 	// Bounded: this endpoint is unauthenticated until the token is checked, and
 	// the check has already happened, but a connection description is a few
 	// hundred bytes and there is no reason to read more.
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8*1024)).Decode(&ds); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8*1024)).Decode(&given); err != nil {
 		writeError(w, http.StatusBadRequest,
 			errors.New("the request is not a connection description"))
 
-		return appconfig.Datasource{}, false
+		return answer{}, false
 	}
 
-	if err := ds.Validate(); err != nil {
+	if err := given.Validate(); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 
-		return appconfig.Datasource{}, false
+		return answer{}, false
 	}
 
-	return ds, true
+	return given, true
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
