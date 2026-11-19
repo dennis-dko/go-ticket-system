@@ -38,10 +38,22 @@
       padding: 32px 20px;
     }
     main { margin: 0 auto; max-width: 640px; }
-    h1 { font-size: 22px; margin: 0 0 6px; }
-    .heading-row { align-items: center; display: flex; gap: 12px; margin: 0 0 8px; }
-    .heading-row h1 { margin: 0; }
-    .heading-row .mark { flex: none; height: 40px; width: 40px; }
+    /* The sign-in card's band, rule for rule: TimePulse's mark on its white
+       field and the heading in white beside it, over the accent's line.
+       TestTheHeadingIsTheSignInCardsBand holds these to app.css's .login-band,
+       .login-emblem, .login-mark and the band's heading. */
+    .welcome {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 10px 30px rgb(16 24 40 / 14%); margin-bottom: 16px; overflow: hidden;
+    }
+    .band {
+      align-items: center; background: #2b3440; border-bottom: 5px solid var(--accent);
+      display: flex; flex-wrap: wrap; gap: 14px 24px; padding: 12px 28px 12px 12px;
+    }
+    .emblem { background: var(--surface); border-radius: 8px; display: flex; flex: none; padding: 6px; }
+    .band .mark { height: 96px; width: 96px; }
+    .band h1 { color: #ffffff; flex: 1 1 10em; font-size: 26px; font-weight: 400; line-height: 1.25; margin: 0; }
+    .welcome .intro { margin: 0; padding: 16px 20px 18px; }
     h2 { font-size: 16px; margin: 0 0 4px; }
     .card {
       background: var(--surface); border: 1px solid var(--border);
@@ -112,11 +124,15 @@
 </head>
 <body>
 <main>
-  <!-- TimePulse's mark before the heading: favicon.svg's drawing, number for
-       number, which TestTheMarkBesideTheTitleIsTheTabIcon holds this copy to.
-       Beside the heading rather than in it, because the heading's words are
-       written by the script and would take the mark with them. -->
-  <div class="heading-row">
+  <!-- Opened as the sign-in card opens: TimePulse's mark on its white field
+       and the heading beside it, on the band. The mark is favicon.svg's
+       drawing, number for number, which TestTheMarkBesideTheTitleIsTheTabIcon
+       holds this copy to. Beside the heading rather than in it, because the
+       heading's words are written by the script and would take the mark with
+       them. -->
+  <section class="welcome">
+  <div class="band">
+    <div class="emblem">
     <svg class="mark" viewBox="0 0 560 560" aria-hidden="true" focusable="false">
       <linearGradient id="installer-mark-ground" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#0a69a7"/>
@@ -132,13 +148,15 @@
         <path d="M378.63 216.5L378.63 153.95A3.85 3.85 0 0 0 370.93 153.95L370.93 216.5ZM377.11 219.57L426.89 181.79A3.85 3.85 0 0 0 422.23 175.65L372.45 213.43ZM376.8 213.22L338.11 189.43A3.85 3.85 0 0 0 334.07 195.99L372.76 219.78Z"/>
       </g>
     </svg>
+    </div>
     <h1 id="heading" data-i18n="title">Set up TimePulse</h1>
   </div>
-  <p class="muted" data-i18n="intro">
+  <p class="muted intro" data-i18n="intro">
     This installation has no database yet. Nothing can be stored, and nobody can
     sign in, until one is chosen here — so this is the first and only screen
     until it works.
   </p>
+  </section>
 
   <div class="card">
     <h2 data-i18n="token.title">Setup token</h2>
