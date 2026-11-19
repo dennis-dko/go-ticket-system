@@ -4,6 +4,7 @@ package browser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -134,5 +135,73 @@ func TestTheSignInTickFollowsTheButtonsRoundEnd(t *testing.T) {
 	if d := shape.Left - shape.Top; d > 1 || d < -1 || shape.Top-shape.Below > 1 || shape.Below-shape.Top > 1 {
 		t.Errorf("the tick is %.1fpx from the button's left, %.1fpx from its top and %.1fpx from its bottom; "+
 			"a tick that follows the round end is as far from it on every side", shape.Left, shape.Top, shape.Below)
+	}
+}
+
+// A week's cell shows the hours in it whole.
+//
+// The cells are fields, and a field's room on either side of its words is a
+// pill's: twenty pixels a side left a cell of five and a half ems too little for
+// "2.75", whose last figure was cut by the cell's edge. Asked of the widest
+// figure a day is likely to hold.
+func TestAWeeksCellShowsItsHoursWhole(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyWorker()
+
+	var projectID int
+
+	p.awaitJSON(`(async () => {
+		const made = await api('/projects', {
+			method: 'POST', body: JSON.stringify({ name: 'Portal', startDate: '2026-01-01' }),
+		});
+		await loadProjects();
+		return made.id;
+	})()`, &projectID)
+
+	p.run("open the week", p.click(`.tab[data-view="week"]`),
+		chromedp.WaitVisible("#table-week", chromedp.ByID))
+
+	// A row to have cells in, added as the select adds one.
+	p.waitForNode(`#week-add-project option[value="` + strconv.Itoa(projectID) + `"]`)
+	p.run("add a row for the project", chromedp.Evaluate(`(() => {
+		const select = document.querySelector('#week-add-project');
+		select.value = '`+strconv.Itoa(projectID)+`';
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+	})()`, nil))
+	p.waitForNode(`#week-card input.week-cell`)
+
+	var cell struct {
+		Room    float64 `json:"room"`
+		Needed  float64 `json:"needed"`
+		Spinner bool    `json:"spinner"`
+	}
+
+	// The room is the cell's width less its borders and padding; the arrows of a
+	// number field are drawn inside that room, so a cell that keeps them is asked
+	// about separately rather than measured, which no script can do.
+	p.evalJSON(`JSON.stringify((() => {
+		const cell = document.querySelector('#week-card input.week-cell');
+		const style = getComputedStyle(cell);
+		const box = cell.getBoundingClientRect();
+		const words = document.createElement('canvas').getContext('2d');
+		words.font = style.font;
+
+		return {
+			room: box.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth) -
+				parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+			needed: words.measureText('12.75').width,
+			spinner: !['textfield', 'none'].includes(style.appearance),
+		};
+	})())`, &cell)
+
+	if cell.Spinner {
+		t.Error("a week's cell keeps the browser's arrows for stepping a number, which take the room of the " +
+			"figures beside them")
+	}
+
+	if cell.Room+0.5 < cell.Needed {
+		t.Errorf("a week's cell cuts 12.75: room for %.1fpx of the %.1f it needs", cell.Room, cell.Needed)
 	}
 }
