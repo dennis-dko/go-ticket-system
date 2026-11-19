@@ -39,6 +39,8 @@ func TestEveryDecoderOfCompressedInputIsBounded(t *testing.T) {
 		"internal/support/spreadsheet/book.go": "excelize.Options{UnzipSizeLimit: maxUnzippedBytes}, 128 MB",
 
 		"internal/support/imaging/imaging.go": "refuseTooManyPixels and PixelsIn, against MaxPixels (16 MP)",
+		"internal/support/backup/backup.go": "MaxFileSize (256 MiB) on the file, and MaxPayloadSize (4 GiB) on " +
+			"what it decompresses to, kept by a reader that refuses past it; a real backup measured 13:1",
 
 		"internal/support/document/document.go": "MaxChartPixels (16 MP), checked on the DecodeConfig already there",
 
