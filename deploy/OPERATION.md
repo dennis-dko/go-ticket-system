@@ -1138,7 +1138,7 @@ that difference is the whole of it.
 | | What the card offers |
 | --- | --- |
 | **C** Single binary | A button. It downloads the release's binary for this platform, checks it against the `SHA256SUMS` published beside it, and puts it where the running file is. |
-| **A/B/D** Container | No button. The card says a newer version exists, which command updates the image - `docker compose pull && docker compose up -d` - and that adding `compose.update.yaml` lets it do that from here. |
+| **A/B/D** Container | No button. The card says a newer version exists, which command updates the image - `docker compose pull && docker compose up -d` - and that adding `compose.update.yaml` lets it do that from here. Under it, it names what that command does not take as it stands: overlays given with `-f`, as in B, which both commands need again unless `COMPOSE_FILE` in `.env` lists them; a version pinned in `TIMEPULSE_VERSION`, which has to be raised first; and a container started with `docker run`, as in D, which is pulled, removed and started again with the same options. |
 | **A/B/D** Container **with `compose.update.yaml`** | A button that pulls a new image, recreates the container from it, and removes the image it replaced. Nothing is left behind. |
 
 **Why a container without the overlay gets no button.** A binary swapped inside

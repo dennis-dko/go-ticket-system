@@ -2501,6 +2501,11 @@ input[type="file"] { border: none; background: none; box-shadow: none; padding: 
 /* --- waiting for a restart --- */
 
 .pending-list { margin: 0 0 14px; padding-left: 18px; }
+
+/* The cases the version card's command does not cover, as close under it as
+   the settings waiting for a restart are under theirs. */
+.by-hand { margin: 0 0 14px; padding-left: 18px; }
+.by-hand li { margin-bottom: 4px; }
 .pending-list li { color: var(--text); font-size: 13px; margin-bottom: 4px; }
 
 /* The arrow between the running value and the stored one, dimmed so the two
