@@ -1,6 +1,7 @@
 package web_test
 
 import (
+	"html"
 	"regexp"
 	"strings"
 	"testing"
@@ -12,6 +13,10 @@ var (
 	fallbackCall = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])t\(\s*'([^']+)',\s*` +
 		`('(?:[^'\\]|\\.)*'(?:\s*\+\s*'(?:[^'\\]|\\.)*')*)\s*[,)]`)
 	fallbackPart = regexp.MustCompile(`'((?:[^'\\]|\\.)*)'`)
+
+	// markupSentence is an element of the markup whose text is its English and
+	// whose data-i18n names its translation.
+	markupSentence = regexp.MustCompile(`data-i18n="([^"]+)"[^>]*>([^<]*)<`)
 
 	// namedThing is a name a sentence hands somebody to type or to look for: a
 	// file of the deployment, a compose file, a docker command, an environment
@@ -33,42 +38,51 @@ var (
 // administrator reading German was told how to update by hand and never that
 // the card could do it. TestEveryTranslationCoversTheCodeLookups could not
 // notice, because the key was there; only what it said had fallen behind.
+//
+// The markup is read as well as the script: the cases the version card's
+// command does not take are written there, and they are made of such names.
 func TestATranslationNamesEveryFileCommandAndSettingItsEnglishDoes(t *testing.T) {
-	languages := dictionaries(t)
-	checked := 0
+	type source struct{ key, english string }
+
+	var fromScript, fromMarkup []source
 
 	for _, call := range fallbackCall.FindAllStringSubmatch(withoutLineComments(asset(t, "/app.js")), -1) {
-		key := call[1]
-
 		var english strings.Builder
 		for _, part := range fallbackPart.FindAllStringSubmatch(call[2], -1) {
 			english.WriteString(part[1])
 		}
 
-		names := namedThing.FindAllString(english.String(), -1)
-		if len(names) == 0 {
-			continue
-		}
+		fromScript = append(fromScript, source{call[1], english.String()})
+	}
 
-		checked++
+	for _, element := range markupSentence.FindAllStringSubmatch(markupComment.ReplaceAllString(asset(t, "/"), ""), -1) {
+		fromMarkup = append(fromMarkup, source{element[1], html.UnescapeString(element[2])})
+	}
+
+	// Each scan has to have read the hundreds of sentences there are, or one
+	// that reads nothing would pass for one that found nothing wrong.
+	if len(fromScript) < 100 || len(fromMarkup) < 100 {
+		t.Fatalf("read %d sentences from the script and %d from the markup; the scan is not reading them",
+			len(fromScript), len(fromMarkup))
+	}
+
+	languages := dictionaries(t)
+
+	for _, s := range append(fromScript, fromMarkup...) {
+		names := namedThing.FindAllString(s.english, -1)
 
 		for language, words := range languages {
-			sentence, ok := words[key]
+			sentence, ok := words[s.key]
 			if !ok {
-				continue // TestEveryTranslationCoversTheCodeLookups says so.
+				continue // TestEveryTranslationCoversTheCodeLookups and ...TheMarkup say so.
 			}
 
 			for _, name := range names {
 				if !strings.Contains(sentence, name) {
 					t.Errorf("%s in %s does not name %s, which its English does:\n\t%s",
-						key, language, name, sentence)
+						s.key, language, name, sentence)
 				}
 			}
 		}
-	}
-
-	if checked == 0 {
-		t.Fatal("found no sentence in the script that names a file, a command or a setting; " +
-			"the scan is not reading the calls")
 	}
 }
