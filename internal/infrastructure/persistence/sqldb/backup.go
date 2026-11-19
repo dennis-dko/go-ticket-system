@@ -3,6 +3,7 @@ package sqldb
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -172,7 +173,30 @@ func HoldsAccounts(ctx context.Context, db DB) bool {
 // Dump writes every table of BackupTables to w as lines of JSON: the header, and
 // then for each table a line naming its columns followed by a line per row. It
 // answers with the number of rows written.
+//
+// Every table is read in one transaction, so the backup is one moment of the
+// database: read table by table while people book, it could hold an entry whose
+// project was made after the projects were read - which PostgreSQL would refuse
+// at restore time. Repeatable read where the dialect offers it; a SQLite
+// transaction reads one moment of its own.
 func Dump(ctx context.Context, db DB, header BackupHeader, w io.Writer) (int64, error) {
+	if beginner, ok := db.(txBeginner); ok {
+		options := &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true}
+		if header.Dialect == DialectSQLite {
+			options = nil
+		}
+
+		tx, err := beginner.BeginTx(ctx, options)
+		if err != nil {
+			return 0, fmt.Errorf("begin reading the backup: %w", err)
+		}
+
+		// Read only: nothing to keep, and a rollback is how it ends.
+		defer func() { _ = tx.Rollback() }()
+
+		db = tx
+	}
+
 	encoder := json.NewEncoder(w)
 
 	header.Format, header.Version = backupFormat, backupVersion
