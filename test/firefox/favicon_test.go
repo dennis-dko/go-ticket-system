@@ -4,21 +4,23 @@ package firefox
 
 import (
 	"fmt"
-	"strconv"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/dennis-dko/timepulse/test/harness"
 )
 
-// The tab keeps TimePulse's mark in Firefox, whatever logo is saved.
+// Firefox adopts TimePulse's mark as the tab's icon, whatever logo is saved.
 //
-// Firefox is where the tab went wrong while a logo stood in for the mark: from
-// the same markup, it kept the shipped .ico where Chrome took the logo. The logo
-// stands at the left of the bar now and nowhere else, so the page declares the
-// shipped pair whatever is uploaded - and this asks Firefox what it makes of the
-// first, by the bytes rather than by the address.
-func TestFirefoxKeepsTimePulsesMarkInTheTab(t *testing.T) {
+// Asked of what Firefox decided rather than of the document alone: what a tab
+// draws is not in the document and not in the response, and Firefox writes its
+// decision down in its own icon store. Firefox is also where the tab went wrong
+// while a logo stood in for the mark - from the same markup, it kept the shipped
+// .ico where Chrome took the logo. The logo stands at the left of the bar now and
+// nowhere else, so with one saved the page still declares the shipped pair, and
+// the mark is what Firefox keeps.
+func TestFirefoxAdoptsTimePulsesMarkWhateverTheLogo(t *testing.T) {
 	app := harness.Start(t)
 	b := openBrowser(t)
 
@@ -38,46 +40,32 @@ func TestFirefoxKeepsTimePulsesMarkInTheTab(t *testing.T) {
 		t.Errorf("the page declares %q, want the shipped mark's SVG and .ico", icons)
 	}
 
-	served := b.evalString(`(async () => {
-		const link = document.querySelector('link[rel~="icon"]');
-		if (!link) return 'no icon';
-
-		const answer = await fetch(link.href);
-
-		return (await answer.text()).includes('aria-label="TimePulse"') ? 'the mark' : 'something else';
-	})()`)
-
-	if served != "the mark" {
-		t.Errorf("the tab's icon answers with %s rather than TimePulse's mark", served)
+	// Adopting is not instant: the icon is fetched after the document, and written
+	// to the store after that. Either file is the mark.
+	adopted := waitForAdoptedIcon(t, b, "favicon.")
+	if adopted == "" {
+		t.Fatal("Firefox recorded no icon for this page, so the tab stays empty")
 	}
 
-	if width := iconWidth(t, b); width == 0 {
-		t.Error("Firefox could not draw what the tab is pointed at")
-	}
-}
-
-// iconWidth fetches whatever the page points its icon at and measures it.
-func iconWidth(t *testing.T, b *browser) int {
-	t.Helper()
-
-	raw := b.evalString(`(async () => {
-		const link = document.querySelector('link[rel~="icon"]');
-		if (!link) return '0';
-
-		return await new Promise((resolve) => {
-			const probe = new Image();
-			probe.onload = () => resolve(String(probe.naturalWidth));
-			probe.onerror = () => resolve('0');
-			probe.src = link.href;
-		});
-	})()`)
-
-	width, err := strconv.Atoi(strings.TrimSpace(raw))
+	// Only this installation's rows: a new profile's store also holds the icons of
+	// Firefox's own bookmarks. Firefox keeps the touch icon as well, and that is
+	// the mark too, drawn at the app's size.
+	origin, err := url.Parse(app.BaseURL())
 	if err != nil {
-		return 0
+		t.Fatalf("reading the instance's address: %v", err)
 	}
 
-	return width
+	for _, row := range recordedIcons(t, b.profile) {
+		if !strings.Contains(row, origin.Host) {
+			continue
+		}
+
+		if !strings.Contains(row, "/favicon.") && !strings.Contains(row, "/app-icon/") {
+			t.Errorf("Firefox adopted %s, which is not TimePulse's mark", row)
+		}
+	}
+
+	t.Logf("Firefox adopted %s", adopted)
 }
 
 // declaredIcons is every icon link on the page, in document order.
