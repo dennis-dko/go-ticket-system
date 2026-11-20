@@ -1,7 +1,9 @@
 package io.github.dennisdko.timepulse
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -35,7 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 
 /**
  * App is the whole of what the app shows: the connect form until it is
@@ -88,7 +93,82 @@ fun App(model: AppModel) {
                     state.ready -> WebScreen(connection.address, state.words, state.shown, model::disconnect, model::sessionEnded)
                     else -> WaitScreen(state, model::retry, model::disconnect)
                 }
+
+                state.update?.let { UpdateDialog(it, state.words, model::install, model::postpone) }
             }
+        }
+    }
+}
+
+/**
+ * UpdateDialog offers the newer app of the installation's release, once each time
+ * the app is started: downloaded and installed when somebody presses to, put off
+ * until the next start otherwise.
+ *
+ * Android lets an app install another only once it has been allowed to under
+ * "Install unknown apps", so the first press opens that setting, and the
+ * installation goes ahead as soon as it comes back allowed.
+ */
+@Composable
+private fun UpdateDialog(update: Update, words: Language, onInstall: () -> Unit, onLater: () -> Unit) {
+    val tones = LocalTones.current
+    val context = LocalContext.current
+    val loading = update.loading
+
+    var refused by rememberSaveable { mutableStateOf(false) }
+
+    val allow = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        refused = !context.packageManager.canRequestPackageInstalls()
+        if (!refused) onInstall()
+    }
+
+    val install = {
+        if (context.packageManager.canRequestPackageInstalls()) {
+            refused = false
+            onInstall()
+        } else {
+            allow.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, ("package:" + context.packageName).toUri()))
+        }
+    }
+
+    // While it downloads, the offer stays: nothing else on the screen can be
+    // reached, and nothing should stop it halfway.
+    Dialog(onDismissRequest = onLater, properties = DialogProperties(dismissOnBackPress = loading == null, dismissOnClickOutside = loading == null)) {
+        Card(words.text("mobile.update.title", "A new version of the app")) {
+            Text(
+                words.text(
+                    "mobile.update.text",
+                    "Your installation runs {0}, and this app is {1}. The app of {0} is downloaded, and Android asks you to confirm its installation.",
+                    update.offer.version,
+                    BuildConfig.VERSION_NAME,
+                ),
+                color = tones.muted,
+                fontSize = 15.sp,
+            )
+
+            if (loading != null) {
+                if (loading > 0f) {
+                    LinearProgressIndicator(progress = { loading }, modifier = Modifier.fillMaxWidth(), color = tones.accent, trackColor = tones.border)
+                } else {
+                    LinearProgressIndicator(Modifier.fillMaxWidth(), color = tones.accent, trackColor = tones.border)
+                }
+
+                Text(words.text("mobile.update.loading", "Downloading … {0}%", (loading * 100).toInt().toString()), color = tones.muted, fontSize = 13.sp)
+            }
+
+            val said = update.said ?: if (refused) {
+                words.text(
+                    "mobile.update.notAllowed",
+                    "TimePulse may not install apps yet. Allow it under Install unknown apps, then press again.",
+                )
+            } else {
+                null
+            }
+
+            said?.let { Text(it, color = tones.danger, fontSize = 14.sp) }
+
+            Action(words.text("mobile.update.install", "Download and install"), primary = true, enabled = loading == null, onClick = install)
+            Action(words.text("mobile.update.later", "Later"), primary = false, enabled = loading == null, onClick = onLater)
         }
     }
 }

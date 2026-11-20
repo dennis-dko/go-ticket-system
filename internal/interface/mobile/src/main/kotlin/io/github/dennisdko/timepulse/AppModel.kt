@@ -1,6 +1,7 @@
 package io.github.dennisdko.timepulse
 
 import android.app.Application
+import android.content.pm.PackageInstaller
 import android.content.res.AssetManager
 import android.os.SystemClock
 import android.webkit.CookieManager
@@ -9,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.Locale
@@ -52,6 +54,8 @@ data class State(
     val busy: String? = null,
     /** said is why the last attempt failed. */
     val said: String? = null,
+    /** update is the newer app the installation offers, until it is installed or put off. */
+    val update: Update? = null,
 )
 
 /**
@@ -71,6 +75,9 @@ class AppModel(application: Application) : AndroidViewModel(application) {
     /** checkedAt is when the web interface's session was last found or opened. */
     private var checkedAt = 0L
 
+    /** askedForUpdate says whether this start of the app has asked the installation for a newer app yet. */
+    private var askedForUpdate = false
+
     var state by mutableStateOf(State(words = words, connection = store.load()))
         private set
 
@@ -78,6 +85,78 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         state.connection?.let {
             open(it, keep = false)
             startReminders(application)
+        }
+
+        viewModelScope.launch { outcomes.collect(::installed) }
+    }
+
+    /**
+     * install downloads the newer app on offer and hands it to Android, which asks
+     * whoever holds the phone to confirm it on a screen of its own. How far the
+     * download has got is shown on the offer, and so is why it was not installed.
+     */
+    fun install() {
+        val update = state.update ?: return
+        if (update.loading != null) return
+
+        state = state.copy(update = update.copy(loading = 0f, said = null))
+
+        viewModelScope.launch {
+            val said = try {
+                Updater(getApplication()).install(update.offer) { share ->
+                    viewModelScope.launch { state = state.copy(update = state.update?.copy(loading = share)) }
+                }
+
+                null
+            } catch (stopped: CancellationException) {
+                throw stopped
+            } catch (failed: Exception) {
+                words.text("mobile.update.notDownloaded", "It could not be downloaded: {0}", failed.message.orEmpty())
+            }
+
+            // Handed over, the question is Android's, asked over this screen: the
+            // offer can be pressed again should that question not have come up.
+            state = state.copy(update = state.update?.copy(loading = null, said = said))
+        }
+    }
+
+    /** postpone puts the offer away until the app is started again. */
+    fun postpone() {
+        state = state.copy(update = null)
+    }
+
+    /**
+     * installed shows what Android said about an installation it was handed:
+     * nothing where its question was answered no, and why where it refused. One
+     * that went ahead replaces the app, and this with it.
+     */
+    private fun installed(outcome: Outcome) {
+        val update = state.update ?: return
+        val said = when (outcome.status) {
+            PackageInstaller.STATUS_SUCCESS, PackageInstaller.STATUS_FAILURE_ABORTED -> null
+            else -> words.text("mobile.update.failed", "Android did not install it: {0}", outcome.message ?: outcome.status.toString())
+        }
+
+        state = state.copy(update = update.copy(loading = null, said = said))
+    }
+
+    /**
+     * askForUpdate asks the installation, once each time the app is started,
+     * whether the app of its release is newer than this one, and offers it where
+     * it is. An installation out of reach, or one that refuses, offers nothing.
+     */
+    private fun askForUpdate(connection: Connection) {
+        if (askedForUpdate) return
+        askedForUpdate = true
+
+        viewModelScope.launch {
+            val answer = try {
+                Installation(connection.address, words).android(connection.token)
+            } catch (_: Refused) {
+                null
+            }
+
+            offerFor(BuildConfig.VERSION_NAME, answer)?.let { state = state.copy(update = Update(it)) }
         }
     }
 
@@ -219,6 +298,8 @@ class AppModel(application: Application) : AndroidViewModel(application) {
 
             checkedAt = SystemClock.elapsedRealtime()
             state = state.copy(busy = null)
+
+            if (state.ready) askForUpdate(connection)
         }
     }
 
