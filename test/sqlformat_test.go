@@ -35,12 +35,12 @@ func TestEveryValueFormattedIntoSQLIsNamed(t *testing.T) {
 		// against it before anything else - and the columns are the ones the
 		// database itself answers with, never the ones the file names.
 		"internal/infrastructure/persistence/sqldb/backup.go:dumpTable": "a table from sqldb.BackupTables",
-		"internal/infrastructure/persistence/sqldb/backup.go:Restore": "a table from sqldb.BackupTables, emptied " +
+		"internal/infrastructure/persistence/sqldb/restore.go:Restore": "a table from sqldb.BackupTables, emptied " +
 			"in reverse",
-		"internal/infrastructure/persistence/sqldb/backup.go:restoreTable": "a table checked against " +
+		"internal/infrastructure/persistence/sqldb/restore.go:tableWriter": "a table checked against " +
 			"sqldb.BackupTables, and the columns the database answers with for it",
-		"internal/infrastructure/persistence/sqldb/backup.go:columnKinds": "a table from sqldb.BackupTables",
-		"internal/infrastructure/persistence/sqldb/backup.go:resetSequences": "a table from sqldb.BackupTables, " +
+		"internal/infrastructure/persistence/sqldb/restore.go:columnKinds": "a table from sqldb.BackupTables",
+		"internal/infrastructure/persistence/sqldb/restore.go:resetSequences": "a table from sqldb.BackupTables, " +
 			"twice, in PostgreSQL's setval",
 
 		"internal/infrastructure/persistence/migration/migration.go:addRoleBasedAccess": "model.RoleUser, " +

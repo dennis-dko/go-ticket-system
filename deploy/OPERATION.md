@@ -675,7 +675,8 @@ installer requires a token. It is generated and printed in the process log at
 start, with the URL to open. For an unattended install set `SETUP_TOKEN`
 yourself; then nothing is printed and a provisioning script can drive the page.
 
-**Demo data**, if you tick the box on the installer. The new database is filled
+**Demo data**, if you choose it on the installer, where a new database starts
+empty, with the demo data or from a backup - one of the three. It is filled
 with four projects, eight weeks of bookings on working days up to yesterday, a
 week of leave, a day off sick and two templates — written in the language the
 installer was read in, and all of it in the built-in administrator's account,
@@ -1470,16 +1471,18 @@ round:
 
    The installer fills in the rest of the connection from `.env`, and prints its
    setup token in that terminal.
-2. Choose the database, tick *Restore a backup into it*, choose the file and type
-   its `BACKUP_PASSPHRASE`. The installer opens it there and then, so a wrong
-   passphrase or a file that is not a backup is said on that page.
+2. Choose the database, choose *Restore a backup into it*, choose the file and type
+   its `BACKUP_PASSPHRASE`. The installer reads it whole there and then, so a
+   wrong passphrase, a file that is not a backup, one cut short on its way, one
+   made by a newer version of TimePulse and one whose secrets the `SECRET_KEY`
+   of step 1 cannot open are said on that page - the restore itself runs after
+   the installer has handed over, where a refusal can only end the process.
 3. *Save and start*. The application migrates the database and puts the backup
    into it before anything else, and everybody signs in with the passwords they
    had. Under Compose, stop that run once it has started - Ctrl+C - and bring the
    stack up as usual with `docker compose up -d`.
 
-A restore refuses a database that already holds an account, and a backup made
-by a newer version of TimePulse than the one restoring it. It is one
+A restore refuses a database that already holds an account. It is one
 transaction, so a backup that fails part of the way leaves the database as the
 migrations made it - and the connection the installer saved is removed again, so
 the next start serves the installer and it can be tried once more.

@@ -69,6 +69,27 @@ func (s *SecretsService) Verify(ctx context.Context) error {
 		return s.settings.Set(ctx, model.SettingSecretKeyCheck, sealed)
 	}
 
+	return CheckSecretKey(s.secrets, stored)
+}
+
+var (
+	// ErrSecretKeyMissing says an installation's secrets were sealed and no
+	// SECRET_KEY is configured to open them.
+	ErrSecretKeyMissing = errors.New("this installation's secrets were encrypted and SECRET_KEY " +
+		"is not set: put the key back, or clear the second factors and the " +
+		"directory password and let them be entered again")
+
+	// ErrSecretKeyDiffers says SECRET_KEY is a key, and not the one an
+	// installation's secrets were sealed with.
+	ErrSecretKeyDiffers = errors.New("SECRET_KEY is not the key this installation's secrets were written with")
+)
+
+// CheckSecretKey asks whether secrets opens stored, the key check an
+// installation kept - the question Verify asks at every start. The installer
+// asks it of the key check inside a backup before taking the backup, because
+// the start that follows a restore would ask it anyway, and by then the only
+// answer left is to end the process.
+func CheckSecretKey(secrets *security.Sealer, stored string) error {
 	// Sealed, or it proves nothing: Open hands a value without the marker back as
 	// it is, and a check that never was sealed would pass whatever the key.
 	if !security.IsSealed(stored) {
@@ -76,15 +97,12 @@ func (s *SecretsService) Verify(ctx context.Context) error {
 			"cannot be checked against it")
 	}
 
-	if _, err := s.secrets.Open(stored); err != nil {
+	if _, err := secrets.Open(stored); err != nil {
 		if errors.Is(err, security.ErrNoKey) {
-			return errors.New("this installation's secrets were encrypted and SECRET_KEY " +
-				"is not set: put the key back, or clear the second factors and the " +
-				"directory password and let them be entered again")
+			return ErrSecretKeyMissing
 		}
 
-		return fmt.Errorf("SECRET_KEY is not the key this installation's secrets were "+
-			"written with: %w", err)
+		return fmt.Errorf("%w: %w", ErrSecretKeyDiffers, err)
 	}
 
 	return nil

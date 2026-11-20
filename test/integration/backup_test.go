@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"testing"
 	"time"
@@ -106,8 +107,8 @@ func TestAnAdministratorMakesDownloadsAndDeletesABackup(t *testing.T) {
 	var header sqldb.BackupHeader
 
 	if err := backup.Open(file, backupPassphrase, func(content io.Reader) error {
-		var err error
-		header, err = sqldb.ReadBackupHeader(content)
+		contents, err := sqldb.InspectBackup(content, math.MaxInt64)
+		header = contents.Header
 
 		return err
 	}); err != nil || header.Dialect == "" || header.CreatedAt.IsZero() {
@@ -266,5 +267,205 @@ func TestABackupIsRestoredThroughTheInstallerOfANewInstallation(t *testing.T) {
 
 	if card := readBackupCard(t, again); card.Keep != 3 {
 		t.Errorf("the restored installation keeps %d backups, want the 3 its plan said", card.Keep)
+	}
+}
+
+// sealedBackup writes lines as a backup sealed with the suite's passphrase: a
+// file the application did not make whole, the way one cut off on its way
+// arrives at the installer.
+func sealedBackup(t *testing.T, lines ...any) []byte {
+	t.Helper()
+
+	file, err := backup.Seal(backupPassphrase, func(w io.Writer) error {
+		encoder := json.NewEncoder(w)
+
+		for _, line := range lines {
+			if err := encoder.Encode(line); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("sealing a backup: %v", err)
+	}
+
+	return file
+}
+
+// The installer reads a backup whole before it takes it, so what the restore
+// would refuse is refused on the installer's own screen: a backup cut short, as
+// a download that stopped is, and one from a newer version of TimePulse than
+// this one. Both used to be taken - only their first line was read - and then
+// refused by the restore, which runs after the installer has handed over, where
+// a refusal can only end the process.
+func TestTheInstallerRefusesWhatTheRestoreWouldRefuse(t *testing.T) {
+	t.Parallel()
+
+	header := func(schema int64) sqldb.BackupHeader {
+		return sqldb.BackupHeader{Format: "timepulse-backup", Version: 1, Application: "TimePulse",
+			Dialect: "sqlite", Schema: schema, CreatedAt: time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC)}
+	}
+
+	roles := map[string]any{"table": "roles", "columns": []string{"id", "name"}, "kinds": []string{"int", "text"}}
+
+	c := openInstaller(t)
+
+	for _, refused := range []struct {
+		name string
+		file []byte
+		code string
+	}{
+		{"cut short", sealedBackup(t, header(20260730120000), roles, []any{1, "admin"}), "backupCutShort"},
+		{"from a newer version", sealedBackup(t, header(99991231235959), map[string]any{"end": true, "rows": 0}),
+			"backupFromNewerVersion"},
+	} {
+		if status, body := uploadBackup(t, c, refused.file, backupPassphrase); status != http.StatusBadRequest ||
+			body["code"] != refused.code {
+			t.Errorf("a backup %s was answered %d %v, want 400 %s", refused.name, status, body, refused.code)
+		}
+	}
+}
+
+// A backup made where SECRET_KEY was set carries its secrets sealed with that
+// key, so it is refused by an installer whose key cannot open them - on the
+// installer's own screen, saying which key is missing - and taken by one with
+// the same key, which then restores it. It used to be taken whatever the key,
+// and the start then refused the restored installation for its key, ending the
+// process in a window that closed with it.
+func TestTheInstallerAsksForTheKeyABackupWasSealedWith(t *testing.T) {
+	t.Parallel()
+
+	key := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("k"), 32))
+	other := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("o"), 32))
+
+	source := start(t, "BACKUP_PASSPHRASE="+backupPassphrase, "SECRET_KEY="+key)
+	admin := source.signInAsAdmin("a-much-better-password")
+
+	_, file := madeBackup(t, admin)
+
+	for _, refused := range []struct {
+		name string
+		env  []string
+		code string
+	}{
+		{"without a key", nil, "backupNeedsSecretKey"},
+		{"with another key", []string{"SECRET_KEY=" + other}, "backupOtherSecretKey"},
+	} {
+		c := openInstaller(t, refused.env...)
+
+		if status, body := uploadBackup(t, c, file, backupPassphrase); status != http.StatusBadRequest ||
+			body["code"] != refused.code {
+			t.Errorf("an installer %s answered %d %v, want 400 %s", refused.name, status, body, refused.code)
+		}
+	}
+
+	c := openInstaller(t, "SECRET_KEY="+key)
+
+	if status, body := uploadBackup(t, c, file, backupPassphrase); status != http.StatusOK {
+		t.Fatalf("an installer with the same key answered %d %v", status, body)
+	}
+
+	answer := map[string]any{"restore": true, "language": "en"}
+	for name, value := range harness.FreshDatasource(t) {
+		answer[name] = value
+	}
+
+	if status, body := c.post("/install/save", c.token, answer); status != http.StatusOK {
+		t.Fatalf("saving the connection with the restore asked for: %d %v", status, body)
+	}
+
+	waitForTheApplication(t, c)
+
+	(&app{App: c.app, t: t}).newClient().signIn(adminEmail, "a-much-better-password")
+}
+
+// A backup moves between kinds of database, both ways: one made on the suite's
+// database comes back into SQLite, and one made on SQLite comes back into the
+// suite's database. The installer offers every kind for a restore and the file
+// says nothing about the kind it was made on - trying a server's backup on one's
+// own computer is the first thing somebody does with it.
+//
+// On the SQLite run both directions stay on SQLite, so the PostgreSQL and MySQL
+// runs are the ones that cross.
+func TestABackupMovesBetweenSQLiteAndTheSuitesDatabase(t *testing.T) {
+	t.Parallel()
+
+	sqlite := map[string]string{"dialect": "sqlite", "name": "chosen"}
+
+	for _, direction := range []struct {
+		name   string
+		source []string
+		madeOn string
+		target map[string]string
+	}{
+		{"from the suite's database into SQLite", nil, "", sqlite},
+		{"from SQLite into the suite's database", []string{"DB_DIALECT=sqlite", "DB_NAME=source"}, "sqlite", nil},
+	} {
+		t.Run(direction.name, func(t *testing.T) {
+			t.Parallel()
+
+			source := start(t, append([]string{"BACKUP_PASSPHRASE=" + backupPassphrase}, direction.source...)...)
+			admin := source.signInAsAdmin("a-much-better-password")
+			worker := source.signInAsUser(admin, "Wera", "wera@example.com")
+
+			worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
+				"date": "2026-11-19", "durationHours": 2.75, "description": "Before the restore",
+			}), http.StatusCreated, http.StatusOK)
+
+			_, file := madeBackup(t, admin)
+
+			c := openInstaller(t)
+
+			status, body := uploadBackup(t, c, file, backupPassphrase)
+			if status != http.StatusOK {
+				t.Fatalf("the backup was not taken: %d %v", status, body)
+			}
+
+			// What the file says it was made on, so the case is seen to cross rather
+			// than assumed to: the source's environment is what decides it.
+			madeOn := direction.madeOn
+			if madeOn == "" {
+				madeOn = source.Dialect()
+			}
+
+			if body["dialect"] != madeOn {
+				t.Fatalf("the backup says it was made on %v, want %s", body["dialect"], madeOn)
+			}
+
+			target := direction.target
+			if target == nil {
+				target = harness.FreshDatasource(t)
+			}
+
+			answer := map[string]any{"restore": true, "language": "en"}
+			for key, value := range target {
+				answer[key] = value
+			}
+
+			if status, body := c.post("/install/save", c.token, answer); status != http.StatusOK {
+				t.Fatalf("saving the connection with the restore asked for: %d %v", status, body)
+			}
+
+			waitForTheApplication(t, c)
+
+			back := (&app{App: c.app, t: t}).newClient()
+			back.signIn("wera@example.com", "another-password-1")
+
+			var entries listOf[timesheetResponse]
+
+			back.must(back.api(http.MethodGet, "/timesheets", nil), http.StatusOK).Data(t, &entries)
+
+			if entries.TotalCount != 1 || entries.Items[0].DurationHours != 2.75 {
+				t.Fatalf("after the restore Wera finds %+v, want her 2.75 hours\n%s", entries, c.app.Log())
+			}
+
+			// And she books again: the ids a restore wrote are taken, so a database
+			// that counts its own - PostgreSQL's sequences - has to count on from them.
+			back.must(back.api(http.MethodPost, "/timesheets", map[string]any{
+				"date": "2026-11-20", "durationHours": 1.5, "description": "After the restore",
+			}), http.StatusCreated, http.StatusOK)
+		})
 	}
 }

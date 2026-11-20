@@ -81,12 +81,22 @@ func runInstaller() (installer.Result, error) {
 
 	logger := logging.NewLogger(logging.INFO)
 
+	// The key the installation will run with, read where the application reads
+	// it, so the installer can tell whether a backup's secrets will open under it.
+	secrets, err := security.NewSealer(appconfig.SecretKeyFromEnvironment())
+	if err != nil {
+		return installer.Result{}, fmt.Errorf("SECRET_KEY cannot be used: %w", err)
+	}
+
 	return installer.Serve(ctx, installer.Config{
 		Addr:           ":" + settings.HTTPPort,
 		Version:        version,
 		Token:          settings.SetupToken,
 		DatasourceFile: appconfig.DatasourceFile,
 		Prefill:        settings.Prefill,
+		Schema:         newestSchema(),
+		Secrets:        secrets,
+		Favicon:        web.Favicon(),
 		Logf:           logger.Infof,
 	})
 }

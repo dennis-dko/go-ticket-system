@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
@@ -19,12 +20,14 @@ import (
 	"sync"
 	"time"
 
+	appservice "github.com/dennis-dko/timepulse/internal/application/v1/service"
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
 	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 	"github.com/dennis-dko/timepulse/internal/support/apperror"
 	"github.com/dennis-dko/timepulse/internal/support/backup"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 //go:embed asset/install.html
@@ -57,6 +60,23 @@ type Config struct {
 	// an operator who configured half of it in a compose file does not retype
 	// it. The password is never sent back.
 	Prefill appconfig.Datasource
+
+	// Schema is the newest migration this binary carries. A backup from a newer
+	// one is refused when it is uploaded, on this screen, rather than by the
+	// restore, which runs after the installer has handed over and can then only
+	// end the process. Zero sets no limit.
+	Schema int64
+
+	// Secrets is the sealer built from this process's SECRET_KEY, which the
+	// installation it sets up will run with. A backup whose secrets it cannot open
+	// is refused when it is uploaded, for the same reason as a newer schema: the
+	// start after the restore would refuse it, and then only by ending the
+	// process. Nil is no key.
+	Secrets *security.Sealer
+
+	// Favicon is the application's tab icon, served at /favicon.svg so the
+	// installer's tab carries the mark the application's does. Empty serves none.
+	Favicon []byte
 
 	// Logf reports progress. Required: this screen is the only thing the
 	// process is doing, and a silent one would look hung.
@@ -144,6 +164,7 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 	mux.HandleFunc("/install/test", s.test)
 	mux.HandleFunc("/install/save", s.save)
 	mux.HandleFunc("/install/backup", s.backup)
+	mux.HandleFunc("/favicon.svg", s.favicon)
 	// Everything else is the page, so a bookmarked deep link into the
 	// application still lands somewhere that explains itself.
 	mux.HandleFunc("/", s.page)
@@ -288,6 +309,22 @@ func (s *server) page(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _ = w.Write(bytes.Replace(page, []byte(dictionariesMarkup), []byte(pageDictionaries()), 1))
+}
+
+// favicon serves the application's tab icon at the path the application serves
+// it from, so a browser keeps the one icon across the handover. Not stored: the
+// application answers the same path once it runs, with caching of its own.
+func (s *server) favicon(w http.ResponseWriter, r *http.Request) {
+	if len(s.cfg.Favicon) == 0 {
+		http.NotFound(w, r)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = w.Write(s.cfg.Favicon)
 }
 
 // dictionariesMarkup is the empty block in the page that pageDictionaries fills.
@@ -553,10 +590,17 @@ func (s *server) backup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var header sqldb.BackupHeader
+	schema := s.cfg.Schema
+	if schema == 0 {
+		schema = math.MaxInt64
+	}
+
+	// Read whole, not only its first line: everything the restore would refuse
+	// is refused here, while there is still a screen to say it on.
+	var contents sqldb.BackupContents
 
 	err = backup.Open(file, string(passphrase), func(content io.Reader) error {
-		header, err = sqldb.ReadBackupHeader(content)
+		contents, err = sqldb.InspectBackup(content, schema)
 
 		return err
 	})
@@ -566,9 +610,19 @@ func (s *server) backup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if contents.KeyCheck != "" {
+		if err := appservice.CheckSecretKey(s.cfg.Secrets, contents.KeyCheck); err != nil {
+			writeError(w, http.StatusBadRequest, keyRefusal(err))
+
+			return
+		}
+	}
+
 	s.mu.Lock()
 	s.restore = &pendingRestore{file: file, passphrase: string(passphrase)}
 	s.mu.Unlock()
+
+	header := contents.Header
 
 	s.cfg.Logf("a backup %s is ready to restore", header.Describe())
 
@@ -582,14 +636,31 @@ func backupRefusal(err error) error {
 	switch {
 	case errors.Is(err, backup.ErrWrongPassphrase):
 		return apperror.Invalidf("the passphrase does not open this backup").WithCode("backupWrongPassphrase")
-	case errors.Is(err, backup.ErrNewerFormat):
+	case errors.Is(err, backup.ErrNewerFormat), errors.Is(err, sqldb.ErrNewerSchema):
 		return apperror.Invalidf("a newer version of TimePulse wrote this backup").WithCode("backupFromNewerVersion")
+	case errors.Is(err, sqldb.ErrCutShort):
+		return apperror.Invalidf("the backup ends before its last line: it was cut short on its way here, " +
+			"so download it again").WithCode("backupCutShort")
 	case errors.Is(err, backup.ErrTooLarge):
 		return apperror.Invalidf("the backup is larger than a backup may be").
 			WithCode("backupTooLarge", strconv.Itoa(backup.MaxFileSize>>20))
 	default:
 		return apperror.Invalidf("this is not a TimePulse backup").WithCode("notABackup")
 	}
+}
+
+// keyRefusal is why a backup whose secrets this process's SECRET_KEY cannot open
+// was not taken, coded for the page to say which key it needs.
+func keyRefusal(err error) error {
+	if errors.Is(err, appservice.ErrSecretKeyMissing) {
+		return apperror.Invalidf("this backup was made where SECRET_KEY was set, and its second factors " +
+			"and directory password are sealed with that key: start TimePulse here with the same " +
+			"SECRET_KEY").WithCode("backupNeedsSecretKey")
+	}
+
+	return apperror.Invalidf("this backup's secrets were sealed with another SECRET_KEY than the one set " +
+		"here: start TimePulse with the SECRET_KEY of the installation it was made on").
+		WithCode("backupOtherSecretKey")
 }
 
 // holdsTheToken reports whether a request carries the setup token.

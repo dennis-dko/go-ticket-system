@@ -3,8 +3,10 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -39,10 +41,10 @@ type installerClient struct {
 	token string
 }
 
-func openInstaller(t *testing.T) *installerClient {
+func openInstaller(t *testing.T, env ...string) *installerClient {
 	t.Helper()
 
-	app := harness.StartUnconfigured(t)
+	app := harness.StartUnconfigured(t, env...)
 
 	// The token is logged during start-up, and waitUntilReady already waited for
 	// the port to answer - but the log is written by a different goroutine, so
@@ -532,5 +534,39 @@ func TestTheHandOverStopsOnceAPasswordHasBeenChosen(t *testing.T) {
 	if got := claim(t, browser, c.token); got.Status == http.StatusOK ||
 		got.Status == http.StatusCreated {
 		t.Error("the setup token still opened a session after a password was chosen")
+	}
+}
+
+// The installer's tab carries TimePulse's icon, as the application's tab does.
+// The page linked none, and the installer answers every path but its own with
+// the page, so a browser asking for an icon was handed the page back and showed
+// none - the one screen of a new installation without the mark.
+func TestTheInstallersTabCarriesTheApplicationsIcon(t *testing.T) {
+	t.Parallel()
+
+	c := openInstaller(t)
+
+	if page := get(t, c.app.BaseURL()+"/"); !strings.Contains(page,
+		`<link rel="icon" type="image/svg+xml" href="/favicon.svg">`) {
+		t.Error("the installer's page links no icon")
+	}
+
+	want, err := os.ReadFile(filepath.Join(harness.RepoRoot(), "internal", "interface", "web", "asset", "favicon.svg"))
+	if err != nil {
+		t.Fatalf("reading the application's icon: %v", err)
+	}
+
+	res, err := (&http.Client{Timeout: 10 * time.Second}).Get(c.app.BaseURL() + "/favicon.svg")
+	if err != nil {
+		t.Fatalf("asking the installer for the icon: %v", err)
+	}
+
+	defer func() { _ = res.Body.Close() }()
+
+	got, _ := io.ReadAll(res.Body)
+
+	if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != "image/svg+xml" || !bytes.Equal(got, want) {
+		t.Errorf("the installer answers /favicon.svg with %d %s and %d bytes, want the application's icon, "+
+			"%d bytes of image/svg+xml", res.StatusCode, res.Header.Get("Content-Type"), len(got), len(want))
 	}
 }
