@@ -214,6 +214,36 @@ func TestTheCredentialsInTheSettingsAreBroughtUnderTheKey(t *testing.T) {
 	}
 }
 
+// The key that signs a push to a browser is brought under the key as well. It is
+// made the first time a browser subscribes, and one made before SECRET_KEY was
+// configured was left in the clear for good - while .env.example says the key
+// encrypts "the key that signs a push to a browser".
+func TestAPushKeyFromBeforeTheKeyIsBroughtUnderIt(t *testing.T) {
+	db := newTestDB(t)
+	ctx := context.Background()
+
+	settings := sqldb.NewSettingsRepository(db, sqldb.DialectSQLite)
+	if err := settings.Set(ctx, model.SettingWebPushKey, "the-private-push-key"); err != nil {
+		t.Fatalf("store the push key in the clear: %v", err)
+	}
+
+	sealer := aSealer(t)
+
+	moved, err := sqldb.SealStoredSecrets(ctx, db, sqldb.DialectSQLite, sealer)
+	if err != nil || moved != 1 {
+		t.Fatalf("brought %d values under the key (%v), want the push key", moved, err)
+	}
+
+	raw, err := settings.Get(ctx, model.SettingWebPushKey)
+	if err != nil || !security.IsSealed(raw) {
+		t.Fatalf("the push key is stored as %q (%v), want it sealed", raw, err)
+	}
+
+	if opened, err := sealer.Open(raw); err != nil || opened != "the-private-push-key" {
+		t.Errorf("the sealed push key opens to %q (%v), want the key it was", opened, err)
+	}
+}
+
 // An installation with no key is left exactly as it was.
 func TestWithoutAKeyNothingIsTouched(t *testing.T) {
 	db := newTestDB(t)

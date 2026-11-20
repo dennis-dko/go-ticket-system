@@ -1459,11 +1459,11 @@ A backup is restored through the **installer**, into an **empty** database of
 any dialect - one made on SQLite restores into PostgreSQL, and the other way
 round:
 
-1. Start TimePulse so that it serves its installer, with the `SECRET_KEY` the
-   backup's installation had. A binary or a bare container serves it when no
-   database is configured (see *First start*). Compose configures one itself, so
-   run the application once without it, against a database volume that is new
-   and empty:
+1. Start TimePulse so that it serves its installer, with the `SECRET_KEY` this
+   installation is to keep - the one the backup's installation had, another, or
+   none. A binary or a bare container serves the installer when no database is
+   configured (see *First start*). Compose configures one itself, so run the
+   application once without it, against a database volume that is new and empty:
 
    ```bash
    docker compose run --rm --service-ports -e DB_DIALECT= app
@@ -1473,10 +1473,21 @@ round:
    setup token in that terminal.
 2. Choose the database, choose *Restore a backup into it*, choose the file and type
    its `BACKUP_PASSPHRASE`. The installer reads it whole there and then, so a
-   wrong passphrase, a file that is not a backup, one cut short on its way, one
-   made by a newer version of TimePulse and one whose secrets the `SECRET_KEY`
-   of step 1 cannot open are said on that page - the restore itself runs after
-   the installer has handed over, where a refusal can only end the process.
+   wrong passphrase, a file that is not a backup, one cut short on its way and
+   one made by a newer version of TimePulse are said on that page - the restore
+   itself runs after the installer has handed over, where a refusal can only end
+   the process.
+
+   Where the backup's installation had a `SECRET_KEY` other than step 1's, its
+   second factors, directory password, sign-in provider's client secret and
+   push key are sealed with that key, and the installer asks for it, the way it
+   asks for the passphrase. Given, it is used once: the restore seals those
+   secrets again under this installation's own key, or keeps them in the clear
+   if this one has none, and the old key is kept nowhere. Where that key is
+   lost, choose *Without its secrets* instead: everything else comes back, the
+   second factors are switched off and set up again, the directory password and
+   the client secret are entered again, and browsers subscribe to
+   notifications anew.
 3. *Save and start*. The application migrates the database and puts the backup
    into it before anything else, and everybody signs in with the passwords they
    had. Under Compose, stop that run once it has started - Ctrl+C - and bring the

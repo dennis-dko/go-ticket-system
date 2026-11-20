@@ -109,7 +109,7 @@ func TestABackupRestoresWhatWasBackedUp(t *testing.T) {
 	restored := newTestDB(t)
 	ctx := context.Background()
 
-	summary, err := sqldb.Restore(ctx, restored, sqldb.DialectSQLite, newestMigration(), backup)
+	summary, err := sqldb.Restore(ctx, restored, sqldb.DialectSQLite, newestMigration(), backup, nil)
 	if err != nil {
 		t.Fatalf("restore: %v", err)
 	}
@@ -175,13 +175,13 @@ func TestARestoreRefusesWhatItCannotFinish(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := sqldb.Restore(ctx, original, sqldb.DialectSQLite, newestMigration(),
-		strings.NewReader(backup)); !errors.Is(err, sqldb.ErrNotEmpty) {
+		strings.NewReader(backup), nil); !errors.Is(err, sqldb.ErrNotEmpty) {
 		t.Errorf("into a database with accounts: %v, want ErrNotEmpty", err)
 	}
 
 	older := newTestDB(t)
 	if _, err := sqldb.Restore(ctx, older, sqldb.DialectSQLite, newestMigration()-1,
-		strings.NewReader(backup)); !errors.Is(err, sqldb.ErrNewerSchema) {
+		strings.NewReader(backup), nil); !errors.Is(err, sqldb.ErrNewerSchema) {
 		t.Errorf("into an older schema: %v, want ErrNewerSchema", err)
 	}
 
@@ -197,7 +197,7 @@ func TestARestoreRefusesWhatItCannotFinish(t *testing.T) {
 	short := strings.Join(lines[:len(lines)-1], "\n")
 
 	if _, err := sqldb.Restore(ctx, cut, sqldb.DialectSQLite, newestMigration(),
-		strings.NewReader(short)); !errors.Is(err, sqldb.ErrCutShort) {
+		strings.NewReader(short), nil); !errors.Is(err, sqldb.ErrCutShort) {
 		t.Errorf("a backup without its last line: %v, want ErrCutShort", err)
 	}
 
@@ -209,6 +209,30 @@ func TestARestoreRefusesWhatItCannotFinish(t *testing.T) {
 	if users != 0 || roles != seeded {
 		t.Errorf("a refused restore left %d accounts and %d roles, want none and the %d seeded",
 			users, roles, seeded)
+	}
+}
+
+// What a restore's last step changes - its secrets sealed again or left behind -
+// lands with the restore or not at all: a last step that fails takes every row
+// the restore wrote back with it, rather than leaving an installation whose
+// secrets nothing can open.
+func TestARestoresLastStepIsPartOfItsTransaction(t *testing.T) {
+	original, _ := filled(t)
+	backup := dumped(t, original).String()
+	target := newTestDB(t)
+
+	failed := errors.New("the last step failed")
+
+	_, err := sqldb.Restore(context.Background(), target, sqldb.DialectSQLite, newestMigration(),
+		strings.NewReader(backup), func(context.Context, sqldb.DB) error { return failed })
+	if !errors.Is(err, failed) {
+		t.Fatalf("the restore answered %v, want the failure of its last step", err)
+	}
+
+	var users int
+
+	if err := target.QueryRow("SELECT COUNT(*) FROM users").Scan(&users); err != nil || users != 0 {
+		t.Errorf("a restore whose last step failed left %d accounts (%v), want none", users, err)
 	}
 }
 

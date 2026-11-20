@@ -35,32 +35,150 @@ func SealStoredSecrets(
 		return 0, nil
 	}
 
-	moved, err := sealTOTPSecrets(ctx, db, dialect, secrets)
-	if err != nil {
-		return moved, err
-	}
+	return rewriteStoredSecrets(ctx, db, dialect, func(stored string) (string, error) {
+		if security.IsSealed(stored) {
+			return stored, nil
+		}
 
-	sealedLDAP, err := sealSettingSecret(ctx, db, dialect, secrets, model.SettingLDAPSettings,
-		func(config *model.LDAPConfig) *string { return &config.BindPassword })
-	if err != nil {
-		return moved, err
-	}
-
-	sealedOpenID, err := sealSettingSecret(ctx, db, dialect, secrets, model.SettingOpenID,
-		func(config *model.OpenIDConfig) *string { return &config.ClientSecret })
-	if err != nil {
-		return moved + sealedLDAP, err
-	}
-
-	return moved + sealedLDAP + sealedOpenID, nil
+		return secrets.Seal(stored)
+	})
 }
 
-// sealTOTPSecrets encrypts the second factors that are still in the clear.
-func sealTOTPSecrets(
+// RekeyStoredSecrets seals again with to every secret that from opens. It is what
+// a restore does with a backup made where another SECRET_KEY was set: the second
+// factors, the directory's bind password, a provider's client secret and the push
+// key work under this installation's key afterwards, and the key they came under
+// is needed this once and kept nowhere. With no key in to they are stored in the
+// clear, as an installation without one stores everything.
+//
+// The key check of the installation they came from goes with them, so the start
+// that follows records this installation's instead of refusing it.
+func RekeyStoredSecrets(ctx context.Context, db DB, dialect string, from, to *security.Sealer) (int, error) {
+	changed, err := rewriteStoredSecrets(ctx, db, dialect, func(stored string) (string, error) {
+		if !security.IsSealed(stored) {
+			return stored, nil
+		}
+
+		plain, err := from.Open(stored)
+		if err != nil {
+			return "", err
+		}
+
+		if !to.Enabled() {
+			return plain, nil
+		}
+
+		return to.Seal(plain)
+	})
+	if err != nil {
+		return changed, err
+	}
+
+	return changed, forgetKeyCheck(ctx, db, dialect)
+}
+
+// LeaveStoredSecretsBehind empties every sealed secret. It is what a restore does
+// when the key they were sealed with is lost: the second factors are switched off,
+// to be set up again; the directory's bind password and a provider's client
+// secret are entered again; and the push key is made anew the next time one is
+// wanted, with the browsers' subscriptions to the old one gone, since nothing can
+// send to them any more. Everything else comes back as it was.
+func LeaveStoredSecretsBehind(ctx context.Context, db DB, dialect string) (int, error) {
+	left, err := rewriteStoredSecrets(ctx, db, dialect, func(stored string) (string, error) {
+		if security.IsSealed(stored) {
+			return "", nil
+		}
+
+		return stored, nil
+	})
+	if err != nil {
+		return left, err
+	}
+
+	// A second factor without its seed would ask for a code nothing can check.
+	if _, err := db.ExecContext(ctx,
+		Rebind(dialect, "UPDATE users SET totp_enabled = ? WHERE totp_secret = ''"), false); err != nil {
+		return left, fmt.Errorf("switching off the second factors left behind: %w", err)
+	}
+
+	var pushKey string
+
+	_ = db.QueryRowContext(ctx,
+		Rebind(dialect, "SELECT value FROM settings WHERE key_name = ?"), model.SettingWebPushKey).Scan(&pushKey)
+
+	if pushKey == "" {
+		if _, err := db.ExecContext(ctx, "DELETE FROM push_subscriptions"); err != nil {
+			return left, fmt.Errorf("removing the subscriptions to the push key left behind: %w", err)
+		}
+	}
+
+	return left, forgetKeyCheck(ctx, db, dialect)
+}
+
+// forgetKeyCheck removes the key check, which the next start records again for
+// whatever key this installation has.
+func forgetKeyCheck(ctx context.Context, db DB, dialect string) error {
+	if _, err := db.ExecContext(ctx,
+		Rebind(dialect, "DELETE FROM settings WHERE key_name = ?"), model.SettingSecretKeyCheck); err != nil {
+		return fmt.Errorf("removing the key check of the installation a backup came from: %w", err)
+	}
+
+	return nil
+}
+
+// rewriteStoredSecrets hands change every value a SECRET_KEY seals - the second
+// factors, the directory's bind password, a sign-in provider's client secret and
+// the key that signs a push to a browser - as it is stored, empty ones aside, and
+// stores what change answers wherever that differs.
+//
+// Bringing what was written in the clear under a key is one change; re-sealing a
+// restored backup's secrets under another key and leaving them behind are two
+// more. One list of where the secrets are serves all three, so a secret added to
+// it is sealed, re-sealed and left behind alike - the push key was missing from
+// the first of them for as long as each kept a list of its own.
+//
+// Returns how many values it changed.
+func rewriteStoredSecrets(
 	ctx context.Context,
 	db DB,
 	dialect string,
-	secrets *security.Sealer,
+	change func(stored string) (string, error),
+) (int, error) {
+	changed, err := rewriteTOTPSecrets(ctx, db, dialect, change)
+	if err != nil {
+		return changed, err
+	}
+
+	for _, rewrite := range []func() (int, error){
+		func() (int, error) {
+			return rewriteSettingSecret(ctx, db, dialect, model.SettingLDAPSettings,
+				func(config *model.LDAPConfig) *string { return &config.BindPassword }, change)
+		},
+		func() (int, error) {
+			return rewriteSettingSecret(ctx, db, dialect, model.SettingOpenID,
+				func(config *model.OpenIDConfig) *string { return &config.ClientSecret }, change)
+		},
+		func() (int, error) {
+			return rewritePlainSetting(ctx, db, dialect, model.SettingWebPushKey, change)
+		},
+	} {
+		n, err := rewrite()
+		changed += n
+
+		if err != nil {
+			return changed, err
+		}
+	}
+
+	return changed, nil
+}
+
+// rewriteTOTPSecrets changes the seeds of the second factors.
+func rewriteTOTPSecrets(
+	ctx context.Context,
+	db DB,
+	dialect string,
+	change func(stored string) (string, error),
 ) (int, error) {
 	rows, err := db.QueryContext(ctx,
 		Rebind(dialect, "SELECT id, totp_secret FROM users WHERE totp_secret <> ''"))
@@ -70,24 +188,22 @@ func sealTOTPSecrets(
 
 	// Collected before anything is written: an update while the rows are open is
 	// a lock the same connection is waiting on, on SQLite.
-	type pending struct {
+	type stored struct {
 		id     uint
 		secret string
 	}
 
-	var plain []pending
+	var all []stored
 
 	for rows.Next() {
-		var row pending
+		var row stored
 		if err := rows.Scan(&row.id, &row.secret); err != nil {
 			_ = rows.Close()
 
 			return 0, fmt.Errorf("reading the stored second factors: %w", err)
 		}
 
-		if !security.IsSealed(row.secret) {
-			plain = append(plain, row)
-		}
+		all = append(all, row)
 	}
 
 	err = rows.Err()
@@ -97,36 +213,43 @@ func sealTOTPSecrets(
 		return 0, fmt.Errorf("reading the stored second factors: %w", err)
 	}
 
-	for _, row := range plain {
-		sealed, sealErr := secrets.Seal(row.secret)
-		if sealErr != nil {
-			return 0, sealErr
+	changed := 0
+
+	for _, row := range all {
+		value, err := change(row.secret)
+		if err != nil {
+			return changed, fmt.Errorf("a stored second factor: %w", err)
+		}
+
+		if value == row.secret {
+			continue
 		}
 
 		if _, err := db.ExecContext(ctx,
 			Rebind(dialect, "UPDATE users SET totp_secret = ? WHERE id = ?"),
-			sealed, row.id); err != nil {
-			return 0, fmt.Errorf("encrypting a stored second factor: %w", err)
+			value, row.id); err != nil {
+			return changed, fmt.Errorf("rewriting a stored second factor: %w", err)
 		}
+
+		changed++
 	}
 
-	return len(plain), nil
+	return changed, nil
 }
 
-// sealSettingSecret encrypts the credential inside a setting stored as JSON, if it
-// is still in the clear - the directory's bind password, a sign-in provider's
-// client secret.
+// rewriteSettingSecret changes the credential inside a setting stored as JSON -
+// the directory's bind password, a sign-in provider's client secret.
 //
 // Only that field. The rest of the configuration is a setting rather than a
 // credential, and a stored setting is worth being able to read when something is
 // wrong with it.
-func sealSettingSecret[C any](
+func rewriteSettingSecret[C any](
 	ctx context.Context,
 	db DB,
 	dialect string,
-	secrets *security.Sealer,
 	key string,
 	secretOf func(*C) *string,
+	change func(stored string) (string, error),
 ) (int, error) {
 	var raw string
 
@@ -145,16 +268,20 @@ func sealSettingSecret[C any](
 	}
 
 	secret := secretOf(&config)
-	if *secret == "" || security.IsSealed(*secret) {
+	if *secret == "" {
 		return 0, nil
 	}
 
-	sealed, err := secrets.Seal(*secret)
+	value, err := change(*secret)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("the credential in %s: %w", key, err)
 	}
 
-	*secret = sealed
+	if value == *secret {
+		return 0, nil
+	}
+
+	*secret = value
 
 	encoded, err := json.Marshal(config)
 	if err != nil {
@@ -163,7 +290,41 @@ func sealSettingSecret[C any](
 
 	if _, err := db.ExecContext(ctx,
 		Rebind(dialect, "UPDATE settings SET value = ? WHERE key_name = ?"), string(encoded), key); err != nil {
-		return 0, fmt.Errorf("encrypting the credential in %s: %w", key, err)
+		return 0, fmt.Errorf("rewriting the credential in %s: %w", key, err)
+	}
+
+	return 1, nil
+}
+
+// rewritePlainSetting changes a setting whose whole value is the secret - the key
+// that signs a push to a browser.
+func rewritePlainSetting(
+	ctx context.Context,
+	db DB,
+	dialect string,
+	key string,
+	change func(stored string) (string, error),
+) (int, error) {
+	var stored string
+
+	err := db.QueryRowContext(ctx,
+		Rebind(dialect, "SELECT value FROM settings WHERE key_name = ?"), key).Scan(&stored)
+	if err != nil || stored == "" {
+		return 0, nil
+	}
+
+	value, err := change(stored)
+	if err != nil {
+		return 0, fmt.Errorf("the secret in %s: %w", key, err)
+	}
+
+	if value == stored {
+		return 0, nil
+	}
+
+	if _, err := db.ExecContext(ctx,
+		Rebind(dialect, "UPDATE settings SET value = ? WHERE key_name = ?"), value, key); err != nil {
+		return 0, fmt.Errorf("rewriting the secret in %s: %w", key, err)
 	}
 
 	return 1, nil
