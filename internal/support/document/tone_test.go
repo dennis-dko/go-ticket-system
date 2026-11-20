@@ -147,6 +147,50 @@ func TestASummaryFigureInCreditOrDebtIsPrintedInItsShade(t *testing.T) {
 	}
 }
 
+// A total is printed as its screen shows it: one the screen sets quietly in its
+// grey - the report's, the statistics', the working time's - is grey on paper,
+// its name with it, and one the screen writes as plain text, as the statement of
+// work does, is in the body's ink. Neither is in the accent.
+//
+// Every figure of the summary used to be printed in the accent, on the reasoning
+// that the number the picture is about should be in the picture's colour. The
+// maintainer asked on 2026-11-20 for the totals to look as they do on the screen,
+// where none of them is blue.
+func TestATotalIsPrintedAsItsScreenShowsIt(t *testing.T) {
+	t.Parallel()
+
+	write := func(tone Tone) string {
+		out, err := Write(Document{
+			Title:   "Auswertung",
+			Summary: []Line{{Label: "Gesamt", Value: "7,50 Std.", Tone: tone}},
+		})
+		if err != nil {
+			t.Fatalf("writing the document: %v", err)
+		}
+
+		return drawn(t, out)
+	}
+
+	accent := "q " + operator(defaultAccent) + " BT"
+	grey := "q " + operator(defaultMuted) + " BT"
+
+	plain, quiet := write(""), write(Muted)
+
+	// The title is written in the accent either way, and only the title is.
+	if got := strings.Count(plain, accent); got != 1 {
+		t.Errorf("a plain total is written in the accent beside the title: %d writings in it, want the title's one", got)
+	}
+
+	if got := strings.Count(quiet, accent); got != 1 {
+		t.Errorf("a quiet total is written in the accent beside the title: %d writings in it, want the title's one", got)
+	}
+
+	// The foot of the page is grey either way, so the grey is counted.
+	if more := strings.Count(quiet, grey) - strings.Count(plain, grey); more != 2 {
+		t.Errorf("a quiet total added %d writings in the page's grey, want two - its name and its figure", more)
+	}
+}
+
 // A tone the page does not know is printed as none rather than refused: a
 // document is not worth losing over a word a newer screen sent.
 func TestAToneThePageDoesNotKnowIsPrintedAsNone(t *testing.T) {

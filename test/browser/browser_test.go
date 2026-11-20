@@ -18,7 +18,6 @@ import (
 	"github.com/chromedp/chromedp"
 
 	"github.com/dennis-dko/timepulse/test/harness"
-	"github.com/dennis-dko/timepulse/test/tempdir"
 )
 
 // interactionTimeout bounds one test. Generous, because a cold browser start
@@ -90,12 +89,13 @@ func launch(t *testing.T, language string, more ...chromedp.ExecAllocatorOption)
 		// and nothing here learns whether that worked; on Windows a helper process
 		// of Chrome's is often still writing then. One green run of the suite left
 		// seventeen profiles behind that way, and 17,745 had piled up in the
-		// temporary directory of the machine where it was noticed. tempdir keeps
-		// trying for as long as Windows holds on - and is registered here, before
-		// the allocator exists, so it runs after whatever closes the browser,
-		// whether the case closes it with defer or with t.Cleanup.
-		// TestABrowserLeavesNoProfileBehind holds the order.
-		chromedp.UserDataDir(tempdir.New(t)),
+		// temporary directory of the machine where it was noticed. profileFor
+		// waits for the browser's last process, then keeps trying for as long as
+		// Windows holds on - and is registered here, before the allocator exists,
+		// so it runs after whatever closes the browser, whether the case closes it
+		// with defer or with t.Cleanup. TestABrowserLeavesNoProfileBehind and
+		// TestAProfileIsRemovedOnlyOnceItsLastProcessHasGone hold the order.
+		chromedp.UserDataDir(profileFor(t)),
 
 		// The container images CI uses run as root, where Chrome refuses to
 		// start without this.
