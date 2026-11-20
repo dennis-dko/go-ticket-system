@@ -245,14 +245,14 @@ func TestAChartThatIsNotAPictureIsRefused(t *testing.T) {
 	}
 }
 
-// A description far wider than its column is cut rather than pushing the
-// column beside it off the paper.
+// A description far wider than its column folds, and is cut once it has filled
+// its lines rather than running its row off the paper.
 //
 // Asserted through the page count, which is the only thing visible from out
-// here: text that overflows its cell in fpdf does not wrap, it runs on, and the
-// document is still one page either way. What this really guards is that a
-// pathological cell does not throw or hang - the shortening loop walks one rune
-// at a time, and an empty result would loop forever.
+// here: twelve thousand letters folded without a bound make a row more than two
+// pages tall. What this also guards is that a pathological cell does not throw
+// or hang - the shortening loop walks one rune at a time, and an empty result
+// would loop forever.
 func TestAnAbsurdlyWideCellDoesNotDerailTheTable(t *testing.T) {
 	t.Parallel()
 
@@ -265,7 +265,7 @@ func TestAnAbsurdlyWideCellDoesNotDerailTheTable(t *testing.T) {
 				Columns: []string{"Beschreibung", "Stunden"},
 				Numeric: []bool{false, true},
 				Rows: [][]string{
-					{strings.Repeat("ä", 4000), "1,0"},
+					{strings.Repeat("ä", 12000), "1,0"},
 					{"kurz", "2,0"},
 				},
 			},

@@ -10865,9 +10865,9 @@ const TOUR_STEPS = [
     permission: 'users:read',
     title: () => t('tour.userTable.title', 'Who is here, and what they may do'),
     text: () => t('tour.userTable.text',
-      'The role beside each name can be changed from here. The built-in administrator is '
-      + 'the exception: it cannot be deleted and its role cannot be moved, because it is '
-      + 'the way back in.'),
+      'The role beside each name can be changed from here, a forgotten password reset and a '
+      + 'second factor lost with a phone removed. The built-in administrator is the exception: '
+      + 'it cannot be deleted and its role cannot be moved, because it is the way back in.'),
   },
   {
     target: '#form-role',
@@ -10951,7 +10951,8 @@ const TOUR_STEPS = [
     title: () => t('tour.totp.title', 'A second factor'),
     text: () => t('tour.totp.text',
       'A code from an authenticator app, set up by scanning a QR code - or by typing the '
-      + 'secret, where scanning is not an option.'),
+      + 'secret, where scanning is not an option. Lost with a phone, it is removed by an '
+      + 'administrator, and you set it up again.'),
   },
   {
     target: '#passkey-card',
@@ -10978,7 +10979,8 @@ const TOUR_STEPS = [
     title: () => t('tour.install.title', 'The Android app'),
     text: () => t('tour.install.text',
       'Scan this code with an Android phone to download the app of the release this '
-      + 'installation runs. It shows this interface and reminds you with notifications.'),
+      + 'installation runs. It shows this interface, reminds you with notifications, and at '
+      + 'every start offers its new version once this installation has been updated.'),
   },
   {
     target: '#feed-card',
@@ -14717,7 +14719,49 @@ async function chartAsPicture(container) {
 }
 
 /**
- * Reads a table off the screen as the figures it is showing.
+ * What one cell says, as the one line a document gives it.
+ *
+ * A cell made of parts set one under the other keeps them apart. The day past
+ * two limits of the Working Hours Act shows a line for each, and its text taken
+ * whole ran the two sentences together on paper: "…(§ 3)45 minutes of breaks…".
+ */
+function cellAsFigure(cell) {
+  if (!cell) return '';
+
+  const parts = [...cell.children];
+  const stacked = parts.length > 1
+    && parts.every((part) => window.getComputedStyle(part).display === 'block');
+
+  if (!stacked) return cell.textContent.trim();
+
+  return parts.map((part) => part.textContent.trim()).filter(Boolean).join(' · ');
+}
+
+/**
+ * What a figure says with its colour, as the word a document prints it by: a
+ * balance in credit or in debt, something quieter than the rest, a notice.
+ *
+ * The word rather than the colour it is drawn in. A colour is the theme's, and
+ * the dark theme's are drawn for a dark ground - a pale grey, a tint nearly
+ * black - so the document prints each word in shades of its own, the light
+ * theme's (document.Tone on the server). The classes are the ones the stylesheet
+ * draws a figure apart by; everyColourIsCarried in the browser suite fails on a
+ * cell drawn apart that this gives no word.
+ */
+function toneOf(figure) {
+  if (!figure) return '';
+
+  if (figure.matches('.plus')) return 'plus';
+  if (figure.matches('.minus')) return 'minus';
+  if (figure.querySelector('.act-notice')) return 'notice';
+  if (figure.matches('.empty') || figure.closest('tr.unrecorded')) return 'muted';
+
+  return '';
+}
+
+/**
+ * Reads a table off the screen as the figures it is showing, and what each of
+ * them says with its colour.
  *
  * The rendered table rather than the answer it was drawn from: what goes in the
  * document is what somebody is looking at, already sorted, already formatted,
@@ -14741,14 +14785,17 @@ function tableAsFigures(table) {
   if (wanted.length === 0) return null;
 
   const rows = [...table.querySelectorAll('tbody tr')]
-    // The "nothing here" line is a message, not a row of figures.
-    .filter((row) => !row.querySelector('td.empty'))
-    .map((row) => wanted.map((i) => row.children[i]?.textContent.trim() ?? ''));
+    // The "nothing here" line is a message, not a row of figures. It is told
+    // apart by being the row's only cell, not by its class alone: a statement's
+    // "no rate yet" is marked empty as well, and its line was left out of the
+    // document with its hours.
+    .filter((row) => !(row.children.length === 1 && row.firstElementChild.matches('td.empty')));
 
   return {
     columns: wanted.map((i) => headings[i].textContent.trim()),
     numeric: wanted.map((i) => headings[i].classList.contains('num')),
-    rows,
+    rows: rows.map((row) => wanted.map((i) => cellAsFigure(row.children[i]))),
+    tones: rows.map((row) => wanted.map((i) => toneOf(row.children[i]))),
   };
 }
 
@@ -14945,6 +14992,7 @@ async function overtimeDocument() {
     summary: [{
       label: t('ot.balance', 'Balance'),
       value: $('#overtime-total').textContent.trim(),
+      tone: toneOf($('#overtime-total')),
     }],
   };
 }

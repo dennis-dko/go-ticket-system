@@ -1433,10 +1433,11 @@ time entries and their history, running timers, absences, plans and templates,
 tokens and passkeys, the administration log, and the whole settings table -
 branding and the logo, the timezone, the directory configuration including its
 bind password. Not the sessions: after a restore everybody signs in again.
-Second factors and the directory password are sealed with `SECRET_KEY` where one
-is set, and stay sealed inside the backup, so a restore needs that `SECRET_KEY`
-too. Keep the passphrase and the key together, and somewhere other than the
-server whose backups they open.
+Second factors, the directory password, a sign-in provider's client secret and
+the push key are sealed with `SECRET_KEY` where one is set, and stay sealed
+inside the backup, so a restore needs that `SECRET_KEY` too - or leaves those
+four behind, as *Restoring a backup* below says. Keep the passphrase and the key
+together, and somewhere other than the server whose backups they open.
 
 **Where they are kept.** `BACKUP_DIR`: `backups` beside `configs/` for a binary,
 `/data/backups` on the `app-data` volume under Compose. Each file is named for
@@ -1547,6 +1548,12 @@ systemctl stop timepulse && cp timepulse-web_v1.3.0_linux_amd64 /opt/timepulse/t
 
 The schema migrates itself on the way up. There is no separate command, and
 nothing to run afterwards.
+
+Phones with the Android app are offered the new release's app at their next
+start: the app asks the installation which release it runs, and a press
+downloads that release's app from GitHub and hands it to Android, which asks
+to confirm it. The phone has to reach GitHub for that; one that cannot is told
+the download failed and keeps the app it has.
 
 Releases up to v0.4.2 carried a terminal client beside this binary. None does since: booking is the web interface's and the
 Android app's. An update neither replaces nor removes a client already handed

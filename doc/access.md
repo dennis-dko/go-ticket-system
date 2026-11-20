@@ -64,7 +64,7 @@ are actually enforced.
 One of them is the whole administration: `settings:manage` opens the *Settings*
 screen and everything on it — the branding, the operational limits, the instance
 timezone, the database connection, the telemetry, the maintenance notice, the
-log and the restart. It is what the `user-admin` role holds that `user` does
+backups, the log and the restart. It is what the `user-admin` role holds that `user` does
 not, and it is why that role is handed out deliberately rather than assembled
 out of smaller rights. Two things stay outside it and belong to an account that
 administers and has no working day of its own - the built-in administrator, or
@@ -76,12 +76,15 @@ synchronisation card is replaced by a sentence saying so.
 
 Running an installation and recording time in it are two different jobs, and the
 `admin` role does only the first: accounts, roles, the database, the directory, the
-log. It has **no** working day at all — it cannot book an hour, keep a project, read
-a figure or set a daily target, its own included.
+backups, the log. It has **no** working day at all — it cannot book an hour, keep a
+project, read a figure or set a daily target, its own included.
 
-Backups used to be in that list and are not a thing this application does: there is
-no permission for them, no endpoint and no screen. They are external, and
-[`deploy/OPERATION.md`](../deploy/OPERATION.md) says what to copy for each dialect.
+Backups were out of that list for as long as the application made none, and are back
+in it: the *Backups* card under *Settings* makes one sealed file of the whole
+installation, now or on a schedule, for whoever holds `settings:manage`. A download
+is a copy of every account and every hour leaving the server, so making, downloading
+and deleting one are in the [administration log](#the-administration-log).
+[`deploy/OPERATION.md`](../deploy/OPERATION.md#backup) says how one is restored.
 
 That is deliberate, and the reason is the account itself. Every installation has the
 built-in administrator before anybody has chosen anything: it is how you get in, not
@@ -431,10 +434,13 @@ What holds the round trip together:
 
 Under **Settings**, *Changes to the installation* lists who changed how the
 installation is run, newest first: an account created, corrected, given another
-role, given a new password or deleted; a role created, changed or deleted;
-accounts or roles imported; each settings card saved; maintenance mode or
-managers switched on or off; an account's managers assigned; the directory
-synchronised; the application restarted, updated or set up. Everybody holding `settings:manage` can read it, and nobody else.
+role, given a new password, stripped of a lost second factor or deleted; a role
+created, changed or deleted; accounts or roles imported; each settings card saved;
+maintenance mode or managers switched on or off; an account's managers assigned;
+the directory synchronised; a backup made, downloaded or deleted, and the plan for
+them changed; the application restarted, updated or set up; and the built-in
+administrator let back in by the recover command, which has no account to name
+and is shown as made on the server. Everybody holding `settings:manage` can read it, and nobody else.
 
 A change is recorded once it has gone through - a refused request changed
 nothing and is not there, and neither is *Check the file* before an import,

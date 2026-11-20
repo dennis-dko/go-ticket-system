@@ -97,12 +97,14 @@ than the production ones.
 
 ## What a copy of the database gives away
 
-Passwords are bcrypt hashes, so a stolen dump yields none of them. Two other
+Passwords are bcrypt hashes, so a stolen dump yields none of them. Four other
 values cannot be hashed, because the application has to read them back rather
 than compare against them: the TOTP seed, which is fed to the code generator on
-every sign-in, and the directory's bind password, which is sent to the directory.
+every sign-in; the directory's bind password, which is sent to the directory; a
+sign-in provider's client secret, which is sent to the provider; and the key
+that signs a push to a browser.
 
-`SECRET_KEY` encrypts those two, with the key outside the database:
+`SECRET_KEY` encrypts those four, with the key outside the database:
 
 ```bash
 openssl rand -base64 32
@@ -122,6 +124,25 @@ Three things follow from that, and all three are easier to know than to discover
 - **It is protection against a copy, not against the machine.** A backup on a
   laptop, a snapshot with weaker access, a managed database somebody can read.
   Whoever has the machine has the key too, and nothing here changes that.
+
+The application's own backups are a copy too, made to leave the server, so each
+is sealed as a whole with `BACKUP_PASSPHRASE` - and none is made without one.
+Inside it the four values stay sealed with `SECRET_KEY`, so restoring one on
+another server takes the passphrase, and the key the backup's installation had
+or the choice to leave those four behind; the installer asks for both. The
+[operations manual](../deploy/OPERATION.md#backup) has the rest.
+
+## A way back in
+
+The built-in administrator cannot register a passkey and is never handed to a
+directory, so it is always a password away. Should that password be lost, or
+its second factor with a phone, `timepulse-web recover` on the server prints a
+one-time password for it, removes its second factor, ends its sessions and
+writes the administration log - whoever can run a command there already holds
+the installation. Anybody else who lost a second factor has it removed by an
+administrator, from the account's row, passkeys with it; the account signs in
+with its password and sets one up again. The
+[operations manual](../deploy/OPERATION.md) has both.
 
 Two things about this arrangement that are easier to know than to discover:
 

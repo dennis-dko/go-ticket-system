@@ -127,6 +127,13 @@ class Installation(private val address: String, private val words: Language, pri
         )
     }
 
+    /**
+     * android is where the app of the installation's release is downloaded, and
+     * which release that is, as the installation answers the owner of [token] -
+     * what [offerFor] reads a newer app out of.
+     */
+    suspend fun android(token: String): JSONObject? = withContext(Dispatchers.IO) { read("/api/v1/me/android", token) }
+
     /** read is what [path] answers the owner of [token], unwrapped from its data; null where it is refused or not found. */
     private fun read(path: String, token: String): JSONObject? {
         val connection = open(path)
