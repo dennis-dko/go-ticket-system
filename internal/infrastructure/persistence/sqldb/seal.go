@@ -44,6 +44,88 @@ func SealStoredSecrets(
 	})
 }
 
+// RekeyStoredSecrets seals again with to every secret that from opens. It is what
+// a restore does with a backup made where another SECRET_KEY was set: the second
+// factors, the directory's bind password, a provider's client secret and the push
+// key work under this installation's key afterwards, and the key they came under
+// is needed this once and kept nowhere. With no key in to they are stored in the
+// clear, as an installation without one stores everything.
+//
+// The key check of the installation they came from goes with them, so the start
+// that follows records this installation's instead of refusing it.
+func RekeyStoredSecrets(ctx context.Context, db DB, dialect string, from, to *security.Sealer) (int, error) {
+	changed, err := rewriteStoredSecrets(ctx, db, dialect, func(stored string) (string, error) {
+		if !security.IsSealed(stored) {
+			return stored, nil
+		}
+
+		plain, err := from.Open(stored)
+		if err != nil {
+			return "", err
+		}
+
+		if !to.Enabled() {
+			return plain, nil
+		}
+
+		return to.Seal(plain)
+	})
+	if err != nil {
+		return changed, err
+	}
+
+	return changed, forgetKeyCheck(ctx, db, dialect)
+}
+
+// LeaveStoredSecretsBehind empties every sealed secret. It is what a restore does
+// when the key they were sealed with is lost: the second factors are switched off,
+// to be set up again; the directory's bind password and a provider's client
+// secret are entered again; and the push key is made anew the next time one is
+// wanted, with the browsers' subscriptions to the old one gone, since nothing can
+// send to them any more. Everything else comes back as it was.
+func LeaveStoredSecretsBehind(ctx context.Context, db DB, dialect string) (int, error) {
+	left, err := rewriteStoredSecrets(ctx, db, dialect, func(stored string) (string, error) {
+		if security.IsSealed(stored) {
+			return "", nil
+		}
+
+		return stored, nil
+	})
+	if err != nil {
+		return left, err
+	}
+
+	// A second factor without its seed would ask for a code nothing can check.
+	if _, err := db.ExecContext(ctx,
+		Rebind(dialect, "UPDATE users SET totp_enabled = ? WHERE totp_secret = ''"), false); err != nil {
+		return left, fmt.Errorf("switching off the second factors left behind: %w", err)
+	}
+
+	var pushKey string
+
+	_ = db.QueryRowContext(ctx,
+		Rebind(dialect, "SELECT value FROM settings WHERE key_name = ?"), model.SettingWebPushKey).Scan(&pushKey)
+
+	if pushKey == "" {
+		if _, err := db.ExecContext(ctx, "DELETE FROM push_subscriptions"); err != nil {
+			return left, fmt.Errorf("removing the subscriptions to the push key left behind: %w", err)
+		}
+	}
+
+	return left, forgetKeyCheck(ctx, db, dialect)
+}
+
+// forgetKeyCheck removes the key check, which the next start records again for
+// whatever key this installation has.
+func forgetKeyCheck(ctx context.Context, db DB, dialect string) error {
+	if _, err := db.ExecContext(ctx,
+		Rebind(dialect, "DELETE FROM settings WHERE key_name = ?"), model.SettingSecretKeyCheck); err != nil {
+		return fmt.Errorf("removing the key check of the installation a backup came from: %w", err)
+	}
+
+	return nil
+}
+
 // rewriteStoredSecrets hands change every value a SECRET_KEY seals - the second
 // factors, the directory's bind password, a sign-in provider's client secret and
 // the key that signs a push to a browser - as it is stored, empty ones aside, and

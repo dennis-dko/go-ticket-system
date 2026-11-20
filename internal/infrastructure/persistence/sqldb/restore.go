@@ -142,7 +142,18 @@ type RestoreSummary struct {
 //
 // The rows the migrations seeded - the built-in roles and their permissions -
 // are removed first, because the backup carries them as they were.
-func Restore(ctx context.Context, db DB, dialect string, schema int64, r io.Reader) (RestoreSummary, error) {
+//
+// finish, where it is given, runs in the same transaction once every row is
+// written, so what it changes lands with the restore or not at all: a backup made
+// under another SECRET_KEY has its secrets sealed again or left behind there.
+func Restore(
+	ctx context.Context,
+	db DB,
+	dialect string,
+	schema int64,
+	r io.Reader,
+	finish func(context.Context, DB) error,
+) (RestoreSummary, error) {
 	decoder := json.NewDecoder(r)
 	decoder.UseNumber()
 
@@ -185,6 +196,12 @@ func Restore(ctx context.Context, db DB, dialect string, schema int64, r io.Read
 		})
 		if err != nil {
 			return err
+		}
+
+		if finish != nil {
+			if err := finish(ctx, tx.db); err != nil {
+				return err
+			}
 		}
 
 		return resetSequences(ctx, tx)

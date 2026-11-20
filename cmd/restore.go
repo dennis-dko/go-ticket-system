@@ -29,7 +29,7 @@ func restoreBackup(ctx *gofr.Context, db sqldb.DB, dialect string, file []byte, 
 	}
 
 	return backup.Open(file, passphrase, func(content io.Reader) error {
-		summary, err := sqldb.Restore(ctx, db, dialect, schema, content)
+		summary, err := sqldb.Restore(ctx, db, dialect, schema, content, nil)
 		if err != nil {
 			return err
 		}
