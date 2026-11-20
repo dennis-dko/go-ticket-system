@@ -100,7 +100,7 @@
   "backup.deleted": "Sicherung gelöscht",
   "backup.download": "herunterladen",
   "backup.folder": "Abgelegt in {0} auf dem Server.",
-  "backup.hint": "Eine Sicherung ist die ganze Installation — jedes Konto, jede Stunde, jede Einstellung —, versiegelt mit BACKUP_PASSPHRASE. Zurückgeholt wird sie über den Installer, in eine leere Datenbank, mit dieser Passphrase und demselben SECRET_KEY.",
+  "backup.hint": "Eine Sicherung ist die ganze Installation — jedes Konto, jede Stunde, jede Einstellung —, versiegelt mit BACKUP_PASSPHRASE. Zurückgeholt wird sie über den Installer, in eine leere Datenbank, mit dieser Passphrase – und mit dem SECRET_KEY, unter dem sie entstand, nach dem der Installer fragt, wenn sein eigener ein anderer ist, oder ohne die Geheimnisse, die dieser Schlüssel versiegelt.",
   "backup.keep": "Aufbewahrte Sicherungen",
   "backup.made": "Erstellt",
   "backup.madeNow": "Sicherung erstellt",

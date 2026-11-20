@@ -1920,7 +1920,7 @@
 
       <div id="backup-card" class="card" data-tab="operation" hidden>
         <h2 data-i18n="backup.title">Backups</h2>
-        <p class="muted" data-i18n="backup.hint">A backup is the whole installation - every account, every hour, every setting - sealed with BACKUP_PASSPHRASE. It is restored through the installer, into an empty database, with that passphrase and the same SECRET_KEY.</p>
+        <p class="muted" data-i18n="backup.hint">A backup is the whole installation - every account, every hour, every setting - sealed with BACKUP_PASSPHRASE. It is restored through the installer, into an empty database, with that passphrase - and with the SECRET_KEY it was made under, which the installer asks for where its own is another, or without the secrets that key seals.</p>
         <p class="muted" id="backup-off" hidden></p>
         <p class="muted" id="backup-folder"></p>
         <div class="row">
