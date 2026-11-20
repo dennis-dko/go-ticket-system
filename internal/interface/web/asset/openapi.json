@@ -3793,6 +3793,16 @@
                 "type": "string"
               }
             }
+          },
+          "tones": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "What each cell says with its colour on the screen, row by row beside `rows`: `plus` and `minus` for a balance in credit or in debt, `muted` for a cell quieter than the rest, `notice` for one the screen tints. The document prints each in shades of its own - the light theme's - whatever theme the screen was in. A cell with no tone, or one this server does not know, is printed in the page's ink."
           }
         }
       },
@@ -3844,10 +3854,35 @@
                 },
                 "value": {
                   "type": "string"
+                },
+                "tone": {
+                  "type": "string",
+                  "description": "What the screen says with the figure's colour, in the words `tones` uses - `plus` or `minus` for a balance in credit or in debt. A figure without one is printed in the accent."
                 }
               }
             },
             "description": "The figures that stand on their own: a total, or the three numbers an overtime calculation comes to."
+          },
+          "colours": {
+            "type": "object",
+            "description": "What the screen is drawn in, as `#rrggbb` or `#rgb`. Only `accent` is used - for the title, the headings and the figures of the summary, and only where it can be read on white. The page keeps its own ink for the rest, whatever theme the screen was in.",
+            "properties": {
+              "accent": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "muted": {
+                "type": "string"
+              },
+              "border": {
+                "type": "string"
+              },
+              "surface": {
+                "type": "string"
+              }
+            }
           }
         }
       }

@@ -51,6 +51,19 @@ type Table struct {
 	Columns []string   `json:"columns"`
 	Numeric []bool     `json:"numeric"`
 	Rows    [][]string `json:"rows"`
+
+	// Tones is what each cell says with its colour on the screen, row by row
+	// beside Rows. A cell it does not reach is printed in the page's ink.
+	Tones [][]Tone `json:"tones"`
+}
+
+// toneOf is the tone of the cell in row r and column c.
+func (t Table) toneOf(r, c int) Tone {
+	if r >= len(t.Tones) || c >= len(t.Tones[r]) {
+		return ""
+	}
+
+	return t.Tones[r][c]
 }
 
 // Section is one part of a document: a heading, optionally a chart, optionally
@@ -213,6 +226,10 @@ func parseColour(value string, fallback colour) colour {
 type Line struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
+
+	// Tone is what the screen says with the figure's colour - a balance in credit
+	// or in debt. A figure that says nothing is printed in the accent.
+	Tone Tone `json:"tone"`
 }
 
 // Document is a whole evaluation.
@@ -485,7 +502,7 @@ func writeTable(pdf *fpdf.Fpdf, ink inks, table Table) {
 
 	_, pageHeight := pdf.GetPageSize()
 
-	for _, row := range table.Rows {
+	for r, row := range table.Rows {
 		if pdf.GetY()+rowHeight > pageHeight-pageMargin {
 			pdf.AddPage()
 			header()
@@ -497,12 +514,35 @@ func writeTable(pdf *fpdf.Fpdf, ink inks, table Table) {
 				cell = row[i]
 			}
 
+			// The face is set before the cell is fitted, because the bold one is
+			// wider.
+			look := ink.shadeOf(table.toneOf(r, i), ink.text)
+
+			pdf.SetFont("go", face(look.bold), bodySize)
+			use(pdf, look.ink)
+
+			if look.filled {
+				pdf.SetFillColor(look.fill.r, look.fill.g, look.fill.b)
+			}
+
 			pdf.CellFormat(widths[i], rowHeight, fit(pdf, cell, widths[i]), "B", 0,
-				alignOf(table, i), false, 0, "")
+				alignOf(table, i), look.filled, 0, "")
 		}
 
 		pdf.Ln(-1)
 	}
+
+	pdf.SetFont("go", "", bodySize)
+	use(pdf, ink.text)
+}
+
+// face is the style a figure is set in.
+func face(bold bool) string {
+	if bold {
+		return "B"
+	}
+
+	return ""
 }
 
 // columnWidths shares the width out by what each column has to hold.
@@ -520,19 +560,23 @@ func columnWidths(pdf *fpdf.Fpdf, table Table) []float64 {
 		widths[i] = pdf.GetStringWidth(column)
 	}
 
-	pdf.SetFont("go", "", bodySize)
-
-	for _, row := range table.Rows {
+	for r, row := range table.Rows {
 		for i := range table.Columns {
 			if i >= len(row) {
 				continue
 			}
+
+			// In the face it is printed in: a balance in credit or in debt is
+			// bold, and wider for it.
+			pdf.SetFont("go", face(table.toneOf(r, i).bold()), bodySize)
 
 			if w := pdf.GetStringWidth(row[i]); w > widths[i] {
 				widths[i] = w
 			}
 		}
 	}
+
+	pdf.SetFont("go", "", bodySize)
 
 	// Room to breathe on both sides of every cell.
 	total := 0.0
@@ -601,10 +645,19 @@ func writeSummary(pdf *fpdf.Fpdf, ink inks, summary []Line) {
 		pdf.CellFormat(contentWide*0.6, rowHeight, line.Label, "", 0, "L", false, 0, "")
 
 		// The figure in the accent: on a page whose picture is drawn in it, the
-		// number the picture is about should be too.
+		// number the picture is about should be too. Unless the screen gives the
+		// figure a colour of its own - a balance in credit or in debt is printed
+		// the way the screen shows it.
+		look := ink.shadeOf(line.Tone, ink.accent)
+
 		pdf.SetFont("go", "B", bodySize)
-		use(pdf, ink.accent)
-		pdf.CellFormat(contentWide*0.4, rowHeight, line.Value, "", 0, "R", false, 0, "")
+		use(pdf, look.ink)
+
+		if look.filled {
+			pdf.SetFillColor(look.fill.r, look.fill.g, look.fill.b)
+		}
+
+		pdf.CellFormat(contentWide*0.4, rowHeight, line.Value, "", 0, "R", look.filled, 0, "")
 		use(pdf, ink.text)
 		pdf.Ln(-1)
 	}

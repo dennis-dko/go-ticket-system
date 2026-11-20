@@ -82,6 +82,10 @@ type DocumentTableRequest struct {
 	Columns []string   `json:"columns"`
 	Numeric []bool     `json:"numeric"`
 	Rows    [][]string `json:"rows"`
+
+	// Tones is what each cell says with its colour, row by row beside Rows - the
+	// word, which the document prints in shades of its own (document.Tone).
+	Tones [][]string `json:"tones"`
 }
 
 // DocumentSectionRequest is one heading, with a chart and a table under it.
@@ -187,7 +191,7 @@ func (r DocumentRequest) document() (document.Document, error) {
 
 	for _, line := range r.Summary {
 		doc.Summary = append(doc.Summary,
-			document.Line{Label: plain(line.Label), Value: plain(line.Value)})
+			document.Line{Label: plain(line.Label), Value: plain(line.Value), Tone: line.Tone})
 	}
 
 	for _, section := range r.Sections {
@@ -253,7 +257,7 @@ func (t DocumentTableRequest) table() (document.Table, error) {
 		table.Columns = append(table.Columns, plain(column))
 	}
 
-	for _, row := range t.Rows {
+	for r, row := range t.Rows {
 		cells := make([]string, 0, len(row))
 
 		for _, cell := range row {
@@ -261,9 +265,26 @@ func (t DocumentTableRequest) table() (document.Table, error) {
 		}
 
 		table.Rows = append(table.Rows, cells)
+		table.Tones = append(table.Tones, tonesOf(t.Tones, r, len(row)))
 	}
 
 	return table, nil
+}
+
+// tonesOf is what the cells of row r say with their colour, as far as the row has
+// cells: a tone past them would colour nothing.
+func tonesOf(tones [][]string, r, cells int) []document.Tone {
+	if r >= len(tones) {
+		return nil
+	}
+
+	row := make([]document.Tone, 0, min(cells, len(tones[r])))
+
+	for c := 0; c < cells && c < len(tones[r]); c++ {
+		row = append(row, document.Tone(tones[r][c]))
+	}
+
+	return row
 }
 
 // decodeChart reads the picture out of the data URI the canvas produced.
