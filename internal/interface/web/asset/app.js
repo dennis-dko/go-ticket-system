@@ -14736,7 +14736,30 @@ function cellAsFigure(cell) {
 }
 
 /**
- * Reads a table off the screen as the figures it is showing.
+ * What a figure says with its colour, as the word a document prints it by: a
+ * balance in credit or in debt, something quieter than the rest, a notice.
+ *
+ * The word rather than the colour it is drawn in. A colour is the theme's, and
+ * the dark theme's are drawn for a dark ground - a pale grey, a tint nearly
+ * black - so the document prints each word in shades of its own, the light
+ * theme's (document.Tone on the server). The classes are the ones the stylesheet
+ * draws a figure apart by; everyColourIsCarried in the browser suite fails on a
+ * cell drawn apart that this gives no word.
+ */
+function toneOf(figure) {
+  if (!figure) return '';
+
+  if (figure.matches('.plus')) return 'plus';
+  if (figure.matches('.minus')) return 'minus';
+  if (figure.querySelector('.act-notice')) return 'notice';
+  if (figure.matches('.empty') || figure.closest('tr.unrecorded')) return 'muted';
+
+  return '';
+}
+
+/**
+ * Reads a table off the screen as the figures it is showing, and what each of
+ * them says with its colour.
  *
  * The rendered table rather than the answer it was drawn from: what goes in the
  * document is what somebody is looking at, already sorted, already formatted,
@@ -14764,13 +14787,13 @@ function tableAsFigures(table) {
     // apart by being the row's only cell, not by its class alone: a statement's
     // "no rate yet" is marked empty as well, and its line was left out of the
     // document with its hours.
-    .filter((row) => !(row.children.length === 1 && row.firstElementChild.matches('td.empty')))
-    .map((row) => wanted.map((i) => cellAsFigure(row.children[i])));
+    .filter((row) => !(row.children.length === 1 && row.firstElementChild.matches('td.empty')));
 
   return {
     columns: wanted.map((i) => headings[i].textContent.trim()),
     numeric: wanted.map((i) => headings[i].classList.contains('num')),
-    rows,
+    rows: rows.map((row) => wanted.map((i) => cellAsFigure(row.children[i]))),
+    tones: rows.map((row) => wanted.map((i) => toneOf(row.children[i]))),
   };
 }
 
@@ -14967,6 +14990,7 @@ async function overtimeDocument() {
     summary: [{
       label: t('ot.balance', 'Balance'),
       value: $('#overtime-total').textContent.trim(),
+      tone: toneOf($('#overtime-total')),
     }],
   };
 }
