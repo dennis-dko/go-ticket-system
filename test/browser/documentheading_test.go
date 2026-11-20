@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/chromedp/chromedp"
 )
@@ -186,26 +185,5 @@ func (p *page) documentsAsked() int {
 func (p *page) subtitleAsked(before int, button string) string {
 	p.t.Helper()
 
-	deadline := time.Now().Add(waitPatience)
-
-	for time.Now().Before(deadline) {
-		var arrived bool
-
-		p.run("look for the document", chromedp.Evaluate(
-			`window.__documents.length > `+strconv.Itoa(before), &arrived))
-
-		if arrived {
-			var subtitle string
-
-			p.run("read its heading", chromedp.Evaluate(`window.__documents.at(-1).subtitle ?? ''`, &subtitle))
-
-			return subtitle
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	p.t.Fatalf("%s never asked for a document", button)
-
-	return ""
+	return p.documentAsked(before, button).Subtitle
 }

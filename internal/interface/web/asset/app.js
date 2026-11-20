@@ -14741,8 +14741,11 @@ function tableAsFigures(table) {
   if (wanted.length === 0) return null;
 
   const rows = [...table.querySelectorAll('tbody tr')]
-    // The "nothing here" line is a message, not a row of figures.
-    .filter((row) => !row.querySelector('td.empty'))
+    // The "nothing here" line is a message, not a row of figures. It is told
+    // apart by being the row's only cell, not by its class alone: a statement's
+    // "no rate yet" is marked empty as well, and its line was left out of the
+    // document with its hours.
+    .filter((row) => !(row.children.length === 1 && row.firstElementChild.matches('td.empty')))
     .map((row) => wanted.map((i) => row.children[i]?.textContent.trim() ?? ''));
 
   return {
