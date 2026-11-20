@@ -621,6 +621,7 @@
   "installer.db.type": "Typ",
   "installer.db.user": "Benutzer",
   "installer.err.alreadyConfigured": "Es wurde bereits eine Datenbank gewählt, und die Anwendung startet damit.",
+  "installer.err.backupCutShort": "Die Sicherung endet vor ihrer letzten Zeile, wurde also auf dem Weg hierher abgeschnitten. Lade sie noch einmal herunter.",
   "installer.err.backupFromNewerVersion": "Diese Sicherung stammt von einer neueren Version von TimePulse. Stelle sie mit dieser Version oder einer späteren wieder her.",
   "installer.err.backupTooLarge": "Die Sicherung ist größer als {0} MiB.",
   "installer.err.backupWrongPassphrase": "Die Passphrase öffnet diese Sicherung nicht — oder die Datei wurde verändert.",

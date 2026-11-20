@@ -87,6 +87,7 @@ func runInstaller() (installer.Result, error) {
 		Token:          settings.SetupToken,
 		DatasourceFile: appconfig.DatasourceFile,
 		Prefill:        settings.Prefill,
+		Schema:         newestSchema(),
 		Logf:           logger.Infof,
 	})
 }

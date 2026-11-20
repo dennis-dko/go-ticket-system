@@ -212,6 +212,58 @@ func TestARestoreRefusesWhatItCannotFinish(t *testing.T) {
 	}
 }
 
+// A backup is read whole before anything is restored from it: what a restore
+// would refuse is refused by the read, which writes nothing, and the key check of
+// the installation it was made on is found, for the installer to ask its own key
+// about.
+func TestABackupIsReadWholeBeforeItIsRestored(t *testing.T) {
+	original, _ := filled(t)
+
+	if _, err := original.Exec("INSERT INTO settings (key_name, value, updated_at) VALUES (?, ?, ?)",
+		model.SettingSecretKeyCheck, "timepulse.v1:as-it-was-kept", time.Now()); err != nil {
+		t.Fatalf("keeping a key check: %v", err)
+	}
+
+	backup := dumped(t, original).String()
+
+	contents, err := sqldb.InspectBackup(strings.NewReader(backup), newestMigration())
+	if err != nil || contents.Tables != len(sqldb.BackupTables) || contents.Rows == 0 ||
+		contents.KeyCheck != "timepulse.v1:as-it-was-kept" {
+		t.Fatalf("the whole backup reads as %+v (%v), want every table, its rows and the key check", contents, err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(backup), "\n")
+	last := lines[len(lines)-1]
+	counted := strings.TrimSuffix(strings.TrimPrefix(last, `{"end":true,"rows":`), "}")
+
+	if counted == last {
+		t.Fatalf("the backup's last line is %q, not the count this case changes", last)
+	}
+
+	for _, refused := range []struct {
+		name   string
+		file   string
+		schema int64
+		want   error
+	}{
+		{"into an older schema", backup, newestMigration() - 1, sqldb.ErrNewerSchema},
+		{"cut short", strings.Join(lines[:len(lines)-1], "\n"), newestMigration(), sqldb.ErrCutShort},
+		{"counting a row more than it holds", strings.Join(lines[:len(lines)-1], "\n") +
+			"\n" + `{"end":true,"rows":` + counted + `0}`, newestMigration(), nil},
+		{"naming a table no backup carries", strings.Replace(backup, `"table":"roles"`,
+			`"table":"nothing_like_it"`, 1), newestMigration(), nil},
+	} {
+		_, err := sqldb.InspectBackup(strings.NewReader(refused.file), refused.schema)
+
+		switch {
+		case err == nil:
+			t.Errorf("a backup %s reads without a word", refused.name)
+		case refused.want != nil && !errors.Is(err, refused.want):
+			t.Errorf("a backup %s: %v, want %v", refused.name, err, refused.want)
+		}
+	}
+}
+
 // What a backup's header says goes into the log on one line. The release and
 // the dialect are read from the file, and a line break in either would start a
 // log line of its own, written by whoever made the file.

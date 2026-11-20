@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
@@ -57,6 +58,12 @@ type Config struct {
 	// an operator who configured half of it in a compose file does not retype
 	// it. The password is never sent back.
 	Prefill appconfig.Datasource
+
+	// Schema is the newest migration this binary carries. A backup from a newer
+	// one is refused when it is uploaded, on this screen, rather than by the
+	// restore, which runs after the installer has handed over and can then only
+	// end the process. Zero sets no limit.
+	Schema int64
 
 	// Logf reports progress. Required: this screen is the only thing the
 	// process is doing, and a silent one would look hung.
@@ -553,10 +560,17 @@ func (s *server) backup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var header sqldb.BackupHeader
+	schema := s.cfg.Schema
+	if schema == 0 {
+		schema = math.MaxInt64
+	}
+
+	// Read whole, not only its first line: everything the restore would refuse
+	// is refused here, while there is still a screen to say it on.
+	var contents sqldb.BackupContents
 
 	err = backup.Open(file, string(passphrase), func(content io.Reader) error {
-		header, err = sqldb.ReadBackupHeader(content)
+		contents, err = sqldb.InspectBackup(content, schema)
 
 		return err
 	})
@@ -570,6 +584,8 @@ func (s *server) backup(w http.ResponseWriter, r *http.Request) {
 	s.restore = &pendingRestore{file: file, passphrase: string(passphrase)}
 	s.mu.Unlock()
 
+	header := contents.Header
+
 	s.cfg.Logf("a backup %s is ready to restore", header.Describe())
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -582,8 +598,11 @@ func backupRefusal(err error) error {
 	switch {
 	case errors.Is(err, backup.ErrWrongPassphrase):
 		return apperror.Invalidf("the passphrase does not open this backup").WithCode("backupWrongPassphrase")
-	case errors.Is(err, backup.ErrNewerFormat):
+	case errors.Is(err, backup.ErrNewerFormat), errors.Is(err, sqldb.ErrNewerSchema):
 		return apperror.Invalidf("a newer version of TimePulse wrote this backup").WithCode("backupFromNewerVersion")
+	case errors.Is(err, sqldb.ErrCutShort):
+		return apperror.Invalidf("the backup ends before its last line: it was cut short on its way here, " +
+			"so download it again").WithCode("backupCutShort")
 	case errors.Is(err, backup.ErrTooLarge):
 		return apperror.Invalidf("the backup is larger than a backup may be").
 			WithCode("backupTooLarge", strconv.Itoa(backup.MaxFileSize>>20))

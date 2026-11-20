@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"testing"
 	"time"
@@ -106,8 +107,8 @@ func TestAnAdministratorMakesDownloadsAndDeletesABackup(t *testing.T) {
 	var header sqldb.BackupHeader
 
 	if err := backup.Open(file, backupPassphrase, func(content io.Reader) error {
-		var err error
-		header, err = sqldb.ReadBackupHeader(content)
+		contents, err := sqldb.InspectBackup(content, math.MaxInt64)
+		header = contents.Header
 
 		return err
 	}); err != nil || header.Dialect == "" || header.CreatedAt.IsZero() {
@@ -266,6 +267,64 @@ func TestABackupIsRestoredThroughTheInstallerOfANewInstallation(t *testing.T) {
 
 	if card := readBackupCard(t, again); card.Keep != 3 {
 		t.Errorf("the restored installation keeps %d backups, want the 3 its plan said", card.Keep)
+	}
+}
+
+// sealedBackup writes lines as a backup sealed with the suite's passphrase: a
+// file the application did not make whole, the way one cut off on its way
+// arrives at the installer.
+func sealedBackup(t *testing.T, lines ...any) []byte {
+	t.Helper()
+
+	file, err := backup.Seal(backupPassphrase, func(w io.Writer) error {
+		encoder := json.NewEncoder(w)
+
+		for _, line := range lines {
+			if err := encoder.Encode(line); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("sealing a backup: %v", err)
+	}
+
+	return file
+}
+
+// The installer reads a backup whole before it takes it, so what the restore
+// would refuse is refused on the installer's own screen: a backup cut short, as
+// a download that stopped is, and one from a newer version of TimePulse than
+// this one. Both used to be taken - only their first line was read - and then
+// refused by the restore, which runs after the installer has handed over, where
+// a refusal can only end the process.
+func TestTheInstallerRefusesWhatTheRestoreWouldRefuse(t *testing.T) {
+	t.Parallel()
+
+	header := func(schema int64) sqldb.BackupHeader {
+		return sqldb.BackupHeader{Format: "timepulse-backup", Version: 1, Application: "TimePulse",
+			Dialect: "sqlite", Schema: schema, CreatedAt: time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC)}
+	}
+
+	roles := map[string]any{"table": "roles", "columns": []string{"id", "name"}, "kinds": []string{"int", "text"}}
+
+	c := openInstaller(t)
+
+	for _, refused := range []struct {
+		name string
+		file []byte
+		code string
+	}{
+		{"cut short", sealedBackup(t, header(20260730120000), roles, []any{1, "admin"}), "backupCutShort"},
+		{"from a newer version", sealedBackup(t, header(99991231235959), map[string]any{"end": true, "rows": 0}),
+			"backupFromNewerVersion"},
+	} {
+		if status, body := uploadBackup(t, c, refused.file, backupPassphrase); status != http.StatusBadRequest ||
+			body["code"] != refused.code {
+			t.Errorf("a backup %s was answered %d %v, want 400 %s", refused.name, status, body, refused.code)
+		}
 	}
 }
 

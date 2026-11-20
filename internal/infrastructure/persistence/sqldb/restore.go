@@ -39,11 +39,12 @@ var (
 // ErrNotABackupHeader says the first line of what was opened is not a backup's.
 var ErrNotABackupHeader = errors.New("the file opened, and what it holds is not a TimePulse backup")
 
-// ReadBackupHeader reads a backup's first line and nothing more, for saying what
-// a backup is before anything is restored from it.
-func ReadBackupHeader(r io.Reader) (BackupHeader, error) {
+// readHeader reads a backup's first line, and refuses one that is not a backup
+// this release reads or one from a schema newer than schema, the newest
+// migration there is to restore it into.
+func readHeader(decoder *json.Decoder, schema int64) (BackupHeader, error) {
 	var header BackupHeader
-	if err := json.NewDecoder(r).Decode(&header); err != nil {
+	if err := decoder.Decode(&header); err != nil {
 		return header, ErrNotABackupHeader
 	}
 
@@ -51,7 +52,61 @@ func ReadBackupHeader(r io.Reader) (BackupHeader, error) {
 		return header, ErrNotABackupHeader
 	}
 
+	if header.Schema > schema {
+		return header, ErrNewerSchema
+	}
+
 	return header, nil
+}
+
+// BackupContents is what a whole read of a backup found: its header, how much it
+// holds, and the key check of the installation it was made on - empty where that
+// installation configured no SECRET_KEY, so nothing in it is sealed.
+type BackupContents struct {
+	Header   BackupHeader
+	Tables   int
+	Rows     int64
+	KeyCheck string
+}
+
+// InspectBackup reads a whole backup and writes nothing, so that what a restore
+// would refuse - a file cut short, a table no backup carries, a last line that
+// does not count the rows before it, a schema newer than schema - is refused
+// before a database is chosen for it. The installer asks it of an upload,
+// because the restore itself runs after the installer has handed over, where a
+// refusal can only end the process.
+func InspectBackup(r io.Reader, schema int64) (BackupContents, error) {
+	decoder := json.NewDecoder(r)
+	decoder.UseNumber()
+
+	var contents BackupContents
+
+	header, err := readHeader(decoder, schema)
+	contents.Header = header
+
+	if err != nil {
+		return contents, err
+	}
+
+	err = walkBackup(decoder, func(section backupSection) (func(row []any) error, error) {
+		contents.Tables++
+
+		key, value := slices.Index(section.Columns, "key_name"), slices.Index(section.Columns, "value")
+
+		return func(row []any) error {
+			contents.Rows++
+
+			if section.Table == "settings" && key >= 0 && value >= 0 && max(key, value) < len(row) {
+				if name, _ := row[key].(string); name == model.SettingSecretKeyCheck {
+					contents.KeyCheck, _ = row[value].(string)
+				}
+			}
+
+			return nil
+		}, nil
+	})
+
+	return contents, err
 }
 
 // HoldsAccounts reports whether the database has an account in it - the
@@ -93,72 +148,103 @@ func Restore(ctx context.Context, db DB, dialect string, schema int64, r io.Read
 
 	var summary RestoreSummary
 
-	if err := decoder.Decode(&summary.Header); err != nil {
-		return summary, fmt.Errorf("read the backup's header: %w", err)
-	}
+	header, err := readHeader(decoder, schema)
+	summary.Header = header
 
-	if summary.Header.Format != backupFormat || summary.Header.Version != backupVersion {
-		return summary, fmt.Errorf("the backup is of format %q version %d, not %s version %d",
-			summary.Header.Format, summary.Header.Version, backupFormat, backupVersion)
-	}
-
-	if summary.Header.Schema > schema {
-		return summary, ErrNewerSchema
+	if err != nil {
+		return summary, err
 	}
 
 	if HoldsAccounts(ctx, db) {
 		return summary, ErrNotEmpty
 	}
 
-	err := base{db: db, dialect: dialect}.withTx(ctx, func(tx base) error {
+	err = base{db: db, dialect: dialect}.withTx(ctx, func(tx base) error {
 		for _, table := range slices.Backward(BackupTables) {
 			if _, err := tx.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
 				return fmt.Errorf("empty %s: %w", table, err)
 			}
 		}
 
-		// The line after a table's rows is read to learn that they have ended, so
-		// it comes back from restoreTable and is the next one looked at here.
-		var line json.RawMessage
-
-		// Every row read, the ones left out included, is what the last line counts.
-		var read int64
-
-		for {
-			if line == nil {
-				var err error
-				if line, err = nextLine(decoder); err != nil {
-					return err
-				}
-			}
-
-			var end backupEnd
-			if json.Unmarshal(line, &end) == nil && end.End {
-				if end.Rows != read {
-					return fmt.Errorf("the backup says it holds %d rows and %d were read", end.Rows, read)
-				}
-
-				return resetSequences(ctx, tx)
-			}
-
-			var section backupSection
-			if err := json.Unmarshal(line, &section); err != nil || section.Table == "" {
-				return fmt.Errorf("the backup has a line where a table should begin: %.80s", line)
-			}
-
-			rows, next, err := restoreTable(ctx, tx, section, decoder)
-			if err != nil {
-				return fmt.Errorf("restore %s: %w", section.Table, err)
-			}
-
+		err := walkBackup(decoder, func(section backupSection) (func(row []any) error, error) {
 			summary.Tables++
-			summary.Rows += rows.restored
-			read += rows.read
-			line = next
+
+			write, err := tableWriter(ctx, tx, section)
+			if err != nil {
+				return nil, err
+			}
+
+			return func(row []any) error {
+				written, err := write(row)
+				if written {
+					summary.Rows++
+				}
+
+				return err
+			}, nil
+		})
+		if err != nil {
+			return err
 		}
+
+		return resetSequences(ctx, tx)
 	})
 
 	return summary, err
+}
+
+// walkBackup reads a backup after its header, table by table, to its last line:
+// open is told each table as it begins and answers with what to do with each of
+// its rows. What a restore and an inspection both stand on is checked here, once
+// for both - that every table is one a backup carries, that the file does not
+// stop before its last line, and that the last line counts every row read, the
+// ones a restore leaves out included.
+func walkBackup(decoder *json.Decoder, open func(backupSection) (func(row []any) error, error)) error {
+	var read int64
+
+	line, err := nextLine(decoder)
+
+	for err == nil {
+		var end backupEnd
+		if json.Unmarshal(line, &end) == nil && end.End {
+			if end.Rows != read {
+				return fmt.Errorf("the backup says it holds %d rows and %d were read", end.Rows, read)
+			}
+
+			return nil
+		}
+
+		var section backupSection
+		if json.Unmarshal(line, &section) != nil || section.Table == "" {
+			return fmt.Errorf("the backup has a line where a table should begin: %.80s", line)
+		}
+
+		if !slices.Contains(BackupTables, section.Table) {
+			return fmt.Errorf("%q is not a table a backup carries", section.Table)
+		}
+
+		each, opened := open(section)
+		if opened != nil {
+			return fmt.Errorf("%s: %w", section.Table, opened)
+		}
+
+		// The line after a table's rows is read to learn that they have ended, so
+		// it is the next one this loop looks at - and the end of the input, which
+		// is never where a backup ends, leaves err set and the loop with it.
+		for line, err = nextLine(decoder); err == nil && line[0] == '['; line, err = nextLine(decoder) {
+			row, bad := rowOf(line)
+			if bad == nil {
+				read++
+				bad = each(row)
+			}
+
+			if bad != nil {
+				return fmt.Errorf("%s: %w", section.Table, bad)
+			}
+		}
+	}
+
+	return err
 }
 
 // nextLine reads the backup's next line as it stands. The end of the input is
@@ -177,25 +263,14 @@ func nextLine(decoder *json.Decoder) (json.RawMessage, error) {
 	return line, nil
 }
 
-// tableRows is what a table's rows came to: every row read, and the ones written.
-// They differ by the settings a restore leaves out, which still count towards
+// tableWriter prepares the rows of one table of a backup to be written into the
+// same table here, and answers for each row whether it was written: a setting a
+// restore leaves as the new installation has it is not, and still counts towards
 // the number the backup's last line names.
-type tableRows struct {
-	read, restored int64
-}
-
-// restoreTable inserts the rows that follow a section line, up to the first line
-// that is not a row, which it hands back unread.
-func restoreTable(ctx context.Context, tx base, section backupSection, decoder *json.Decoder) (tableRows, json.RawMessage, error) {
-	var rows tableRows
-
-	if !slices.Contains(BackupTables, section.Table) {
-		return rows, nil, fmt.Errorf("%q is not a table a backup carries", section.Table)
-	}
-
+func tableWriter(ctx context.Context, tx base, section backupSection) (func(row []any) (bool, error), error) {
 	target, err := columnKinds(ctx, tx, section.Table)
 	if err != nil {
-		return rows, nil, err
+		return nil, err
 	}
 
 	// The columns both the backup and the database know, by their position in
@@ -227,47 +302,34 @@ func restoreTable(ctx context.Context, tx base, section backupSection, decoder *
 
 	keyColumn := slices.Index(section.Columns, "key_name")
 
-	for {
-		line, err := nextLine(decoder)
-		if err != nil {
-			return rows, nil, err
-		}
-
-		// A row is an array; the line that is not one opens what follows.
-		if line[0] != '[' {
-			return rows, line, nil
-		}
-
-		row, err := rowOf(line)
-		if err != nil {
-			return rows, nil, err
-		}
-
-		rows.read++
-
+	return func(row []any) (bool, error) {
 		if section.Table == "settings" && keyColumn >= 0 && keyColumn < len(row) {
 			if key, _ := row[keyColumn].(string); slices.Contains(skippedOnRestore, key) {
-				continue
+				return false, nil
 			}
 		}
 
 		args := make([]any, len(names))
+
 		for j, position := range positions {
 			if position >= len(row) {
-				return rows, nil, fmt.Errorf("a row of %d values where %d columns were named", len(row), len(section.Columns))
+				return false, fmt.Errorf("a row of %d values where %d columns were named", len(row), len(section.Columns))
 			}
 
-			if args[j], err = decodeValue(kinds[j], row[position]); err != nil {
-				return rows, nil, fmt.Errorf("column %s: %w", names[j], err)
+			value, err := decodeValue(kinds[j], row[position])
+			if err != nil {
+				return false, fmt.Errorf("column %s: %w", names[j], err)
 			}
+
+			args[j] = value
 		}
 
 		if _, err := tx.db.ExecContext(ctx, insert, args...); err != nil {
-			return rows, nil, err
+			return false, err
 		}
 
-		rows.restored++
-	}
+		return true, nil
+	}, nil
 }
 
 // rowOf reads a row's values with its numbers as written: an id or a count
