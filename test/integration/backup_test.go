@@ -268,3 +268,92 @@ func TestABackupIsRestoredThroughTheInstallerOfANewInstallation(t *testing.T) {
 		t.Errorf("the restored installation keeps %d backups, want the 3 its plan said", card.Keep)
 	}
 }
+
+// A backup moves between kinds of database, both ways: one made on the suite's
+// database comes back into SQLite, and one made on SQLite comes back into the
+// suite's database. The installer offers every kind for a restore and the file
+// says nothing about the kind it was made on - trying a server's backup on one's
+// own computer is the first thing somebody does with it.
+//
+// On the SQLite run both directions stay on SQLite, so the PostgreSQL and MySQL
+// runs are the ones that cross.
+func TestABackupMovesBetweenSQLiteAndTheSuitesDatabase(t *testing.T) {
+	t.Parallel()
+
+	sqlite := map[string]string{"dialect": "sqlite", "name": "chosen"}
+
+	for _, direction := range []struct {
+		name   string
+		source []string
+		madeOn string
+		target map[string]string
+	}{
+		{"from the suite's database into SQLite", nil, "", sqlite},
+		{"from SQLite into the suite's database", []string{"DB_DIALECT=sqlite", "DB_NAME=source"}, "sqlite", nil},
+	} {
+		t.Run(direction.name, func(t *testing.T) {
+			t.Parallel()
+
+			source := start(t, append([]string{"BACKUP_PASSPHRASE=" + backupPassphrase}, direction.source...)...)
+			admin := source.signInAsAdmin("a-much-better-password")
+			worker := source.signInAsUser(admin, "Wera", "wera@example.com")
+
+			worker.must(worker.api(http.MethodPost, "/timesheets", map[string]any{
+				"date": "2026-11-19", "durationHours": 2.75, "description": "Before the restore",
+			}), http.StatusCreated, http.StatusOK)
+
+			_, file := madeBackup(t, admin)
+
+			c := openInstaller(t)
+
+			status, body := uploadBackup(t, c, file, backupPassphrase)
+			if status != http.StatusOK {
+				t.Fatalf("the backup was not taken: %d %v", status, body)
+			}
+
+			// What the file says it was made on, so the case is seen to cross rather
+			// than assumed to: the source's environment is what decides it.
+			madeOn := direction.madeOn
+			if madeOn == "" {
+				madeOn = source.Dialect()
+			}
+
+			if body["dialect"] != madeOn {
+				t.Fatalf("the backup says it was made on %v, want %s", body["dialect"], madeOn)
+			}
+
+			target := direction.target
+			if target == nil {
+				target = harness.FreshDatasource(t)
+			}
+
+			answer := map[string]any{"restore": true, "language": "en"}
+			for key, value := range target {
+				answer[key] = value
+			}
+
+			if status, body := c.post("/install/save", c.token, answer); status != http.StatusOK {
+				t.Fatalf("saving the connection with the restore asked for: %d %v", status, body)
+			}
+
+			waitForTheApplication(t, c)
+
+			back := (&app{App: c.app, t: t}).newClient()
+			back.signIn("wera@example.com", "another-password-1")
+
+			var entries listOf[timesheetResponse]
+
+			back.must(back.api(http.MethodGet, "/timesheets", nil), http.StatusOK).Data(t, &entries)
+
+			if entries.TotalCount != 1 || entries.Items[0].DurationHours != 2.75 {
+				t.Fatalf("after the restore Wera finds %+v, want her 2.75 hours\n%s", entries, c.app.Log())
+			}
+
+			// And she books again: the ids a restore wrote are taken, so a database
+			// that counts its own - PostgreSQL's sequences - has to count on from them.
+			back.must(back.api(http.MethodPost, "/timesheets", map[string]any{
+				"date": "2026-11-20", "durationHours": 1.5, "description": "After the restore",
+			}), http.StatusCreated, http.StatusOK)
+		})
+	}
+}
