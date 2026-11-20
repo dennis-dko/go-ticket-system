@@ -82,6 +82,35 @@
       transform: translateY(-1px) rotate(-45deg); width: 10px;
     }
     label.check input:checked::after { opacity: 1; }
+    /* One choice of several as cards in a column, a radio dot on each and the
+       chosen one in the accent: the card is the label, so the whole of it is
+       what is pressed. */
+    .choice { border: 0; margin: 4px 0 14px; min-width: 0; padding: 0; }
+    .choice legend { font-size: 13px; margin-bottom: 8px; padding: 0; }
+    label.option {
+      align-items: flex-start; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); cursor: pointer; display: flex; gap: 12px; margin-bottom: 8px;
+      padding: 14px 16px; transition: background-color .15s ease, border-color .15s ease;
+    }
+    label.option:hover { border-color: var(--field-border-hover); }
+    label.option:has(input:checked) {
+      background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-color: var(--accent);
+    }
+    label.option input {
+      appearance: none; background: var(--field-bg); border: 1px solid var(--field-border-hover);
+      border-radius: 50%; box-shadow: none; cursor: pointer; flex: none; height: 22px; margin: 1px 0 0;
+      min-height: 0; padding: 0; position: relative; width: 22px;
+    }
+    label.option input:checked { background: var(--accent); border-color: var(--accent); }
+    label.option input::after {
+      background: var(--accent-text); border-radius: 50%; content: ""; height: 8px; inset: 0;
+      margin: auto; opacity: 0; position: absolute; width: 8px;
+    }
+    label.option input:checked::after { opacity: 1; }
+    label.option input:focus-visible { box-shadow: 0 0 0 3px var(--ring); }
+    .option-text { display: grid; gap: 2px; min-width: 0; }
+    .option-text strong { font-size: 14px; font-weight: 600; }
+    .option-text .muted { margin: 0; }
     input, select {
       background: var(--field-bg); border: 1px solid transparent; border-radius: var(--pill);
       color: var(--text); font: inherit; margin-top: 4px; min-height: var(--control); padding: 0 20px;
@@ -227,21 +256,42 @@
       </div>
     </div>
 
-    <!-- Asked here and answered by the application once it has migrated the
-         database, into the built-in administrator's account, and only into a
-         database that holds no projects yet. -->
-    <label class="check"><input type="checkbox" id="demo"><span data-i18n="db.demo">Fill it with demo data</span></label>
-    <p class="muted" data-i18n="db.demoText">
-      Four projects, eight weeks of bookings, a week of leave and two templates,
-      in the built-in administrator's account, which is given the role that
-      records time as well. Only into an empty database, and only for trying
-      TimePulse out.
-    </p>
+    <!-- What the new database starts with, as one choice of three: the demo data
+         and a backup exclude each other, and a radio group is what says so and
+         lets anybody go from any answer to any other. Both are answered by the
+         application once it has migrated the database, and only into an empty
+         one: the demo into the built-in administrator's account, a backup after
+         it was read here first, so what is wrong with it is said on this page. -->
+    <fieldset class="choice">
+      <legend data-i18n="db.startWith">What should the new database start with?</legend>
+      <label class="option">
+        <input type="radio" name="start" id="empty" value="empty" checked>
+        <span class="option-text">
+          <strong data-i18n="db.empty">Start empty</strong>
+          <span class="muted" data-i18n="db.emptyText">Nothing but the built-in administrator; accounts, projects and hours are added in the application.</span>
+        </span>
+      </label>
+      <label class="option">
+        <input type="radio" name="start" id="demo" value="demo">
+        <span class="option-text">
+          <strong data-i18n="db.demo">Fill it with demo data</strong>
+          <span class="muted" data-i18n="db.demoText">
+            Four projects, eight weeks of bookings, a week of leave and two templates,
+            in the built-in administrator's account, which is given the role that
+            records time as well. Only into an empty database, and only for trying
+            TimePulse out.
+          </span>
+        </span>
+      </label>
+      <label class="option">
+        <input type="radio" name="start" id="restore" value="restore">
+        <span class="option-text">
+          <strong data-i18n="db.restore">Restore a backup into it</strong>
+          <span class="muted" data-i18n="db.restoreHint">Every account, hour and setting of an installation, from the file its backup card made.</span>
+        </span>
+      </label>
+    </fieldset>
 
-    <!-- Opened here first, so a wrong passphrase is said on this page; restored by
-         the application once it has migrated the database, and only into an empty
-         one. Demo data or a backup, never both. -->
-    <label class="check"><input type="checkbox" id="restore"><span data-i18n="db.restore">Restore a backup into it</span></label>
     <div id="restore-fields" hidden>
       <label data-i18n="db.restoreFile">Backup file<input type="file" id="restore-file" accept=".tpbak"></label>
       <label data-i18n="db.restorePassphrase">The backup's passphrase<input type="password" id="restore-passphrase" autocomplete="off"></label>
@@ -623,15 +673,13 @@
     }
   });
 
-  // A backup or demo data, never both: the demo goes into an empty database, and
-  // after a restore there is none.
-  $('restore').addEventListener('change', () => {
-    const restoring = $('restore').checked;
-
-    $('restore-fields').hidden = !restoring;
-    $('demo').disabled = restoring;
-    if (restoring) $('demo').checked = false;
-  });
+  // The backup's own fields belong to the backup alone, so they follow the
+  // choice whichever way it moves.
+  for (const answer of document.querySelectorAll('input[name="start"]')) {
+    answer.addEventListener('change', () => {
+      $('restore-fields').hidden = !$('restore').checked;
+    });
+  }
 
   /**
    * Sends the backup to be opened once, before a database is chosen for it.
