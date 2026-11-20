@@ -2,9 +2,11 @@ package document
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"image/png"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +31,10 @@ const (
 	// figures readable at a glance.
 	lineHeight = 6.0
 	rowHeight  = 6.5
+
+	// lineStep is how far below the line before it each further line of a cell
+	// that folds is written.
+	lineStep = 4.2
 )
 
 // Type sizes. One family throughout, in two weights: the document is a record,
@@ -262,16 +268,8 @@ type Document struct {
 
 // Write lays the document out and returns the PDF.
 func Write(doc Document) ([]byte, error) {
-	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf := paper()
 	ink := doc.Colours.resolve()
-
-	// The Go fonts rather than fpdf's built-in ones. Those are Latin-1: they
-	// cover German and turn everything else into question marks without saying
-	// so, and a project name is whatever somebody typed. These arrive with
-	// golang.org/x/image, which this module already depends on, so they cost no
-	// new dependency and no font file to ship.
-	pdf.AddUTF8FontFromBytes("go", "", goregular.TTF)
-	pdf.AddUTF8FontFromBytes("go", "B", gobold.TTF)
 
 	pdf.SetMargins(pageMargin, pageMargin, pageMargin)
 	pdf.SetAutoPageBreak(true, pageMargin)
@@ -298,6 +296,22 @@ func Write(doc Document) ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
+}
+
+// paper is an empty document with the fonts every page is written in.
+//
+// The Go fonts rather than fpdf's built-in ones. Those are Latin-1: they cover
+// German and turn everything else into question marks without saying so, and a
+// project name is whatever somebody typed. These arrive with golang.org/x/image,
+// which this module already depends on, so they cost no new dependency and no
+// font file to ship.
+func paper() *fpdf.Fpdf {
+	pdf := fpdf.New("P", "mm", "A4", "")
+
+	pdf.AddUTF8FontFromBytes("go", "", goregular.TTF)
+	pdf.AddUTF8FontFromBytes("go", "B", gobold.TTF)
+
+	return pdf
 }
 
 // writeFooter puts the installation and the moment at the foot of every page.
@@ -476,7 +490,8 @@ func writeChart(pdf *fpdf.Fpdf, number int, chart []byte) error {
 // writeTable sets the figures out in columns.
 //
 // The heading row is repeated on every page the table runs onto, because a
-// column of numbers with nothing above it is a column nobody can read.
+// column of numbers with nothing above it is a column nobody can read. A cell
+// longer than its column folds onto more lines, and its row grows to hold it.
 func writeTable(pdf *fpdf.Fpdf, ink inks, table Table) {
 	if len(table.Columns) == 0 {
 		return
@@ -503,10 +518,12 @@ func writeTable(pdf *fpdf.Fpdf, ink inks, table Table) {
 	_, pageHeight := pdf.GetPageSize()
 
 	for r, row := range table.Rows {
-		if pdf.GetY()+rowHeight > pageHeight-pageMargin {
-			pdf.AddPage()
-			header()
-		}
+		// Every cell in its own face and folded to its column, so the row is as
+		// tall as its tallest cell. The face is set before the folding, because
+		// the bold one is wider.
+		looks := make([]shade, len(table.Columns))
+		cells := make([][]string, len(table.Columns))
+		lines := 1
 
 		for i := range table.Columns {
 			cell := ""
@@ -514,22 +531,49 @@ func writeTable(pdf *fpdf.Fpdf, ink inks, table Table) {
 				cell = row[i]
 			}
 
-			// The face is set before the cell is fitted, because the bold one is
-			// wider.
-			look := ink.shadeOf(table.toneOf(r, i), ink.text)
+			looks[i] = ink.shadeOf(table.toneOf(r, i), ink.text)
 
-			pdf.SetFont("go", face(look.bold), bodySize)
-			use(pdf, look.ink)
+			pdf.SetFont("go", face(looks[i].bold), bodySize)
 
-			if look.filled {
-				pdf.SetFillColor(look.fill.r, look.fill.g, look.fill.b)
-			}
-
-			pdf.CellFormat(widths[i], rowHeight, fit(pdf, cell, widths[i]), "B", 0,
-				alignOf(table, i), look.filled, 0, "")
+			cells[i] = fold(pdf, cell, widths[i])
+			lines = max(lines, len(cells[i]))
 		}
 
-		pdf.Ln(-1)
+		height := rowHeight + float64(lines-1)*lineStep
+
+		if pdf.GetY()+height > pageHeight-pageMargin {
+			pdf.AddPage()
+			header()
+		}
+
+		start, top := pdf.GetX(), pdf.GetY()
+		x := start
+
+		for i, cell := range cells {
+			pdf.SetFont("go", face(looks[i].bold), bodySize)
+			use(pdf, looks[i].ink)
+
+			if looks[i].filled {
+				pdf.SetFillColor(looks[i].fill.r, looks[i].fill.g, looks[i].fill.b)
+				pdf.Rect(x, top, widths[i], height, "F")
+			}
+
+			// Centred in its row, as the screen sets a cell beside a taller one.
+			first := top + float64(lines-len(cell))*lineStep/2
+
+			for n, line := range cell {
+				pdf.SetXY(x, first+float64(n)*lineStep)
+				pdf.CellFormat(widths[i], rowHeight, line, "", 0, alignOf(table, i), false, 0, "")
+			}
+
+			x += widths[i]
+		}
+
+		// One rule under the whole row, where every cell used to draw its own: a
+		// cell of one line would rule itself off halfway down a row another cell
+		// folds.
+		pdf.Line(start, top+height, x, top+height)
+		pdf.SetXY(start, top+height)
 	}
 
 	pdf.SetFont("go", "", bodySize)
@@ -590,11 +634,42 @@ func columnWidths(pdf *fpdf.Fpdf, table Table) []float64 {
 		return widths
 	}
 
-	// Scaled to the page: up where there is room to spare, down where there is
-	// not. Down is the case that matters - one long description would otherwise
-	// push the last column off the paper.
-	for i := range widths {
-		widths[i] = widths[i] * contentWide / total
+	// Scaled up to the page where there is room to spare.
+	if total <= contentWide {
+		for i := range widths {
+			widths[i] = widths[i] * contentWide / total
+		}
+
+		return widths
+	}
+
+	// And where there is not, the narrow columns keep their room and only the
+	// widest give way, folding onto more lines. Every column used to be scaled
+	// down alike, which cut a date to "01.11…" and a time to "0…" beside one long
+	// sentence - and the figures are what the page is for.
+	return shareOut(widths, contentWide)
+}
+
+// shareOut gives each column what it needs up to one cap, the width at which
+// the columns fill room exactly: those under it keep all they need, and those
+// over it share what is left alike.
+func shareOut(needed []float64, room float64) []float64 {
+	order := make([]int, len(needed))
+	for i := range order {
+		order[i] = i
+	}
+
+	slices.SortStableFunc(order, func(a, b int) int { return cmp.Compare(needed[a], needed[b]) })
+
+	widths := make([]float64, len(needed))
+	left := room
+
+	// Narrowest first, each taking what it needs or an equal share of what is
+	// left, whichever is less. Once one takes the share, every wider one after it
+	// takes the same.
+	for placed, i := range order {
+		widths[i] = min(needed[i], left/float64(len(order)-placed))
+		left -= widths[i]
 	}
 
 	return widths
@@ -607,6 +682,25 @@ func alignOf(table Table, column int) string {
 	}
 
 	return "L"
+}
+
+// maxCellLines is how many lines a cell folds onto before it is cut. Far more
+// than a cell the screens send needs - three limits of the Working Hours Act fold
+// onto four - and few enough that no row runs taller than a page.
+const maxCellLines = 10
+
+// fold breaks a cell onto the lines its column needs, in the face already set.
+// One that needs more than maxCellLines ends its last in an ellipsis.
+func fold(pdf *fpdf.Fpdf, cell string, width float64) []string {
+	lines := pdf.SplitText(cell, width)
+	if len(lines) <= maxCellLines {
+		return lines
+	}
+
+	lines = lines[:maxCellLines]
+	lines[maxCellLines-1] = fit(pdf, lines[maxCellLines-1]+"…", width)
+
+	return lines
 }
 
 // fit shortens a cell that will not fit its column, ending it with an ellipsis
