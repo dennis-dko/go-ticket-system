@@ -167,6 +167,81 @@ func TestTheOvertimeDocumentIsInTheColoursOfItsScreen(t *testing.T) {
 		t.Errorf("the overtime document's summary is %+v, want the balance of half an hour "+
 			"over in credit", asked.Summary)
 	}
+
+	p.theTotalsColourIsCarried("#overtime-total")
+
+	// A week with nothing booked comes to nothing, which the screen shows in a
+	// grey pill rather than in credit or in debt.
+	p.run("work out an empty week's balance", chromedp.Evaluate(`(() => {
+			const form = document.querySelector('#form-overtime');
+			setDateField(form.elements.from, '2026-03-09');
+			setDateField(form.elements.to, '2026-03-15');
+		})()`, nil),
+		p.click(`#form-overtime button[type="submit"]`))
+	p.waitForText("#overtime-meta", "booked 0.00 h of 0.00 h")
+
+	p.theTotalsColourIsCarried("#overtime-total")
+
+	before = p.documentsAsked()
+
+	p.run("export the empty week", p.click("#overtime-pdf"))
+
+	if summary := p.documentAsked(before, "#overtime-pdf").Summary; len(summary) != 1 || summary[0].Tone != "muted" {
+		t.Errorf("the empty week's summary is %+v, want its balance of nothing in the screen's grey", summary)
+	}
+}
+
+// The report's and the statistics' totals are in the grey their screens set them
+// in, in the documents made of those screens - not in the installation's blue,
+// in which every total of a document used to be printed.
+func TestTheReportAndStatisticsTotalsAreInTheColourOfTheirScreen(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyWorker()
+
+	var booked bool
+
+	p.awaitJSON(`(async () => {
+		await api('/timesheets', { method: 'POST', body: JSON.stringify({ date: todayISO(), durationHours: 2.5 }) });
+		return true;
+	})()`, &booked)
+
+	p.catchDocuments()
+
+	p.run("evaluate the report", p.click(`.tab[data-view="report"]`),
+		p.click(`#report-tabs [data-card-tab="report"]`),
+		chromedp.WaitVisible("#form-report", chromedp.ByID),
+		p.click(`#form-report button[type="submit"]`))
+	p.waitShown("#report-result")
+	p.waitForText("#report-total", "2.50")
+	p.atRest()
+
+	p.theTotalsColourIsCarried("#report-total")
+
+	before := p.documentsAsked()
+
+	p.run("export the report", p.click("#report-pdf"))
+
+	if summary := p.documentAsked(before, "#report-pdf").Summary; len(summary) != 1 || summary[0].Tone != "muted" {
+		t.Errorf("the report's summary is %+v, want its total in the screen's grey", summary)
+	}
+
+	p.run("evaluate the statistics", p.click(`.tab[data-view="overtime"]`),
+		chromedp.WaitVisible("#statistics-card", chromedp.ByID),
+		p.click("#statistics-load"))
+	p.waitForText("#statistics-total", "2.50")
+	p.atRest()
+
+	p.theTotalsColourIsCarried("#statistics-total")
+
+	before = p.documentsAsked()
+
+	p.run("export the statistics", p.click("#statistics-pdf"))
+
+	if summary := p.documentAsked(before, "#statistics-pdf").Summary; len(summary) != 1 || summary[0].Tone != "muted" {
+		t.Errorf("the statistics' summary is %+v, want its total in the screen's grey", summary)
+	}
 }
 
 // The working time's document is in the colours of its screen: a day booked on
@@ -193,9 +268,42 @@ func TestTheWorkingTimeDocumentIsInTheColoursOfItsScreen(t *testing.T) {
 		quiet,
 	}
 
-	if got := p.documentAsked(before, "#workday-pdf").table(t, 0).Tones; !reflect.DeepEqual(got, want) {
+	asked := p.documentAsked(before, "#workday-pdf")
+
+	if got := asked.table(t, 0).Tones; !reflect.DeepEqual(got, want) {
 		t.Errorf("the working time's document says %q with its colours, want %q - each limit "+
 			"on its tint and the day with nothing recorded quieter", got, want)
+	}
+
+	// The month's totals are the grey sentence under the table.
+	p.theTotalsColourIsCarried("#workday-total")
+
+	if len(asked.Summary) != 2 || asked.Summary[0].Tone != "muted" || asked.Summary[1].Tone != "muted" {
+		t.Errorf("the working time's summary is %+v, want the hours worked and booked in the screen's grey", asked.Summary)
+	}
+}
+
+// theTotalsColourIsCarried fails the case when the screen draws the total at
+// selector apart from plain text - in another colour, or in the bold face - and
+// toneOf gives it no word, so the document made of the screen would print it as
+// plain text.
+func (p *page) theTotalsColourIsCarried(selector string) {
+	p.t.Helper()
+
+	var missed string
+
+	p.run("compare the total's colour with its tone", chromedp.Evaluate(`(() => {
+		const total = document.querySelector('`+selector+`');
+		const plain = window.getComputedStyle(document.body);
+		const look = window.getComputedStyle(total);
+		const apart = look.color !== plain.color || Number(look.fontWeight) >= 600;
+
+		return apart && !toneOf(total) ? total.textContent.trim() : '';
+	})()`, &missed))
+
+	if missed != "" {
+		p.t.Errorf("%s draws %q apart on the screen, and its document would print it as plain text",
+			selector, missed)
 	}
 }
 

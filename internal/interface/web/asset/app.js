@@ -8042,9 +8042,10 @@ async function workDayDocument() {
         'A record kept by its owner for themselves: when each day began and finished, its breaks, and the hours booked on it.'),
       table: tableAsFigures($('#table-workdays')),
     }],
+    // In the tone of the sentence that says the same under the table.
     summary: [
-      { label: t('work.worked', 'Worked'), value: fmtHours(workDays?.totalWorked ?? 0) },
-      { label: t('work.booked', 'Booked'), value: fmtHours(workDays?.totalBooked ?? 0) },
+      { label: t('work.worked', 'Worked'), value: fmtHours(workDays?.totalWorked ?? 0), tone: toneOf($('#workday-total')) },
+      { label: t('work.booked', 'Booked'), value: fmtHours(workDays?.totalBooked ?? 0), tone: toneOf($('#workday-total')) },
     ],
   };
 }
@@ -14745,8 +14746,9 @@ function cellAsFigure(cell) {
  * the dark theme's are drawn for a dark ground - a pale grey, a tint nearly
  * black - so the document prints each word in shades of its own, the light
  * theme's (document.Tone on the server). The classes are the ones the stylesheet
- * draws a figure apart by; everyColourIsCarried in the browser suite fails on a
- * cell drawn apart that this gives no word.
+ * draws a figure apart by - a total set in a pill or as a quiet sentence is grey
+ * - and everyColourIsCarried and theTotalsColourIsCarried in the browser suite
+ * fail on a cell or a total drawn apart that this gives no word.
  */
 function toneOf(figure) {
   if (!figure) return '';
@@ -14754,7 +14756,7 @@ function toneOf(figure) {
   if (figure.matches('.plus')) return 'plus';
   if (figure.matches('.minus')) return 'minus';
   if (figure.querySelector('.act-notice')) return 'notice';
-  if (figure.matches('.empty') || figure.closest('tr.unrecorded')) return 'muted';
+  if (figure.matches('.empty, .muted, .pill') || figure.closest('tr.unrecorded')) return 'muted';
 
   return '';
 }
@@ -14927,7 +14929,9 @@ async function reportDocument() {
       chart: await chartAsPicture($('#report-chart')),
       table: tableAsFigures($('#table-report')),
     }],
-    summary: total ? [{ label: t('stats.total', 'Total'), value: total }] : [],
+    summary: total
+      ? [{ label: t('stats.total', 'Total'), value: total, tone: toneOf($('#report-total')) }]
+      : [],
   };
 }
 
@@ -14974,6 +14978,7 @@ async function statisticsDocument() {
     summary: [{
       label: t('stats.total', 'Total'),
       value: $('#statistics-total').textContent.replace(/^[^:]*:\s*/, '').trim(),
+      tone: toneOf($('#statistics-total')),
     }],
   };
 }
