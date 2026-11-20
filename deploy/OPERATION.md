@@ -1548,6 +1548,12 @@ systemctl stop timepulse && cp timepulse-web_v1.3.0_linux_amd64 /opt/timepulse/t
 The schema migrates itself on the way up. There is no separate command, and
 nothing to run afterwards.
 
+Phones with the Android app are offered the new release's app at their next
+start: the app asks the installation which release it runs, and a press
+downloads that release's app from GitHub and hands it to Android, which asks
+to confirm it. The phone has to reach GitHub for that; one that cannot is told
+the download failed and keeps the app it has.
+
 Releases up to v0.4.2 carried a terminal client beside this binary. None does since: booking is the web interface's and the
 Android app's. An update neither replaces nor removes a client already handed
 out, and it knows only its own release's API, so take it out of use once the

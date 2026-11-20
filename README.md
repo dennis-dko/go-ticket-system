@@ -286,9 +286,13 @@ which are set up there.
 installation runs - **My account → Install the Android app** shows it as a code
 the phone's camera downloads it from - and open it on the phone; Android asks once whether the
 browser or file manager it was opened from may install apps. Every release is
-signed with the same key, so the next one installs over it. An installation
-whose certificate comes from an authority of its own needs that authority
-installed on the phone, as the phone's browser does.
+signed with the same key, so the next one installs over it - and the app offers
+it itself: at every start it asks the installation which release it runs, and
+once that is newer than the app, a press downloads that release's app and hands
+it to Android, which asks once whether TimePulse may install apps and asks to
+confirm each update. An installation whose certificate comes from an authority
+of its own needs that authority installed on the phone, as the phone's browser
+does.
 
 ## What it does
 
