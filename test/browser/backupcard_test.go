@@ -82,3 +82,50 @@ func TestTheBackupCardSaysWhatToSetWithoutAPassphrase(t *testing.T) {
 		t.Errorf("the card says %q, want what to set and that it takes 12 characters", said)
 	}
 }
+
+// The plan stands a line apart from the button above it.
+//
+// "Back up now" makes a backup at once; the form under it only stores when the
+// next ones are made. With nothing between them the schedule's label read as
+// the button's caption, "Zeitplan" directly under "Jetzt sichern". .row-apart
+// is the stylesheet's rule for this: a line's worth of air above a control that
+// is a different kind of thing from the one above it.
+//
+// Measured as geometry rather than asserted as a class, as the rights notice's
+// case is, so it says what a reader would see.
+func TestTheBackupPlanStandsApartFromTheButtonAboveIt(t *testing.T) {
+	t.Parallel()
+
+	p := openWith(t, "BACKUP_PASSPHRASE=the installation's own passphrase")
+	p.readyAdmin()
+
+	p.run("open the settings", p.click(`.tab[data-view="admin"]`))
+	p.showTabOf("#backup-card")
+	p.waitShown("#backup-now")
+
+	var gap int
+
+	p.run("measure the air under the button", chromedp.Evaluate(`(() => {
+		const button = document.querySelector('#backup-now');
+		const label = document.querySelector('#form-backup-plan label');
+
+		return Math.round(
+			label.getBoundingClientRect().top - button.getBoundingClientRect().bottom);
+	})()`, &gap))
+
+	p.run("show the whole card", chromedp.ScrollIntoView("#backup-card"))
+	p.saveShot(t, "backupcard.png")
+
+	t.Logf("the schedule's label sits %dpx below the button", gap)
+
+	// A line, near enough: the rule is 18px, and this asks for most of one so the
+	// case is about there being air rather than about the exact figure.
+	const aLine = 12
+
+	if gap < aLine {
+		t.Errorf("the schedule's label sits %dpx under \"Back up now\", which reads as "+
+			"the button's caption. .row-apart already exists for this: a line's worth "+
+			"of air above a control that is a different kind of thing from the one "+
+			"above it", gap)
+	}
+}
