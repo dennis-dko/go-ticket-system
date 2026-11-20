@@ -69,6 +69,72 @@ func TestAStatementLineWithNoRateYetIsInItsDocument(t *testing.T) {
 	}
 }
 
+// Each limit of the Working Hours Act a day went past is its own sentence in the
+// working time's document, as it is its own line on the screen.
+//
+// The cell holds one element per limit, set one under the other, and the reader
+// of a table took the cell's text whole - which runs them together, so a day
+// that was too long and had too short a break read "…(Working Hours Act § 3)45
+// minutes of breaks needed…" on paper.
+func TestEachLimitADayWentPastIsItsOwnSentenceInTheDocument(t *testing.T) {
+	t.Parallel()
+
+	p := open(t)
+	p.readyWorker()
+	p.recordAMonthPastTheLimits()
+	p.catchDocuments()
+
+	before := p.documentsAsked()
+
+	p.run("export the month", p.click("#workday-pdf"))
+
+	table := p.documentAsked(before, "#workday-pdf").table(t, 0)
+
+	const act = 6
+
+	if len(table.Columns) <= act || table.Columns[act] != "Working Hours Act" {
+		t.Fatalf("the document's columns are %q, want the Working Hours Act at %d", table.Columns, act)
+	}
+
+	want := "More than ten hours (Working Hours Act § 3) · 45 minutes of breaks needed (Working Hours Act § 4)"
+
+	for _, row := range table.Rows {
+		if len(row) > act && row[act] == want {
+			return
+		}
+	}
+
+	t.Errorf("no day of the document reads %q under the Working Hours Act; its rows are %q", want, table.Rows)
+}
+
+// recordAMonthPastTheLimits records the first two days of the calendar's month
+// and books the third without recording it, and opens the month: the first day
+// too long and with too short a break, the second begun too soon after it.
+func (p *page) recordAMonthPastTheLimits() {
+	p.t.Helper()
+
+	var recorded bool
+
+	p.awaitJSON(`(async () => {
+		const first = currentCalendarMonth();
+		const day = (n) => ISO_DAY(new Date(first.getFullYear(), first.getMonth(), n));
+		await api('/me/workdays/' + day(1), {
+			method: 'PUT', body: JSON.stringify({ start: '07:00', end: '19:00', breakMinutes: 15 }),
+		});
+		await api('/me/workdays/' + day(2), {
+			method: 'PUT', body: JSON.stringify({ start: '05:00', end: '09:00', breakMinutes: 0 }),
+		});
+		await api('/timesheets', { method: 'POST', body: JSON.stringify({ date: day(3), durationHours: 2 }) });
+		await loadWorkDays();
+		return true;
+	})()`, &recorded)
+
+	p.run("open the working time", p.click(`.tab[data-view="calendar"]`),
+		p.click(`#calendar-tabs [data-card-tab="worktime"]`),
+		chromedp.WaitVisible("#workday-card", chromedp.ByID))
+	p.waitForText("#table-workdays tbody", "Only 10.00 h of rest since the day before")
+}
+
 // askedDocument is a document as the page asked for it to be laid out.
 type askedDocument struct {
 	Subtitle string `json:"subtitle"`

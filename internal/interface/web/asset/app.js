@@ -14717,6 +14717,25 @@ async function chartAsPicture(container) {
 }
 
 /**
+ * What one cell says, as the one line a document gives it.
+ *
+ * A cell made of parts set one under the other keeps them apart. The day past
+ * two limits of the Working Hours Act shows a line for each, and its text taken
+ * whole ran the two sentences together on paper: "…(§ 3)45 minutes of breaks…".
+ */
+function cellAsFigure(cell) {
+  if (!cell) return '';
+
+  const parts = [...cell.children];
+  const stacked = parts.length > 1
+    && parts.every((part) => window.getComputedStyle(part).display === 'block');
+
+  if (!stacked) return cell.textContent.trim();
+
+  return parts.map((part) => part.textContent.trim()).filter(Boolean).join(' · ');
+}
+
+/**
  * Reads a table off the screen as the figures it is showing.
  *
  * The rendered table rather than the answer it was drawn from: what goes in the
@@ -14746,7 +14765,7 @@ function tableAsFigures(table) {
     // "no rate yet" is marked empty as well, and its line was left out of the
     // document with its hours.
     .filter((row) => !(row.children.length === 1 && row.firstElementChild.matches('td.empty')))
-    .map((row) => wanted.map((i) => row.children[i]?.textContent.trim() ?? ''));
+    .map((row) => wanted.map((i) => cellAsFigure(row.children[i])));
 
   return {
     columns: wanted.map((i) => headings[i].textContent.trim()),
