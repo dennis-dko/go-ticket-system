@@ -49,7 +49,8 @@ services:
 
       APP_NAME: ${APP_NAME:-TimePulse}
 
-      # Encrypts the second factors and the directory password in the database.
+      # Encrypts the second factors, the directory password, a sign-in provider's
+      # client secret and the push key in the database.
       # Empty stores them in the clear, as every installation did before this
       # existed; see .env.example for how to generate one and why it has to be
       # backed up somewhere other than beside the database.
