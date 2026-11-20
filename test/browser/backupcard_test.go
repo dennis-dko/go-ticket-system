@@ -129,3 +129,43 @@ func TestTheBackupPlanStandsApartFromTheButtonAboveIt(t *testing.T) {
 			"above it", gap)
 	}
 }
+
+// The card's explanations are drawn as explanations, not as warnings.
+//
+// .minus is the stylesheet's warning - the danger colour, in bold - and the
+// folder line and the schedule's hint carried it while saying nothing that is
+// wrong: where the backups are kept, and how the five fields are read. Red on a
+// card about keeping the data safe says something is the matter with it. The
+// directory card's schedule hint, the same kind of sentence, is plain .muted.
+func TestTheBackupCardsExplanationsAreNotWarnings(t *testing.T) {
+	t.Parallel()
+
+	p := openWith(t, "BACKUP_PASSPHRASE=the installation's own passphrase")
+	p.readyAdmin()
+
+	p.run("open the settings", p.click(`.tab[data-view="admin"]`))
+	p.showTabOf("#backup-card")
+	p.waitShown("#backup-now")
+
+	var looks map[string]string
+
+	p.run("read how each sentence is drawn", chromedp.Evaluate(`(() => {
+		const look = (selector) => {
+			const style = getComputedStyle(document.querySelector(selector));
+			return style.color + ' ' + style.fontWeight;
+		};
+
+		return {
+			card: look('#backup-card > p[data-i18n="backup.hint"]'),
+			folder: look('#backup-folder'),
+			schedule: look('#form-backup-plan p[data-i18n="backup.scheduleHint"]'),
+		};
+	})()`, &looks))
+
+	for _, line := range []string{"folder", "schedule"} {
+		if looks[line] != looks["card"] {
+			t.Errorf("the %s line is drawn %q where the card's own explanation is %q; "+
+				"it says nothing that is wrong, and .minus is the warning", line, looks[line], looks["card"])
+		}
+	}
+}

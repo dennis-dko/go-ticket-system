@@ -1922,7 +1922,7 @@
         <h2 data-i18n="backup.title">Backups</h2>
         <p class="muted" data-i18n="backup.hint">A backup is the whole installation - every account, every hour, every setting - sealed with BACKUP_PASSPHRASE. It is restored through the installer, into an empty database, with that passphrase and the same SECRET_KEY.</p>
         <p class="muted" id="backup-off" hidden></p>
-        <p class="muted minus" id="backup-folder"></p>
+        <p class="muted" id="backup-folder"></p>
         <div class="row">
           <button type="button" id="backup-now" data-i18n="backup.now">Back up now</button>
         </div>
@@ -1931,7 +1931,7 @@
             <label data-i18n="backup.schedule">Schedule<input type="text" name="schedule" maxlength="255" placeholder="0 3 * * *" autocomplete="off"></label>
             <label data-i18n="backup.keep">Backups kept<input type="number" name="keep" min="1" max="365" step="1" required></label>
           </div>
-          <p class="muted minus" data-i18n="backup.scheduleHint">Five fields - minute, hour, day of the month, month, day of the week - in the installation's timezone. Empty makes no backup on its own; after each one, the oldest go until this many are left.</p>
+          <p class="muted" data-i18n="backup.scheduleHint">Five fields - minute, hour, day of the month, month, day of the week - in the installation's timezone. Empty makes no backup on its own; after each one, the oldest go until this many are left.</p>
           <button type="submit" data-i18n="action.save">Save</button>
         </form>
         <table id="table-backups">
