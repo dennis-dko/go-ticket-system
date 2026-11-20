@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	appservice "github.com/dennis-dko/timepulse/internal/application/v1/service"
@@ -14,13 +15,18 @@ import (
 	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 	"github.com/dennis-dko/timepulse/internal/support/apperror"
 	"github.com/dennis-dko/timepulse/internal/support/backup"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 // pendingRestore is a backup the installer has opened once, to be sure it can
-// be, and hands to the application to restore after the migrations.
+// be, and hands to the application to restore after the migrations - with what
+// to do with secrets this process's key cannot open: the key they came under,
+// or leave them behind.
 type pendingRestore struct {
-	file       []byte
-	passphrase string
+	file           []byte
+	passphrase     string
+	secretKey      string
+	withoutSecrets bool
 }
 
 // restoreAsked is the backup an answer asks to restore, once the questions a
@@ -124,21 +130,41 @@ func (s *server) backup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pending := &pendingRestore{file: file, passphrase: string(passphrase)}
+
+	// The key the backup's installation had comes as the passphrase does, as
+	// base64 of what was typed; one that does not decode opens nothing.
+	secretKey, err := base64.StdEncoding.DecodeString(r.Header.Get("X-Backup-Secret-Key"))
+	if err != nil {
+		secretKey = []byte("not a key")
+	}
+
 	if contents.KeyCheck != "" {
-		if err := appservice.CheckSecretKey(s.cfg.Secrets, contents.KeyCheck); err != nil {
-			writeError(w, http.StatusBadRequest, keyRefusal(err))
+		err := s.secretsOf(contents.KeyCheck, strings.TrimSpace(string(secretKey)),
+			r.Header.Get("X-Backup-Without-Secrets") == "true", pending)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err)
 
 			return
 		}
 	}
 
 	s.mu.Lock()
-	s.restore = &pendingRestore{file: file, passphrase: string(passphrase)}
+	s.restore = pending
 	s.mu.Unlock()
 
 	header := contents.Header
 
-	s.cfg.Logf("a backup %s is ready to restore", header.Describe())
+	secrets := ""
+
+	switch {
+	case pending.secretKey != "":
+		secrets = "; its secrets are sealed again under this installation's key"
+	case pending.withoutSecrets:
+		secrets = "; its secrets are left behind"
+	}
+
+	s.cfg.Logf("a backup %s is ready to restore%s", header.Describe(), secrets)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"application": header.Application, "dialect": header.Dialect, "createdAt": header.CreatedAt,
@@ -163,16 +189,50 @@ func backupRefusal(err error) error {
 	}
 }
 
+// secretsOf decides what the restore does with a backup's secrets, sealed where
+// keyCheck was kept: nothing, where this process's key opens them; seal them
+// again under it with the key they came under, where that is given and opens
+// them; leave them behind, where that is asked; and otherwise ask for one of the
+// two, saying why this process's own key does not do.
+func (s *server) secretsOf(keyCheck, secretKey string, without bool, pending *pendingRestore) error {
+	own := appservice.CheckSecretKey(s.cfg.Secrets, keyCheck)
+	if own == nil {
+		return nil
+	}
+
+	switch {
+	case secretKey != "":
+		old, err := security.NewSealer(secretKey)
+		if err == nil {
+			err = appservice.CheckSecretKey(old, keyCheck)
+		}
+
+		if err != nil {
+			return apperror.Invalidf("the SECRET_KEY given does not open this backup's secrets").
+				WithCode("backupSecretKeyWrong")
+		}
+
+		pending.secretKey = secretKey
+	case without:
+		pending.withoutSecrets = true
+	default:
+		return keyRefusal(own)
+	}
+
+	return nil
+}
+
 // keyRefusal is why a backup whose secrets this process's SECRET_KEY cannot open
-// was not taken, coded for the page to say which key it needs.
+// was not taken without more, coded for the page to ask for the key the backup's
+// installation had, or whether to restore it without its secrets.
 func keyRefusal(err error) error {
 	if errors.Is(err, appservice.ErrSecretKeyMissing) {
-		return apperror.Invalidf("this backup was made where SECRET_KEY was set, and its second factors " +
-			"and directory password are sealed with that key: start TimePulse here with the same " +
-			"SECRET_KEY").WithCode("backupNeedsSecretKey")
+		return apperror.Invalidf("this backup was made where SECRET_KEY was set, and its second factors, " +
+			"directory password and other secrets are sealed with that key: give the SECRET_KEY of the " +
+			"installation it was made on, or restore it without its secrets").WithCode("backupNeedsSecretKey")
 	}
 
 	return apperror.Invalidf("this backup's secrets were sealed with another SECRET_KEY than the one set " +
-		"here: start TimePulse with the SECRET_KEY of the installation it was made on").
+		"here: give the SECRET_KEY of the installation it was made on, or restore it without its secrets").
 		WithCode("backupOtherSecretKey")
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 	"github.com/dennis-dko/timepulse/internal/support/backup"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 	"github.com/dennis-dko/timepulse/test/harness"
 )
 
@@ -180,6 +181,20 @@ func TestABackupPlanIsKeptOnlyIfItCanRun(t *testing.T) {
 func uploadBackup(t *testing.T, c *installerClient, file []byte, passphrase string) (int, map[string]any) {
 	t.Helper()
 
+	return uploadBackupWith(t, c, file, passphrase, nil)
+}
+
+// uploadBackupWith is uploadBackup with more headers, as the page sends what it
+// asked for about the backup's secrets.
+func uploadBackupWith(
+	t *testing.T,
+	c *installerClient,
+	file []byte,
+	passphrase string,
+	headers map[string]string,
+) (int, map[string]any) {
+	t.Helper()
+
 	req, err := http.NewRequest(http.MethodPost, c.app.BaseURL()+"/install/backup", bytes.NewReader(file))
 	if err != nil {
 		t.Fatalf("cannot build the upload: %v", err)
@@ -188,6 +203,10 @@ func uploadBackup(t *testing.T, c *installerClient, file []byte, passphrase stri
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("X-Setup-Token", c.token)
 	req.Header.Set("X-Backup-Passphrase", base64.StdEncoding.EncodeToString([]byte(passphrase)))
+
+	for name, value := range headers {
+		req.Header.Set(name, value)
+	}
 
 	res, err := (&http.Client{Timeout: time.Minute}).Do(req)
 	if err != nil {
@@ -379,6 +398,101 @@ func TestTheInstallerAsksForTheKeyABackupWasSealedWith(t *testing.T) {
 	waitForTheApplication(t, c)
 
 	(&app{App: c.app, t: t}).newClient().signIn(adminEmail, "a-much-better-password")
+}
+
+// A backup made where another SECRET_KEY was set is restored with that key given
+// once, the way its passphrase is: the installer refuses a key that does not open
+// the backup's secrets and takes the one that does, and the restore seals them
+// again under this installation's own key - so the second factor of the account
+// it carries works here, under a key the backup never knew. Where that key is
+// lost, the backup comes back without its secrets, and the account signs in with
+// its password alone.
+func TestABackupMadeUnderAnotherKeyIsRestoredWithItOrWithoutItsSecrets(t *testing.T) {
+	t.Parallel()
+
+	key := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("k"), 32))
+	other := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("o"), 32))
+	header := func(value string) string { return base64.StdEncoding.EncodeToString([]byte(value)) }
+
+	source := start(t, "BACKUP_PASSPHRASE="+backupPassphrase, "SECRET_KEY="+key)
+	admin := source.signInAsAdmin("a-much-better-password")
+
+	setup := beginEnrolment(t, admin)
+
+	code, err := security.CurrentTOTPCode(setup.Secret)
+	if err != nil {
+		t.Fatalf("generate a code: %v", err)
+	}
+
+	admin.must(admin.api(http.MethodPut, "/me/totp", map[string]any{"code": code}), http.StatusOK, http.StatusNoContent)
+
+	_, file := madeBackup(t, admin)
+
+	restore := func(t *testing.T, c *installerClient) *app {
+		t.Helper()
+
+		answer := map[string]any{"restore": true, "language": "en"}
+		for name, value := range harness.FreshDatasource(t) {
+			answer[name] = value
+		}
+
+		if status, body := c.post("/install/save", c.token, answer); status != http.StatusOK {
+			t.Fatalf("saving the connection with the restore asked for: %d %v", status, body)
+		}
+
+		waitForTheApplication(t, c)
+
+		return &app{App: c.app, t: t}
+	}
+
+	t.Run("with the key it was sealed with", func(t *testing.T) {
+		t.Parallel()
+
+		c := openInstaller(t, "SECRET_KEY="+other)
+
+		if status, body := uploadBackupWith(t, c, file, backupPassphrase,
+			map[string]string{"X-Backup-Secret-Key": header(other)}); status != http.StatusBadRequest ||
+			body["code"] != "backupSecretKeyWrong" {
+			t.Errorf("a key that does not open the backup was answered %d %v, want 400 backupSecretKeyWrong",
+				status, body)
+		}
+
+		if status, body := uploadBackupWith(t, c, file, backupPassphrase,
+			map[string]string{"X-Backup-Secret-Key": header(key)}); status != http.StatusOK {
+			t.Fatalf("the key the backup was sealed with was answered %d %v", status, body)
+		}
+
+		restored := restore(t, c)
+
+		// The next step's code: the current one was spent turning the factor on.
+		next, err := security.TOTPCodeAt(setup.Secret, time.Now().Add(30*time.Second))
+		if err != nil {
+			t.Fatalf("generate a code: %v", err)
+		}
+
+		back := restored.newClient()
+		back.must(back.api(http.MethodPost, "/auth/login", map[string]string{
+			"email": adminEmail, "password": "a-much-better-password", "totp": next,
+		}), http.StatusOK, http.StatusCreated)
+	})
+
+	t.Run("without its secrets", func(t *testing.T) {
+		t.Parallel()
+
+		c := openInstaller(t)
+
+		if status, body := uploadBackupWith(t, c, file, backupPassphrase,
+			map[string]string{"X-Backup-Without-Secrets": "true"}); status != http.StatusOK {
+			t.Fatalf("the backup without its secrets was answered %d %v", status, body)
+		}
+
+		restored := restore(t, c)
+
+		if opened, asked := passwordSignIn(t, restored, adminEmail, "a-much-better-password"); opened == nil || asked {
+			t.Errorf("after a restore without its secrets the account signs in: %v, asked for a second factor: %v",
+				opened != nil, asked)
+		}
+	})
 }
 
 // A backup moves between kinds of database, both ways: one made on the suite's

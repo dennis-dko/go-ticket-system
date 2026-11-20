@@ -107,6 +107,14 @@ type Result struct {
 	// the start.
 	Restore           []byte
 	RestorePassphrase string
+
+	// RestoreSecretKey is the SECRET_KEY the backup's installation had, given
+	// where this process's key cannot open the backup's secrets, so the restore
+	// seals them again under this one's. RestoreWithoutSecrets asks it to leave
+	// them behind instead, for a backup whose key is lost. Neither is set where
+	// the backup's secrets open under this process's key, or it has none.
+	RestoreSecretKey      string
+	RestoreWithoutSecrets bool
 }
 
 // answer is the body the page sends: the connection, and with a save, whether
@@ -223,8 +231,9 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 		Language:   accepted.language,
 	}
 
-	if accepted.restore != nil {
-		result.Restore, result.RestorePassphrase = accepted.restore.file, accepted.restore.passphrase
+	if restore := accepted.restore; restore != nil {
+		result.Restore, result.RestorePassphrase = restore.file, restore.passphrase
+		result.RestoreSecretKey, result.RestoreWithoutSecrets = restore.secretKey, restore.withoutSecrets
 	}
 
 	return result, waitErr

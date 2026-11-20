@@ -362,12 +362,9 @@ func main() {
 		demoLanguage string
 	)
 
-	// The backup that same answer uploaded to start the database from, and the
-	// passphrase it opens with; restored once the migrations have made the tables.
-	var (
-		restoreFile       []byte
-		restorePassphrase string
-	)
+	// The backup that same answer uploaded to start the database from, with what
+	// came with it; restored once the migrations have made the tables.
+	var backupToRestore *restoreRequest
 
 	if !configured {
 		chosen, err := runInstaller()
@@ -394,7 +391,14 @@ func main() {
 		ds = chosen.Datasource
 		installerToken = chosen.Token
 		demoWanted, demoLanguage = chosen.Demo, chosen.Language
-		restoreFile, restorePassphrase = chosen.Restore, chosen.RestorePassphrase
+		if chosen.Restore != nil {
+			backupToRestore = &restoreRequest{
+				file:           chosen.Restore,
+				passphrase:     chosen.RestorePassphrase,
+				secretKey:      chosen.RestoreSecretKey,
+				withoutSecrets: chosen.RestoreWithoutSecrets,
+			}
+		}
 	}
 
 	// Asked here and said once there is a logger, never refused: an installation
@@ -762,15 +766,15 @@ func main() {
 		// then asked of the installation as it was restored. A restore that fails
 		// takes the saved connection with it, so the next start serves the installer
 		// again instead of an empty installation on the database the backup was for.
-		if restoreFile != nil {
-			if err := restoreBackup(ctx, db, cfg.Dialect, restoreFile, restorePassphrase); err != nil {
+		if backupToRestore != nil {
+			if err := restoreBackup(ctx, db, cfg.Dialect, *backupToRestore, secrets); err != nil {
 				_ = os.Remove(appconfig.DatasourceFile)
 
 				return fmt.Errorf("the backup was not restored, and the installer is served again "+
 					"at the next start: %w", err)
 			}
 
-			restoreFile, restorePassphrase = nil, ""
+			backupToRestore = nil
 		}
 
 		// Before anything writes a moment. MySQL keeps one without its zone, so a
