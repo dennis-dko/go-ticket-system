@@ -39,10 +39,10 @@ type installerClient struct {
 	token string
 }
 
-func openInstaller(t *testing.T) *installerClient {
+func openInstaller(t *testing.T, env ...string) *installerClient {
 	t.Helper()
 
-	app := harness.StartUnconfigured(t)
+	app := harness.StartUnconfigured(t, env...)
 
 	// The token is logged during start-up, and waitUntilReady already waited for
 	// the port to answer - but the log is written by a different goroutine, so

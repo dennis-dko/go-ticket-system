@@ -20,12 +20,14 @@ import (
 	"sync"
 	"time"
 
+	appservice "github.com/dennis-dko/timepulse/internal/application/v1/service"
 	"github.com/dennis-dko/timepulse/internal/domain/model"
 	appconfig "github.com/dennis-dko/timepulse/internal/infrastructure/config"
 	"github.com/dennis-dko/timepulse/internal/infrastructure/persistence/sqldb"
 	"github.com/dennis-dko/timepulse/internal/support/apperror"
 	"github.com/dennis-dko/timepulse/internal/support/backup"
 	"github.com/dennis-dko/timepulse/internal/support/i18n"
+	"github.com/dennis-dko/timepulse/internal/support/security"
 )
 
 //go:embed asset/install.html
@@ -64,6 +66,13 @@ type Config struct {
 	// restore, which runs after the installer has handed over and can then only
 	// end the process. Zero sets no limit.
 	Schema int64
+
+	// Secrets is the sealer built from this process's SECRET_KEY, which the
+	// installation it sets up will run with. A backup whose secrets it cannot open
+	// is refused when it is uploaded, for the same reason as a newer schema: the
+	// start after the restore would refuse it, and then only by ending the
+	// process. Nil is no key.
+	Secrets *security.Sealer
 
 	// Logf reports progress. Required: this screen is the only thing the
 	// process is doing, and a silent one would look hung.
@@ -580,6 +589,14 @@ func (s *server) backup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if contents.KeyCheck != "" {
+		if err := appservice.CheckSecretKey(s.cfg.Secrets, contents.KeyCheck); err != nil {
+			writeError(w, http.StatusBadRequest, keyRefusal(err))
+
+			return
+		}
+	}
+
 	s.mu.Lock()
 	s.restore = &pendingRestore{file: file, passphrase: string(passphrase)}
 	s.mu.Unlock()
@@ -609,6 +626,20 @@ func backupRefusal(err error) error {
 	default:
 		return apperror.Invalidf("this is not a TimePulse backup").WithCode("notABackup")
 	}
+}
+
+// keyRefusal is why a backup whose secrets this process's SECRET_KEY cannot open
+// was not taken, coded for the page to say which key it needs.
+func keyRefusal(err error) error {
+	if errors.Is(err, appservice.ErrSecretKeyMissing) {
+		return apperror.Invalidf("this backup was made where SECRET_KEY was set, and its second factors " +
+			"and directory password are sealed with that key: start TimePulse here with the same " +
+			"SECRET_KEY").WithCode("backupNeedsSecretKey")
+	}
+
+	return apperror.Invalidf("this backup's secrets were sealed with another SECRET_KEY than the one set " +
+		"here: start TimePulse with the SECRET_KEY of the installation it was made on").
+		WithCode("backupOtherSecretKey")
 }
 
 // holdsTheToken reports whether a request carries the setup token.

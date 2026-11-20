@@ -328,6 +328,59 @@ func TestTheInstallerRefusesWhatTheRestoreWouldRefuse(t *testing.T) {
 	}
 }
 
+// A backup made where SECRET_KEY was set carries its secrets sealed with that
+// key, so it is refused by an installer whose key cannot open them - on the
+// installer's own screen, saying which key is missing - and taken by one with
+// the same key, which then restores it. It used to be taken whatever the key,
+// and the start then refused the restored installation for its key, ending the
+// process in a window that closed with it.
+func TestTheInstallerAsksForTheKeyABackupWasSealedWith(t *testing.T) {
+	t.Parallel()
+
+	key := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("k"), 32))
+	other := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("o"), 32))
+
+	source := start(t, "BACKUP_PASSPHRASE="+backupPassphrase, "SECRET_KEY="+key)
+	admin := source.signInAsAdmin("a-much-better-password")
+
+	_, file := madeBackup(t, admin)
+
+	for _, refused := range []struct {
+		name string
+		env  []string
+		code string
+	}{
+		{"without a key", nil, "backupNeedsSecretKey"},
+		{"with another key", []string{"SECRET_KEY=" + other}, "backupOtherSecretKey"},
+	} {
+		c := openInstaller(t, refused.env...)
+
+		if status, body := uploadBackup(t, c, file, backupPassphrase); status != http.StatusBadRequest ||
+			body["code"] != refused.code {
+			t.Errorf("an installer %s answered %d %v, want 400 %s", refused.name, status, body, refused.code)
+		}
+	}
+
+	c := openInstaller(t, "SECRET_KEY="+key)
+
+	if status, body := uploadBackup(t, c, file, backupPassphrase); status != http.StatusOK {
+		t.Fatalf("an installer with the same key answered %d %v", status, body)
+	}
+
+	answer := map[string]any{"restore": true, "language": "en"}
+	for name, value := range harness.FreshDatasource(t) {
+		answer[name] = value
+	}
+
+	if status, body := c.post("/install/save", c.token, answer); status != http.StatusOK {
+		t.Fatalf("saving the connection with the restore asked for: %d %v", status, body)
+	}
+
+	waitForTheApplication(t, c)
+
+	(&app{App: c.app, t: t}).newClient().signIn(adminEmail, "a-much-better-password")
+}
+
 // A backup moves between kinds of database, both ways: one made on the suite's
 // database comes back into SQLite, and one made on SQLite comes back into the
 // suite's database. The installer offers every kind for a restore and the file

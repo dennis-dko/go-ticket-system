@@ -1472,10 +1472,10 @@ round:
    setup token in that terminal.
 2. Choose the database, tick *Restore a backup into it*, choose the file and type
    its `BACKUP_PASSPHRASE`. The installer reads it whole there and then, so a
-   wrong passphrase, a file that is not a backup, one cut short on its way and
-   one made by a newer version of TimePulse are said on that page - the restore
-   itself runs after the installer has handed over, where a refusal can only end
-   the process.
+   wrong passphrase, a file that is not a backup, one cut short on its way, one
+   made by a newer version of TimePulse and one whose secrets the `SECRET_KEY`
+   of step 1 cannot open are said on that page - the restore itself runs after
+   the installer has handed over, where a refusal can only end the process.
 3. *Save and start*. The application migrates the database and puts the backup
    into it before anything else, and everybody signs in with the passwords they
    had. Under Compose, stop that run once it has started - Ctrl+C - and bring the
