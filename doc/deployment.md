@@ -220,7 +220,11 @@ docker compose pull && docker compose up -d
 ```
 
 Schema migrations run at start-up, so there is no separate step. Back the
-database up first — the application will not undo a migration for you:
+installation up first — the application will not undo a migration for you.
+*Back up now* on the *Backups* card under *Settings* makes one sealed file of it
+and downloads it, once `BACKUP_PASSPHRASE` is set in `.env`; the
+[operations manual](../deploy/OPERATION.md#backup) says how it comes back. A dump
+of the database does as well, and needs no passphrase:
 
 ```bash
 docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > backup-$(date +%F).sql.gz
