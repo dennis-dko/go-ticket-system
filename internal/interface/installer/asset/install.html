@@ -337,9 +337,32 @@
       <label data-i18n="db.restorePassphrase">The backup's passphrase<input type="password" id="restore-passphrase" autocomplete="off"></label>
       <p class="muted" data-i18n="db.restoreText">
         The BACKUP_PASSPHRASE of the installation the backup comes from. Every
-        account, hour and setting comes back with it; start this installation with
-        that installation's SECRET_KEY, or the second factors in it cannot be read.
+        account, hour and setting comes back with it; if that installation had
+        another SECRET_KEY than this one, it is asked for once the backup is read.
       </p>
+
+      <!-- Shown once the installer has read a backup whose secrets this
+           installation's key cannot open, and asked: the key that backup's
+           installation had, given once and kept nowhere - the secrets are sealed
+           again under this installation's own - or the backup without them. -->
+      <fieldset class="choice" id="restore-key" hidden>
+        <legend data-i18n="db.secretsHow">This backup's secrets - second factors, the directory password - are sealed with another SECRET_KEY</legend>
+        <label class="option">
+          <input type="radio" name="secrets" id="secrets-key" value="key" checked>
+          <span class="option-text">
+            <strong data-i18n="db.secretsKey">With the SECRET_KEY of the installation it comes from</strong>
+            <span class="muted" data-i18n="db.secretsKeyText">Given once and kept nowhere: the secrets are sealed again with this installation's own key.</span>
+          </span>
+        </label>
+        <label id="restore-secret-key-field" data-i18n="db.secretKey">That installation's SECRET_KEY<input type="password" id="restore-secret-key" autocomplete="off" spellcheck="false"></label>
+        <label class="option">
+          <input type="radio" name="secrets" id="secrets-without" value="without">
+          <span class="option-text">
+            <strong data-i18n="db.secretsWithout">Without its secrets</strong>
+            <span class="muted" data-i18n="db.secretsWithoutText">For a backup whose key is lost: everything else comes back, the second factors are set up again, the directory password and a sign-in provider's client secret entered again, and notifications subscribed to anew.</span>
+          </span>
+        </label>
+      </fieldset>
     </div>
 
     <div class="row">
@@ -778,23 +801,30 @@
     const file = $('restore-file').files[0];
     if (!file) throw new Error(t('err.noBackupChosen', 'Choose the backup file to restore.'));
 
-    let binary = '';
-    for (const byte of new TextEncoder().encode($('restore-passphrase').value)) {
-      binary += String.fromCharCode(byte);
+    const headers = {
+      'Content-Type': 'application/octet-stream',
+      'X-Setup-Token': $('token').value.trim(),
+      'X-Backup-Passphrase': headerValue($('restore-passphrase').value),
+    };
+
+    // What was answered about the backup's secrets, once they were asked about.
+    if (!$('restore-key').hidden) {
+      if ($('secrets-without').checked) {
+        headers['X-Backup-Without-Secrets'] = 'true';
+      } else {
+        const key = $('restore-secret-key').value.trim();
+        if (!key) {
+          throw new Error(t('err.noSecretKey', 'Give the SECRET_KEY of the installation the backup comes from.'));
+        }
+
+        headers['X-Backup-Secret-Key'] = headerValue(key);
+      }
     }
 
     let res;
 
     try {
-      res = await fetch('/install/backup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'X-Setup-Token': $('token').value.trim(),
-          'X-Backup-Passphrase': btoa(binary),
-        },
-        body: file,
-      });
+      res = await fetch('/install/backup', { method: 'POST', headers, body: file });
     } catch {
       throw new Error(t('msg.unreachable',
         'The server could not be reached. Check the connection and try again.'));
@@ -803,7 +833,30 @@
     let body = {};
     try { body = await res.json(); } catch { /* a non-JSON error page */ }
 
-    if (!res.ok) throw new Error(refusal(body, res.status));
+    if (!res.ok) {
+      if (KEY_REFUSALS.has(body.code)) $('restore-key').hidden = false;
+      throw new Error(refusal(body, res.status));
+    }
+  }
+
+  /** Base64 of the UTF-8 of what was typed: a header carries Latin-1 only. */
+  function headerValue(typed) {
+    let binary = '';
+    for (const byte of new TextEncoder().encode(typed)) binary += String.fromCharCode(byte);
+
+    return btoa(binary);
+  }
+
+  // The refusals of a backup whose secrets this installation's key cannot open,
+  // which the page answers by asking for the key they came under, or whether to
+  // restore the backup without them.
+  const KEY_REFUSALS = new Set(['backupNeedsSecretKey', 'backupOtherSecretKey']);
+
+  // The key's field belongs to the answer that gives one.
+  for (const answer of document.querySelectorAll('input[name="secrets"]')) {
+    answer.addEventListener('change', () => {
+      $('restore-secret-key-field').hidden = !$('secrets-key').checked;
+    });
   }
 
   $('form').addEventListener('submit', async (event) => {
