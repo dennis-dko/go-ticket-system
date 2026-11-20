@@ -22,14 +22,15 @@ func TestTheAndroidAppComesAsACode(t *testing.T) {
 	var answer struct {
 		Release  string `json:"release"`
 		Download string `json:"download"`
+		Version  string `json:"version"`
 		QR       string `json:"qr"`
 	}
 
 	worker.must(worker.api(http.MethodGet, "/me/android", nil), http.StatusOK).Data(t, &answer)
 
-	if answer.Release != selfupdate.Releases+"/latest" || answer.Download != "" {
-		t.Errorf("a build from source is sent to %q and %q, want the newest release's page and no file",
-			answer.Release, answer.Download)
+	if answer.Release != selfupdate.Releases+"/latest" || answer.Download != "" || answer.Version != "" {
+		t.Errorf("a build from source is sent to %q and %q as %q, want the newest release's page, no file "+
+			"and no version for the app to update to", answer.Release, answer.Download, answer.Version)
 	}
 
 	if want, err := qrcode.SVGDataURI(answer.Release); err != nil || answer.QR != want {
