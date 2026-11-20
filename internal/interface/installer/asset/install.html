@@ -111,6 +111,30 @@
     .option-text { display: grid; gap: 2px; min-width: 0; }
     .option-text strong { font-size: 14px; font-weight: 600; }
     .option-text .muted { margin: 0; }
+    /* The backup file's field, dashed until a file is chosen. The input is out of
+       sight rather than gone, so the keyboard's ring is drawn on the field. */
+    .drop { margin-bottom: 12px; position: relative; }
+    .drop input {
+      height: 1px; margin: 0; min-height: 0; opacity: 0; overflow: hidden; padding: 0;
+      position: absolute; width: 1px;
+    }
+    .drop-area {
+      align-items: center; background: var(--field-bg); border: 1.5px dashed var(--field-border-hover);
+      border-radius: var(--radius); cursor: pointer; display: flex; gap: 14px; margin: 0;
+      min-height: 76px; padding: 14px 18px; transition: background-color .15s ease, border-color .15s ease;
+    }
+    .drop-area:hover, .drop.over .drop-area {
+      background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-color: var(--accent);
+    }
+    .drop input:focus-visible + .drop-area { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+    .drop.chosen .drop-area { border-style: solid; }
+    .drop-icon {
+      color: var(--accent); fill: none; flex: none; height: 28px; stroke: currentColor;
+      stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; width: 28px;
+    }
+    .drop-text { display: grid; gap: 2px; min-width: 0; }
+    .drop-choose { color: var(--accent); font-size: 14px; font-weight: 600; }
+    .drop-text .muted { margin: 0; overflow-wrap: anywhere; }
     input, select {
       background: var(--field-bg); border: 1px solid transparent; border-radius: var(--pill);
       color: var(--text); font: inherit; margin-top: 4px; min-height: var(--control); padding: 0 20px;
@@ -293,7 +317,23 @@
     </fieldset>
 
     <div id="restore-fields" hidden>
-      <label data-i18n="db.restoreFile">Backup file<input type="file" id="restore-file" accept=".tpbak"></label>
+      <!-- A field of the page's own rather than the browser's button, whose words
+           are the browser's and in its language: the whole of it opens the file
+           dialog, a file dropped on it is taken, and once one is chosen it says
+           which and how large. The input stays the control, out of sight and in
+           reach of a keyboard and a screen reader, named by the field. -->
+      <div class="drop" id="restore-drop">
+        <input type="file" id="restore-file" accept=".tpbak">
+        <label for="restore-file" class="drop-area">
+          <svg class="drop-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>
+          </svg>
+          <span class="drop-text">
+            <span class="drop-choose" data-i18n="db.restoreChoose">Choose the backup file</span>
+            <span class="muted" id="restore-file-name" data-i18n="db.restoreDrop">or drop it here - a .tpbak file</span>
+          </span>
+        </label>
+      </div>
       <label data-i18n="db.restorePassphrase">The backup's passphrase<input type="password" id="restore-passphrase" autocomplete="off"></label>
       <p class="muted" data-i18n="db.restoreText">
         The BACKUP_PASSPHRASE of the installation the backup comes from. Every
@@ -680,6 +720,53 @@
       $('restore-fields').hidden = !$('restore').checked;
     });
   }
+
+  // What the backup's field says until a file is chosen, in the page's words.
+  const DROP_HINT = $('restore-file-name').textContent;
+
+  /** A size as the application's backup card writes it. */
+  function fileSize(bytes) {
+    const megabytes = bytes >= 1024 * 1024;
+
+    return new Intl.NumberFormat(language, {
+      style: 'unit',
+      unit: megabytes ? 'megabyte' : 'kilobyte',
+      maximumFractionDigits: megabytes ? 1 : 0,
+    }).format(megabytes ? bytes / (1024 * 1024) : Math.max(1, Math.round(bytes / 1024)));
+  }
+
+  function showChosenFile() {
+    const file = $('restore-file').files[0];
+
+    $('restore-drop').classList.toggle('chosen', Boolean(file));
+    $('restore-file-name').textContent = file ? `${file.name} · ${fileSize(file.size)}` : DROP_HINT;
+  }
+
+  $('restore-file').addEventListener('change', showChosenFile);
+
+  // A file dropped on the field is taken as if it had been chosen in the dialog.
+  const drop = $('restore-drop');
+
+  for (const type of ['dragenter', 'dragover']) {
+    drop.addEventListener(type, (event) => {
+      event.preventDefault();
+      drop.classList.add('over');
+    });
+  }
+
+  drop.addEventListener('dragleave', (event) => {
+    if (!drop.contains(event.relatedTarget)) drop.classList.remove('over');
+  });
+
+  drop.addEventListener('drop', (event) => {
+    event.preventDefault();
+    drop.classList.remove('over');
+
+    if (event.dataTransfer?.files.length) {
+      $('restore-file').files = event.dataTransfer.files;
+      showChosenFile();
+    }
+  });
 
   /**
    * Sends the backup to be opened once, before a database is chosen for it.
