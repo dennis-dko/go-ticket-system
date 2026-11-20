@@ -97,8 +97,7 @@ type Section struct {
 // Every field is optional. An empty one falls back to the shade below, which is
 // what a document with no palette at all used to look like throughout.
 type Palette struct {
-	// Accent leads: headings, the rule under the title, the figures in the
-	// summary.
+	// Accent leads: the title, the headings and the rule under the title.
 	Accent string `json:"accent"`
 
 	// Text is the body, Muted the second rank - captions, the period under the
@@ -234,7 +233,8 @@ type Line struct {
 	Value string `json:"value"`
 
 	// Tone is what the screen says with the figure's colour - a balance in credit
-	// or in debt. A figure that says nothing is printed in the accent.
+	// or in debt, a total set quietly in grey. A figure that says nothing is
+	// printed as plain text.
 	Tone Tone `json:"tone"`
 }
 
@@ -734,17 +734,25 @@ func writeSummary(pdf *fpdf.Fpdf, ink inks, summary []Line) {
 	pdf.Ln(2)
 
 	for _, line := range summary {
+		// As the screen shows the total: a balance in credit or in debt in its
+		// colour and the bold face beside a name in the body's ink, a total the
+		// screen sets quietly in grey with its name, and anything else as plain
+		// text. Every figure here used to be in the accent, on the reasoning that
+		// the number the picture is about should be in the picture's colour; the
+		// maintainer asked on 2026-11-20 for the totals to look as they do on the
+		// screen, where none of them is.
+		look := ink.shadeOf(line.Tone, ink.text)
+
+		name := ink.text
+		if line.Tone == Muted {
+			name = look.ink
+		}
+
 		pdf.SetFont("go", "", bodySize)
-		use(pdf, ink.text)
+		use(pdf, name)
 		pdf.CellFormat(contentWide*0.6, rowHeight, line.Label, "", 0, "L", false, 0, "")
 
-		// The figure in the accent: on a page whose picture is drawn in it, the
-		// number the picture is about should be too. Unless the screen gives the
-		// figure a colour of its own - a balance in credit or in debt is printed
-		// the way the screen shows it.
-		look := ink.shadeOf(line.Tone, ink.accent)
-
-		pdf.SetFont("go", "B", bodySize)
+		pdf.SetFont("go", face(look.bold), bodySize)
 		use(pdf, look.ink)
 
 		if look.filled {
