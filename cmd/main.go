@@ -96,6 +96,7 @@ func runInstaller() (installer.Result, error) {
 		Prefill:        settings.Prefill,
 		Schema:         newestSchema(),
 		Secrets:        secrets,
+		Favicon:        web.Favicon(),
 		Logf:           logger.Infof,
 	})
 }

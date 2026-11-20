@@ -74,6 +74,10 @@ type Config struct {
 	// process. Nil is no key.
 	Secrets *security.Sealer
 
+	// Favicon is the application's tab icon, served at /favicon.svg so the
+	// installer's tab carries the mark the application's does. Empty serves none.
+	Favicon []byte
+
 	// Logf reports progress. Required: this screen is the only thing the
 	// process is doing, and a silent one would look hung.
 	Logf func(format string, args ...any)
@@ -160,6 +164,7 @@ func Serve(ctx context.Context, cfg Config) (Result, error) {
 	mux.HandleFunc("/install/test", s.test)
 	mux.HandleFunc("/install/save", s.save)
 	mux.HandleFunc("/install/backup", s.backup)
+	mux.HandleFunc("/favicon.svg", s.favicon)
 	// Everything else is the page, so a bookmarked deep link into the
 	// application still lands somewhere that explains itself.
 	mux.HandleFunc("/", s.page)
@@ -304,6 +309,22 @@ func (s *server) page(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _ = w.Write(bytes.Replace(page, []byte(dictionariesMarkup), []byte(pageDictionaries()), 1))
+}
+
+// favicon serves the application's tab icon at the path the application serves
+// it from, so a browser keeps the one icon across the handover. Not stored: the
+// application answers the same path once it runs, with caching of its own.
+func (s *server) favicon(w http.ResponseWriter, r *http.Request) {
+	if len(s.cfg.Favicon) == 0 {
+		http.NotFound(w, r)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = w.Write(s.cfg.Favicon)
 }
 
 // dictionariesMarkup is the empty block in the page that pageDictionaries fills.

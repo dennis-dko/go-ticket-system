@@ -147,6 +147,19 @@ func Handler(branding BrandingFunc) func(http.Handler) http.Handler {
 	}
 }
 
+// Favicon is the tab icon this package serves, for the installer to serve as
+// well: it runs before the application does and loads nothing of these assets,
+// and a copy of its own would be a second drawing of the mark to keep equal.
+// Empty only in a binary built without the assets, which Handler refuses anyway.
+func Favicon() []byte {
+	icon, err := assets.ReadFile("asset/favicon.svg")
+	if err != nil {
+		return nil
+	}
+
+	return icon
+}
+
 // etags is the content hash of every embedded asset, by request path.
 //
 // Built once at start-up, which is possible precisely because the assets are
