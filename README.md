@@ -45,8 +45,8 @@
   sign-on, and OpenID Connect providers such as Keycloak, Authentik, Entra ID or
   Google.
 - 📈 **Built to be operated.** Health endpoints, Prometheus metrics,
-  OpenTelemetry traces, a live log, a maintenance mode, updates from the settings
-  screen and HTTPS with Let's Encrypt.
+  OpenTelemetry traces, a live log, a maintenance mode, sealed backups on a
+  schedule, updates from the settings screen and HTTPS with Let's Encrypt.
 - 🌍 **For the people using it.** English and German, light and dark, from a
   telephone to a wide screen — and installable as an app.
 
@@ -116,11 +116,11 @@ working time first — `task readme:pictures` takes them again.
   <tr>
     <td valign="top">
       <img src="doc/image/log.png" alt="The live log under Settings, filtered by level">
-      <p><b>Operated from the browser.</b> The process log, live; the database, the directory, telemetry, maintenance, updates and a restart, all under <i>Settings</i>.</p>
+      <p><b>Operated from the browser.</b> The process log, live; the database, the directory, telemetry, maintenance, backups, updates and a restart, all under <i>Settings</i>.</p>
     </td>
     <td valign="top">
       <img src="doc/image/installer.png" alt="The installer asking for the setup token and a database">
-      <p><b>Set up in the browser.</b> Without a database the binary serves this screen, guarded by a token from its log, and then takes its port over in the same process.</p>
+      <p><b>Set up in the browser.</b> Without a database the binary serves this screen, guarded by a token from its log, and then takes its port over in the same process — starting empty, with demo data, or from a backup.</p>
     </td>
   </tr>
   <tr>
@@ -308,7 +308,7 @@ does.
 | **Accounts and roles** | Roles and their rights administered at run time; an administrator who runs the installation without keeping hours in it; managers for the accounts assigned to them, where an installation switches them on | [Access](doc/access.md) |
 | **Sign-in** | Passwords with TOTP, passkeys, LDAP and Active Directory with synchronisation, Kerberos, OpenID Connect | [Sign-in](doc/access.md#ldap) |
 | **API** | REST under `/api/v1`, described at `/api-docs`, reached with personal tokens that never outrank their owner - one of which signs the Android app in | [API](doc/api.md) |
-| **Operations** | Health, metrics, traces, live log, maintenance mode, updates, restart, HTTPS with Let's Encrypt, the installation's own name and logo | [Configuration](doc/configuration.md) |
+| **Operations** | Health, metrics, traces, live log, maintenance mode, backups sealed with a passphrase and restored into any of the three databases, updates, restart, a command on the server that lets the built-in administrator back in, HTTPS with Let's Encrypt, the installation's own name and logo | [Configuration](doc/configuration.md) |
 
 ## Documentation
 

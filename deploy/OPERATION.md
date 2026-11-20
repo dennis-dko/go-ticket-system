@@ -1433,10 +1433,11 @@ time entries and their history, running timers, absences, plans and templates,
 tokens and passkeys, the administration log, and the whole settings table -
 branding and the logo, the timezone, the directory configuration including its
 bind password. Not the sessions: after a restore everybody signs in again.
-Second factors and the directory password are sealed with `SECRET_KEY` where one
-is set, and stay sealed inside the backup, so a restore needs that `SECRET_KEY`
-too. Keep the passphrase and the key together, and somewhere other than the
-server whose backups they open.
+Second factors, the directory password, a sign-in provider's client secret and
+the push key are sealed with `SECRET_KEY` where one is set, and stay sealed
+inside the backup, so a restore needs that `SECRET_KEY` too - or leaves those
+four behind, as *Restoring a backup* below says. Keep the passphrase and the key
+together, and somewhere other than the server whose backups they open.
 
 **Where they are kept.** `BACKUP_DIR`: `backups` beside `configs/` for a binary,
 `/data/backups` on the `app-data` volume under Compose. Each file is named for

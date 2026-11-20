@@ -10865,9 +10865,9 @@ const TOUR_STEPS = [
     permission: 'users:read',
     title: () => t('tour.userTable.title', 'Who is here, and what they may do'),
     text: () => t('tour.userTable.text',
-      'The role beside each name can be changed from here. The built-in administrator is '
-      + 'the exception: it cannot be deleted and its role cannot be moved, because it is '
-      + 'the way back in.'),
+      'The role beside each name can be changed from here, a forgotten password reset and a '
+      + 'second factor lost with a phone removed. The built-in administrator is the exception: '
+      + 'it cannot be deleted and its role cannot be moved, because it is the way back in.'),
   },
   {
     target: '#form-role',
@@ -10951,7 +10951,8 @@ const TOUR_STEPS = [
     title: () => t('tour.totp.title', 'A second factor'),
     text: () => t('tour.totp.text',
       'A code from an authenticator app, set up by scanning a QR code - or by typing the '
-      + 'secret, where scanning is not an option.'),
+      + 'secret, where scanning is not an option. Lost with a phone, it is removed by an '
+      + 'administrator, and you set it up again.'),
   },
   {
     target: '#passkey-card',

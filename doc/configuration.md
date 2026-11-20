@@ -84,7 +84,9 @@ nothing sets the variable.
 | `SETUP_TOKEN` | generated | what the installer asks for; logged when generated |
 | `UI_ENABLED` | `true` | `false` runs the binary as a headless API |
 | `AUTH_ENABLED` | `true` | `false` gives **every** caller full admin rights |
-| `SECRET_KEY` | empty | base64 of 32 bytes. Encrypts the second factors and the directory password in the database. Empty stores them in the clear, as before, and logs a line saying so. **Losing it costs every enrolled second factor** |
+| `SECRET_KEY` | empty | base64 of 32 bytes. Encrypts the second factors, the directory password, a sign-in provider's client secret and the key that signs a push to a browser in the database. Empty stores them in the clear, as before, and logs a line saying so. **Losing it costs every enrolled second factor** - a backup made under it is restored with it, or without those secrets |
+| `BACKUP_PASSPHRASE` | empty | seals every backup, at least twelve characters. **Without one no backup is made**, and the *Backups* card says so. A restore needs it, so keep it with `SECRET_KEY` and away from the server |
+| `BACKUP_DIR` | `backups` | where scheduled backups are kept, beside `configs/` unless absolute; `/data/backups` on the data volume under Compose |
 | `SESSION_LIFETIME` | `12h` | how long a sign-in stays valid. **Administered under Settings**; not in `configs/.env` |
 | `TLS_ENABLED` | `false` | HTTPS with Let's Encrypt |
 | `TLS_DOMAINS` | – | comma separated; the names Let's Encrypt is asked about. One of this or the two below is required when TLS is on |
