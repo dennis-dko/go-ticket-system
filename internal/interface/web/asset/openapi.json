@@ -3857,7 +3857,7 @@
                 },
                 "tone": {
                   "type": "string",
-                  "description": "What the screen says with the figure's colour, in the words `tones` uses - `plus` or `minus` for a balance in credit or in debt. A figure without one is printed in the accent."
+                  "description": "What the screen says with the figure's colour, in the words `tones` uses - `plus` or `minus` for a balance in credit or in debt, `muted` for a total the screen sets quietly in grey, which greys its label as well. A figure without one is printed as plain text."
                 }
               }
             },
@@ -3865,7 +3865,7 @@
           },
           "colours": {
             "type": "object",
-            "description": "What the screen is drawn in, as `#rrggbb` or `#rgb`. Only `accent` is used - for the title, the headings and the figures of the summary, and only where it can be read on white. The page keeps its own ink for the rest, whatever theme the screen was in.",
+            "description": "What the screen is drawn in, as `#rrggbb` or `#rgb`. Only `accent` is used - for the title and the headings, and only where it can be read on white. The page keeps its own ink for the rest, whatever theme the screen was in.",
             "properties": {
               "accent": {
                 "type": "string"
